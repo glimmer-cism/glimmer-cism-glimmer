@@ -9,6 +9,7 @@
    input
  * New file - glint_constants.f90 - mostly for conversion between different
    time units.
+ * Removed redundant Matlab code
 
 2005-02-22 Ian Rutt
  * Substantial reorganisation of GLINT. 
