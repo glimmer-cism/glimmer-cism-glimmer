@@ -1,3 +1,14 @@
+2004-06-30 Magnus Hagdorn
+ * glimmer_ts.f90: added scalar variations of interpolation routines and
+   corresponding module interface
+ * eis_ela.f90: fixed a bug, use new scalar glimmer_ts, change topo and thck to 
+   double precision
+ * added sea-level forcing (eis_slc.f90, eis_forcing.f90)
+ * ncdf_vars.def: new output variables for global sea level and isostatic sea level
+ * eis_glide.f90: single function call to update climate
+ * simple3.config: change time step size
+ * added sea-level forcing (fennscan1.config, specmap.data)
+	
 2004-06-28 Magnus Hagdorn
  * added time series support (glimmer_ts.f90) and a test program (test_ts.f90)
  * added eustatic sea level (glide_types.f90)

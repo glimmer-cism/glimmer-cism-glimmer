@@ -102,6 +102,22 @@ load:          1
 #factor:        thk0
 #load:          1
 
+[eus]
+dimensions:    time
+units:         meter
+long_name:     global average sea level
+data:          model%climate%eus
+factor:        thk0
+standard_name: global_average_sea_level
+
+[slc]
+dimensions:    time, y0, x0
+units:         meter
+long_name:     isostatic adjustment
+data:          model%geometry%topg-model%geometry%relx
+factor:        thk0
+standard_name: isostatic_adjustment
+
 [uflx]
 dimensions:    time, y0, x0
 units:         meter2/year

@@ -46,19 +46,21 @@ module eis_forcing
   
   use eis_ela
   use eis_temp
+  use eis_slc
 
-  type eis_climate
+  type eis_climate_type
      !*FD holds EIS climate
      type(eis_ela_type)  :: ela  !*FD ELA forcing
      type(eis_temp_type) :: temp !*FD temperature forcing
-  end type eis_climate
+     type(eis_slc_type)  :: slc  !*FD sea level forcing
+  end type eis_climate_type
   
 contains
   subroutine eis_initialise(climate,fname,model)
     !*FD initialise EIS climate
     use glide_types
     implicit none
-    type(eis_climate) :: climate         !*FD structure holding EIS climate
+    type(eis_climate_type) :: climate    !*FD structure holding EIS climate
     character(len=*),intent(in) :: fname !*FD name of file containing configuration
     type(glide_global_type) :: model     !*FD model instance
 
@@ -70,13 +72,14 @@ contains
     ! initialise subsystems
     call eis_init_ela(climate%ela,model)
     call eis_init_temp(climate%temp,model)
+    call eis_init_slc(climate%slc)
   end subroutine eis_initialise
 
   subroutine eis_readconfig(climate,fname)
     !*FD read EIS configuration
     use glimmer_config
     implicit none
-    type(eis_climate) :: climate         !*FD structure holding EIS climate
+    type(eis_climate_type) :: climate    !*FD structure holding EIS climate
     character(len=*),intent(in) :: fname !*FD name of file containing configuration
     ! local variables
     type(ConfigSection), pointer :: config
@@ -93,17 +96,37 @@ contains
     if (associated(section)) then
        call eis_temp_config(section,climate%temp)
     end if
+    call GetSection(config,section,'EIS SLC')
+    if (associated(section)) then
+       call eis_slc_config(section,climate%slc)
+    end if
   end subroutine eis_readconfig
 
   subroutine eis_printconfig(climate)
     !*FD print EIS configuration
     use glimmer_log
     implicit none
-    type(eis_climate) :: climate         !*FD structure holding EIS climate
+    type(eis_climate_type) :: climate  !*FD structure holding EIS climate
     
     call write_log_div
     call write_log('Edinburgh Ice Model')
     call eis_ela_printconfig(climate%ela)
     call eis_temp_printconfig(climate%temp)
+    call eis_slc_printconfig(climate%slc)
   end subroutine eis_printconfig
+
+  subroutine eis_climate(climate,model,time)
+    !*FD do the EIS climate forcing
+    use glide_types
+    use glimmer_global, only : rk    
+    implicit none
+    type(eis_climate_type) :: climate  !*FD structure holding EIS climate
+    type(glide_global_type)   :: model !*FD model instance
+    real(kind=rk), intent(in) :: time  !*FD current time
+    
+    call eis_eus(climate%slc,model,time)
+    call eis_massbalance(climate%ela,model,time)
+    call eis_surftemp(climate%temp,model,time)
+  end subroutine eis_climate
+    
 end module eis_forcing

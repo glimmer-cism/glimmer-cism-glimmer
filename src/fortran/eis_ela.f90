@@ -139,12 +139,12 @@ contains
     real(kind=rk), intent(in) :: time  !*FD current time
 
     ! local variables
-    real,dimension(1) :: ela_time = 0.
+    real :: ela_time = 0.
 
     call glimmer_ts_step(ela%ela_ts,real(time),ela_time)
-    model%climate%acab = calc_mb(ela%ela+ela_time(1), &
-         real(model%geometry%topg), &
-         real(model%geometry%thck), &
+    model%climate%acab = calc_mb(ela%ela+ela_time, &
+         model%geometry%topg, &
+         model%geometry%thck, &
          model%climate%eus, ela%zmax,ela%bmax)
   end subroutine eis_massbalance
 
@@ -153,10 +153,11 @@ contains
   !*****************************************************************************
   elemental function calc_mb(ela,topo,thick,eus,zmax,bmax)
     !*FD calculate mass balance
+    use glimmer_global, only : dp
     implicit none
     real, intent(in) :: ela       !*FD equilibrium line altitude
-    real, intent(in) :: topo      !*FD topography
-    real, intent(in) :: thick     !*FD ice thickness
+    real(kind=dp), intent(in) :: topo      !*FD topography
+    real(kind=dp), intent(in) :: thick     !*FD ice thickness
     real, intent(in) :: eus       !*FD eustatic sea level
     real, intent(in) :: zmax,bmax !*FD parameters describing MB variation around ELA
     real calc_mb
@@ -176,7 +177,7 @@ contains
           calc_mb = bmax
           return
        else
-          calc_mb = 2.*z*bmax/zmax + z*z*bmax/(zmax*zmax)
+          calc_mb = 2.*z*bmax/zmax - z*z*bmax/(zmax*zmax)
           return
        end if
     else

@@ -29,7 +29,7 @@ SOURCES = glimmer_degd.f90 glimmer_isot.f90 glimmer_setup.f90 \
           glimmer_object.f90 glimmer_proj.f90 glimmer_utils.f90 gmt.f90 \
           glimmer_global_grid.f90 glimmer_config.f90 glimmer_CFproj.f90 $(AUTOGEN)
 
-EIS = eis_glide.o eis_forcing.o eis_ela.o eis_temp.o
+EIS = eis_glide.o eis_forcing.o eis_ela.o eis_temp.o eis_slc.o
 
 SIMPLE = simple_forcing.o simple_glide.o
 

@@ -49,7 +49,7 @@ program eis_glide
   implicit none
 
   type(glide_global_type) :: model        ! model instance
-  type(eis_climate) :: climate         ! climate
+  type(eis_climate_type) :: climate         ! climate
   character(len=50) :: fname   ! name of paramter file
   real(kind=rk) time
 
@@ -65,8 +65,7 @@ program eis_glide
 
   time = model%numerics%tstart
   do while(time.le.model%numerics%tend)
-     call eis_massbalance(climate%ela,model,time)
-     call eis_surftemp(climate%temp,model,time)
+     call eis_climate(climate,model,time)
      call glide_tstep(model,time)
      ! override masking stuff for now
      time = time + model%numerics%tinc

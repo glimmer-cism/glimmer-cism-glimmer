@@ -45,12 +45,20 @@ module glimmer_ts
 
   type glimmer_tseries
      !*FD time series type
-     integer :: numt                      !*FD number of times in time series
-     integer :: numv                      !*FD number of values per time
+     integer :: numt=0                    !*FD number of times in time series
+     integer :: numv=1                    !*FD number of values per time
      integer :: current=1                 !*FD current position in ts
      real, dimension(:), pointer :: times=>NULL() !*FD array holding times
      real, dimension(:,:), pointer :: values=>NULL()!*FD array holding values
   end type glimmer_tseries
+
+  interface glimmer_ts_step
+     module procedure glimmer_ts_step_array, glimmer_ts_step_scalar
+  end interface
+
+  interface glimmer_ts_linear
+     module procedure glimmer_ts_linear_array,glimmer_ts_linear_scalar
+  end interface
 
   private :: get_i
 
@@ -95,7 +103,7 @@ contains
     close(99)
   end subroutine glimmer_read_ts
 
-  subroutine glimmer_ts_step(ts,time,value)
+  subroutine glimmer_ts_step_array(ts,time,value)
     !*FD interpolate time series by stepping
     use glimmer_log
     implicit none
@@ -109,9 +117,20 @@ contains
     end if
 
     value = ts%values(:,get_i(ts,time))
-  end subroutine glimmer_ts_step
+  end subroutine glimmer_ts_step_array
 
-  subroutine glimmer_ts_linear(ts,time,value)
+  subroutine glimmer_ts_step_scalar(ts,time,value)
+    !*FD interpolate time series by stepping
+    use glimmer_log
+    implicit none
+    type(glimmer_tseries) :: ts     !*FD time series data
+    real, intent(in)      :: time   !*FD time value to get
+    real                  :: value  !*FD interpolated value
+       
+    value = ts%values(1,get_i(ts,time))
+  end subroutine glimmer_ts_step_scalar
+  
+  subroutine glimmer_ts_linear_array(ts,time,value)
     !*FD linear interpolate time series
     use glimmer_log
     implicit none
@@ -130,7 +149,24 @@ contains
     i = get_i(ts,time)
     slope(:) = (ts%values(:,i+1)-ts%values(:,i))/(ts%times(i+1)-ts%times(i))
     value(:) = ts%values(:,i) + slope(:)*(time-ts%times(i))
-  end subroutine glimmer_ts_linear
+  end subroutine glimmer_ts_linear_array
+
+  subroutine glimmer_ts_linear_scalar(ts,time,value)
+    !*FD linear interpolate time series
+    use glimmer_log
+    implicit none
+    type(glimmer_tseries) :: ts     !*FD time series data
+    real, intent(in)      :: time   !*FD time value to get
+    real                  :: value  !*FD interpolated value
+       
+    integer i
+    real :: slope
+
+    i = get_i(ts,time)
+    slope = (ts%values(1,i+1)-ts%values(1,i))/(ts%times(i+1)-ts%times(i))
+    value = ts%values(1,i) + slope*(time-ts%times(i))
+  end subroutine glimmer_ts_linear_scalar
+  
 
   function get_i(ts,time)
     !*FD get index
