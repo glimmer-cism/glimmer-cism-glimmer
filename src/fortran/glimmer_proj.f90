@@ -67,7 +67,6 @@ module glimmer_project
                                                  !*FD \item Spherical stereographic (equatorial)
                                                  !*FD \end{enumerate}
     type(gmt_pinf) :: gmt_params                 !*FD parameters needed for gmt routines
-    real(rk)       :: xscale,yscale              !*FD scale factors for conversions
     integer        :: nx                         !*FD number of grid points in the EW direction
     integer        :: ny                         !*FD number of grid points in the NS direction
     real(rk)       :: dx                         !*FD the nominal $x$ grid-spacing at the centre of the projection
@@ -131,9 +130,6 @@ contains
     proj%sintheta=0.0 ; proj%costheta=0.0
 
     call gmt_set(proj%p_type,proj%latc,proj%lonc,radea,proj%gmt_params)
-    
-    proj%xscale=proj%dx
-    proj%yscale=proj%dy
 
     call calc_grid_angle(proj)
 
@@ -202,8 +198,8 @@ contains
       print*,'ERROR: ',proj%p_type,' is not a valid projection type'
     end select
 
-    x=(x/proj%xscale)+proj%cpx
-    y=(y/proj%yscale)+proj%cpy
+    x=(x/proj%dx)+proj%cpx
+    y=(y/proj%dy)+proj%cpy
 
   end subroutine ll_to_xy
 
@@ -229,8 +225,8 @@ contains
 
     xx=x ; yy=y
 
-    xx=(xx-proj%cpx)*proj%xscale
-    yy=(yy-proj%cpy)*proj%yscale
+    xx=(xx-proj%cpx)*proj%dx
+    yy=(yy-proj%cpy)*proj%dy
 
     select case(proj%p_type)
     case(1)
@@ -397,8 +393,6 @@ contains
     integer,intent(in) :: unit          !*FD Logical file unit to use
 
     write(unit) proj%p_type
-    write(unit) proj%xscale
-    write(unit) proj%yscale
     write(unit) proj%nx
     write(unit) proj%ny
     write(unit) proj%dx
@@ -445,8 +439,6 @@ contains
     integer,intent(in) :: unit             !*FD Logical file unit to use
 
     read(unit) proj%p_type
-    read(unit) proj%xscale
-    read(unit) proj%yscale
     read(unit) proj%nx
     read(unit) proj%ny
     read(unit) proj%dx
