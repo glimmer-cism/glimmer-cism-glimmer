@@ -56,7 +56,7 @@ program glint_example
   type(glint_params) :: ice_sheet    ! This is the derived type variable that holds all 
                                        ! domains of the ice model
 
-  character(fname_length) :: paramfile='g_land.config'  ! The top-level configuration file
+  character(fname_length) :: paramfile  ! The top-level configuration file
 
   integer :: total_years ! Length of run in years
 
@@ -64,7 +64,14 @@ program glint_example
 
   real(rk),dimension(:,:,:),pointer :: orog_clim     => null()  ! Orography
   real(rk),dimension(:,:,:),pointer :: precip_clim   => null()  ! Precip
+  real(rk),dimension(:,:,:),pointer :: precip_clim2  => null()  ! Precip
   real(rk),dimension(:,:,:),pointer :: surftemp_clim => null()  ! Surface temperature
+
+  ! arrays for interpolation -------------------------------------------------------
+
+  logical,dimension(:,:),allocatable :: maskin,maskout
+  real,dimension(:,:),allocatable :: intin,intout
+  real,dimension(:),pointer :: lonbin,latbin,lonbout,latbout
 
   ! Arrays which hold the global fields used as input to GLIMMER ------------------------
 
@@ -99,6 +106,7 @@ program glint_example
 
   integer :: nx,ny   ! Size of normal global grid
   integer :: nxo,nyo ! Size of global orography grid
+  integer :: nxp,nyp ! Precip grid
 
   ! Scalar model outputs ----------------------------------------------------------------
 
@@ -111,27 +119,47 @@ program glint_example
   logical :: out    ! Outputs set flag
   integer :: i,j    ! Array index counters
   integer :: time   ! Current time (hours)
+  integer :: ierr
 
   ! -------------------------------------------------------------------------------------
   ! Executable code starts here - Basic initialisation
   ! -------------------------------------------------------------------------------------
 
+  Print*,'Enter name of configuration file:'
+  read*,paramfile
+
   ! Read in climate data
 
-  call read_ncdf_3d('monthly_precip_mean_1974-2003.nc','pr_wtr',precip_clim,lats=lats,lons=lons)
-  call read_ncdf_3d('surf_temp_6h_1974-2003.nc','air_temperature',surftemp_clim)
+  call read_ncdf_3d('monthly_precip_mean_1974-2003.nc','prate',precip_clim2, &
+       lonbound=lonbin,latbound=latbin)
+  call read_ncdf_3d('surf_temp_6h_1974-2003.nc','air_temperature',surftemp_clim,lats=lats,lons=lons, &
+       lonbound=lonbout,latbound=latbout)
   call read_ncdf_3d('global_orog.nc','hgt',orog_clim)
 
   ! Fix up a few things
 
-  where (precip_clim<0.0) precip_clim=0.0  ! Fix negatives
-  precip_clim=precip_clim/2592000.0        ! Convert to mm/s
   surftemp_clim=surftemp_clim-273.15       ! Convert temps to degreesC
 
   ! Set dimensions of global grids
 
-  nx=size(precip_clim,1) ; ny=size(precip_clim,2) ! Normal global grid
+  nx=size(surftemp_clim,1) ; ny=size(surftemp_clim,2) ! Normal global grid
+  nxp=size(precip_clim2,1) ; nyp=size(precip_clim2,2) ! Precip input grid
   nxo=200 ; nyo=100                               ! Grid used for orographic output
+
+  ! Do precip interpolation
+
+  allocate(precip_clim(nx,ny,12))
+  allocate(intin(nxp,nyp),maskin(nxp,nyp))
+  allocate(intout(nx,ny),maskout(nx,ny))
+  maskin=.true.
+  maskout=.true.
+
+  do i=1,12
+     intin=precip_clim2(:,:,i)
+     call awi(nxp,nxp,lonbin,nyp,latbin,intin,maskin,nx,nx,lonbout,ny,latbout,intout,maskout,ierr)
+     precip_clim(:,:,i)=intout
+     print*,ierr
+  end do
 
   ! start logging
   call open_log(unit=101)  
@@ -208,37 +236,40 @@ program glint_example
 
 contains
 
-  subroutine read_ncdf_3d(filename,varname,array,lons,lats)
+  subroutine read_ncdf_3d(filename,varname,array,lons,lats,lonbound,latbound)
 
     use netcdf
 
     character(*) :: filename,varname
     real(dp),dimension(:,:,:),pointer :: array
     real(dp),dimension(:),pointer,optional :: lons,lats
+    real,dimension(:),pointer,optional :: lonbound,latbound
     integer :: ncerr,ncid,i,varid
     real(rk) :: offset=0.0,scale=1.0
     integer,dimension(3) :: dimids,dimlens
     character(20),dimension(3) :: dimnames
+    real(dp),dimension(:,:),allocatable :: lnb,ltb
 
     if (associated(array)) deallocate(array)
 
     ncerr=nf90_open(filename,0,ncid)
-    call handle_err(ncerr)
+    call handle_err(ncerr,__LINE__)
 
     ncerr=nf90_inq_varid(ncid,varname,varid)
-    call handle_err(ncerr)
+    call handle_err(ncerr,__LINE__)
     ncerr=nf90_inquire_variable(ncid, varid, dimids=dimids)
-    call handle_err(ncerr)
+    call handle_err(ncerr,__LINE__)
 
     do i=1,3
        ncerr=nf90_inquire_dimension(ncid, dimids(i), name=dimnames(i),len=dimlens(i))
-       call handle_err(ncerr)
+       call handle_err(ncerr,__LINE__)
     end do
 
     allocate(array(dimlens(1),dimlens(2),dimlens(3)))
     
     ncerr=nf90_get_var(ncid, varid, array)
-    call handle_err(ncerr)
+    call handle_err(ncerr,__LINE__)
+       call handle_err(ncerr,__LINE__)
 
     ncerr=nf90_get_att(ncid, varid, 'add_offset', offset)
     if (ncerr/=NF90_NOERR) then
@@ -257,31 +288,73 @@ contains
     if (present(lons)) then
        if (associated(lons)) deallocate(lons)
        ncerr=nf90_inq_varid(ncid,dimnames(1),varid)
-       call handle_err(ncerr)
+       call handle_err(ncerr,__LINE__)
        allocate(lons(dimlens(1)))
        ncerr=nf90_get_var(ncid, varid, lons)
-       call handle_err(ncerr)
+       call handle_err(ncerr,__LINE__)
     end if
 
     if (present(lats)) then
        if (associated(lats)) deallocate(lats)
        ncerr=nf90_inq_varid(ncid,dimnames(2),varid)
-       call handle_err(ncerr)
+       call handle_err(ncerr,__LINE__)
        allocate(lats(dimlens(2)))
        ncerr=nf90_get_var(ncid, varid, lats)
-       call handle_err(ncerr)
+       call handle_err(ncerr,__LINE__)
+    end if
+
+    if (present(lonbound)) then
+       if (associated(lonbound)) deallocate(lonbound)
+       ncerr=nf90_inq_varid(ncid,'bounds_lon',varid)
+       call handle_err(ncerr,__LINE__)
+       ncerr=nf90_inquire_variable(ncid, varid, dimids=dimids)
+       call handle_err(ncerr,__LINE__)
+       do i=1,2
+          ncerr=nf90_inquire_dimension(ncid, dimids(i), name=dimnames(i),len=dimlens(i))
+          call handle_err(ncerr,__LINE__)
+       end do
+       allocate(lnb(dimlens(1),dimlens(2)),lonbound(dimlens(2)+1))
+       ncerr=nf90_get_var(ncid, varid,lnb)
+       call handle_err(ncerr,__LINE__)
+       do i=1,dimlens(2)
+          lonbound(i)=lnb(1,i)
+          lonbound(i+1)=lnb(2,i)
+       end do
+       deallocate(lnb)
+    end if
+
+    if (present(latbound)) then
+       if (associated(latbound)) deallocate(latbound)
+       ncerr=nf90_inq_varid(ncid,'bounds_lat',varid)
+       call handle_err(ncerr,__LINE__)
+       ncerr=nf90_inquire_variable(ncid, varid, dimids=dimids)
+       call handle_err(ncerr,__LINE__)
+       do i=1,2
+          ncerr=nf90_inquire_dimension(ncid, dimids(i), name=dimnames(i),len=dimlens(i))
+          call handle_err(ncerr,__LINE__)
+       end do
+       allocate(ltb(dimlens(1),dimlens(2)),latbound(dimlens(2)+1))
+       ncerr=nf90_get_var(ncid, varid,ltb)
+       call handle_err(ncerr,__LINE__)
+       do i=1,dimlens(2)
+          latbound(i)=ltb(1,i)
+          latbound(i+1)=ltb(2,i)
+       end do
+       deallocate(ltb)
     end if
 
   end subroutine read_ncdf_3d
 
-  subroutine handle_err(status)
+  subroutine handle_err(status,line)
 
     use netcdf
 
     integer, intent (in) :: status
+    integer, intent (in) :: line
     
     if(status /= nf90_noerr) then
        print *, trim(nf90_strerror(status))
+       print *, 'Line:',line
        stop "Stopped"
     end if
   end subroutine handle_err

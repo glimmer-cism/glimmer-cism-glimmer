@@ -1,3 +1,9 @@
+2005-03-16 Ian Rutt
+ * Added some dodgy f77 interpolation code (awi.f) to deal with problems I
+ had with different global grids in NCEP data used to force
+ glint_example. It is my aim to convert this to f90 soon.
+ * Changed glint_example to deal with new precip data
+
 2005-03-14 Ian Rutt
  * Adapted netcdf code to handle fractional year-lengths and added
   handling in GLINT for writing mass-balance information at these times
