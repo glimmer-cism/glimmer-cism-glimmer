@@ -111,7 +111,7 @@ module gmt
 
 contains
 
-  subroutine gmt_set(p_type,latc,lonc,radea,project_info)
+  subroutine gmt_set(p_type,latc,lonc,radea,std_par,project_info)
 
     !*FD Initialise a GMT parameter type
 
@@ -127,6 +127,7 @@ contains
     real(rk),intent(in) :: latc   !*FD Centre of projection (Latitude)
     real(rk),intent(in) :: lonc   !*FD Centre of projection (Longitude)
     real(rk),intent(in) :: radea  !*FD Radius of the Earth (m)
+    real(rk),intent(in) :: std_par !*FD Standard parallel (polar stereographic only, ignored otherwise)
     type(gmt_pinf),intent(inout) :: project_info !*FD GMT parameters to be initialised
 
     call gmt_type_init(project_info)
@@ -137,7 +138,9 @@ contains
     select case(p_type)
     case(1)   ! Lambert equal area 
       call gmt_lambeq_set(latc,lonc,project_info)
-    case(2:4)   ! Spherical/stereographic (polar,oblique equatorial) 
+    case(2)   ! Spherical/stereographic (polar) 
+      call gmt_map_init_stereo(latc,lonc,project_info,std_par)
+    case(3:4)  ! Spherical/stereographic (oblique, equatorial) 
       call gmt_map_init_stereo(latc,lonc,project_info)
     case default
       print*,'* ERROR: ',p_type,' is not a valid projection type.'
@@ -317,7 +320,7 @@ contains
 ! Spherical polar / Polar Stereographic
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine gmt_map_init_stereo(latg,rlong,project_info)
+  subroutine gmt_map_init_stereo(latg,rlong,project_info,std_par)
 
     !*FD Initialises a polar stereographic projection.
 
@@ -326,8 +329,11 @@ contains
     real(rk) :: latg      !*FD Centre of map projection, latitude (degrees).
     real(rk) :: rlong     !*FD Centre of map projection, longitude (degrees).
     type(gmt_pinf),intent(inout) :: project_info !*FD GMT parameters to be set.
+    real(rk),optional,intent(in) :: std_par !*FD Standard parallel (polar stereographic only, degrees)
 
     ! ---------------------------------------------------------------------------
+
+    real(rk) :: sp
 
     call gmt_set_polar (latg,project_info)
 
@@ -336,7 +342,13 @@ contains
 
     if (abs (latg) < SMALL) latg = 0.001
 
-    call gmt_vstereo(rlong,latg,project_info)
+	  if (present(std_par)) then
+		  sp=std_par
+	  else
+		  sp=90.0 
+    endif
+
+    call gmt_vstereo(rlong,latg,sp,project_info)
 
   end subroutine gmt_map_init_stereo
 
@@ -366,7 +378,7 @@ contains
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine gmt_vstereo (rlong0,plat,project_info)
+  subroutine gmt_vstereo (rlong0,plat,std_par,project_info)
 
     !*FD Set up a Stereographic transformation.
 
@@ -376,6 +388,8 @@ contains
 
     real(rk),      intent(in)    :: rlong0       !*FD Centre of the projection, longitude (degrees).
     real(rk),      intent(in)    :: plat         !*FD Centre of the projection, latitude (degrees).
+	  real(rk),      intent(in)    :: std_par      !*FD Standard parallel (for polar stereographic 
+	                                               !*FD only, in degrees)
     type(gmt_pinf),intent(inout) :: project_info !*FD GMT parameters to be set.
 
     ! Internal variables --------------------------------------------------------
@@ -391,7 +405,7 @@ contains
     project_info%sinp = sin (D2R*clat)    ! These may be conformal
     project_info%cosp = cos (D2R*clat)
     project_info%north_pole = (plat > 0.0)
-    project_info%s_c = 2.0 * project_info%EQ_RAD * GMT_map_scale_factor
+    project_info%s_c = 2.0 * project_info%EQ_RAD * GMT_map_scale_factor * sin(D2R*std_par)
     project_info%s_ic = 1.0 / project_info%s_c
 
   end subroutine gmt_vstereo

@@ -83,7 +83,7 @@ contains
     ! ...for the projection
 
     integer  :: p_type
-    real(sp) :: cpx,cpy,latc,lonc
+    real(sp) :: cpx,cpy,latc,lonc,std_par
 
     ! ...for the filenames
 
@@ -127,7 +127,7 @@ contains
     ! -------------------------------------------------------------------
 
     namelist / sizs / ewn, nsn, upn
-    namelist / prj  / p_type, cpx, cpy, latc, lonc
+    namelist / prj  / p_type, cpx, cpy, latc, lonc, std_par
     namelist / opts / whichtemp, whichartm, whichthck, whichflwa, &
                       whichisot, whichslip, whichbwat, whichmarn, &
                       whichbtrc, whichacab, whichstrs, & 
@@ -155,6 +155,7 @@ contains
     cpy    = proj%cpy
     latc   = proj%latc
     lonc   = proj%lonc
+    std_par= proj%std_par
 
     ! For options:
 
@@ -249,6 +250,7 @@ contains
     proj%dy=dns
     proj%latc=latc
     proj%lonc=lonc
+    proj%std_par=std_par
 
     ! copy to options type
 

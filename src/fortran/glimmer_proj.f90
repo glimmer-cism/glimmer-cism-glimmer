@@ -73,6 +73,7 @@ module glimmer_project
     real(rk)       :: dy                         !*FD the nominal $y$ grid-spacing at the centre of the projection
     real(rk)       :: cpx,cpy                    !*FD The location of the map projection centre within the grid ($x$ and $y$)
     real(rk)       :: latc,lonc                  !*FD The location of the projection centre in lat/lon space (lat and lon)
+    real(rk)       :: std_par=90.0               !*FD Standard parallel (polar stereographic only)
     real(rk),dimension(:,:),pointer :: sintheta => NULL()  !*FD sines of grid angle relative to north.
     real(rk),dimension(:,:),pointer :: costheta => NULL() !*FD coses of grid angle relative to north.
     real(rk),dimension(:,:),pointer :: latitudes => NULL() !*FD The latitude of each grid-point
@@ -84,7 +85,7 @@ module glimmer_project
 
 contains
 
-  subroutine new_proj(proj,radea,p_type,nx,ny,dx,dy,cpx,cpy,latc,lonc)
+  subroutine new_proj(proj,radea,p_type,nx,ny,dx,dy,cpx,cpy,latc,lonc,std_par)
 
     !*FD Initialise new map projection area. The subroutine may be used without the optional
     !*FD arguments to initialise a projection when these parameters
@@ -105,6 +106,7 @@ contains
     real(rk),intent(in),optional   :: cpy    !*FD The $y$-location of the projection centre within the grid
     real(rk),intent(in),optional   :: latc   !*FD The latitudinal location of the projection centre (degrees north)
     real(rk),intent(in),optional   :: lonc   !*FD The longituidinal location of the projection centre (degrees east)
+    real(rk),intent(in),optional   :: std_par !*FD The standard parallel (polar stereographic only, degrees north)
 
     if (present(p_type).and. &
         present(nx).and. &
@@ -125,11 +127,13 @@ contains
 
     endif
 
+    if (present(std_par)) proj%std_par=std_par
+
     call proj_allocate(proj)
 
     proj%sintheta=0.0 ; proj%costheta=0.0
 
-    call gmt_set(proj%p_type,proj%latc,proj%lonc,radea,proj%gmt_params)
+    call gmt_set(proj%p_type,proj%latc,proj%lonc,radea,proj%std_par,proj%gmt_params)
 
     call calc_grid_angle(proj)
 
