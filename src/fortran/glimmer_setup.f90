@@ -242,6 +242,7 @@ contains
       read(unit,nml=outs)
       read(unit,nml=dats)
       read(unit,nml=cons)
+      read(unit,nml=forc)
       close(unit)
     else
       print*,'Error opening namelist file ',trim(nmlfile),' - it doesn''t exist!'
