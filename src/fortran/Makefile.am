@@ -11,6 +11,7 @@ dist_variable_DATA = $(variable_DATA)
 nodist_include_HEADERS = *.mod
 
 BUILT_SOURCES = glide_io.f90 eis_io.f90 glint_io.f90
+dist_data_DATA= f90_dep.mak
 CLEANFILES = $(BUILT_SOURCES) f90_dep.mak
 
 libglimmer_a_SOURCES = glimmer_CFproj.f90 glimmer_config.f90 glimmer_global.f90 glimmer_utils.f90 glimmer_log.f90 glimmer_ts.f90 \
@@ -44,4 +45,4 @@ glint_io.f90:	glint_vars.def ncdf_template.f90.in
 f90_dep.mak:	*.f90 $(BUILT_SOURCES)
 		$(PYTHON) ../python/f90_dependencies.py -o $@ $^
 
-include f90_dep.mak
+-include f90_dep.mak
