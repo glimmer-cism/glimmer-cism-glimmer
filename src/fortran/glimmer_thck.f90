@@ -650,7 +650,7 @@ contains
        acab = prcp
     case(3)
 !       call enmabal
- 	   call masbgrn(pddcalc,artm,arng,prcp,lati,ablt,acab)
+       call masbgrn(pddcalc,artm,arng,prcp,lati,ablt,acab)
     case default
        call glide_msg(GM_FATAL,__FILE__,__LINE__,'Unrecognised value of whichacab')
     end select

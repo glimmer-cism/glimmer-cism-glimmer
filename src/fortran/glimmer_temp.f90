@@ -66,7 +66,7 @@ contains
 
     type(glimmer_global_type),intent(inout) :: model       !*FD Ice model parameters.
     integer,                  intent(in)    :: which       !*FD Flag to choose method.
-    real(sp),dimension(:,:),  intent(in)    :: artm        !*FD Surface air temperature
+    real(sp),dimension(:,:),  intent(in)    :: artm        !*FD Surface air temperature.
 
     !------------------------------------------------------------------------------------
     ! Internal variables
@@ -77,7 +77,7 @@ contains
     real(dp) :: tempresid
 
     integer :: iter, again
-    integer :: ew,ns
+    integer :: ew,ns,ewn,nsn
 
     real(dp),parameter :: tempthres = 0.001d0, floatlim = 10.0d0 / thk0
     integer, parameter :: mxit = 100
@@ -90,15 +90,17 @@ contains
     ! ewbc/nsbc set the type of boundary condition aplied at the end of
     ! the domain. a value of 0 implies zero gradient.
     !------------------------------------------------------------------------------------
-    ! Calculate the ice thickness according to different methods
+    ! Calculate the ice temperature according to different methods
     !------------------------------------------------------------------------------------
+
+    ewn=size(artm,1) ; nsn=size(artm,2)
 
     select case(which)
 
     case(0) ! Set column to surface air temperature -------------------------------------
 
-       do ns = 1,model%general%nsn
-          do ew = 1,model%general%ewn
+       do ns = 1,nsn
+          do ew = 1,ewn
              model%temper%temp(:,ew,ns) = dmin1(0.0d0,dble(artm(ew,ns)))
           end do
        end do
@@ -316,7 +318,10 @@ contains
 
        deallocate(model%tempwk%dissip,floater)
 
-    case(2) ! Do something else, unspecified ---------------------------------------
+    case(2) ! Set column temp to be air temp at top, and melting point at bottom, ---
+            ! interpolating linearly between the two, except where this exceeds -----
+            ! pressure melting point - in this case the temp is set to equal the ----
+            ! pressure melting point ------------------------------------------------
 
        model%temper%bwat = 0.0d0
 
@@ -340,15 +345,15 @@ contains
          real(model%temper%temp(model%general%upn,model%general%ewn/2+1,model%general%nsn/2+1))
     call glide_msg(GM_TIMESTEP,__FILE__,__LINE__,trim(adjustl(outtxt)))
 
-       ! Calculate Glenn's A --------------------------------------------------------
+    ! Calculate Glenn's A --------------------------------------------------------
 
-       call calcflwa(model%numerics,        &
-            model%velowk,          &
-            model%paramets%fiddle, &
-            model%temper%flwa,     &
-            model%temper%temp,     &
-            model%geometry%thck,   &
-            model%options%whichflwa) 
+    call calcflwa(model%numerics,        &
+                  model%velowk,          &
+                  model%paramets%fiddle, &
+                  model%temper%flwa,     &
+                  model%temper%temp,     &
+                  model%geometry%thck,   &
+                  model%options%whichflwa) 
 
   end subroutine timeevoltemp
 
@@ -678,13 +683,22 @@ contains
 
     implicit none
 
-    type(glimmer_global_type) :: model
-    integer, intent(in) :: ew, ns, iter
-    real(dp), dimension(:), intent(in) :: temp, wgrd, wvel, iteradvt, diagadvt
-    real(dp), intent(in) :: thck
-    real(sp), intent(in) :: artm 
-    real(dp), dimension(:), intent(out) :: subd, diag, supd, rhsd
-    logical, intent(in) :: float
+    type(glimmer_global_type),intent(inout) :: model
+    integer,                  intent(in)    :: iter
+    integer,                  intent(in)    :: ew
+    integer,                  intent(in)    :: ns
+    real(dp), dimension(:),   intent(out)   :: subd
+    real(dp), dimension(:),   intent(out)   :: diag
+    real(dp), dimension(:),   intent(out)   :: supd
+    real(dp), dimension(:),   intent(out)   :: rhsd
+    real(dp), dimension(:),   intent(in)    :: iteradvt
+    real(dp), dimension(:),   intent(in)    :: diagadvt
+    real(dp), dimension(:),   intent(in)    :: temp 
+    real(dp), dimension(:),   intent(in)    :: wgrd
+    real(dp), dimension(:),   intent(in)    :: wvel
+    real(dp),                 intent(in)    :: thck
+    real(sp),                 intent(in)    :: artm 
+    logical,                  intent(in)    :: float
     integer :: up
 
     real(dp) :: fact(3), dupnp1
