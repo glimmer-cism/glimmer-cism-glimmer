@@ -52,3 +52,10 @@ RANLIB=ranlib
 %.o : %.mod
 
 .SUFFIXES:	.f .f90 .o
+
+# Various machine-dependent things - would need to change for use under
+# Windows
+
+LIB_EXT=a
+OBJ_EXT=o
+OUT_FLAG=-o 

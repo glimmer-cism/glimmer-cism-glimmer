@@ -1,7 +1,9 @@
 2005-01-12 Ian Rutt
  * Restored .in files and generate_ncvars.py, but not as part of build
- structure, to enable system to still be used for development, but not as
- part of build
+   structure, to enable system to still be used for development, but not as
+   part of build
+ * Adjusted Makefiles to reflect machine-independence in GENIE build (i.e. added 
+   $(OBJ_EXT), etc)
 
 2005-01-11 Ian Rutt
  * Completed first stage changes to Glimmer structure for the new mass-balance model. 
