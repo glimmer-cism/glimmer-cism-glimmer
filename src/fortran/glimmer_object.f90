@@ -270,7 +270,7 @@ contains
     real(rk),dimension(:,:),intent(out)  :: g_water_out  !*FD Output water flux (mm)
     real(rk),               intent(out)  :: t_win        !*FD Total water input (kg)
     real(rk),               intent(out)  :: t_wout       !*FD Total water output (kg)
-    real(rk),               intent(out)  :: ice_vol      !*FD Output ice volume (m^3)
+    real(rk),               intent(out)  :: ice_vol      !*FD Output ice volume (m$^3$)
     type(output_flags),     intent(in)   :: out_f        !*FD Flags to tell us whether to do output       
 
     ! ------------------------------------------------------------------------  

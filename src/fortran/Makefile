@@ -88,10 +88,6 @@ clean :
 f90_dep.mak: *.f90 $(AUTOGEN)
 	python ../python/f90_dependencies.py -o $@ $^
 
-code_doc: $(SOURCES) $(OTHER_FILES)
-	f90doc -t "GLIMMER Code Documentation" -a "Ian Rutt" $(SOURCES) > ../../doc/code_doc.tex
-	cd ../../doc && latex2html -local_icons -split 4 -toc_depth 3 -link 1 code_doc.tex
-
 #some special rules for automatically generating ncdf src code
 ncdf.f90:	ncdf_vars.def ncdf.f90.in
 		python ../python/generate_ncvars.py $< $@.in	
