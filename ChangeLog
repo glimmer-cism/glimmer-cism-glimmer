@@ -1,3 +1,6 @@
+2004-09-01 Magnus Hagdorn
+ * glide_mask.f90: added module describing model cell content, it's not hooked up yet
+
 2004-08-27 Magnus Hagdorn
  * simple_forcing.f90: fixed another bug introduced by previous fix
 
