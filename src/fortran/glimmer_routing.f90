@@ -1,5 +1,5 @@
 
-module glimmer_routing
+module glint_routing
 
   use glimmer_global,only: rk
 
@@ -342,5 +342,5 @@ contains
 
   end subroutine q_sort_index
 
-end module glimmer_routing
+end module glint_routing
 

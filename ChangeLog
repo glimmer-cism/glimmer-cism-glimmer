@@ -1,6 +1,7 @@
 2005-01-10 Ian Rutt
  * Merge part 3 - fixed glint build, under windows and Linux
  * Removed redundant files
+ * renamed routing code in the glint series
 
 2005-02-10 Magnus Hagdorn
  * merged documentation
