@@ -385,6 +385,7 @@ module glide_types
 
   type glide_thckwk
     real(dp),dimension(:,:),  pointer :: oldthck   => null()
+    real(dp),dimension(:,:),  pointer :: oldthck2  => null()
     real(dp),dimension(:,:),  pointer :: basestate => null()
     real(dp),dimension(:,:),pointer :: float => null()
     real(dp),dimension(:,:,:),pointer :: olds      => null()
@@ -416,6 +417,7 @@ module glide_types
     real(dp),dimension(4)             :: cons     = 0.0
     real(dp),dimension(4)             :: f        = 0.0
     real(dp),dimension(8)             :: c        = 0.0
+    real(dp),dimension(2)             :: slide_f
     real(dp) :: noflow      = -1
     real(dp) :: advconst(2) = 0.0
     real(dp) :: zbed        = 0.0
@@ -588,9 +590,17 @@ contains
     allocate(model%thckwk%olds(ewn,nsn,model%thckwk%nwhich))
                                                       model%thckwk%olds = 0.0d0
     allocate(model%thckwk%oldthck(ewn,nsn));          model%thckwk%oldthck = 0.0d0
+    allocate(model%thckwk%oldthck2(ewn,nsn));         model%thckwk%oldthck2 = 0.0d0
     allocate(model%thckwk%basestate(ewn,nsn));        model%thckwk%basestate = 0.0d0
     allocate(model%isotwk%load(ewn,nsn));             model%isotwk%load = 0.0d0 
     allocate(model%numerics%sigma(upn))
+    
+    ! allocate memory for sparse matrix
+    allocate (model%pcgdwk%pcgrow(ewn*nsn*5))
+    allocate (model%pcgdwk%pcgcol(ewn*nsn*5))
+    allocate (model%pcgdwk%pcgval(ewn*nsn*5))
+    allocate (model%pcgdwk%rhsd(ewn*nsn))
+    allocate (model%pcgdwk%answ(ewn*nsn))
 
   end subroutine glide_allocarr
 
@@ -640,9 +650,13 @@ contains
 
     deallocate(model%thckwk%olds)
     deallocate(model%thckwk%oldthck)
+    deallocate(model%thckwk%oldthck2)
     deallocate(model%thckwk%basestate)
     deallocate(model%isotwk%load)
     deallocate(model%numerics%sigma)
+    
+    deallocate(model%pcgdwk%pcgrow,model%pcgdwk%pcgcol,model%pcgdwk%pcgval,model%pcgdwk%rhsd,model%pcgdwk%answ)
+
   end subroutine glide_deallocarr
 end module glide_types
 

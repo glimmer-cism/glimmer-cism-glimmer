@@ -233,7 +233,7 @@ units:         meter/year
 long_name:     accumulation, ablation rate
 data:          model%climate%acab
 factor:        scale2d_f1
-standard_name: land_ice_lwe_surface_specific_mass_balance
+standard_name: land_ice_surface_specific_mass_balance
 coordinates:   lon lat
 
 [bmlt]
@@ -242,7 +242,7 @@ units:         meter/year
 long_name:     basal melt rate
 data:          model%temper%bmlt
 factor:        scale2d_f1
-standard_name: land_ice_lwe_basal_melt_rate
+standard_name: land_ice_basal_melt_rate
 hot:           1
 coordinates:   lon lat
 

@@ -1,3 +1,10 @@
+2004-12-02 Magnus Hagdorn
+ * merged in eismint_1: this should fix all (most) EISMINT problems
+   the GLINT-GLIDE_eismint should be considered stable, all interesting
+   stuff will go on on the GLINT-GLIDE branch
+ * removed lwe from standard names since mass balance and meltrate are
+   measured in ice rather than liquid-water-equiv.
+ 
 2004-11-28 Magnus Hagdorn
  * added description of non-linear solver
 

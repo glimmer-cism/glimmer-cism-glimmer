@@ -39,187 +39,393 @@
 ! http://forge.nesc.ac.uk/projects/glimmer/
 !
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
 module glide_thck
 
   use glide_types
 
+#ifdef DEBUG_PICARD
+  ! debugging Picard iteration
+  integer, private, parameter :: picard_unit=101
+  real, private, parameter    :: picard_interval=500.
+  integer, private            :: picard_max=0
+#endif
 contains
 
   subroutine init_thck(model)
     !*FD initialise work data for ice thickness evolution
+    use glimmer_log
     implicit none
     type(glide_global_type) :: model
 
     allocate(model%thckwk%float(model%general%ewn,model%general%nsn))
     
-    select case(model%options%whichevol)
-    case(0)
-       model%pcgdwk%fc = (/ model%numerics%alpha * model%numerics%dt / (2.0d0 * model%numerics%dew), &
-            model%numerics%alpha * model%numerics%dt / (2.0d0 * model%numerics%dew), model%numerics%dt, &
-            (1.0d0-model%numerics%alpha) / model%numerics%alpha/)       
-    case(2)
-       model%pcgdwk%fc2 = (/ model%numerics%alpha * model%numerics%dt / (2.0d0 * model%numerics%dew * model%numerics%dew), &
-            model%numerics%dt, (1.0d0-model%numerics%alpha) / model%numerics%alpha, &
-            1.0d0 / model%numerics%alpha, model%numerics%alpha * model%numerics%dt / &
-            (2.0d0 * model%numerics%dns * model%numerics%dns), 0.0d0 /) 
-    end select
+    model%pcgdwk%fc2 = (/ model%numerics%alpha * model%numerics%dt / (2.0d0 * model%numerics%dew * model%numerics%dew), &
+         model%numerics%dt, (1.0d0-model%numerics%alpha) / model%numerics%alpha, &
+         1.0d0 / model%numerics%alpha, model%numerics%alpha * model%numerics%dt / &
+         (2.0d0 * model%numerics%dns * model%numerics%dns), 0.0d0 /) 
+
+#ifdef DEBUG_PICARD
+    call write_log('Logging Picard iterations')
+    open(picard_unit,name='picard_info.data',status='unknown')
+    write(picard_unit,*) '#time    max_iter'
+#endif
   end subroutine init_thck
 
-  subroutine timeevolthck(model,thckflag,usrf,thck,acab,mask,uflx,vflx,dusrfdew,dusrfdns,totpts,logunit)
+  subroutine thck_lin_evolve(model,newtemps,logunit)
 
-    use glimmer_global, only : dp, sp 
+    !*FD this subroutine solves the linearised ice thickness equation by computing the
+    !*FD diffusivity from quantities of the previous time step
 
+    use glide_velo
     implicit none
-
+    ! subroutine arguments
     type(glide_global_type) :: model
-    real(dp), intent(in), dimension(:,:) :: uflx, vflx, dusrfdew, dusrfdns, usrf
-    real(sp), intent(in), dimension(:,:) :: acab 
-    integer, intent(in), dimension(:,:) :: mask
-    integer, intent(in) :: totpts, thckflag
-    real(dp), intent(inout), dimension(:,:) :: thck 
-    integer,intent(in) :: logunit
-    
-    integer, parameter :: flag = 0
-    real(dp), dimension(5) :: sumd 
-    real(dp) :: err 
-    real(dp), parameter :: tolbnd = 1.0d-12
-    integer :: linit 
-    integer, parameter :: mxtbnd = 10
-    integer :: ew,ns
+    logical, intent(in) :: newtemps                     !*FD true when we should recalculate Glen's A
+    integer,intent(in) :: logunit                       !*FD unit for logging
+
+    if (model%geometry%empty) then
+
+       model%geometry%thck = dmax1(0.0d0,model%geometry%thck + model%climate%acab * model%pcgdwk%fc2(2))
+       print *, "* thck empty - net accumulation added", model%numerics%time
+
+    else
+
+       ! calculate basal velos
+       if (newtemps) then
+          call slipvelo(model%numerics,                &
+               model%velowk,                  &
+               model%geomderv,                &
+               (/1,model%options%whichbtrc/), &
+               model%temper%   bwat,          &
+               model%velocity% btrc,          &
+               model%geometry% relx,          &
+               model%velocity% ubas,          &
+               model%velocity% vbas)
+       end if
+       call slipvelo(model%numerics,                &
+            model%velowk,                  &
+            model%geomderv,                &
+            (/2,model%options%whichbtrc/), &
+            model%temper%   bwat,          &
+            model%velocity% btrc,          &
+            model%geometry% relx,          &
+            model%velocity% ubas,          &
+            model%velocity% vbas)
+
+       ! calculate Glen's A if necessary
+       if (newtemps) then
+          call velo_integrate_flwa(model%velowk,model%geomderv%stagthck,model%temper%flwa)
+       end if
+       ! calculate diffusivity
+       call velo_calc_diffu(model%velowk,model%geomderv%stagthck,model%geomderv%dusrfdew, &
+            model%geomderv%dusrfdns,model%velocity%diffu)
+
+       ! get new thicknesses
+       call thck_evolve(model,logunit,.true.,model%geometry%thck,model%geometry%thck)
+
+       ! calculate horizontal velocity field
+       call slipvelo(model%numerics,                &
+            model%velowk,                  &
+            model%geomderv,                &
+            (/3,model%options%whichbtrc/), &
+            model%temper%bwat,             &
+            model%velocity%btrc,           &
+            model%geometry%relx,           &
+            model%velocity%ubas,           &
+            model%velocity%vbas)
+       call velo_calc_velo(model%velowk,model%geomderv%stagthck,model%geomderv%dusrfdew, &
+            model%geomderv%dusrfdns,model%temper%flwa,model%velocity%diffu,model%velocity%ubas, &
+            model%velocity%vbas,model%velocity%uvel,model%velocity%vvel,model%velocity%uflx,model%velocity%vflx)
+    end if
+  end subroutine thck_lin_evolve
+
+  subroutine thck_nonlin_evolve(model,newtemps,logunit)
+
+    !*FD this subroutine solves the ice thickness equation by doing an outer, 
+    !*FD non-linear iteration to update the diffusivities and in inner, linear
+    !*FD iteration to calculate the new ice thickness distrib
+
+    use glimmer_global, only : dp
+    use glide_velo
+    use glide_setup
+    implicit none
+    ! subroutine arguments
+    type(glide_global_type) :: model
+    logical, intent(in) :: newtemps                     !*FD true when we should recalculate Glen's A
+    integer,intent(in) :: logunit                       !*FD unit for logging
+
+    ! local variables
+    integer, parameter :: pmax=50                       !*FD maximum Picard iterations
+    real(kind=dp), parameter :: tol=1.0d-6
+    real(kind=dp) :: residual
+    integer p
+    logical first_p
 
 
     if (model%geometry%empty) then
 
-      thck = dmax1(0.0d0,thck + acab * model%pcgdwk%fc(2))
-      print *, "* thck empty - net accumulation added", model%numerics%time
+       model%geometry%thck = dmax1(0.0d0,model%geometry%thck + model%climate%acab * model%pcgdwk%fc2(2))
+       print *, "* thck empty - net accumulation added", model%numerics%time
 
     else
 
-      !* the number of grid points and the number of nonzero matrix elements (including bounary points)
-      model%pcgdwk%pcgsize = (/ totpts, totpts * 5 /)
+       ! calculate basal velos
+       if (newtemps) then
+          call slipvelo(model%numerics,                &
+               model%velowk,                  &
+               model%geomderv,                &
+               (/1,model%options%whichbtrc/), &
+               model%temper%   bwat,          &
+               model%velocity% btrc,          &
+               model%geometry% relx,          &
+               model%velocity% ubas,          &
+               model%velocity% vbas)
+          ! calculate Glen's A if necessary
+          call velo_integrate_flwa(model%velowk,model%geomderv%stagthck,model%temper%flwa)
+       end if
 
-      !* allocate sparse matrices of the appropriate size 
-      allocate (model%pcgdwk%pcgrow(model%pcgdwk%pcgsize(2)))
-      allocate (model%pcgdwk%pcgcol(model%pcgdwk%pcgsize(2)))
-      allocate (model%pcgdwk%pcgval(model%pcgdwk%pcgsize(2)))
-      allocate (model%pcgdwk%rhsd(model%pcgdwk%pcgsize(1)))
-      allocate (model%pcgdwk%answ(model%pcgdwk%pcgsize(1)))
+       first_p = .true.
+       model%thckwk%oldthck = model%geometry%thck
+       ! do Picard iteration
+       do p=1,pmax
+          model%thckwk%oldthck2 = model%geometry%thck
 
-      model%pcgdwk%ct = 1
+          call stagvarb(model%geometry% thck, &
+               model%geomderv% stagthck,&
+               model%general%  ewn, &
+               model%general%  nsn)
 
-      do ns = 1,model%general%nsn
-        do ew = 1,model%general%ewn 
-          if (mask(ew,ns) /= 0) then
-            if (ew == 1 .or. ew == model%general%ewn .or. ns == 1 .or. ns == model%general%nsn) then
-              call putpcgc(model%pcgdwk,1.0d0,mask(ew,ns),mask(ew,ns))           ! point (ew,ns)
-              model%pcgdwk%rhsd(mask(ew,ns)) = thck(ew,ns) 
-              model%pcgdwk%answ(mask(ew,ns)) = thck(ew,ns) 
-            else if (any((thck(ew-1:ew+1,ns-1:ns+1) == 0.0d0)) .and. thckflag == 5) then
-              call putpcgc(model%pcgdwk,1.0d0,mask(ew,ns),mask(ew,ns))           ! point (ew,ns)
-              model%pcgdwk%rhsd(mask(ew,ns)) = thck(ew,ns) + acab(ew,ns) * model%pcgdwk%fc(3) 
-              model%pcgdwk%answ(mask(ew,ns)) = thck(ew,ns) 
-            else
-              sumd = findsums(uflx(ew-1:ew,ns-1:ns),dusrfdew(ew-1:ew,ns-1:ns),&
-                        vflx(ew-1:ew,ns-1:ns),dusrfdns(ew-1:ew,ns-1:ns),model%pcgdwk%fc)
-              call putpcgc(model%pcgdwk,sumd(1),mask(ew-1,ns),mask(ew,ns))       ! point (ew-1,ns)
-              call putpcgc(model%pcgdwk,sumd(2),mask(ew+1,ns),mask(ew,ns))       ! point (ew+1,ns)
-              call putpcgc(model%pcgdwk,sumd(3),mask(ew,ns-1),mask(ew,ns))       ! point (ew,ns-1)
-              call putpcgc(model%pcgdwk,sumd(4),mask(ew,ns+1),mask(ew,ns))       ! point (ew,ns+1)
-              call putpcgc(model%pcgdwk,1.0d0 + sumd(5),mask(ew,ns),mask(ew,ns)) ! point (ew,ns)
+          call geomders(model%numerics, &
+               model%geometry% usrf, &
+               model%geomderv% stagthck,&
+               model%geomderv% dusrfdew, &
+               model%geomderv% dusrfdns)
 
-              model%pcgdwk%rhsd(mask(ew,ns)) = thck(ew,ns) + acab(ew,ns) * model%pcgdwk%fc(3) - &
-                            model%pcgdwk%fc(4) * (usrf(ew,ns) * sumd(5) + &
-                            usrf(ew-1,ns) * sumd(1) + usrf(ew+1,ns) * sumd(2) + &
-                            usrf(ew,ns-1) * sumd(3) + usrf(ew,ns+1) * sumd(4))  
+          call geomders(model%numerics, &
+               model%geometry% thck, &
+               model%geomderv% stagthck,&
+               model%geomderv% dthckdew, &
+               model%geomderv% dthckdns)
 
-              model%pcgdwk%answ(mask(ew,ns)) = thck(ew,ns) 
 
-            end if
+          call slipvelo(model%numerics,                &
+               model%velowk,                  &
+               model%geomderv,                &
+               (/2,model%options%whichbtrc/), &
+               model%temper%   bwat,          &
+               model%velocity% btrc,          &
+               model%geometry% relx,          &
+               model%velocity% ubas,          &
+               model%velocity% vbas)
+
+          ! calculate diffusivity
+          call velo_calc_diffu(model%velowk,model%geomderv%stagthck,model%geomderv%dusrfdew, &
+               model%geomderv%dusrfdns,model%velocity%diffu)
+
+          ! get new thicknesses
+          call thck_evolve(model,logunit,first_p,model%thckwk%oldthck,model%geometry%thck)
+
+          first_p = .false.
+          residual = maxval(abs(model%geometry%thck-model%thckwk%oldthck2))
+          if (residual.le.tol) then
+             exit
           end if
-        end do
-      end do
+          
+          ! calculate upper and lower surface
+          call glide_calclsrf(model%geometry%thck, model%geometry%topg, model%climate%eus, model%geometry%lsrf)
+          model%geometry%usrf = max(0.d0,model%geometry%thck + model%geometry%lsrf)
 
-      model%pcgdwk%pcgsize(2) = model%pcgdwk%ct - 1 
-      call slapsolv(model,.true.,linit,err,logunit)   
-
-      do ns = 1,model%general%nsn
-        do ew = 1,model%general%ewn 
-
-          if (mask(ew,ns) /= 0) then
-            thck(ew,ns) = model%pcgdwk%answ(mask(ew,ns))
-          end if
-
-        end do
-      end do
-
-      ! *tp+* implement bcs
-
-      thck(1,:) = thck(2,:)
-      thck(model%general%ewn,:) = thck(model%general%ewn-1,:)
-      thck(:,1) = thck(:,2)
-      thck(:,model%general%nsn) = thck(:,model%general%nsn-1)
-
-      model%pcgdwk%tlinit = model%pcgdwk%tlinit + linit
-      model%pcgdwk%mlinit = max(linit,model%pcgdwk%mlinit)
-
-      thck = max(0.0d0, thck)
-
-#ifdef DEBUG
-      print *, "* thck ", model%numerics%time, linit, model%pcgdwk%mlinit, model%pcgdwk%tlinit, totpts, &
-          real(thk0*thck(model%general%ewn/2+1,model%general%nsn/2+1))
+       end do
+#ifdef DEBUG_PICARD
+       picard_max=max(picard_max,p)
+       if (model%numerics%tinc > mod(model%numerics%time,picard_interval)) then
+          write(picard_unit,*) model%numerics%time,p
+          picard_max = 0
+       end if
 #endif
 
-      deallocate(model%pcgdwk%pcgrow,model%pcgdwk%pcgcol)
-      deallocate(model%pcgdwk%pcgval,model%pcgdwk%rhsd,model%pcgdwk%answ)
-
+       ! calculate horizontal velocity field
+       call slipvelo(model%numerics,                &
+            model%velowk,                  &
+            model%geomderv,                &
+            (/3,model%options%whichbtrc/), &
+            model%temper%bwat,             &
+            model%velocity%btrc,           &
+            model%geometry%relx,           &
+            model%velocity%ubas,           &
+            model%velocity%vbas)
+       call velo_calc_velo(model%velowk,model%geomderv%stagthck,model%geomderv%dusrfdew, &
+            model%geomderv%dusrfdns,model%temper%flwa,model%velocity%diffu,model%velocity%ubas, &
+            model%velocity%vbas,model%velocity%uvel,model%velocity%vvel,model%velocity%uflx,model%velocity%vflx)
     end if
+  end subroutine thck_nonlin_evolve
+
+  subroutine thck_evolve(model,logunit,calc_rhs,old_thck,new_thck)
+
+    !*FD set up sparse matrix and solve matrix equation to find new ice thickness distribution
+    !*FD this routine does not override the old thickness distribution
+
+    use glimmer_global, only : dp
+    use paramets, only : thk0,vel0
+    implicit none
+    ! subroutine arguments
+    type(glide_global_type) :: model
+    integer,intent(in) :: logunit                       !*FD unit for logging
+    logical,intent(in) :: calc_rhs                      !*FD set to true when rhs should be calculated 
+                                                        !*FD i.e. when doing lin solution or first picard iteration
+    real(dp), intent(in), dimension(:,:) :: old_thck    !*FD contains ice thicknesses from previous time step
+    real(dp), intent(inout), dimension(:,:) :: new_thck !*FD on entry contains first guess for new ice thicknesses
+                                                        !*FD on exit contains ice thicknesses of new time step
+
+    ! local variables
+    real(dp), dimension(5) :: sumd 
+    real(dp) :: err
+    real(dp), parameter :: tolbnd = 1.0d-6
+    integer :: thckflag = 0
+
+    integer :: linit
+    integer, parameter :: mxtbnd = 10, ewbc = 1, nsbc = 1
+
+    ! ewbc/nsbc set the type of boundary condition aplied at the end of
+    ! the domain. a value of 0 implies zero gradient.
+
+    integer :: ew,ns
+
+       !* the number of grid points and the number of nonzero 
+       !* matrix elements (including bounary points)
+       model%pcgdwk%pcgsize = (/ model%geometry%totpts, model%geometry%totpts * 5 /)
+
+       model%pcgdwk%ct = 1
+
+       do ns = 1,model%general%nsn
+          do ew = 1,model%general%ewn 
+
+             if (model%geometry%mask(ew,ns) /= 0) then
+
+                if (ew == 1 .or. ew == model%general%ewn .or. &
+                     ns == 1 .or. &
+                     ns == model%general%nsn) then
+
+                   call putpcgc(model%pcgdwk,&
+                        1.0d0, &
+                        model%geometry%mask(ew,ns), &
+                        model%geometry%mask(ew,ns))           ! point (ew,ns)
+                   if (calc_rhs) then
+                      model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = old_thck(ew,ns) 
+                   end if
+                   model%pcgdwk%answ(model%geometry%mask(ew,ns)) = new_thck(ew,ns) 
+
+                else if (any((model%geometry%thck(ew-1:ew+1,ns-1:ns+1) == 0.0d0)) .and. thckflag == 5) then
+
+                   call putpcgc(model%pcgdwk, &
+                        1.0d0, &
+                        model%geometry%mask(ew,ns), &
+                        model%geometry%mask(ew,ns))           ! point (ew,ns)
+
+                   if (calc_rhs) then
+                      model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = old_thck(ew,ns) + &
+                           model%climate%acab(ew,ns) * model%pcgdwk%fc2(2) 
+                   end if
+                   model%pcgdwk%answ(model%geometry%mask(ew,ns)) = new_thck(ew,ns) 
+
+                else
+
+                   call findsums(ew,ns,model%pcgdwk%fc2)
+
+                   call putpcgc(model%pcgdwk,sumd(1), &
+                        model%geometry%mask(ew-1,ns), &
+                        model%geometry%mask(ew,ns))       ! point (ew-1,ns)
+                   call putpcgc(model%pcgdwk,sumd(2), &
+                        model%geometry%mask(ew+1,ns), &
+                        model%geometry%mask(ew,ns))       ! point (ew+1,ns)
+                   call putpcgc(model%pcgdwk,sumd(3), &
+                        model%geometry%mask(ew,ns-1), &
+                        model%geometry%mask(ew,ns))       ! point (ew,ns-1)
+                   call putpcgc(model%pcgdwk,sumd(4), &
+                        model%geometry%mask(ew,ns+1), &
+                        model%geometry%mask(ew,ns))       ! point (ew,ns+1)
+                   call putpcgc(model%pcgdwk,1.0d0 + sumd(5), &
+                        model%geometry%mask(ew,ns), &
+                        model%geometry%mask(ew,ns)) ! point (ew,ns)
+
+                   if (calc_rhs) then
+                      model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = old_thck(ew,ns) * &
+                           (1.0d0 - model%pcgdwk%fc2(3) * sumd(5)) - model%pcgdwk%fc2(3) * &
+                           (old_thck(ew-1,ns) * sumd(1) + old_thck(ew+1,ns) * sumd(2) + &
+                           old_thck(ew,ns-1) * sumd(3) + old_thck(ew,ns+1) * sumd(4)) - &
+                           model%pcgdwk%fc2(4) * (model%geometry%lsrf(ew,ns) * sumd(5) + &
+                           model%geometry%lsrf(ew-1,ns) * sumd(1) + model%geometry%lsrf(ew+1,ns) * sumd(2) + &
+                           model%geometry%lsrf(ew,ns-1) * sumd(3) + model%geometry%lsrf(ew,ns+1) * sumd(4)) +  &
+                           model%climate%acab(ew,ns) * model%pcgdwk%fc2(2)
+                   end if
+                   model%pcgdwk%answ(model%geometry%mask(ew,ns)) = new_thck(ew,ns) 
+
+                end if
+             end if
+          end do
+       end do
+
+       model%pcgdwk%pcgsize(2) = model%pcgdwk%ct - 1 
+
+       call slapsolv(model,.true.,linit,err,logunit)   
+
+       do ns = 1,model%general%nsn
+          do ew = 1,model%general%ewn 
+
+             if (model%geometry%mask(ew,ns) /= 0) then
+                new_thck(ew,ns) = model%pcgdwk%answ(model%geometry%mask(ew,ns))
+             end if
+
+          end do
+       end do
+
+       ! *tp+* implement bcs
+
+       call swapbndh(ewbc, &
+            new_thck(1,:), new_thck(2,:), &
+            new_thck(model%general%ewn,:), new_thck(model%general%ewn-1,:))
+       call swapbndh(nsbc, &
+            new_thck(:,1), new_thck(:,2), &
+            new_thck(:,model%general%nsn), new_thck(:,model%general%nsn-1))
+
+       model%pcgdwk%tlinit = model%pcgdwk%tlinit + linit
+       model%pcgdwk%mlinit = max(linit,model%pcgdwk%mlinit)
+
+       new_thck = max(0.0d0, new_thck)
+#ifdef DEBUG
+       print *, "* thck ", model%numerics%time, linit, model%pcgdwk%mlinit, model%pcgdwk%tlinit, model%geometry%totpts, &
+            real(thk0*new_thck(model%general%ewn/2+1,model%general%nsn/2+1)), &
+            real(vel0*maxval(abs(model%velocity%ubas))), real(vel0*maxval(abs(model%velocity%vbas))) 
+#endif
 
   contains
-
-    function findsums(uf,dsx,vf,dsy,fc)
-
-      use glimmer_global, only : dp
-
-      implicit none
-          
-      real(dp), intent(in), dimension(2,2) :: uf, dsx, vf, dsy
-      real(dp), dimension(5) :: findsums
-      real(dp),dimension(4),intent(in) :: fc
-     
-      findsums(1) = (divider(uf(1,1),dsx(1,1)) + divider(uf(1,2),dsx(1,2))) / fc(1)
-      findsums(2) = (divider(uf(2,1),dsx(2,1)) + divider(uf(2,2),dsx(2,2))) / fc(1)
-      findsums(3) = (divider(vf(1,1),dsy(1,1)) + divider(vf(2,1),dsy(2,1))) / fc(2)
-      findsums(4) = (divider(vf(1,2),dsy(1,2)) + divider(vf(2,2),dsy(2,2))) / fc(2)
-
-      findsums(5) = - sum(findsums(1:4))
-
-    end function findsums
-       
-    function divider(b,a)
-
-      use glimmer_global, only : dp
+    
+    subroutine findsums(ew,ns,fc)
 
       implicit none
 
-      real(dp), intent(in) :: a, b
-      real(dp) :: divider
+      integer, intent(in) :: ew, ns
+      real(dp),intent(in),dimension(6) :: fc
 
-      if (a .ne. 0.0d0) then
-        divider = - b / a
-      else
-        divider = 0.0d0 
-      end if
+      sumd(1) = fc(1) * (sum(model%velocity%diffu(ew-1,ns-1:ns)) + &
+           sum(model%velocity%ubas(ew-1,ns-1:ns)))
+      sumd(2) = fc(1) * (sum(model%velocity%diffu(ew,ns-1:ns)) + &
+           sum(model%velocity%ubas(ew,ns-1:ns)))
+      sumd(3) = fc(5) * (sum(model%velocity%diffu(ew-1:ew,ns-1)) + &
+           sum(model%velocity%ubas(ew-1:ew,ns-1)))
+      sumd(4) = fc(5) * (sum(model%velocity%diffu(ew-1:ew,ns)) + &
+           sum(model%velocity%ubas(ew-1:ew,ns)))
+      sumd(5) = - sum(sumd(1:4))
 
-    end function divider
-
-  end subroutine timeevolthck
+    end subroutine findsums
+  end subroutine thck_evolve
 
 !---------------------------------------------------------------------------------
 
   subroutine slapsolv(model,first,iter,err,lunit)
 
     use glimmer_global, only : dp 
+    use glide_stop
   !use pcgdwk 
   !use funits, only : ulog
 
@@ -278,6 +484,7 @@ contains
       call dcpplt(model%pcgdwk%pcgsize(1),model%pcgdwk%pcgsize(2),model%pcgdwk%pcgrow, &
                 model%pcgdwk%pcgcol,model%pcgdwk%pcgval,isym,lunit)
       print *, model%pcgdwk%pcgval
+      call glide_finalise(model,.true.)
       stop
     end if
 
@@ -591,260 +798,6 @@ contains
     deallocate(smth)            
 
   end subroutine filterthck
-
-!---------------------------------------------------------------------------------
-
-  subroutine nonlevolthck(model,thckflag,newtemps,logunit)
-
-    use glimmer_global, only : dp
-
-    use glide_velo
-
-    implicit none
-
-    type(glide_global_type) :: model
-    integer, intent(in) :: thckflag
-    logical, intent(in) :: newtemps
-    integer,intent(in) :: logunit
-
-    real(dp), dimension(5) :: sumd 
-    real(dp) :: err
-    real(dp), parameter :: tolbnd = 1.0d-6
-
-    integer :: linit
-    integer, parameter :: mxtbnd = 10, ewbc = 1, nsbc = 1
-
-! ewbc/nsbc set the type of boundary condition aplied at the end of
-! the domain. a value of 0 implies zero gradient.
-
-    integer :: ew,ns
-
-    if (model%geometry%empty) then
-
-      model%geometry%thck = dmax1(0.0d0,model%geometry%thck + model%climate%acab * model%pcgdwk%fc2(2))
-      print *, "* thck empty - net accumulation added", model%numerics%time
-
-    else
-
-      if (newtemps) then
-        call slipvelo(model%numerics,                &
-                      model%velowk,                  &
-                      model%geomderv,                &
-                      (/1,model%options%whichbtrc/), &
-                      model%temper%   bwat,          &
-                      model%velocity% btrc,          &
-                      model%geometry% relx,          &
-                      model%velocity% ubas,          &
-                      model%velocity% vbas)
-      end if
-
-      call slipvelo(model%numerics,                &
-                    model%velowk,                  &
-                    model%geomderv,                &
-                    (/2,model%options%whichbtrc/), &
-                    model%temper%   bwat,          &
-                    model%velocity% btrc,          &
-                    model%geometry% relx,          &
-                    model%velocity% ubas,          &
-                    model%velocity% vbas)
-
-      if (newtemps) then
-        call zerovelo(model%velowk,            &
-                      model%numerics%sigma,    &
-                      1,                       &
-                      model%geomderv%stagthck, &
-                      model%geomderv%dusrfdew, &
-                      model%geomderv%dusrfdns, &
-                      model%temper%flwa,       &
-                      model%velocity%ubas,     &
-                      model%velocity%vbas,     &
-                      model%velocity%uvel,     &
-                      model%velocity%vvel,     &
-                      model%velocity%uflx,     &
-                      model%velocity%vflx,     &
-                      model%velocity%diffu)
-      end if
-
-      call zerovelo(model%velowk,             &
-                    model%numerics%sigma,    &
-                    2,                       &
-                    model%geomderv%stagthck, &
-                    model%geomderv%dusrfdew, &
-                    model%geomderv%dusrfdns, &
-                    model%temper%flwa,       &
-                    model%velocity%ubas,     &
-                    model%velocity%vbas,     &
-                    model%velocity%uvel,     &
-                    model%velocity%vvel,     &
-                    model%velocity%uflx,     &
-                    model%velocity%vflx,     &
-                    model%velocity%diffu)
-
-      !* the number of grid points and the number of nonzero 
-      !* matrix elements (including bounary points)
-      model%pcgdwk%pcgsize = (/ model%geometry%totpts, model%geometry%totpts * 5 /)
-
-      !* allocate sparse matrices of the appropriate size 
-      allocate (model%pcgdwk%pcgrow(model%pcgdwk%pcgsize(2)))
-      allocate (model%pcgdwk%pcgcol(model%pcgdwk%pcgsize(2)))
-      allocate (model%pcgdwk%pcgval(model%pcgdwk%pcgsize(2)))
-      allocate (model%pcgdwk%rhsd(model%pcgdwk%pcgsize(1)))
-      allocate (model%pcgdwk%answ(model%pcgdwk%pcgsize(1)))
-
-      model%pcgdwk%ct = 1
-
-      do ns = 1,model%general%nsn
-        do ew = 1,model%general%ewn 
-
-          if (model%geometry%mask(ew,ns) /= 0) then
-
-            if (ew == 1 .or. ew == model%general%ewn .or. &
-                ns == 1 .or. &
-                ns == model%general%nsn) then
-    
-              call putpcgc(model%pcgdwk,&
-                           1.0d0, &
-                           model%geometry%mask(ew,ns), &
-                           model%geometry%mask(ew,ns))           ! point (ew,ns)
-
-              model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = model%geometry%thck(ew,ns) 
-              model%pcgdwk%answ(model%geometry%mask(ew,ns)) = model%geometry%thck(ew,ns) 
-
-            else if (any((model%geometry%thck(ew-1:ew+1,ns-1:ns+1) == 0.0d0)) .and. thckflag == 5) then
-
-              call putpcgc(model%pcgdwk, &
-                           1.0d0, &
-                           model%geometry%mask(ew,ns), &
-                           model%geometry%mask(ew,ns))           ! point (ew,ns)
-
-              model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = model%geometry%thck(ew,ns) + &
-                                                              model%climate%acab(ew,ns) * model%pcgdwk%fc2(2) 
-              model%pcgdwk%answ(model%geometry%mask(ew,ns)) = model%geometry%thck(ew,ns) 
-
-            else
-
-              call findsums(ew,ns,model%pcgdwk%fc2)
-
-              call putpcgc(model%pcgdwk,sumd(1), &
-                           model%geometry%mask(ew-1,ns), &
-                           model%geometry%mask(ew,ns))       ! point (ew-1,ns)
-              call putpcgc(model%pcgdwk,sumd(2), &
-                           model%geometry%mask(ew+1,ns), &
-                           model%geometry%mask(ew,ns))       ! point (ew+1,ns)
-              call putpcgc(model%pcgdwk,sumd(3), &
-                           model%geometry%mask(ew,ns-1), &
-                           model%geometry%mask(ew,ns))       ! point (ew,ns-1)
-              call putpcgc(model%pcgdwk,sumd(4), &
-                           model%geometry%mask(ew,ns+1), &
-                           model%geometry%mask(ew,ns))       ! point (ew,ns+1)
-              call putpcgc(model%pcgdwk,1.0d0 + sumd(5), &
-                           model%geometry%mask(ew,ns), &
-                           model%geometry%mask(ew,ns)) ! point (ew,ns)
-
-              model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = model%geometry%thck(ew,ns) * &
-                             (1.0d0 - model%pcgdwk%fc2(3) * sumd(5)) - model%pcgdwk%fc2(3) * &
-                             (model%geometry%thck(ew-1,ns) * sumd(1) + model%geometry%thck(ew+1,ns) * sumd(2) + &
-                              model%geometry%thck(ew,ns-1) * sumd(3) + model%geometry%thck(ew,ns+1) * sumd(4)) - &
-                              model%pcgdwk%fc2(4) * (model%geometry%lsrf(ew,ns) * sumd(5) + &
-                              model%geometry%lsrf(ew-1,ns) * sumd(1) + model%geometry%lsrf(ew+1,ns) * sumd(2) + &
-                              model%geometry%lsrf(ew,ns-1) * sumd(3) + model%geometry%lsrf(ew,ns+1) * sumd(4)) +  &
-                              model%climate%acab(ew,ns) * model%pcgdwk%fc2(2)
-
-              model%pcgdwk%answ(model%geometry%mask(ew,ns)) = model%geometry%thck(ew,ns) 
-
-            end if
-          end if
-        end do
-      end do
-
-      model%pcgdwk%pcgsize(2) = model%pcgdwk%ct - 1 
-
-      call slapsolv(model,.true.,linit,err,logunit)   
-   
-      do ns = 1,model%general%nsn
-        do ew = 1,model%general%ewn 
-
-          if (model%geometry%mask(ew,ns) /= 0) then
-            model%geometry%thck(ew,ns) = model%pcgdwk%answ(model%geometry%mask(ew,ns))
-          end if
-
-        end do
-      end do
-
-      ! *tp+* implement bcs
-
-      call swapbndh(ewbc, &
-                    model%geometry%thck(1,:), &
-                    model%geometry%thck(2,:), &
-                    model%geometry%thck(model%general%ewn,:), &
-                    model%geometry%thck(model%general%ewn-1,:))
-      call swapbndh(nsbc, &
-                    model%geometry%thck(:,1), &
-                    model%geometry%thck(:,2), &
-                    model%geometry%thck(:,model%general%nsn), &
-                    model%geometry%thck(:,model%general%nsn-1))
-    
-      model%pcgdwk%tlinit = model%pcgdwk%tlinit + linit
-      model%pcgdwk%mlinit = max(linit,model%pcgdwk%mlinit)
-
-      model%geometry%thck = max(0.0d0, model%geometry%thck)
-
-      call slipvelo(model%numerics,                &
-                    model%velowk,                  &
-                    model%geomderv,                &
-                    (/3,model%options%whichbtrc/), &
-                    model%temper%bwat,             &
-                    model%velocity%btrc,           &
-                    model%geometry%relx,           &
-                    model%velocity%ubas,           &
-                    model%velocity%vbas)
-
-      call zerovelo(model%velowk,            &
-                    model%numerics%sigma,    &
-                    3,                       &
-                    model%geomderv%stagthck, &
-                    model%geomderv%dusrfdew, &
-                    model%geomderv%dusrfdns, &
-                    model%temper%flwa,       &
-                    model%velocity%ubas,     &
-                    model%velocity%vbas,     &
-                    model%velocity%uvel,     &
-                    model%velocity%vvel,     &
-                    model%velocity%uflx,     &
-                    model%velocity%vflx,     &
-                    model%velocity%diffu)
-
-#ifdef DEBUG
-        print *, "* thck ", model%numerics%time, linit, model%pcgdwk%mlinit, model%pcgdwk%tlinit, model%geometry%totpts, &
-        real(thk0*model%geometry%thck(model%general%ewn/2+1,model%general%nsn/2+1)), &
-        real(vel0*maxval(abs(model%velocity%ubas))), real(vel0*maxval(abs(model%velocity%vbas))) 
-#endif
-      deallocate(model%pcgdwk%pcgrow,model%pcgdwk%pcgcol,model%pcgdwk%pcgval,model%pcgdwk%rhsd,model%pcgdwk%answ)
-
-    end if
-
-  contains
-
-    subroutine findsums(ew,ns,fc)
-
-      implicit none
-          
-      integer, intent(in) :: ew, ns
-      real(dp),intent(in),dimension(6) :: fc
-
-      sumd(1) = fc(1) * (sum(model%velocity%diffu(ew-1,ns-1:ns)) + &
-                sum(model%velocity%ubas(ew-1,ns-1:ns)))
-      sumd(2) = fc(1) * (sum(model%velocity%diffu(ew,ns-1:ns)) + &
-                sum(model%velocity%ubas(ew,ns-1:ns)))
-      sumd(3) = fc(5) * (sum(model%velocity%diffu(ew-1:ew,ns-1)) + &
-                sum(model%velocity%ubas(ew-1:ew,ns-1)))
-      sumd(4) = fc(5) * (sum(model%velocity%diffu(ew-1:ew,ns)) + &
-                sum(model%velocity%ubas(ew-1:ew,ns)))
-      sumd(5) = - sum(sumd(1:4))
-
-    end subroutine findsums
-       
-  end subroutine nonlevolthck
 
 !----------------------------------------------------------------------
 

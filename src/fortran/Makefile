@@ -40,7 +40,7 @@ libglimmer.a: 	glimmer_CFproj.o glimmer_config.o glimmer_global.o glimmer_utils.
 		ar rcv $@ $^
 		if [ "$(RANLIB)" != "" ] ; then $(RANLIB) $@ ; fi
 
-libglide.a:	glide.o glide_setup.o glide_types.o glimmer_temp.o glimmer_isot.o glimmer_thck.o glimmer_velo.o glide_mask.o
+libglide.a:	glide.o glide_setup.o glide_types.o glimmer_temp.o glimmer_isot.o glimmer_thck.o glimmer_velo.o glide_mask.o glide_stop.o
 		ar rcv $@ $^
 		if [ "$(RANLIB)" != "" ] ; then $(RANLIB) $@ ; fi
 
@@ -58,7 +58,7 @@ simple_glide:	$(SIMPLE) libglide.a libglimmer.a SLAP_library
 glimmer_example :  glimmer_example.o libglide.a libglimmer.a libglint.a SLAP_library
 	$(F77) $(GLIMMERFLAGS) -o $@ $< libglint.a libglide.a libglimmer.a SLAP_library/libslap.a $(LD_FLAGS)
 
-bin2ncdf: bin2ncdf.o glimmer_global.o  ncdf.o ncdf_file.o glide_types.o glimmer_physcon.o glimmer_paramets.o  glimmer_CFproj.o glimmer_log.o 
+bin2ncdf: bin2ncdf.o glimmer_global.o  ncdf.o ncdf_file.o glide_types.o glimmer_physcon.o glimmer_paramets.o  glimmer_CFproj.o glimmer_log.o glide_mask.o
 	$(F77) -o $@ $^ $(LD_FLAGS) 
 
 input2ncdf:	input2ncdf.o glimmer_global.o  ncdf.o ncdf_file.o glide_types.o glimmer_paramets.o  glimmer_CFproj.o glimmer_log.o

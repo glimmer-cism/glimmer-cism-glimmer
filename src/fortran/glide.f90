@@ -44,6 +44,7 @@ module glide
   !*FD the top-level GLIDE module
 
   use glide_types
+  use glide_stop
 
   integer, private, parameter :: dummyunit=99
 
@@ -165,43 +166,45 @@ contains
     ! ------------------------------------------------------------------------ 
     ! Do velocity calculation if necessary
     ! ------------------------------------------------------------------------ 
-    if (model%numerics%tinc > mod(model%numerics%time,model%numerics%nvel) .or. &
-         model%numerics%time == model%numerics%tinc ) then
+    if (model%options%whichevol.eq.1) then
+       if ((model%numerics%tinc > mod(model%numerics%time,model%numerics%nvel) .or. &
+            model%numerics%time == model%numerics%tinc)) then
 
-       call slipvelo(model%numerics, &
-            model%velowk,   &
-            model%geomderv, &
-            (/model%options%whichslip,model%options%whichbtrc/), &
-            model%temper%   bwat,     &
-            model%velocity% btrc,     &
-            model%geometry% relx,     &
-            model%velocity% ubas,     &
-            model%velocity% vbas)
+          call slipvelo(model%numerics, &
+               model%velowk,   &
+               model%geomderv, &
+               (/model%options%whichslip,model%options%whichbtrc/), &
+               model%temper%   bwat,     &
+               model%velocity% btrc,     &
+               model%geometry% relx,     &
+               model%velocity% ubas,     &
+               model%velocity% vbas)
 
-       call zerovelo(model%velowk,             &
-            model%numerics%sigma,     &
-            0,                                 &
-            model%geomderv% stagthck, &
-            model%geomderv% dusrfdew, &
-            model%geomderv% dusrfdns, &
-            model%temper%   flwa,     &
-            model%velocity% ubas,     &
-            model%velocity% vbas,     &
-            model%velocity% uvel,     &
-            model%velocity% vvel,     &
-            model%velocity% uflx,     &
-            model%velocity% vflx,     &
-            model%velocity% diffu)
+          call zerovelo(model%velowk,             &
+               model%numerics%sigma,     &
+               0,                                 &
+               model%geomderv% stagthck, &
+               model%geomderv% dusrfdew, &
+               model%geomderv% dusrfdns, &
+               model%temper%   flwa,     &
+               model%velocity% ubas,     &
+               model%velocity% vbas,     &
+               model%velocity% uvel,     &
+               model%velocity% vvel,     &
+               model%velocity% uflx,     &
+               model%velocity% vflx,     &
+               model%velocity% diffu)
 
+       end if
     end if
 
     call glide_maskthck(0, &                                    !magi a hack, someone explain what whichthck=5 does
-                  model%geometry% thck,      &
-                  model%climate%  acab,      &
-                  model%geometry% dom,       &
-                  model%geometry% mask,      &
-                  model%geometry% totpts,    &
-                  model%geometry% empty)
+         model%geometry% thck,      &
+         model%climate%  acab,      &
+         model%geometry% dom,       &
+         model%geometry% mask,      &
+         model%geometry% totpts,    &
+         model%geometry% empty)
 
     ! ------------------------------------------------------------------------ 
     ! Calculate temperature evolution and Glenn's A, if necessary
@@ -239,18 +242,7 @@ contains
     select case(model%options%whichevol)
     case(0) ! Use precalculated uflx, vflx -----------------------------------
 
-       call timeevolthck(model, &
-            0, &                                        !magi a hack, someone explain what whichthck=5 does
-            model%geometry% usrf,      &
-            model%geometry% thck,      &
-            model%climate%  acab,      &
-            model%geometry% mask,      &
-            model%velocity% uflx,      &
-            model%velocity% vflx,      &
-            model%geomderv% dusrfdew,  &
-            model%geomderv% dusrfdns,  &
-            model%geometry% totpts,    &
-            6)
+       call thck_lin_evolve(model,model%temper%newtemps, 6)
 
     case(1) ! Use explicit leap frog method with uflx,vflx -------------------
 
@@ -261,7 +253,7 @@ contains
 
     case(2) ! Use non-linear calculation that incorporates velocity calc -----
 
-       call nonlevolthck(model, 0, model%temper%newtemps, 6) !magi a hack, someone explain what whichthck=5 does
+       call thck_nonlin_evolve(model,model%temper%newtemps, 6)
 
     end select
 
@@ -302,19 +294,4 @@ contains
 
   end subroutine glide_tstep_p2
 
-  subroutine glide_finalise(model)
-    !*FD finalise GLIDE model instance
-    use glimmer_ncfile
-    use glimmer_ncinfile
-    use glimmer_log
-    implicit none
-    type(glide_global_type) :: model        !*FD model instance
-    
-    call closeall_in(model)
-    call closeall_out(model)
-    
-    call glide_deallocarr(model)
-
-    call close_log
-  end subroutine glide_finalise
 end module glide
