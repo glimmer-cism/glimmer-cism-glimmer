@@ -89,8 +89,6 @@ module glimmer_ncdf
      !*FD id of sigma level variable
      integer timevar
      !*FD id of time variable 
-     integer spotvar
-     !*FD id of spot variable
      integer, dimension(num_vars) :: varids
      !*FD array holding variable ids
   end type glimmer_nc_stat
@@ -106,6 +104,10 @@ module glimmer_ncdf
      !*FD next time step at which data is dumped
      integer :: timecounter=1
      !*FD time counter
+     integer, pointer, dimension(:) :: spotx=>NULL()
+     !*FD array containg spot x-index
+     integer, pointer, dimension(:) :: spoty=>NULL()
+     !*FD array containg spot y-index
      
      type(glimmer_nc_output), pointer :: next=>NULL()
      !*FD next element in list

@@ -71,7 +71,7 @@ module glimmer_config
   end type ConfigSection
 
   interface GetValue
-     module procedure GetValueReal, GetValueInt, GetValueChar
+     module procedure GetValueReal, GetValueInt, GetValueChar, GetValueRealArray, GetValueIntArray
   end interface
 
 contains
@@ -132,6 +132,7 @@ contains
        linenr = linenr + 1
     end do
     close(unit)
+    return
   end subroutine ConfigRead
 
   subroutine PrintConfig(config)
@@ -170,6 +171,73 @@ contains
     end do
   end subroutine GetSection
 
+  subroutine GetValueRealArray(section,name,val,numval)
+    !*FD get real array value
+    implicit none
+    type(ConfigSection), pointer :: section
+    character(len=*),intent(in) :: name
+    real, pointer, dimension(:) :: val
+    integer,intent(in), optional :: numval
+
+    ! local variables
+    character(len=valuelen) :: value
+    real, dimension(:),allocatable :: tempval
+    integer ios,i,numv
+
+    if (present(numval)) then
+       numv=numval
+    else
+       numv=100
+    end if
+    allocate(tempval(numv))
+    value=''
+    call GetValueChar(section,name,value)
+    if (value.eq.'') return
+    read(value,*,end=10) (tempval(i),i=1,numv)
+10  i=i-1
+    if (i.ge.1) then
+       if (associated(val)) then
+          deallocate(val)
+       end if
+       allocate(val(i))
+       val = tempval(1:i)
+    end if
+  end subroutine GetValueRealArray
+
+  subroutine GetValueIntArray(section,name,val,numval)
+    !*FD get integer array value
+    implicit none
+    type(ConfigSection), pointer :: section
+    character(len=*),intent(in) :: name
+    integer, pointer, dimension(:) :: val
+    integer,intent(in), optional :: numval
+
+    ! local variables
+    character(len=valuelen) :: value
+    integer, dimension(:),allocatable :: tempval
+    integer ios,i,numv
+
+    if (present(numval)) then
+       numv=numval
+    else
+       numv=100
+    end if
+    allocate(tempval(numv))
+    value=''
+    call GetValueChar(section,name,value)
+    if (value.eq.'') return
+    read(value,*,end=20) (tempval(i),i=1,numv)
+20  i=i-1
+
+    if (i.ge.1) then
+       if (associated(val)) then
+          deallocate(val)
+       end if
+       allocate(val(i))
+       val = tempval(1:i)
+    end if
+  end subroutine GetValueIntArray
+
   subroutine GetValueReal(section,name,val)
     !*FD get real value
     implicit none
@@ -185,7 +253,7 @@ contains
     value=''
     call GetValueChar(section,name,value)
 
-    read(value,*) temp
+    read(value,*,iostat=ios) temp
     if (ios==0) then
        val = temp
     end if

@@ -105,7 +105,6 @@ contains
 
     ! ...for funits
 
-    integer,dimension(8)    :: indices0dx,indices0dy
     character(fname_length) :: usrffile, topgfile, relxfile
     character(fname_length) :: presusrffile, forcfile, prcpfile
     character(fname_length) :: latifile
@@ -137,7 +136,6 @@ contains
                       whichevol, whichwvel, whichprecip
     namelist / nums / ntem, nvel, niso, nout, nstr, thklim, mlimit, dew, dns 
     namelist / pars / geot, fiddle, airt, nmsb, hydtim, isotim, bpar
-    namelist / outs / indices0dx, indices0dy
     namelist / dats / usrffile, topgfile, relxfile, presusrffile, forcfile, &
                       prcpfile, latifile
     namelist / cons / lapse_rate,precip_rate,air_temp,albedo
@@ -173,8 +171,6 @@ contains
 
     ! For funits
 
-    indices0dx=(/1,1,1,1,1,1,1,1/)
-    indices0dy=(/1,1,1,1,1,1,1,1/)
     usrffile     ='none'; topgfile='none'; relxfile='none'
     presusrffile ='none'; forcfile='none'; prcpfile='none'
     latifile     ='none'
@@ -215,7 +211,6 @@ contains
       read(unit,nml=opts)
       read(unit,nml=nums)
       read(unit,nml=pars)
-      read(unit,nml=outs)
       read(unit,nml=dats)
       read(unit,nml=cons)
       close(unit)
@@ -277,8 +272,6 @@ contains
 
     ! copy funits type
 
-    model%funits%indices0dx = indices0dx
-    model%funits%indices0dy = indices0dy
     model%funits%usrffile   = usrffile
     model%funits%topgfile   = topgfile
     model%funits%relxfile   = relxfile

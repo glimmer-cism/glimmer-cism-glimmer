@@ -321,10 +321,6 @@ module glimmer_types
   end type glimmer_stress
 
   type glimmer_funits
-    integer, dimension(8) :: indices0dx
-    integer, dimension(8) :: indices0dy
-    integer, dimension(n2d) :: which2d
-    integer, dimension(n3d) :: which3d 
     character(fname_length) :: usrffile, topgfile, relxfile    ! input filenames
     character(fname_length) :: sigfile                         !*FD sigma coordinates file
     character(fname_length) :: prcpfile                        !*FD Precipitation file
@@ -527,10 +523,6 @@ contains
 
     params%forcdata%flines       = 0
 
-    params%funits%indices0dx     = 0
-    params%funits%indices0dy     = 0
-    params%funits%which2d        = 1 
-    params%funits%which3d        = 1
     params%funits%usrffile       = 'none'
     params%funits%topgfile       = 'none'
     params%funits%relxfile       = 'none'

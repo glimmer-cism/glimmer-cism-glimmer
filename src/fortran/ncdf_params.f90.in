@@ -100,6 +100,7 @@ contains
 
     ! local variables
     character(len=210) vars
+    integer :: numspots=-1
 
     handle_output=>add(output)
     
@@ -107,7 +108,22 @@ contains
     call GetValue(section,'name',handle_output%nc%filename)
     call GetValue(section,'frequency',handle_output%freq)
     call GetValue(section,'variables',vars)
+    call GetValue(section,'numspot',numspots)
+    if (numspots.eq.-1) then
+       numspots=100
+    end if
+    call GetValue(section,'spotx',handle_output%spotx,numspots)
+    call GetValue(section,'spoty',handle_output%spoty,numspots)
 
+    if (associated(handle_output%spotx) .and. associated(handle_output%spoty)) then
+       if (size(handle_output%spotx).ne.size(handle_output%spoty)) then
+          write(*,*) 'Warning [netCDF output]  number of spot x and y locations differ ', &
+               size(handle_output%spotx), size(handle_output%spoty)
+       else
+          handle_output%nc%do_spot = .true.
+       end if
+    end if
+    
     vars = ' '//trim(vars)//' '
 
     if (handle_output%nc%filename(1:1).eq.' ') then

@@ -10,10 +10,6 @@ dimensions:    time
 units:         year
 long_name:     Model time
 
-[spot]
-dimensions:    spot
-long_name:     Spot index
-
 [x0]
 dimensions:    x0
 units:         meter

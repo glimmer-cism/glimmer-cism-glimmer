@@ -1,4 +1,9 @@
 2004-05-18 Magnus Hagdorn
+ * added integer and real array parameters (test_config.conf, glimmer_config.f90, test_config.f90)
+ * removed indices0dx and indices0dy (glimmer_setup.f90, glimmer_restart.f90, glimmer_modu.f90)
+ * fully implemented spot variables (ncdf.f90.in, ncdf_file.f90.in, ncdf_params.f90.in, ncdf_vars.def, generate_ncvars.py)
+	
+2004-05-18 Magnus Hagdorn
  * initialised pointers to NULL() to fix segfault with NAG compiler (ncdf_params.f90.in)
  * added debug flags to makefile.nag
 

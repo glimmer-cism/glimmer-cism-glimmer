@@ -139,10 +139,6 @@ contains
     call nc_errorhandle(__FILE__,__LINE__,status)
     status = nf90_def_dim(NC%id,'level',model%general%upn,NC%leveldim)
     call nc_errorhandle(__FILE__,__LINE__,status)
-    if (NC%do_spot) then
-       status = nf90_def_dim(NC%id,'spot',size(model%funits%indices0dx),NC%spotdim)
-       call nc_errorhandle(__FILE__,__LINE__,status)
-    end if
     status = nf90_def_dim(NC%id,'time',NF90_UNLIMITED,NC%timedim)
     call nc_errorhandle(__FILE__,__LINE__,status)
 
@@ -173,19 +169,19 @@ contains
     status=nf90_put_var(NC%id,NC%levelvar,model%numerics%sigma)
     call nc_errorhandle(__FILE__,__LINE__,status)
     if (NC%do_spot) then
-       do i=1,size(model%funits%indices0dx)
+       do i=1,size(outfile%spotx)
           status=nf90_put_var(NC%id,NC%x0_spotvar, &
-               (real(model%funits%indices0dx(i))-0.5)*real(model%numerics%dew*len0),(/i/))
+               (real(outfile%spotx(i))-0.5)*real(model%numerics%dew*len0),(/i/))
           call nc_errorhandle(__FILE__,__LINE__,status)
           status=nf90_put_var(NC%id,NC%y0_spotvar, &
-               (real(model%funits%indices0dy(i))-0.5)*real(model%numerics%dns*len0),(/i/))
+               (real(outfile%spoty(i))-0.5)*real(model%numerics%dns*len0),(/i/))
           call nc_errorhandle(__FILE__,__LINE__,status)
           
           status=nf90_put_var(NC%id,NC%x1_spotvar, &
-               (real(model%funits%indices0dx(i))-1.0)*real(model%numerics%dew*len0),(/i/))
+               (real(outfile%spotx(i))-1.0)*real(model%numerics%dew*len0),(/i/))
           call nc_errorhandle(__FILE__,__LINE__,status)
           status=nf90_put_var(NC%id,NC%y1_spotvar, &
-               (real(model%funits%indices0dy(i))-1.0)*real(model%numerics%dns*len0),(/i/))
+               (real(outfile%spoty(i))-1.0)*real(model%numerics%dns*len0),(/i/))
           call nc_errorhandle(__FILE__,__LINE__,status)    
        end do
     end if
@@ -206,7 +202,7 @@ contains
 
     ! local variables
     integer status
-    integer up
+    integer up, sp
     real(dp):: f1, f2, f3, f4, f5, f6, f7, f8
     integer :: ewnv, nsnv
 

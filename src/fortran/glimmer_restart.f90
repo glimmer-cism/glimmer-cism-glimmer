@@ -177,10 +177,6 @@ contains
 
     ! funits
 
-    write(unit) instance%model%funits% indices0dx
-    write(unit) instance%model%funits% indices0dy
-    write(unit) instance%model%funits% which2d
-    write(unit) instance%model%funits% which3d
     write(unit) instance%model%funits% usrffile
     write(unit) instance%model%funits% topgfile
     write(unit) instance%model%funits% relxfile
@@ -515,10 +511,6 @@ contains
 
     ! funits
 
-    read(unit) instance%model%funits% indices0dx
-    read(unit) instance%model%funits% indices0dy
-    read(unit) instance%model%funits% which2d
-    read(unit) instance%model%funits% which3d
     read(unit) instance%model%funits% usrffile
     read(unit) instance%model%funits% topgfile
     read(unit) instance%model%funits% relxfile

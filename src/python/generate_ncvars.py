@@ -211,7 +211,10 @@ class PrintNCDF_PARAMS(PrintVars):
 
         # skip variables associated with dimension 
         if not is_dimvar(var):
-            self.stream.write("    if (index(vars,' %s ').ne.0) then\n"%(var['name'].upper()))
+            if isspot(var):
+                self.stream.write("    if (index(vars,' %s ').ne.0 .and. handle_output%%nc%%do_spot) then\n"%(var['name'].upper()))
+            else:
+                self.stream.write("    if (index(vars,' %s ').ne.0) then\n"%(var['name'].upper()))
             self.stream.write("       handle_output%%nc%%do_var(%s) = .true.\n"%var_type(var))
             self.stream.write("    end if\n\n")
 
@@ -276,35 +279,62 @@ class PrintNCDF_FILE(PrintVars):
             for i in range(0,len(dims)):
                 dims[i] = dims[i].strip()
             self.stream.write("    if (NC%%do_var(%s)) then\n"%(var_type(var)))
-
-            dimstring = ''
-            spaces = ''
-            for i in range(0,len(dims)):
-                if i > 0:
-                    dimstring = dimstring + ','
-                if dims[i] == 'time':
-                    dimstring = dimstring + 'outfile%timecounter'
-                elif dims[i] == 'level':
-                    dimstring = dimstring + 'up'
-                else:
-                    dimstring = dimstring + '1'
             
-            if  'level' in dims:
-                # handle 3D fields
-                spaces = ' '*3
-                self.stream.write("       do up=1,model%general%upn\n")
+            if isspot(var):
+                if len(dims)==2:
+                    if var['name']=='btemp_spot':
+                        dimstring_in='model%general%upn,outfile%spotx(sp),outfile%spoty(sp)'
+                    else:
+                        dimstring_in='outfile%spotx(sp),outfile%spoty(sp)'
+                    dimstring_out='(/sp,outfile%timecounter/)'
+                elif len(dims)==3:
+                    dimstring_in=':,outfile%spotx(sp),outfile%spoty(sp)'
+                    dimstring_out='(/sp,1,outfile%timecounter/),(/1,model%general%upn,1/)'
+
+                self.stream.write("       do sp=1,size(outfile%spotx)\n")
+                pos = var['data'].find('(')
+                if pos>-1:
+                    data=var['data'][:pos]
+                else:
+                    data=var['data']
+                data = '%s(%s)'%(data,dimstring_in)
+                if 'factor' in var:
+                    data = '(%s)*(%s)'%(var['factor'], data)
+                self.stream.write("          status = nf90_put_var(NC%%id, NC%%varids(%s), &\n"%var_type(var))
+                self.stream.write("               %s, &\n"%data)
+                self.stream.write("               %s)\n"%dimstring_out)
+                self.stream.write("          call nc_errorhandle(__FILE__,__LINE__,status)\n")
+                self.stream.write("       end do\n")
+                
+            else:
+                dimstring = ''
+                spaces = ''
+                for i in range(0,len(dims)):
+                    if i > 0:
+                        dimstring = dimstring + ','
+                    if dims[i] == 'time':
+                        dimstring = dimstring + 'outfile%timecounter'
+                    elif dims[i] == 'level':
+                        dimstring = dimstring + 'up'
+                    else:
+                        dimstring = dimstring + '1'
+                
+                if  'level' in dims:
+                    # handle 3D fields
+                    spaces = ' '*3
+                    self.stream.write("       do up=1,model%general%upn\n")
 
                         
-            if 'factor' in var:
-                data = '(%s)*(%s)'%(var['factor'], var['data'])
-            else:
-                data = var['data']
-            self.stream.write("%s       status = nf90_put_var(NC%%id, %s, &\n%s            %s, (/%s/))\n"%(spaces,'NC%%varids(%s)'%var_type(var),
-                                                                                                         spaces,data, dimstring))
-            self.stream.write("%s       call nc_errorhandle(__FILE__,__LINE__,status)\n"%(spaces))
+                if 'factor' in var:
+                    data = '(%s)*(%s)'%(var['factor'], var['data'])
+                else:
+                    data = var['data']
+                self.stream.write("%s       status = nf90_put_var(NC%%id, %s, &\n%s            %s, (/%s/))\n"%(spaces,'NC%%varids(%s)'%var_type(var),
+                                                                                                             spaces,data, dimstring))
+                self.stream.write("%s       call nc_errorhandle(__FILE__,__LINE__,status)\n"%(spaces))
 
-            if  'level' in dims:
-                self.stream.write("       end do\n")
+                if  'level' in dims:
+                    self.stream.write("       end do\n")
             self.stream.write("    end if\n\n")
 
 class PrintNCDF_INFILE(PrintVars):

@@ -52,6 +52,7 @@ program testconfig
   character(len=100) :: charval
   integer :: intval
   real :: realval
+  real, dimension(:), pointer :: realarray
 
   write(*,*) 'Enter name of configuration file'
   read(*,*) fname
@@ -63,12 +64,17 @@ program testconfig
   call GetSection(config,section,'a section')
 
   write(*,*) associated(section)
+  if (.not.associated(section)) then
+     write(*,*) 'Huh?1'
+     stop
+  end if
 
   call GetValue(section,'an_int',intval)
   call GetValue(section,'a_float',realval)
   call GetValue(section,'a_char',charval)
+  call GetValue(section,'an_array',realarray)
   write(*,*) intval,realval,trim(charval)
-
+  write(*,*) realarray
 
   intval = -1
   realval = -10.
