@@ -159,7 +159,7 @@ module glint_type
 
 contains
 
-  subroutine glint_i_allocate(instance,nxg,nyg)
+  subroutine glint_i_allocate(instance,nxg,nyg,nxgo,nygo)
 
     !*FD Allocate top-level arrays in
     !*FD the model instance, and ice model arrays.
@@ -169,6 +169,8 @@ contains
     type(glint_instance),intent(inout) :: instance  !*FD Instance whose elements are to be allocated.
     integer,             intent(in)    :: nxg       !*FD Longitudinal size of global grid (grid-points).
     integer,             intent(in)    :: nyg       !*FD Latitudinal size of global grid (grid-points).
+    integer,             intent(in)    :: nxgo       !*FD Longitudinal size of global orog grid (grid-points).
+    integer,             intent(in)    :: nygo       !*FD Latitudinal size of global orog grid (grid-points).
 
     integer ewn,nsn
 
@@ -233,7 +235,7 @@ contains
     ! Fractional coverage map
 
     allocate(instance%frac_coverage(nxg,nyg)); instance%frac_coverage = 0.0
-    allocate(instance%frac_cov_orog(nxg,nyg)); instance%frac_cov_orog = 0.0
+    allocate(instance%frac_cov_orog(nxgo,nygo)); instance%frac_cov_orog = 0.0
 
     ! Output mask
 

@@ -229,7 +229,7 @@ program glimmer_example
 
   ! Initialise the ice model
 
-  call initialise_glint(ice_sheet,lats,lons,paramfile,orog=orog,ice_frac=ice_frac, &
+  call initialise_glint(ice_sheet,lats,lons,paramfile,orog=orog_out,ice_frac=ice_frac, &
        albedo=albedo,orog_longs=lons_orog,orog_lats=lats_orog)
 
   ! Get coverage maps for the ice model instances

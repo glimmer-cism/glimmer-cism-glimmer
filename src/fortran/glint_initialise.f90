@@ -51,7 +51,7 @@ module glint_initialise
 
 contains
 
-  subroutine glint_i_initialise(config,instance,grid,mbts)
+  subroutine glint_i_initialise(config,instance,grid,grid_orog,mbts)
 
     !*FD Initialise a GLINT ice model instance
 
@@ -66,6 +66,7 @@ contains
     type(ConfigSection), pointer         :: config      !*FD structure holding sections of configuration file   
     type(glint_instance),  intent(inout) :: instance    !*FD The instance being initialised.
     type(global_grid),     intent(in)    :: grid        !*FD Global grid to use
+    type(global_grid),     intent(in)    :: grid_orog   !*FD Global grid to use for orography
     integer,               intent(out)   :: mbts        !*FD mass-balance time-step (hours)
 
     ! initialise model
@@ -97,9 +98,10 @@ contains
                   dy=get_dns(instance%model))
     call new_downscale(instance%downs,instance%proj,grid)     ! Initialise the downscaling
 
-    call glint_i_allocate(instance,grid%nx,grid%ny)           ! Allocate arrays appropriately
+    call glint_i_allocate(instance,grid%nx,grid%ny,grid_orog%nx,grid_orog%ny)           ! Allocate arrays appropriately
     call glint_i_readdata(instance)
     call new_upscale(instance%ups,grid,instance%proj,instance%out_mask) ! Initialise upscaling parameters
+    call new_upscale(instance%ups_orog,grid_orog,instance%proj,instance%out_mask) ! Initialise upscaling parameters
 
     call calc_coverage(instance%proj, &                         ! Calculate coverage map
                        instance%ups,  &             
@@ -107,10 +109,11 @@ contains
                        instance%out_mask, &
                        instance%frac_coverage)
 
-    call copy_upscale(instance%ups,instance%ups_orog)    ! Set upscaling for orog output to same as for 
-                                                         ! other fields.
-    instance%frac_cov_orog=instance%frac_coverage        ! Set fractional coverage for orog to be same as
-                                                         ! for other fields.
+    call calc_coverage(instance%proj, &                         ! Calculate coverage map for orog
+                       instance%ups_orog,  &             
+                       grid_orog,     &
+                       instance%out_mask, &
+                       instance%frac_cov_orog)
 
   end subroutine glint_i_initialise
 

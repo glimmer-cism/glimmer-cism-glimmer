@@ -280,7 +280,7 @@ contains
        ! initialise the single instance
 
        call write_log(trim(paramfile))
-       call glint_i_initialise(global_config,params%instances(1),params%g_grid,mbts(1))
+       call glint_i_initialise(global_config,params%instances(1),params%g_grid,params%g_grid_orog,mbts(1))
        call write_log('')
 
        ! Update the coverage and normalisation fields
@@ -307,7 +307,7 @@ contains
           call GetValue(section,'name',instance_fname)
           call write_log(trim(instance_fname))
           call ConfigRead(instance_fname,instance_config)
-          call glint_i_initialise(instance_config,params%instances(i),params%g_grid,mbts(i))
+          call glint_i_initialise(instance_config,params%instances(i),params%g_grid,params%g_grid_orog,mbts(i))
 
           params%total_coverage = params%total_coverage + params%instances(i)%frac_coverage
           params%total_cov_orog = params%total_cov_orog + params%instances(i)%frac_cov_orog
@@ -335,7 +335,6 @@ contains
 
     ! Check that all mass-balance time-steps are the same length and 
     ! assign that value to the top-level variable
-    ! **** Not implemented - v. strange bug, so have removed this code ****
 
     params%tstep_mbal=check_mbts(mbts)
 

@@ -51,7 +51,7 @@ module glint_mbal
   !*FD Unified wrapper for different mass-balance codes
 
   type glint_mbal_params
-    type(glimmer_pdd_params),pointer :: annual_pdd !*FD Pointer to annual PDD params
+    type(glimmer_pdd_params),pointer :: annual_pdd => null() !*FD Pointer to annual PDD params
     integer :: which !*FD Flag for chosen mass-balance type
     integer :: tstep !*FD Timestep of mass-balance scheme in hours
   end type glint_mbal_params
