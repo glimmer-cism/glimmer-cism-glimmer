@@ -34,7 +34,6 @@ dimensions:    time, y1, x1
 units:         meter/year
 long_name:     precipitation
 data:          data%prcp
-factor:        scale2d_f1
 standard_name: lwe_precipitation_rate
 coordinates:   lon lat
 
@@ -43,5 +42,4 @@ dimensions:    time, y1, x1
 units:         meter/year
 long_name:     ablation
 data:          data%ablt
-factor:        scale2d_f1
 coordinates:   lon lat

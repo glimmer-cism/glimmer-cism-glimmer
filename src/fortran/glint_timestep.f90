@@ -214,7 +214,6 @@ contains
             instance%artm, &
             instance%arng, &
             instance%prcp, &
-            instance%proj%latitudes, &
             instance%ablt, &
             instance%acab) 
     case(2) 

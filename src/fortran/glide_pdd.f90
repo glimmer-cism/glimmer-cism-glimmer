@@ -133,7 +133,7 @@ contains
 
 !-------------------------------------------------------------------------------
 
-  subroutine glint_pdd_mbal(params,artm,arng,prcp,lati,ablt,acab)
+  subroutine glint_pdd_mbal(params,artm,arng,prcp,ablt,acab)
 
     !*FD Calculates mass-balance over the ice model domain, by the
     !*FD positive-degree-day method.
@@ -146,8 +146,6 @@ contains
     real(sp), dimension(:,:), intent(in)    :: arng    !*FD Annual temerature half-range ($^{\circ}$C)
     real(sp), dimension(:,:), intent(in)    :: prcp    !*FD Annual accumulated precipitation 
                                                        !*FD (mm water equivalent)
-    real(rk), dimension(:,:), intent(in)    :: lati    !*FD Latitudes of each point in the 
-                                                       !*FD domain ($^{\circ}$N)
     real(sp), dimension(:,:), intent(out)   :: ablt    !*FD Annual ablation (mm water equivalent)
     real(sp), dimension(:,:), intent(out)   :: acab    !*FD Annual mass-balance (mm water equivalent)
 
@@ -166,8 +164,6 @@ contains
 
     do ns = 1, nsn
       do ew = 1, ewn 
-
-        if (lati(ew,ns) .gt. 0.0) then
 
           ! Find the no. of pdd from the mean annual temp and its range
 
@@ -248,10 +244,6 @@ contains
           ! ablation.
 
           acab(ew,ns) = prcp(ew,ns) - ablt(ew,ns)
-        else
-          acab(ew,ns) = 0.0
-          ablt(ew,ns) = 0.0
-        end if
       end do
     end do
 

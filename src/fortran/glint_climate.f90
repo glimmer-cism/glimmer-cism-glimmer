@@ -54,7 +54,7 @@ contains
     use glint_mbal
     implicit none
 
-    real(sp),dimension(:,:),         intent(in)    :: usrf   !*FD Surface elevation (km)
+    real(sp),dimension(:,:),         intent(in)    :: usrf   !*FD Surface elevation (m)
     real(sp),dimension(:,:),         intent(out)   :: artm   !*FD Surface annual mean air temperature ($^{\circ}$C)
     real(sp),dimension(:,:),         intent(out)   :: arng   !*FD Surface annual air tempurature range ($^{\circ}$C)
     real(dp),dimension(:,:),         intent(in)    :: g_orog !*FD Global orography on local grid (m)

@@ -138,8 +138,9 @@ module glint_type
     real(sp) :: uprecip_rate =   0.5 !*FD Uniform precipitaion rate in m/a
     real(sp) :: usurftemp    = -20.0 !*FD Uniform surface temperature in $^{\circ}$C.
     real(sp) :: ice_albedo   =   0.4 !*FD Ice albedo. (fraction)
-    real(sp) :: ulapse_rate  =  -8.0 !*FD Uniform lapse rate in deg C/km 
-                                     !*FD (N.B. This should be \emph{negative}!)
+    real(sp) :: ulapse_rate  =   8.0 !*FD Uniform lapse rate in deg C/km 
+                                     !*FD (N.B. This should be \emph{positive} for 
+                                     !*FD temperature falling with height!)
     real(sp) :: tinc_mbal = 1.0   !*FD mass-balance scheme timestep in years (set internally)
     integer  :: av_count = 0
 

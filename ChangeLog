@@ -1,3 +1,8 @@
+2005-02-21 Ian Rutt
+ * Removed redundant argument from calcacab call in GLINT
+ * Fixed lapse-rate adjustment problem in GLINT
+ * Removed scaling on output of precip field in GLINT
+
 2005-02-18 Ian Rutt
  * Added fix_acab call to glint_timestep.f90
  * Converted precip to m in glint_timestep.f90
