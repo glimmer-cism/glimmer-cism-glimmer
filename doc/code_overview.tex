@@ -1,0 +1,64 @@
+\documentclass[11pt]{article}
+\textheight 10in
+\topmargin -0.5in
+\textwidth 6.5in
+\oddsidemargin -0.2in
+\parindent=0.3in
+
+\usepackage{epsfig}
+% Defines paragraphs
+\setlength{\parskip}{\bigskipamount}
+\setlength{\parindent}{0em}
+
+\pagestyle{myheadings}
+\markright{GLIMMER code design overview}
+
+\begin{document}
+
+\title{GLIMMER code overview}
+\date{April 2004}
+\author{Ian Rutt}
+\maketitle
+
+\section{Introduction}
+
+The `design' of GLIMMER is a consequence of the way it has been
+developed. Initially, as a stand-alone model with a single domain, module
+variables were used to hold all model fields and parameters. With the move to
+use GLIMMER as the ice model component within GENIE, and the desire to enable
+several active regions to be run simultaneously, the module variables were
+converted into components of derived types, and an extra layer added on top of
+the exisiting structure to deal with global fields and parameters, and deal
+with the downscaling/interpolation of input fields. The result is a structure
+that is probably more complex than it needs to be, but still hopefully
+reasonably logical.
+
+\section{Data structure}
+
+The derived type \texttt{glimmer\_params} is the top-level data-structure in
+GLIMMER. It contains the global parameters for the model, as well as the
+global fields used in the temporal averaging of input fields. Its primary
+function, however, is to hold an array of ice model instances (type
+\texttt{glimmer\_instance}). This array is allocated at run-time. Each ice
+model instance contains instances of derived types (\texttt{projection} and
+\texttt{downscale}) concerning the relationship between the local and global
+model grids, as well as upscaling parameters (which should have their own
+derived type, really), and an instance of \texttt{glimmer\_global\_type}. This
+last derived type contains single instances of eighteen other derived types,
+which were replacements for the variable-containing modules of the original
+ice model. It is debatable whether \texttt{glimmer\_global\_type} is strictly necessary,
+and it might be worth reorganising the whole structure at some point, though
+this would obviously be a big job. The situation is summarised in figure
+\ref{main_class_diagram}.
+
+\begin{figure}
+\centering
+\epsfig{figure=class_diagram.eps,width=\textwidth}
+\caption{Main `Class Diagram' for GLIMMER. The relationship between the top-level
+  \texttt{glimmer\_params} type and its component types is shown. The
+  components of the \texttt{glimmer\_global\_type} type are formed from the
+  modules of the original ice model.}
+\label{main_class_diagram}
+\end{figure}
+
+\end{document}
