@@ -63,8 +63,17 @@ data:          model%climate%lati
 load:          1
 standard_name: latitude
 
+[lon]
+dimensions:    time, y1, x1
+units:         degreeE
+long_name:     Longitude
+data:          model%climate%loni
+load:          1
+standard_name: longitude
+
 [mask]
 dimensions:    time, y1, x1
+units:         1
 long_name:     upscaling and downscaling mask
 data:          model%climate%out_mask
 load:          1

@@ -283,20 +283,21 @@ contains
     
   end subroutine check_vars
 
-  subroutine nc_errorhandle(file,line,status)
-    !*FD handle netCDF error
-    implicit none
-    character(len=*), intent(in) :: file
-    !*FD name of f90 file error occured in
-    integer, intent(in) :: line
-    !*FD line number error occured at
-    integer, intent(in) :: status
-    !*FD netCDF return value
-
-    if (status.ne.NF90_NOERR) then
-       write(*,*) 'Error (',file,line,'): ', nf90_strerror(status)
-       stop
-    end if
-  end subroutine nc_errorhandle
-
 end module glimmer_ncdf
+
+subroutine nc_errorhandle(file,line,status)
+  !*FD handle netCDF error
+  use netcdf
+  implicit none
+  character(len=*), intent(in) :: file
+  !*FD name of f90 file error occured in
+  integer, intent(in) :: line
+  !*FD line number error occured at
+  integer, intent(in) :: status
+  !*FD netCDF return value
+  
+  if (status.ne.NF90_NOERR) then
+     write(*,*) 'Error (',file,line,'): ', nf90_strerror(status)
+     stop
+  end if
+end subroutine nc_errorhandle

@@ -148,7 +148,6 @@ contains
     call new_downscale(instance%downs,instance%proj,grid)       ! Initialise the downscaling
     call glimmer_i_allocate(instance,grid%nx,grid%ny)           ! Allocate arrays appropriately
     call glimmer_load_sigma(instance%model,unit)                ! Load the sigma file
-    call openall_out(instance%model)                            ! Initialise output files
     call calc_lats(instance%proj,instance%model%climate%lati)   ! Initialise the local latitude array. 
                                                                 ! This may be redundant, though.
     call testinisthk(instance%model,unit,instance%first, &
@@ -172,6 +171,7 @@ contains
       instance%model%numerics%time = 0.0              ! each instance has a copy of the counter
     endif                                             ! for simplicity.
 
+    call openall_out(instance%model)                            ! Initialise output files
     call writeall(instance%model)
 
   end subroutine glimmer_i_initialise

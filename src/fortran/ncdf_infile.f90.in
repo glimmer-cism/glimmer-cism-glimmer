@@ -104,6 +104,7 @@ contains
     !*FD open an existing netCDF file
     use glimmer_ncdf
     use glimmer_types
+    use glimmer_cfproj
     implicit none
     type(glimmer_nc_input), pointer :: infile
     !*FD structure containg input netCDF descriptor
@@ -121,6 +122,9 @@ contains
     call nc_errorhandle(__FILE__,__LINE__,status)
     write(*,*) '*******************************************************************************'
     write(*,*) 'opening file ',trim(NC%filename),' for input'
+
+    ! getting projections
+    model%projection = CFproj_GetProj(NC%id)
 
     ! reading dimensions
     ! getting ids

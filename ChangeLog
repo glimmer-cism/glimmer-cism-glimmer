@@ -1,3 +1,11 @@
+2004-06-13 Magnus Hagdorn
+ * add mapping info (g_land.input.nc)
+ * added files to doc which I had forgotton before (Makefile, varlist.tex.in)
+ * added longitudes (glimmer_modu.f90, glimmer_setup.f90, ncdf_vars.def)
+ * added CF projections (Makefile, glimmer_CFproj.f90, ncdf_file.f90.in, ncdf_infile.f90.in, generate_ncvars.py)
+ * glimmer_object.f90: initialise output later so it gets projections from input
+ * ncdf.f90.in: moved error handle out of module
+	
 2004-06-11 Ian Rutt
  * Extended GMT projections code to allow the specification of a
    standard parallel when using the polar stereographic projection

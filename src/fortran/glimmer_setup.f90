@@ -848,6 +848,7 @@ contains
     allocate(model%climate%g_artm(ewn,nsn));          model%climate%g_artm = 0.0
     allocate(model%climate%g_arng(ewn,nsn));          model%climate%g_arng = 0.0
     allocate(model%climate%lati(ewn,nsn));            model%climate%lati = 0.0
+    allocate(model%climate%loni(ewn,nsn));            model%climate%loni = 0.0
     allocate(model%climate%out_mask(ewn,nsn));        model%climate%out_mask = 1.0
     allocate(model%climate%ablt(ewn,nsn));            model%climate%ablt = 0.0
     allocate(model%climate%prcp(ewn,nsn));            model%climate%prcp = 0.0

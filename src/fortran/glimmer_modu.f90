@@ -58,6 +58,7 @@ module glimmer_types
  
   use glimmer_global
   use glimmer_ncdf
+  use glimmer_cfproj, only : CFproj_projection
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -308,6 +309,7 @@ module glimmer_types
     real(sp),dimension(:,:),pointer :: artm     => null() !*FD Annual mean air temperature
     real(sp),dimension(:,:),pointer :: arng     => null() !*FD Annual air temperature range
     real(sp),dimension(:,:),pointer :: lati     => null() !*FD Latitudes of model grid points
+    real(sp),dimension(:,:),pointer :: loni     => null() !*FD Longitudes of model grid points
     real(sp),dimension(:,:),pointer :: ablt     => null() !*FD Annual ablation.
     real(sp),dimension(:,:),pointer :: g_arng   => null() !*FD Global annual air temperature range
     real(sp),dimension(:,:),pointer :: g_artm   => null() !*FD Global annual mean air temperature
@@ -564,6 +566,7 @@ module glimmer_types
     type(glimmer_thckwk)   :: thckwk
     type(glimmer_tempwk)   :: tempwk
     type(glimmer_paramets) :: paramets
+    type(CFproj_projection) :: projection
   end type glimmer_global_type
 
 end module glimmer_types

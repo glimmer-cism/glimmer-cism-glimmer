@@ -46,6 +46,8 @@ module glimmer_ncfile
   !*FD routines for GLIMMER netCDF file I/O
   !*FD written by Magnus Hagdorn, 2004
 
+  character(len=*), private, parameter :: mapvarname = 'mapping'
+
 contains
   subroutine openall_out(model)
     !*FD open all netCDF files for output
@@ -111,6 +113,7 @@ contains
     !*FD create a new netCDF file
     use glimmer_ncdf
     use glimmer_types
+    use glimmer_CFproj
     use paramets, only : len0
     implicit none
     type(glimmer_nc_output), pointer :: outfile
@@ -120,7 +123,7 @@ contains
 
     ! local variables
     integer status
-    integer i
+    integer i,mapid
     
     ! create new netCDF file
     status = nf90_create(NC%filename,NF90_CLOBBER,NC%id)
@@ -164,6 +167,11 @@ contains
 
     ! defining variables
     !GENVARS!
+
+    ! adding projection info
+    status = nf90_def_var(NC%id,mapvarname,NF90_CHAR,mapid)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    call CFproj_PutProj(NC%id,mapid,model%projection)
 
     ! leaving define mode
     status = nf90_enddef(NC%id)
