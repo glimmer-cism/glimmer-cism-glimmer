@@ -47,9 +47,40 @@ module glide_setup
 
   private
   public :: glide_readconfig, glide_printconfig, glide_scale_params, &
-       glide_calclsrf, glide_marinlim, glide_load_sigma, glide_maskthck
+       glide_calclsrf, glide_marinlim, glide_load_sigma, glide_maskthck, &
+       glide_prof_start, glide_prof_stop
 
 contains
+  
+  subroutine glide_prof_start(model,profn)
+    !*FD start logging profile
+    use glide_types
+    use profile
+    implicit none
+    type(glide_global_type) :: model        !*FD model instance
+    integer, intent(in)     :: profn        !*FD profile number
+
+    call profile_start(model%prof,profn)
+  end subroutine glide_prof_start
+
+  subroutine glide_prof_stop(model,profn,msg)
+    !*FD write message to profile
+    use glide_types
+    use profile
+    implicit none
+    type(glide_global_type) :: model        !*FD model instance
+    integer, intent(in)     :: profn        !*FD profile number
+    character(len=*), intent(in) :: msg     !*FD message to be written to profile
+    
+    !local variables
+    character (len=20) :: timestring
+
+    call profile_stop(model%prof,profn)
+    if (mod(model%numerics%timecounter,glide_profile_period).eq.0) then
+       write(timestring,*) model%numerics%time
+       call profile_log(model%prof,profn,trim(timestring)//' '//msg)
+    end if
+  end subroutine glide_prof_stop
 
   subroutine glide_readconfig(model,config)
     !*FD read GLIDE configuration file

@@ -53,6 +53,7 @@ contains
     use glimmer_log
     use glide_types
     use glide_io
+    use profile
     implicit none
     type(glide_global_type) :: model        !*FD model instance
     logical, optional :: crash              !*FD set to true if the model died unexpectedly
@@ -75,6 +76,10 @@ contains
     write(message,*) 'Maximum temperature iterations: ',model%temper%niter
     call write_log(message)
 
+    ! close profile
+#ifdef PROFILING
+    call profile_close(model%prof)
+#endif
     call close_log
   end subroutine glide_finalise
 end module glide_stop

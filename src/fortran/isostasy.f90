@@ -63,6 +63,7 @@ contains
     if (model%isos%lithosphere .eq. 1) then
        call init_elastic(model%isos%rbel,model%numerics%dew)
     end if
+    model%isos%next_calc = model%numerics%tstart
 
     ! scale tau
     model%isos%relaxed_tau = model%isos%relaxed_tau * scyr / tim0

@@ -58,9 +58,16 @@ module glide_types
   use glimmer_global
   use glimmer_ncdf
   use isostasy_types
+  use profile
   use glimmer_cfproj, only : CFproj_projection
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+#ifdef PROFILE_PERIOD
+  integer, parameter :: glide_profile_period = PROFILE_PERIOD
+#else
+  integer, parameter :: glide_profile_period = 100
+#endif
 
   type glide_general
 
@@ -319,6 +326,8 @@ module glide_types
     real(dp) :: dt     =    0.0
     real(dp) :: dttem  =    0.0
     real(sp) :: nshlf  =    0.0
+
+    integer  :: timecounter = 0   !*FD count time steps
     
     ! Vertical coordinate ---------------------------------------------------
                                                                
@@ -445,6 +454,7 @@ module glide_types
     type(glide_tempwk)   :: tempwk
     type(glide_paramets) :: paramets
     type(CFproj_projection) :: projection
+    type(profile_type)   :: prof
     type(isos_type)      :: isos
   end type glide_global_type
 

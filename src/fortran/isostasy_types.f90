@@ -76,6 +76,8 @@ module isostasy_types
      !*FD characteristic time constant of relaxing mantle
      real :: period = 500.
      !*FD lithosphere update period
+     real :: next_calc
+     !*FD when to upate lithosphere
      logical :: new_load=.false.
      !*FD set to true if there is a new surface load
      type(isostasy_elastic) :: rbel

@@ -1,3 +1,10 @@
+2005-01-27 Magnus Hagdorn
+ * fixed bug in isostasy code where lithosphere was updated every time step
+   (isostasy.f90, isostasy_types.f90, glide.f90)
+ * added profileing module (profile.f90)
+ * hooked up profiling (glide.f90, glide_setup.f90, glide_stop.f90, 
+   glide_stop.f90, glide_types.f90)
+
 2005-01-26 Magnus Hagdorn
  * some more minor optimisations to glimmer_temp.f90
 

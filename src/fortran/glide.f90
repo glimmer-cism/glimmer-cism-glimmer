@@ -65,6 +65,7 @@ contains
     use glimmer_scales
     use glide_mask
     use isostasy
+    use profile
     implicit none
     type(glide_global_type) :: model        !*FD model instance
     type(ConfigSection), pointer :: config  !*FD structure holding sections of configuration file
@@ -127,6 +128,11 @@ contains
     call glide_calclsrf(model%geometry%thck, model%geometry%topg, model%climate%eus,model%geometry%lsrf)
     model%geometry%usrf = model%geometry%thck + model%geometry%lsrf
 
+    ! initialise profile
+#ifdef PROFILING
+    call profile_init(model%prof,'glide.profile')
+    write(model%prof%profile_unit,*) '# take a profile every ',glide_profile_period,' time steps'
+#endif
   end subroutine glide_initialise
   
   subroutine glide_tstep_p1(model,time)
@@ -150,6 +156,9 @@ contains
     ! ------------------------------------------------------------------------ 
     ! Calculate various derivatives...
     ! ------------------------------------------------------------------------     
+#ifdef PROFILING
+    call glide_prof_start(model,1)
+#endif
     call stagvarb(model%geometry% thck, &
          model%geomderv% stagthck,&
          model%general%  ewn, &
@@ -166,10 +175,16 @@ contains
          model%geomderv% stagthck,&
          model%geomderv% dthckdew, &
          model%geomderv% dthckdns)
+#ifdef PROFILING
+    call glide_prof_stop(model,1,'horizontal derivatives')
+#endif
 
     ! ------------------------------------------------------------------------ 
     ! Do velocity calculation if necessary
     ! ------------------------------------------------------------------------ 
+#ifdef PROFILING
+    call glide_prof_start(model,2)
+#endif
     if (model%options%whichevol.eq.1) then
        if ((model%numerics%tinc > mod(model%numerics%time,model%numerics%nvel) .or. &
             model%numerics%time == model%numerics%tinc)) then
@@ -201,7 +216,13 @@ contains
 
        end if
     end if
+#ifdef PROFILING
+    call glide_prof_stop(model,2,'horizontal velocities')
+#endif
 
+#ifdef PROFILING
+    call glide_prof_start(model,3)
+#endif
     call glide_maskthck(0, &                                    !magi a hack, someone explain what whichthck=5 does
          model%geometry% thck,      &
          model%climate%  acab,      &
@@ -209,14 +230,23 @@ contains
          model%geometry% mask,      &
          model%geometry% totpts,    &
          model%geometry% empty)
+#ifdef PROFILING
+    call glide_prof_stop(model,3,'ice mask 1')
+#endif
 
     ! ------------------------------------------------------------------------ 
     ! Calculate temperature evolution and Glenn's A, if necessary
     ! ------------------------------------------------------------------------ 
+#ifdef PROFILING
+    call glide_prof_start(model,4)
+#endif
     if ( model%numerics%tinc >  mod(model%numerics%time,model%numerics%ntem)) then
        call timeevoltemp(model, model%options%whichtemp)
        model%temper%newtemps = .true.
     end if
+#ifdef PROFILING
+    call glide_prof_stop(model,4,'temperature')
+#endif
   end subroutine glide_tstep_p1
 
 
@@ -243,6 +273,9 @@ contains
     ! ------------------------------------------------------------------------ 
     ! Calculate flow evolution by various different methods
     ! ------------------------------------------------------------------------ 
+#ifdef PROFILING
+    call glide_prof_start(model,5)
+#endif
     select case(model%options%whichevol)
     case(0) ! Use precalculated uflx, vflx -----------------------------------
 
@@ -260,16 +293,28 @@ contains
        call thck_nonlin_evolve(model,model%temper%newtemps, 6)
 
     end select
+#ifdef PROFILING
+    call glide_prof_stop(model,5,'ice evolution')
+#endif
 
     ! ------------------------------------------------------------------------
     ! get new mask
     ! ------------------------------------------------------------------------
+#ifdef PROFILING
+    call glide_prof_start(model,6)
+#endif
     call glide_set_mask(model)
+#ifdef PROFILING
+    call glide_prof_stop(model,6,'ice mask 2')
+#endif
 
     ! ------------------------------------------------------------------------ 
     ! Remove ice which is either floating, or is present below prescribed
     ! depth, depending on value of whichmarn
     ! ------------------------------------------------------------------------ 
+#ifdef PROFILING
+    call glide_prof_start(model,7)
+#endif
     call glide_marinlim(model%options%  whichmarn, &
          0, &                                        !magi a hack, someone explain what whichthck=6 does
          model%geometry% thck,      &
@@ -279,16 +324,26 @@ contains
          model%geometry%thkmask,    &
          model%numerics%mlimit,     &
          model%climate%eus)
+#ifdef PROFILING
+    call glide_prof_stop(model,7,'marine margin')
+#endif
 
     ! ------------------------------------------------------------------------
     ! update ice/water load if necessary
     ! ------------------------------------------------------------------------
+#ifdef PROFILING
+    call glide_prof_start(model,8)
+#endif
     if (model%isos%do_isos) then
-       if (model%numerics%tinc .gt. mod(model%numerics%time,model%isos%period)) then
+       if (model%numerics%time.ge.model%isos%next_calc) then
+          model%isos%next_calc = model%isos%next_calc + model%isos%period
           call isos_icewaterload(model)
           model%isos%new_load = .true.
        end if
     end if
+#ifdef PROFILING
+    call glide_prof_stop(model,8,'isostasy water')
+#endif
 
   end subroutine glide_tstep_p2
 
@@ -303,15 +358,25 @@ contains
     ! ------------------------------------------------------------------------ 
     ! Calculate isostasy
     ! ------------------------------------------------------------------------ 
+#ifdef PROFILING
+    call glide_prof_start(model,9)
+#endif
     if (model%isos%do_isos) then
        call isos_isostasy(model)
     end if
+#ifdef PROFILING
+    call glide_prof_stop(model,9,'isostasy')
+#endif
 
     ! ------------------------------------------------------------------------
     ! calculate upper and lower ice surface
     ! ------------------------------------------------------------------------
     call glide_calclsrf(model%geometry%thck, model%geometry%topg, model%climate%eus, model%geometry%lsrf)
     model%geometry%usrf = max(0.d0,model%geometry%thck + model%geometry%lsrf)
+
+    ! increment time counter
+    model%numerics%timecounter = model%numerics%timecounter + 1
+
   end subroutine glide_tstep_p3
 
 end module glide
