@@ -538,7 +538,7 @@ contains
     use glimmer_global, only : dp, sp 
     use paramets, only : len0
 
-    use glimmer_degd
+    use glide_pdd
     use glimmer_types
 
     implicit none

@@ -1,3 +1,8 @@
+2004-08-04 Ian Rutt
+ * Completed new PDD code, with Romberg integration from a
+   ACM public domain routine (Algorithm 60). This has been tested, and
+   should work. Removed glimmer_degd.f90, since this is now redundant.
+
 2004-07-18 Ian Rutt
  * Added new coding of PDD routines, without any NR code,
    (glide_pdd.f90), but not "plumbed in" yet.

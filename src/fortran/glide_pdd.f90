@@ -48,16 +48,16 @@ module glide_pdd
   !*FD Antarctica, but this has been removed for the time being. The current
   !*FD code was originally specific to Greenland, but is in fact applied
   !*FD regardless of which region the ice model is covering.
+  !*FD 
+  !*FD This file replaces glimmer_degd.f90.
 
   use glimmer_types
-  !use glimmer_global
 
   implicit none
 
   ! These module variables are used for back-door message passing, to make the
   ! integration of the PDD table look more comprehensible, and avoid the need to
   ! have two customised copies of the integration code.
-
 
   real(sp) :: dd_sigma            !*FD The value of $\sigma$ in the PDD integral
   real(sp) :: t_a_prime           !*FD The value of $T'_{a}$ in the PDD integral
@@ -228,7 +228,8 @@ contains
 
     !*FD Initialises the positive-degree-day-table.
 
-    use glimmer_global, only: sp   
+    use glimmer_global, only: sp
+    use glide_messages
  
     implicit none
 
@@ -249,6 +250,8 @@ contains
     !  tmj -- the actual july temperature
     !--------------------------------------------------------------------
 
+    call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,'Calculating PDD table...')
+
     do tma = pddcalc%iy, pddcalc%iy+(pddcalc%ny-1)*pddcalc%dy, pddcalc%dy
 
       ky = findgrid(tma,real(pddcalc%iy),real(pddcalc%dy))
@@ -263,14 +266,16 @@ contains
         mean_annual_temp=tma
         dd_sigma=pddcalc%dd_sigma
      
-        pddcalc%pddtab(kx,ky)=(1.0/(dd_sigma*sqrt(twopi)))*hrvint(inner_integral,0.0,twopi,16,1e-14,fac,mfin)
-     
+        pddcalc%pddtab(kx,ky)=(1.0/(dd_sigma*sqrt(twopi)))*romberg_int(inner_integral,0.0,twopi)
+       
         ! convert to days     
 
         pddcalc%pddtab(kx,ky) = 365.0 * pddcalc%pddtab(kx,ky) / twopi
 
       end do
     end do
+
+    call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,'   ...done.')
 
   end subroutine pddtabgrn
 
@@ -293,7 +298,11 @@ contains
 
     upper_limit=t_a_prime+2.5*dd_sigma
 
-    inner_integral=hrvint(pdd_integrand,0.0,upper_limit,16,1e-14,fac,mfin)
+    if (upper_limit<=0.0) then
+      inner_integral=0.0
+    else
+      inner_integral=romberg_int(pdd_integrand,0.0,upper_limit)
+    endif
 
   end function inner_integral
 
@@ -311,161 +320,64 @@ contains
     use glimmer_global, only : sp
          
     implicit none
-    
+
     real(sp), intent(in) :: artm      !*FD The annual mean air temperature (degC)
-    
-    pdd_integrand = artm *  exp(- (artm - t_a_prime)**2 / (2.0 * dd_sigma**2))
+
+     pdd_integrand = artm *  exp(- (artm - t_a_prime)**2 / (2.0 * dd_sigma**2))
 
   end function pdd_integrand
 
-!-------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------------
 
-    recursive real(sp) function hrvint(f,a,b,max,acc,fac,mfin)
+  recursive real(sp) function romberg_int(fct,lgr,rgr)
 
-    !*FD Modified Havie Integration, based on TOMS
-    !*FD algorithm 400, which appeared in Comm. ACM, {\bf 13}, 
-    !*FD no. 10, p. 622 (1970). Original description is: `Havie 
-    !*FD integration with an expanded Rutishauser-type 
-    !*FD summation procedure'. This version converted from
-    !*FD what looks like FORTRAN IV by ICR, July 2004.
+    !*FD Function to perform Romberg Integration on function \texttt{fct}, between
+    !*FD limits \texttt{lgr} and \texttt{rgr}. The precision of the routine is 
+    !*FD determined by the value of \texttt{ord}, an internal variable. 
+    !*FD
+    !*FD This routine is an implementation of ACM algorithm 60, by F. L. Bauer.
+    !*FD (Comm. ACM, vol. 4, issue 6, June 1961).
 
     implicit none
 
-    real                :: f
-    real,   intent(in)  :: a
-    real,   intent(in)  :: b
-    integer,intent(in)  :: max
-    real,   intent(in)  :: acc
-    real,   intent(out) :: fac
-    integer,intent(out) :: mfin
+    real(sp)            :: fct    !*FD Function to be integrated
+    real(sp),intent(in) :: lgr    !*FD Lower bound
+    real(sp),intent(in) :: rgr    !*FD Upper bound
+    integer,parameter :: ord = 6
 
-    ! Internal variables --------------------------------------------
+    real(sp),dimension(ord+1) :: t
+    real(sp) :: l,u,m
+    integer :: f,h,j,n
 
-    real(dp),dimension(17) :: t,u,tprev,uprev
-    integer :: mux,n,nn,nz,na,nb,kc,kk,kb,kkk,ka,kfr,kz,k
-    real(dp) :: enpt,sumt,h,sh,en,em,sum,suma,sumb,sumz,zkz,ak,d,dma
+    external fct
 
-    ! Externals -----------------------------------------------------
-
-    external f
-
-    ! test for max greater than 16 ----------------------------------
-
-    mux=max
-    if (max>16) mux=16
-
-    ! initialization ------------------------------------------------
-
-    enpt=0.5*(f(a)+f(b))
-    sumt=0.0
-    mfin=1
+    l=rgr-lgr
+    t(1)=(fct(lgr)+fct(rgr))/2.0
     n=1
-    h=b-a
-    sh=h
 
-    ! begin repetitive loop from order 1 to order max --------------- 
+    do h=1,ord
+       u=0
+       m=l/(2*n)
 
-    do
-       t(1)=h*(enpt+sumt)
-       sum=0.
-       nn=n+n
-       en=nn
-       em=sh/en
+       do j=1,2*n-1,2
+          u=u+fct(lgr+j*m)
+       end do
 
-       ! begin rutishauser evaluation of rectangular sums --------------
-       ! initialization
+       t(h+1)=((u/n)+t(h))/2.0
+       f=1
+       
+       do j=h,1,-1
+          f=f*4
+          t(j)=t(j+1)+(t(j+1)-t(j))/(f-1)
+       end do
 
-       if(nn<=16) then
-          nz=nn
-       else
-          nz=16
-       endif
+       n=2*n
 
-       if(nn<=256) then
-          na=nn
-       else
-          na=256
-       endif
+    end do
 
-       if(nn<=4096) then
-          nb=nn
-       else
-          nb=4096
-       endif
+    romberg_int=t(1)*l
 
-       ! development of rectangular sums -------------------------------
-
-       do kc=1,nn,4096
-          sumb=0.
-          kk=kc+nb-1
-          do kb=kc,kk,256
-             suma=0.
-             kkk=kb+na-1
-             do ka=kb,kkk,16
-                sumz=0.
-                kfr=ka+nz-1
-                do kz=ka,kfr,2
-                   zkz=kz
-                   sumz=sumz+f(a+zkz*em)
-                enddo
-                suma=sumz+suma
-             enddo
-             sumb=suma+sumb
-          enddo
-          sum=sumb+sum
-       enddo
-
-       ! end of rutishauser procedure ----------------------------------
-
-       u(1)=h*sum
-       k=1
-
-       ! begin extrapolation loop --------------------------------------
-       ! The arithmetic ifs and gotos here were too complicated for
-       ! me to contemplate writing them...
-
-75     fac=abs(t(k)-u(k))
-       if(t(k)) 80, 85, 80
-
-       ! test for relative accuracy
-
-80     if(fac-abs(acc*t(k))) 90, 90, 100
-
-       ! test for absolute accuracy when t(k)=0
-
-85     if(fac-abs(acc)) 95, 95, 100
-90     fac=fac/abs(t(k))
-
-       ! integral evaluation before exit
-
-95     hrvint=0.5*(t(k)+u(k))
-       exit
-100    if(k-mfin) 105, 115, 115
-105    ak=k+k
-       d=2.**ak
-       dma=d-1.0
-       ! begin extrapolation
-       t(k+1)=(d*t(k)-tprev(k))/dma
-       tprev(k)=t(k)
-       u(k+1)=(d*u(k)-uprev(k))/dma
-       uprev(k)=u(k)
-       ! end extrapolation
-       k=k+1
-       if(k-mux) 75, 110, 110
-       ! end extrapolation loop
-110    fac=abs(t(k)-u(k))
-       if(t(k)) 90, 95, 90
-       ! order is increased by one
-115    h=0.5*h
-       sumt=sumt+sum
-       tprev(k)=t(k)
-       uprev(k)=u(k)
-       mfin=mfin+1
-       n=nn
-       ! return for next order extrapolation
-    enddo
-
-  end function hrvint
+  end function romberg_int
 
 !-------------------------------------------------------------------------------
 
