@@ -70,6 +70,7 @@ program eis_glide
   ! initialise GLIDE
   call glide_initialise(model,config)
   call eis_initialise(climate,config,model)
+  call CheckSections(config)
   ! fill dimension variables
   call glide_nc_fillall(model)
 

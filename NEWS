@@ -1,3 +1,18 @@
+Changes in Version 0.3
+======================
+* slight change in configuration file format, the following sections 
+  were renamed to
+  [default] -> [CF default]
+  [output]  -> [CF output]
+  [input]   -> [CF input]
+* model version is handled by configure.in script
+* we've got a glimmer-config script
+* renamed some files and fixed module name space
+* general glint clean-up
+* updated doc (a never-ending task)
+* model data can be accessed via accessor subroutines
+  these hide scaling at a performance penalty
+  
 Changes in Version 0.2
 ======================
 * use autotools for generating Makefiles

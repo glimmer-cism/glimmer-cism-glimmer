@@ -81,8 +81,19 @@ $$ where $z^\ast$ is the vertical distance above the ELA. }\\
     \texttt{ela\_a} & ELA factor $a$\\
     \texttt{ela\_b} & ELA factor $b$\\
     \texttt{ela\_c} & ELA factor $c$\\
-    \texttt{zmax} & The elevation at which the maximum mass balance is reached, $z_{\text{max}}$\\
-    \texttt{bmax} & The maximum mass balance, $M_{\text{max}}$\\
+    \texttt{zmax\_mar} & The elevation at which the maximum mass balance is reached, $z_{\text{max}}$ for marine conditions\\
+    \texttt{bmax\_mar} & The maximum mass balance, $M_{\text{max}}$ for marine conditions\\
+    \texttt{zmax\_cont} & The elevation at which the maximum mass balance is reached, $z_{\text{max}}$ for continental conditions\\
+    \texttt{bmax\_cont} & The maximum mass balance, $M_{\text{max}}$ for continental conditions\\ 
+    \hline 
+%%%% 
+    \hline
+    \multicolumn{2}{|l|}{\texttt{[EIS CONY]}}\\
+    \hline
+    \multicolumn{2}{|p{0.98\textwidth}|}{The mass balance function can be modified with a continentality value. The continentality value is determined by finding the ratio between points below sea level and the total number of points in a circle of given search radius. This value between 0 and 1 is used to interpolate between continental and maritime mass balance curves.}\\
+    \hline
+    \texttt{period} & how often continentality is updated (default 500a).\\
+    \texttt{radius} & the search radius (default 600000m).\\
     \hline
 %%%% 
     \hline

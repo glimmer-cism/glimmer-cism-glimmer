@@ -1,4 +1,3 @@
-
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! +                                                           +
 ! +  glimmer_global.f90 - part of the GLIMMER ice model       + 
@@ -46,8 +45,7 @@ module glimmer_global
   !*FD Module holding global variables for Glimmer. Holds real-type
   !*FD kind values, and other global code parameters.
 
-  character(len=*), parameter :: glimmer_version = 'GLIMMER v. 0.2'
-  !*FD Glimmer version string
+  use glimmer_vers
 
   integer,parameter :: sp = kind(1.0) 
   

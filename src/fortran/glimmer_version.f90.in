@@ -1,6 +1,6 @@
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! +                                                           +
-! +  simple_glide.f90 - part of the GLIMMER ice model         + 
+! +  glimmer_version.f90 - part of the GLIMMER ice model      + 
 ! +                                                           +
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! 
@@ -40,48 +40,7 @@
 !
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-program simple_glide
-  !*FD This is a simple GLIDE test driver. It can be used to run
-  !*FD the EISMINT test cases
-  use glimmer_global, only:rk
-  use glide
-  use simple_forcing
-  use glimmer_log
-  use glimmer_config
-  implicit none
-
-  type(glide_global_type) :: model        ! model instance
-  type(simple_climate) :: climate         ! climate
-  type(ConfigSection), pointer :: config  ! configuration stuff
-  character(len=50) :: fname   ! name of paramter file
-  real(kind=rk) time
-
-  write(*,*) 'Enter name of GLIDE configuration file to be read'
-  read(*,*) fname
-  
-  ! start logging
-  call open_log(unit=50)
-  
-  ! read configuration
-  call ConfigRead(fname,config)
-
-  ! initialise GLIDE
-  call simple_initialise(climate,config)
-  call glide_initialise(model,config)
-  call CheckSections(config)
-  ! fill dimension variables
-  call glide_nc_fillall(model)
-  time = model%numerics%tstart
-  do while(time.le.model%numerics%tend)
-     call simple_massbalance(climate,model,time)
-     call simple_surftemp(climate,model,time)     
-     call glide_tstep_p1(model,time)
-     call glide_tstep_p2(model)
-     call glide_tstep_p3(model)
-     ! override masking stuff for now
-     time = time + model%numerics%tinc
-  end do
-
-  ! finalise GLIDE
-  call glide_finalise(model)
-end program simple_glide
+module glimmer_vers
+  character(len=*), parameter :: glimmer_version = 'GLIMMER v. @GLIMMER_MAJOR_VERSION@.@GLIMMER_MINOR_VERSION@'
+  !*FD Glimmer version string
+end module glimmer_vers

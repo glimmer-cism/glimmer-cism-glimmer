@@ -68,29 +68,29 @@ contains
     type(glimmer_nc_input), pointer :: input => null()
 
     ! get default meta data
-    call GetSection(config,section,'default')
+    call GetSection(config,section,'CF default')
     if (associated(section)) then
        call handle_metadata(section, default_metadata, .true.)
     end if
 
     ! setup outputs
-    call GetSection(config,section,'output')
+    call GetSection(config,section,'CF output')
     do while(associated(section))
        output => handle_output(section,output,model%numerics%tstart)
        if (.not.associated(model%funits%out_first)) then
           model%funits%out_first => output
        end if
-       call GetSection(section%next,section,'output')
+       call GetSection(section%next,section,'CF output')
     end do
 
     ! setup inputs
-    call GetSection(config,section,'input')
+    call GetSection(config,section,'CF input')
     do while(associated(section))
        input => handle_input(section,input)
        if (.not.associated(model%funits%in_first)) then
           model%funits%in_first => input
        end if
-       call GetSection(section%next,section,'input')
+       call GetSection(section%next,section,'CF input')
     end do
 
   end subroutine glimmer_nc_readparams

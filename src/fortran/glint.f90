@@ -295,9 +295,12 @@ contains
              write(message,*) 'Must specify ',params%ninstances,' instance config files'
              call write_log(message,GM_FATAL,__FILE__,__LINE__)
           end if
-
+          ! check if we used all sections
+          call CheckSections(instance_config)
        end do
     end if
+    ! check if we used all sections
+    call CheckSections(global_config)
 
     ! Check that all mass-balance time-steps are the same length and 
     ! assign that value to the top-level variable

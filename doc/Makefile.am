@@ -9,7 +9,7 @@ docdir = $(prefix)/doc
 dist_doc_DATA = $(doc_DATA)
 SUBDIRS = dg ug num common
 
-EXTRA_DIST = dg.tex dg_pdf.tex dg_ps.tex glimmer.tex glimmer_pdf.tex glimmer_ps.tex num.tex num_pdf.tex num_ps.tex ug.tex ug_pdf.tex ug_ps.tex user_doc.tex
+EXTRA_DIST = dg.tex dg_pdf.tex dg_ps.tex glimmer.tex glimmer_pdf.tex glimmer_ps.tex num.tex num_pdf.tex num_ps.tex ug.tex ug_pdf.tex ug_ps.tex 
 
 CLEANFILES = *~ *.aux *.dvi *.log *.out *.toc
 

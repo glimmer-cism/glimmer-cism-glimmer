@@ -67,6 +67,7 @@ module glimmer_config
 
   type ConfigSection
      character(len=namelen) :: name
+     logical :: used = .false.
      type(ConfigValue), pointer :: values=>NULL()
      type(ConfigSection), pointer :: next=>NULL()
   end type ConfigSection
@@ -169,11 +170,30 @@ contains
     found=>config
     do while(associated(found))
        if (name.eq.trim(found%name)) then
+          found%used = .true.
           return
        end if
        found=>found%next
     end do
   end subroutine GetSection
+
+  subroutine CheckSections(config)
+    !*FD traverse linked list and check that all sections have been used
+    use glimmer_log
+    implicit none
+    type(ConfigSection), pointer :: config
+    
+    ! local variables
+    type(ConfigSection), pointer :: cf
+
+    cf=>config
+    do while(associated(cf))
+       if (.not.cf.used) then
+          call write_log('Unused section: '//trim(cf%name),GM_WARNING)
+       end if
+       cf=>cf%next
+    end do
+  end subroutine CheckSections
 
   subroutine GetValueDoubleArray(section,name,val,numval)
     !*FD get real array value
