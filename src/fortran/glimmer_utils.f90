@@ -253,9 +253,33 @@ contains
                                                 !*FD two horizontal.
     real(dp),dimension(size(inp,dim=1))  :: hsum
   
-    hsum = sum(sum(inp(:,:,:),dim=3),dim=2)
+    integer up
+
+    do up=1,size(inp,dim=1)
+       hsum(up) = sum(inp(up,:,:))
+    end do
 
   end function hsum
+
+  function hsum4(inp)
+
+    !*FD Calculates the sum of a given three-dimensional field at each
+    !*FD level. The vertical coordinate of the input is the first index of
+    !*FD the array.
+    !*RV A one-dimensional array of the same size as the first dimension of
+    !*RV \texttt{inp} is returned, containing the sum of \texttt{inp} for 
+    !*RV each level.
+
+    implicit none
+
+    real(dp),dimension(:,:,:),intent(in) :: inp !*FD The input array. The first
+                                                !*FD index is the vertical, the other
+                                                !*FD two horizontal.
+    real(dp),dimension(size(inp,dim=1))  :: hsum4
+  
+    hsum4(:) = inp(:,1,1) + inp(:,2,1) + inp(:,1,2) + inp(:,2,2)
+
+  end function hsum4
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

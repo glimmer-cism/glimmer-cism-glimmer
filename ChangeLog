@@ -1,3 +1,8 @@
+2004-08-18 Magnus Hagdorn
+ * optimised hsum, execution of hsum improved by a factor of 2.3
+   this leads to an overall improvement by a factor of 1.27 for an EISMINT-2 run
+   (glimmer_utils.f90, glimmer_velo.f90)
+	
 2004-08-16 Magnus Hagdorn
  * data_dep.dot: added plot of data dependency
  * glide.f90: when hotstarting temp and flwa is read from file

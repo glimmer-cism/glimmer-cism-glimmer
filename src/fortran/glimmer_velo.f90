@@ -230,7 +230,7 @@ contains
     !*FD different values of \texttt{flag}, depending on exactly what we want to calculate.
 
     use glimmer_global, only : dp
-    use glimmer_utils, only : hsum
+    use glimmer_utils, only : hsum4
     use physcon, only : rhoi, grav, gn
     use paramets, only : thk0, len0, vis0, vel0
 
@@ -292,7 +292,7 @@ contains
 
             ! Get column profile of Glenn's A
 
-            hrzflwa = hsum(flwa(:,ew:ew+1,ns:ns+1))
+            hrzflwa = hsum4(flwa(:,ew:ew+1,ns:ns+1))
 
             ! Calculate coefficient for integration
 
@@ -340,7 +340,7 @@ contains
         do ew = 1,ewn-1
           if (stagthck(ew,ns) /= 0.0d0) then
 
-            hrzflwa = hsum(flwa(:,ew:ew+1,ns:ns+1))  
+            hrzflwa = hsum4(flwa(:,ew:ew+1,ns:ns+1))  
             intflwa(upn) = 0.0d0
 
             do up = upn-1, 1, -1
@@ -378,7 +378,7 @@ contains
             uvel(upn,ew,ns) = ubas(ew,ns)
             vvel(upn,ew,ns) = vbas(ew,ns)
 
-            hrzflwa = hsum(flwa(:,ew:ew+1,ns:ns+1))  
+            hrzflwa = hsum4(flwa(:,ew:ew+1,ns:ns+1))  
 
             if (velowk%dintflwa(ew,ns) /= 0.0d0) then
                const(2) = c * diffu(ew,ns) / velowk%dintflwa(ew,ns)
@@ -423,7 +423,7 @@ contains
     !*FD Compare this with equation A1 in {\em Payne and Dongelmans}.
 
     use glimmer_global, only : dp
-    use glimmer_utils, only: hsum 
+    use glimmer_utils, only: hsum4 
 
     implicit none 
 
@@ -463,10 +463,10 @@ contains
       do ew = 2,ewn
         if (thck(ew,ns) > thklim) then
           wgrd(:,ew,ns) = geomderv%dusrfdtm(ew,ns) - sigma * geomderv%dthckdtm(ew,ns) + & 
-                      (hsum(uvel(:,ew-1:ew,ns-1:ns)) * &
+                      (hsum4(uvel(:,ew-1:ew,ns-1:ns)) * &
                       (sum(geomderv%dusrfdew(ew-1:ew,ns-1:ns)) - sigma * &
                        sum(geomderv%dthckdew(ew-1:ew,ns-1:ns))) + &
-                       hsum(vvel(:,ew-1:ew,ns-1:ns)) * &
+                       hsum4(vvel(:,ew-1:ew,ns-1:ns)) * &
                       (sum(geomderv%dusrfdns(ew-1:ew,ns-1:ns)) - sigma * &
                        sum(geomderv%dthckdns(ew-1:ew,ns-1:ns)))) / 16.0d0
         else
@@ -492,7 +492,7 @@ contains
     !*FD done if the thickness is greater than the threshold given by \texttt{numerics\%thklim}.
 
     use glimmer_global, only : dp
-    use glimmer_utils, only : hsum 
+    use glimmer_utils, only : hsum4 
 
     implicit none
 
@@ -568,8 +568,8 @@ contains
           cons(5) = (thck(ew-1,ns)+2.0d0*thck(ew,ns)+thck(ew+1,ns)) / dew16
           cons(6) = (thck(ew,ns-1)+2.0d0*thck(ew,ns)+thck(ew,ns+1)) / dns16
 
-          velowk%suvel = hsum(uvel(:,ew-1:ew,ns-1:ns))
-          velowk%svvel = hsum(vvel(:,ew-1:ew,ns-1:ns))
+          velowk%suvel = hsum4(uvel(:,ew-1:ew,ns-1:ns))
+          velowk%svvel = hsum4(vvel(:,ew-1:ew,ns-1:ns))
 
           ! Loop over each model level, starting from the bottom ----------------------
 
