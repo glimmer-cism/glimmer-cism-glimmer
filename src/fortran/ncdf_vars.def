@@ -111,10 +111,10 @@ factor:        thk0
 standard_name: global_average_sea_level
 
 [slc]
-dimensions:    time, y0, x0
+dimensions:    time, y1, x1
 units:         meter
 long_name:     isostatic adjustment
-data:          model%geometry%topg-model%geometry%relx
+data:          model%geometry%relx-model%geometry%topg
 factor:        thk0
 standard_name: isostatic_adjustment
 

@@ -1,3 +1,7 @@
+2004-07-01 Magnus Hagdorn
+ * handle input relaxed topo (glide.f90, glide_setup.f90, glide_types.f90)
+ * ncdf_vars.def: fixed sign of isostatic sea level 
+	
 2004-06-30 Magnus Hagdorn
  * glimmer_ts.f90: added scalar variations of interpolation routines and
    corresponding module interface

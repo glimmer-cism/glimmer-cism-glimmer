@@ -170,6 +170,13 @@ module glide_types
     !*FD upper kinematic B.C. obeyed 
     !*FD \end{description}
 
+    integer :: whichrelaxed = 0
+    !*FD relaxed topography:
+    !*FD \begin{description}
+    !*FD \item[0] get relaxed topo from separate variable
+    !*FD \item[1] first time slice of input topo is relaxed
+    !*FD \end{description}
+
   end type glide_options
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

@@ -496,6 +496,7 @@ contains
     call GetValue(section,'stress_calc',model%options%whichstrs)
     call GetValue(section,'evolution',model%options%whichevol)
     call GetValue(section,'vertical_integration',model%options%whichwvel)
+    call GetValue(section,'topo_is_relaxed',model%options%whichrelaxed)
   end subroutine handle_options
   
   subroutine print_options(model)
@@ -612,6 +613,9 @@ contains
     end if
     write(message,*) 'vertical_integration    : ',model%options%whichwvel,vertical_integration(model%options%whichwvel)
     call write_log(message)
+    if (model%options%whichrelaxed.eq.1) then
+       call write_log('First topo time slice is relaxed')
+    end if
     call write_log('')
   end subroutine print_options
 

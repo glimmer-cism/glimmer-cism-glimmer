@@ -78,6 +78,11 @@ contains
     ! and read first time slice
     call readall(model)
 
+    ! handle relaxed topo
+    if (model%options%whichrelaxed.eq.1) then
+       model%geometry%relx = model%geometry%topg
+    end if
+
     ! open all output files
     call openall_out(model)
 
