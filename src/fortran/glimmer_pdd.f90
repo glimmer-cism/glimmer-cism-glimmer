@@ -276,6 +276,7 @@ contains
        call GetValue(section,'wmax',params%wmax)
        call GetValue(section,'pddfac_ice',params%pddfac_ice)
        call GetValue(section,'pddfac_snow',params%pddfac_snow)
+       call GetValue(section,'dd_sigma',params%dd_sigma)
     end if
 
   end subroutine pdd_readconfig
@@ -311,6 +312,9 @@ contains
     call write_log(message)
     write(message,*) 'PDD factor for snow',params%pddfac_snow
     call write_log(message)
+    write(message,*) 'Standard deviation of temperature cycle',params%dd_sigma,' degC'
+    call write_log(message)
+    call write_log('')
 
   end subroutine pdd_printconfig
 

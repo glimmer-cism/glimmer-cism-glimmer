@@ -1,6 +1,7 @@
 2005-02-25 Ian Rutt
  * Finished updating GLINT documentation
-
+ * Added mass-balance scheme docs for PDD (resurrected from old docs)
+	
 2005-02-24 Ian Rutt
  * Updated GLINT documetation, resurrected some old stuff about using
    GLINT, and added a diagram about timestepping. This is perhaps a bit big
