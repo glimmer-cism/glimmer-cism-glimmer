@@ -1,0 +1,38 @@
+   100     [modetup] mnl:       (max num of vertical layers)
+     3     [modetup] mnal:      (max num of annual layers)
+  0.09     [modetup] dz0:       size of uppermost grid cell (m)
+  30.0     [modetup] zdeep:     depth of grid (m)
+   4.0     [modetup] dzdeep:    size of lowermost grid cell (m)
+.false.    [modetup] outmap:    extensive output saving (includes saving map output, i.e. large files)	
+.true.     [modetup] chcons:    check for conservation of energy and mass (true) or not (f)
+ -10.0     [physpar] t0ini:     initial surface temperature (C)
+ -10.0     [physpar] tempb:     temperature in lower layer (C)
+  1.00     [physpar] rint:      initial snow pack depth at elevation of measurements (m)
+ 300.0     [physpar] denup:     density of upper layer (kg/m3)
+ 910.0     [physpar] dendw:     density of lower layer (kg/m3)
+.true.     [physpar] dry:       initial snow pack dry (true) or wet (false)
+  0.45     [physpar] alboldwet: albedo of wet old snow 
+  0.65	   [physpar] albolddry: albedo of dry old snow     
+  0.82     [physpar] albfrs:    albedo of fresh snow      
+  0.52     [physpar] albice:    albedo of ice      
+  0.52     [physpar] albsup:    albedo of superimposed ice 
+  0.15	   [physpar] albwat:    albedo of water     
+  30.0     [physpar] decalb:    decay time for snow albedo (days) 
+ 300.0     [physpar] scswat:    scaling height (mm) for the effect of surficial water on the surface albedo  
+  0.01	   [physpar] scsnow:    scaling height for the effect of fresh snow (scsnow)    
+0.00012    [physpar] z0fs:      momentum roughness length for frozen snow (m)
+0.0013     [physpar] z0ms:      momentum roughness length for melting snow (m)
+0.0032     [physpar] z0ice:     momentum roughness length for ice (m)
+   2.5     [physpar] absice:    extinction coefficient for ice (m-1)
+  20.0     [physpar] abslow:    extinction coefficient for fresh snow (m-1)
+  15.0     [physpar] tsc0:      time scale for runoff of surficial water on a horizontal surface (days) 
+  0.05     [physpar] tsc1:      time scale for runoff of surficial water on a surface with slope of 1 degree (days) 
+   0.0     [physpar] tsc10:     time scale for runoff of surficial water on a steep surface (days) 
+  10.0     [physpar] tscfac:    ratio of time scales of runoff below and above surface
+  10.0     [physpar] zwind:     height of wind velocity input (m) for bulk method or highest level profile method
+   2.0     [physpar] ztemp:     height of temperature input (m) for bulk method or highest level profile method
+   1	   [method]  albkind:   (1.zuo&Konz., 2. Bugnion. , 3. Bugnion-modif)
+.false.	   [method]  VanDus:    Conductivity as in Van Dusen,1929 (true) or Sturm, 1997  
+   4	   [method]  kindz0:    kindz0 (1:z0t=z0; 2:z0t=0.00001; 3:Brutsaert; 4:Andreas)
+   2	   [method]  kstab:     stability functions (1=Businger; 2=Hogstrom; 3=Beljaars and Holtslag; 4=Dyer)
+.true.	   [method]  supice:    run off according to Zuo and Oe (true) or all water on top of ice runs off (false)
