@@ -52,27 +52,129 @@ program input2ncdf
 
   ! file names
   character(len=30) :: latfile, topofile, rtopofile, surffile, precepfile, pressurf
-  integer unit
+  integer unit, status
   type(glimmer_nc_output), pointer :: outfile
   type(glimmer_global_type) :: model
 
-  
-  write(*,*) 'Enter name of latitude file.'
-  read(*,*) latfile
-  write(*,*) 'Enter name of topography file.'
-  read(*,*) topofile
-  write(*,*) 'Enter name of relaxed topography file.'
-  read(*,*) rtopofile
-  write(*,*) 'Enter name of surface file file.'
-  read(*,*) surffile
-  write(*,*) 'Enter name of present precipitation file.'
-  read(*,*) precepfile
-  write(*,*) 'Enter name of present ice surface file.'
-  read(*,*) pressurf
+  integer nx,ny
+  real time,delta
+  real(kind=sp), dimension(:,:), allocatable :: data
 
   allocate(outfile)
+  write(*,*) 'Enter name of latitude file.'
+  read(*,*) latfile
+  inquire(file=latfile,exist=NC%do_var(NC_B_LAT))
+  write(*,*) 'Enter name of topography file.'
+  read(*,*) topofile
+  inquire(file=topofile,exist=NC%do_var(NC_B_TOPG))
+  write(*,*) 'Enter name of relaxed topography file.'
+  read(*,*) rtopofile
+  inquire(file=rtopofile,exist=NC%do_var(NC_B_RELX))
+  write(*,*) 'Enter name of surface file.'
+  read(*,*) surffile
+  inquire(file=surffile,exist=NC%do_var(NC_B_USURF))
+  write(*,*) 'Enter name of present precipitation file.'
+  read(*,*) precepfile
+  inquire(file=precepfile,exist=NC%do_var(NC_B_PRESPRCP))
+  write(*,*) 'Enter name of present ice surface file.'
+  read(*,*) pressurf
+  inquire(file=pressurf,exist=NC%do_var(NC_B_PRESUSRF))
+
   write(*,*) 'Enter name of output netCDF file.'
   read(*,*) NC%filename
 
+  if (.not.NC%do_var(NC_B_TOPG)) then
+     write(*,*) 'No topo file, bailing out...'
+     stop
+  end if
+
+  call readplan(topofile,data,time,nx,ny,delta)
+  model%general%upn = 1
+  model%numerics%dew = delta
+  model%numerics%dns = delta
+  allocate(model%numerics%sigma(model%general%upn))
+  model%numerics%sigma = 1
+  model%general%ewn = nx
+  model%general%nsn = ny
+  call glimmer_nc_createfile(outfile, model)
+
+  status = nf90_put_var(NC%id, NC%varids(NC_B_TOPG), data, (/1,1,1/))
+  call nc_errorhandle(__FILE__,__LINE__,status)
+
+  status = nf90_put_var(NC%id, NC%timevar,time,(/1/))
+  call nc_errorhandle(__FILE__,__LINE__,status)
+
+  if (NC%do_var(NC_B_LAT)) then
+     call readplan(latfile,data,time,nx,ny,delta)
+     status = nf90_put_var(NC%id, NC%varids(NC_B_LAT), data, (/1,1,1/))
+     call nc_errorhandle(__FILE__,__LINE__,status)
+  end if
+
+  if (NC%do_var(NC_B_RELX)) then
+     call readplan(rtopofile,data,time,nx,ny,delta)
+     status = nf90_put_var(NC%id, NC%varids(NC_B_RELX), data, (/1,1,1/))
+     call nc_errorhandle(__FILE__,__LINE__,status)
+  end if
+
+  if (NC%do_var(NC_B_USURF)) then
+     call readplan(surffile,data,time,nx,ny,delta)
+     status = nf90_put_var(NC%id, NC%varids(NC_B_USURF), data, (/1,1,1/))
+     call nc_errorhandle(__FILE__,__LINE__,status)
+  end if
+
+  if (NC%do_var(NC_B_PRESPRCP)) then
+     call readplan(precepfile,data,time,nx,ny,delta)
+     status = nf90_put_var(NC%id, NC%varids(NC_B_PRESPRCP), data, (/1,1,1/))
+     call nc_errorhandle(__FILE__,__LINE__,status)
+  end if
+
+  if (NC%do_var(NC_B_PRESUSRF)) then
+     call readplan(pressurf,data,time,nx,ny,delta)
+     status = nf90_put_var(NC%id, NC%varids(NC_B_PRESUSRF), data, (/1,1,1/))
+     call nc_errorhandle(__FILE__,__LINE__,status)
+  end if
+
+  status = nf90_close(NC%id)
+contains
+  subroutine readplan(fname,data,time,ewn,nsn, delta)
+    use glimmer_global, only : sp
+    implicit none
+    character(*),intent(in) :: fname
+    real(kind=sp), dimension(:,:), allocatable :: data
+    integer, intent(out) :: ewn,nsn
+    real(kind=sp), intent(out) :: time, delta
+
+    ! local 
+    integer :: unit=1
+    character :: cdum*4 
+    logical :: here
+    integer i,j
+
+    if (allocated(data)) then
+       deallocate(data)
+    end if
+
+    inquire(file=fname,exist=here)
+    if ( .not. here ) then
+      print*,'planform file ',fname,' not found'
+      stop
+    endif
+
+#ifdef CVF
+    open(unit,file=fname,form='unformatted',convert='BIG_ENDIAN')
+    ! convert is a non-standard specifier and doesn't work with the
+    ! Intel compiler.
+    ! Substituting with
+
+#else
+    open(unit,file=fname,form='unformatted')
+#endif
+
+    read(unit) time, cdum, ewn,nsn, delta
+    allocate(data(ewn,nsn))
+    read(unit) ((data(i,j),i=1,ewn),j=1,nsn)
+
+    close(unit)
+  end subroutine readplan
 
 end program input2ncdf

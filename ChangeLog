@@ -1,4 +1,9 @@
 2004-05-10 Magnus Hagdorn
+ * input2ncdf.f90: actually does what it is supposed to
+ * ncdf_vars.def: added presusrf, present day surface of the ice-sheet
+ * generate_ncvars.py: don't write variables associated with spots if no spots are selected
+
+2004-05-10 Magnus Hagdorn
  * added spot variables (generate_ncvars.py, ncdf_vars.def, ncdf.f90.in, ncdf_file.f90.in)
  * bin2ncdf.f90: does 3D now as well, there is a bug with the 0D time series.
  * input2ncdf.f90: start of a tool to convert glimmer input files to netCDF file

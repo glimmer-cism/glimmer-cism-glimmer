@@ -40,6 +40,9 @@ example :  $(LIBNAME).a glimmer_example.o
 bin2ncdf: bin2ncdf.o glimmer_global.o  ncdf.o ncdf_file.o glimmer_modu.o glimmer_physcon.o glimmer_paramets.o
 	$(F77) -o $@ $^ $(LD_FLAGS) 
 
+input2ncdf:	input2ncdf.o glimmer_global.o  ncdf.o ncdf_file.o glimmer_modu.o
+	$(F77) -o $@ $^ $(LD_FLAGS)
+
 clean : 
 	\rm -f *.o *.a *.mod f90_dep.mak $(AUTOGEN)
 

@@ -228,6 +228,9 @@ class PrintNCDF_FILE(PrintVars):
             self.stream.write("    if (NC%%do_var(%s)) then\n"%(var_type(var)))
             id = 'NC%%varids(%s)'%var_type(var)
         else:
+            if 'spot' in var['dimensions']:
+                spaces=3
+                self.stream.write("    if (NC%do_spot) then\n")
             id = 'NC%%%svar'%var['name']
         self.stream.write("%s    write(*,*) 'Creating variable %s'\n"%(spaces*' ',var['name']))
         self.stream.write("%s    status = nf90_def_var(NC%%id,'%s',NF90_FLOAT,(/%s/),%s)\n"%(spaces*' ',
@@ -243,7 +246,7 @@ class PrintNCDF_FILE(PrintVars):
                                                                                                            attrib,
                                                                                                            spaces*' ',
                                                                                                            var[attrib]))
-        if not is_dimvar(var):
+        if not is_dimvar(var) or 'spot' in var['dimensions']:
             self.stream.write("    end if\n")
         self.stream.write("\n")
 

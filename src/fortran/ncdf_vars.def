@@ -79,6 +79,13 @@ long_name:     present day precipitation
 data:          model%climate%prcp
 factor:        scyr * acc0
 
+[presusrf]
+dimensions:    time, y1, x1
+units:         meter
+long_name:     present day surface of the ice-sheet
+data:          model%climate%presusrf
+factor:        thk0
+
 [uflx]
 dimensions:    time, y0, x0
 units:         meter2/year
