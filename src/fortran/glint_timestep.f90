@@ -202,7 +202,7 @@ contains
 
     ! Convert from mm to m - very important!
 
-    instance%whichprecip=instance%whichprecip*0.001
+    instance%prcp=instance%prcp*0.001
 
     ! ------------------------------------------------------------------------ 
     ! Calculate ablation, and thus mass-balance
