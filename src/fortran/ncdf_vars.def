@@ -55,28 +55,28 @@ dimensions:    level
 units:         1
 long_name:     sigma layers
 
-[lat]
-dimensions:    time, y1, x1
-units:         degreeN
-long_name:     Latitude
-data:          model%climate%lati
-load:          1
-standard_name: latitude
+#[lat]
+#dimensions:    time, y1, x1
+#units:         degreeN
+#long_name:     Latitude
+#data:          model%climate%lati
+#load:          1
+#standard_name: latitude
 
-[lon]
-dimensions:    time, y1, x1
-units:         degreeE
-long_name:     Longitude
-data:          model%climate%loni
-load:          1
-standard_name: longitude
+#[lon]
+#dimensions:    time, y1, x1
+#units:         degreeE
+#long_name:     Longitude
+#data:          model%climate%loni
+#load:          1
+#standard_name: longitude
 
-[mask]
-dimensions:    time, y1, x1
-units:         1
-long_name:     upscaling and downscaling mask
-data:          model%climate%out_mask
-load:          1
+#[mask]
+#dimensions:    time, y1, x1
+#units:         1
+#long_name:     upscaling and downscaling mask
+#data:          model%climate%out_mask
+#load:          1
 
 [relx]
 dimensions:    time, y1, x1
@@ -86,21 +86,21 @@ data:          model%geometry%relx
 factor:        thk0
 load:          1
 
-[presprcp]
-dimensions:    time, y1, x1
-units:         meter/year
-long_name:     present day precipitation
-data:          model%climate%presprcp
-factor:        scyr * acc0
-load:          1
+#[presprcp]
+#dimensions:    time, y1, x1
+#units:         meter/year
+#long_name:     present day precipitation
+#data:          model%climate%presprcp
+#factor:        scyr * acc0
+#load:          1
 
-[presusrf]
-dimensions:    time, y1, x1
-units:         meter
-long_name:     present day surface of the ice-sheet
-data:          model%climate%presusrf
-factor:        thk0
-load:          1
+#[presusrf]
+#dimensions:    time, y1, x1
+#units:         meter
+#long_name:     present day surface of the ice-sheet
+#data:          model%climate%presusrf
+#factor:        thk0
+#load:          1
 
 [uflx]
 dimensions:    time, y0, x0
@@ -215,26 +215,26 @@ units:         degree_Celcius
 long_name:     basal ice temperature
 data:          model%temper%temp(model%general%upn,1:model%general%ewn,1:model%general%nsn)
 
-[arng]
-dimensions:    time, y1, x1
-units:         degree_Celcius
-long_name:     annual temperature range
-data:          model%climate%arng
+#[arng]
+#dimensions:    time, y1, x1
+#units:         degree_Celcius
+#long_name:     annual temperature range
+#data:          model%climate%arng
 
-[prcp]
-dimensions:    time, y1, x1
-units:         meter/year
-long_name:     precipitation
-data:          model%climate%prcp
-factor:        f1
-standard_name: lwe_precipitation_rate
+#[prcp]
+#dimensions:    time, y1, x1
+#units:         meter/year
+#long_name:     precipitation
+#data:          model%climate%prcp
+#factor:        f1
+#standard_name: lwe_precipitation_rate
 
-[ablt]
-dimensions:    time, y1, x1
-units:         meter/year
-long_name:     ablation
-data:          model%climate%ablt
-factor:        f1
+#[ablt]
+#dimensions:    time, y1, x1
+#units:         meter/year
+#long_name:     ablation
+#data:          model%climate%ablt
+#factor:        f1
 
 [dusrfdtm]
 dimensions:    time, y1, x1

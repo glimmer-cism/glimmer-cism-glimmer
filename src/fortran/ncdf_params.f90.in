@@ -53,10 +53,10 @@ module glimmer_ncparams
 contains
   subroutine ReadNCParams(model)
     !*FD read netCDF I/O related configuration file
-    use glimmer_types
+    use glide_types
     use glimmer_config
     implicit none
-    type(glimmer_global_type) :: model
+    type(glide_global_type) :: model
     
     ! local variables
     type(ConfigSection), pointer :: config

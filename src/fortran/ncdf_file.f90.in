@@ -51,10 +51,10 @@ module glimmer_ncfile
 contains
   subroutine openall_out(model)
     !*FD open all netCDF files for output
-    use glimmer_types
+    use glide_types
     use glimmer_ncdf
     implicit none
-    type(glimmer_global_type) :: model
+    type(glide_global_type) :: model
     
     ! local variables
     type(glimmer_nc_output), pointer :: oc
@@ -69,10 +69,10 @@ contains
 
   subroutine writeall(model,atend)
     !*FD if necessary write to netCDF files
-    use glimmer_types
+    use glide_types
     use glimmer_ncdf
     implicit none
-    type(glimmer_global_type) :: model
+    type(glide_global_type) :: model
     logical, optional :: atend
 
     ! local variables
@@ -94,10 +94,10 @@ contains
 
   subroutine closeall_out(model)
     !*FD close all netCDF files for output
-    use glimmer_types
+    use glide_types
     use glimmer_ncdf
     implicit none
-    type(glimmer_global_type) :: model
+    type(glide_global_type) :: model
     
     ! local variables
     type(glimmer_nc_output), pointer :: oc
@@ -112,13 +112,13 @@ contains
   subroutine glimmer_nc_createfile(outfile,model)
     !*FD create a new netCDF file
     use glimmer_ncdf
-    use glimmer_types
+    use glide_types
     use glimmer_CFproj
     use paramets, only : len0
     implicit none
     type(glimmer_nc_output), pointer :: outfile
     !*FD structure containg output netCDF descriptor
-    type(glimmer_global_type) :: model
+    type(glide_global_type) :: model
     !*FD the model instance
 
     ! local variables
@@ -169,9 +169,11 @@ contains
     !GENVARS!
 
     ! adding projection info
-    status = nf90_def_var(NC%id,mapvarname,NF90_CHAR,mapid)
-    call nc_errorhandle(__FILE__,__LINE__,status)
-    call CFproj_PutProj(NC%id,mapid,model%projection)
+    if (CFproj_allocated(model%projection)) then
+       status = nf90_def_var(NC%id,mapvarname,NF90_CHAR,mapid)
+       call nc_errorhandle(__FILE__,__LINE__,status)
+       call CFproj_PutProj(NC%id,mapid,model%projection)
+    end if
 
     ! leaving define mode
     status = nf90_enddef(NC%id)
@@ -218,14 +220,14 @@ contains
   subroutine glimmer_nc_write(outfile,model)
     !*FD write variables to a netCDF file
     use glimmer_ncdf
-    use glimmer_types
+    use glide_types
     use glimmer_global, only : dp
     use physcon, only : scyr
     use paramets, only : thk0, tim0, vel0, vis0, len0, tau0, acc0
     implicit none
     type(glimmer_nc_output), pointer :: outfile
     !*FD structure containg output netCDF descriptor
-    type(glimmer_global_type) :: model
+    type(glide_global_type) :: model
     !*FD the model instance
 
     ! local variables

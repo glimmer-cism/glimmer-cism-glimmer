@@ -245,6 +245,12 @@ module glide_types
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+  type glide_climate
+     !*FD Holds fields used to drive the model
+     real(sp),dimension(:,:),pointer :: acab     => null() !*FD Annual mass balance.
+     real(sp),dimension(:,:),pointer :: artm     => null() !*FD Annual mean air temperature
+  end type glide_climate
+
   type glide_temper
 
     !*FD Holds fields relating to temperature.
@@ -400,8 +406,6 @@ module glide_types
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   type glide_paramets
-    real(sp),dimension(2) :: airt = (/ -3.150, -1.0e-2 /)       ! K, K km^{-3}
-    real(sp),dimension(3) :: nmsb = (/ 0.5, 1.05e-5, 450.0e3 /) ! m yr^{-1}, yr^{-1}, m                
     real(dp),dimension(5) :: bpar = (/ 2.0d0, 10.0d0, 10.0d0, 0.0d0, 1.0d0 /)
     real(dp) :: geot   = -5.0d-2  ! W m^{-2}
     real(dp) :: fiddle = 3.0d0    ! -
@@ -418,6 +422,7 @@ module glide_types
     type(glide_geometry) :: geometry
     type(glide_geomderv) :: geomderv
     type(glide_velocity) :: velocity
+    type(glide_climate)  :: climate
     type(glide_temper)   :: temper
     type(glide_funits)   :: funits
     type(glide_numerics) :: numerics
@@ -430,5 +435,174 @@ module glide_types
     type(CFproj_projection) :: projection
   end type glide_global_type
 
+contains
+  
+  subroutine glide_allocarr(model)
+    
+    !*FD Allocates the model arrays, and initialises some of them to zero.
+    !*FD These are the arrays allocated, and their dimensions:
+    !*FD
+    !*FD In \texttt{model\%temper}:
+    !*FD \begin{itemize}
+    !*FD \item \texttt{temp(upn,0:ewn+1,0:nsn+1))}
+    !*FD \item \texttt{flwa(upn,ewn,nsn))}
+    !*FD \item \texttt{bwat(ewn,nsn))}
+    !*FD \item \texttt{bmlt(ewn,nsn))}
+    !*FD \end{itemize}
+
+    !*FD In \texttt{model\%velocity}:
+    !*FD \begin{itemize}
+    !*FD \item \texttt{uvel(upn,ewn-1,nsn-1))}
+    !*FD \item \texttt{vvel(upn,ewn-1,nsn-1))}
+    !*FD \item \texttt{wvel(upn,ewn,nsn))}
+    !*FD \item \texttt{wgrd(upn,ewn,nsn))}
+    !*FD \item \texttt{uflx(ewn-1,nsn-1))}
+    !*FD \item \texttt{vflx(ewn-1,nsn-1))}
+    !*FD \item \texttt{diffu(ewn,nsn))}
+    !*FD \item \texttt{btrc(ewn,nsn))}
+    !*FD \item \texttt{ubas(ewn,nsn))}
+    !*FD \item \texttt{vbas(ewn,nsn))}
+    !*FD \end{itemize}
+
+    !*FD In \texttt{model\%climate}:
+    !*FD \begin{itemize}
+    !*FD \item \texttt{acab(ewn,nsn))}
+    !*FD \item \texttt{artm(ewn,nsn))}
+    !*FD \end{itemize}
+
+    !*FD In \texttt{model\%geomderv}:
+    !*FD \begin{itemize}
+    !*FD \item \texttt{dthckdew(ewn,nsn))}
+    !*FD \item \texttt{dusrfdew(ewn,nsn))}
+    !*FD \item \texttt{dthckdns(ewn,nsn))}
+    !*FD \item \texttt{dusrfdns(ewn,nsn))}
+    !*FD \item \texttt{dthckdtm(ewn,nsn))}
+    !*FD \item \texttt{dusrfdtm(ewn,nsn))}
+    !*FD \item \texttt{stagthck(ewn-1,nsn-1))}
+    !*FD \end{itemize}
+  
+    !*FD In \texttt{model\%geometry}:
+    !*FD \begin{itemize}
+    !*FD \item \texttt{thck(ewn,nsn))}
+    !*FD \item \texttt{usrf(ewn,nsn))}
+    !*FD \item \texttt{lsrf(ewn,nsn))}
+    !*FD \item \texttt{topg(ewn,nsn))}
+    !*FD \item \texttt{relx(ewn,nsn))}
+    !*FD \item \texttt{mask(ewn,nsn))}
+    !*FD \end{itemize}
+
+    !*FD In \texttt{model\%thckwk}:
+    !*FD \begin{itemize}
+    !*FD \item \texttt{olds(ewn,nsn,thckwk\%nwhich))}
+    !*FD \end{itemize}
+
+    !*FD In \texttt{model\%isotwk}:
+    !*FD \begin{itemize}
+    !*FD \item \texttt{load(ewn,nsn))}
+    !*FD \end{itemize}
+
+    !*FD In \texttt{model\%numerics}:
+    !*FD \begin{itemize}
+    !*FD \item \texttt{sigma(upn))}
+    !*FD \end{itemize}
+
+    implicit none
+
+    type(glide_global_type),intent(inout) :: model
+
+    integer :: ewn,nsn,upn
+
+    ! for simplicity, copy these values...
+
+    ewn=model%general%ewn
+    nsn=model%general%nsn
+    upn=model%general%upn
+
+    ! Allocate appropriately
+
+    allocate(model%temper%temp(upn,0:ewn+1,0:nsn+1)); model%temper%temp = 0.0
+    allocate(model%temper%flwa(upn,ewn,nsn))   
+    allocate(model%temper%bwat(ewn,nsn));             model%temper%bwat = 0.0
+    allocate(model%temper%bmlt(ewn,nsn));             model%temper%bmlt = 0.0
+
+    allocate(model%velocity%uvel(upn,ewn-1,nsn-1));   model%velocity%uvel = 0.0d0
+    allocate(model%velocity%vvel(upn,ewn-1,nsn-1));   model%velocity%vvel = 0.0d0
+    allocate(model%velocity%wvel(upn,ewn,nsn));       model%velocity%wvel = 0.0d0
+    allocate(model%velocity%wgrd(upn,ewn,nsn));       model%velocity%wgrd = 0.0d0
+    allocate(model%velocity%uflx(ewn-1,nsn-1));       model%velocity%uflx = 0.0d0
+    allocate(model%velocity%vflx(ewn-1,nsn-1));       model%velocity%vflx = 0.0d0
+    allocate(model%velocity%diffu(ewn,nsn));          model%velocity%diffu = 0.0d0
+    allocate(model%velocity%btrc(ewn,nsn));           model%velocity%btrc = 0.0d0
+    allocate(model%velocity%ubas(ewn,nsn));           model%velocity%ubas = 0.0d0
+    allocate(model%velocity%vbas(ewn,nsn));           model%velocity%vbas = 0.0d0
+
+    allocate(model%climate%acab(ewn,nsn));            model%climate%acab = 0.0
+    allocate(model%climate%artm(ewn,nsn));            model%climate%artm = 0.0
+
+    allocate(model%geomderv%dthckdew(ewn,nsn));       model%geomderv%dthckdew = 0.0d0 
+    allocate(model%geomderv%dusrfdew(ewn,nsn));       model%geomderv%dusrfdew = 0.0d0
+    allocate(model%geomderv%dthckdns(ewn,nsn));       model%geomderv%dthckdns = 0.0d0
+    allocate(model%geomderv%dusrfdns(ewn,nsn));       model%geomderv%dusrfdns = 0.0d0
+    allocate(model%geomderv%dthckdtm(ewn,nsn));       model%geomderv%dthckdtm = 0.0d0
+    allocate(model%geomderv%dusrfdtm(ewn,nsn));       model%geomderv%dusrfdtm = 0.0d0
+    allocate(model%geomderv%stagthck(ewn-1,nsn-1));   model%geomderv%stagthck = 0.0d0
+  
+    allocate(model%geometry%thck(ewn,nsn));           model%geometry%thck = 0.0d0
+    allocate(model%geometry%usrf(ewn,nsn));           model%geometry%usrf = 0.0d0
+    allocate(model%geometry%lsrf(ewn,nsn));           model%geometry%lsrf = 0.0d0
+    allocate(model%geometry%topg(ewn,nsn));           model%geometry%topg = 0.0d0
+    allocate(model%geometry%relx(ewn,nsn));           model%geometry%relx = 0.0d0
+    allocate(model%geometry%mask(ewn,nsn));           model%geometry%mask = 0
+
+    allocate(model%thckwk%olds(ewn,nsn,model%thckwk%nwhich))
+                                                      model%thckwk%olds = 0.0d0
+    allocate(model%isotwk%load(ewn,nsn));             model%isotwk%load = 0.0d0 
+    allocate(model%numerics%sigma(upn))
+
+  end subroutine glide_allocarr
+
+  subroutine glide_deallocarr(model)
+    !*FD deallocate model arrays
+    implicit none
+    type(glide_global_type),intent(inout) :: model
+
+    deallocate(model%temper%temp)
+    deallocate(model%temper%flwa)
+    deallocate(model%temper%bwat)
+    deallocate(model%temper%bmlt)
+
+    deallocate(model%velocity%uvel)
+    deallocate(model%velocity%vvel)
+    deallocate(model%velocity%wvel)
+    deallocate(model%velocity%wgrd)
+    deallocate(model%velocity%uflx)
+    deallocate(model%velocity%vflx)
+    deallocate(model%velocity%diffu)
+    deallocate(model%velocity%btrc)
+    deallocate(model%velocity%ubas)
+    deallocate(model%velocity%vbas)
+
+    deallocate(model%climate%acab)
+    deallocate(model%climate%artm)
+
+    deallocate(model%geomderv%dthckdew)
+    deallocate(model%geomderv%dusrfdew)
+    deallocate(model%geomderv%dthckdns)
+    deallocate(model%geomderv%dusrfdns)
+    deallocate(model%geomderv%dthckdtm)
+    deallocate(model%geomderv%dusrfdtm)
+    deallocate(model%geomderv%stagthck)
+  
+    deallocate(model%geometry%thck)
+    deallocate(model%geometry%usrf)
+    deallocate(model%geometry%lsrf)
+    deallocate(model%geometry%topg)
+    deallocate(model%geometry%relx)
+    deallocate(model%geometry%mask)
+
+    deallocate(model%thckwk%olds)
+    deallocate(model%isotwk%load)
+    deallocate(model%numerics%sigma)
+  end subroutine glide_deallocarr
 end module glide_types
 

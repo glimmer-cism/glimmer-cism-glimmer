@@ -46,11 +46,11 @@ module glide_setup
   !*FD from the top-level glimmer subroutines.
 
   private
-  public :: readconfig, printconfig
+  public :: glide_readconfig, glide_printconfig, glide_scale_params, glide_calclsrf, glide_marinlim, glide_load_sigma
 
 contains
 
-  subroutine readconfig(model,fname)
+  subroutine glide_readconfig(model,fname)
     !*FD read GLIDE configuration file
     use glide_types
     use glimmer_config
@@ -89,23 +89,177 @@ contains
     if (associated(section)) then
        call handle_parameters(section, model)
     end if
+  end subroutine glide_readconfig
 
-  end subroutine readconfig
-
-
-  subroutine printconfig(unit,model)
+  subroutine glide_printconfig(unit,model)
     !*FD print model configuration to unit
     use glide_types
     implicit none
     integer, intent(in) :: unit       !*FD unit to print to
     type(glide_global_type)  :: model !*FD model instance
 
+    write(unit,*) '*******************************************************************************'
     call print_grid(unit,model)
     call print_time(unit,model)
     call print_options(unit,model)
     call print_parameters(unit,model)
-  end subroutine printconfig
+  end subroutine glide_printconfig
     
+  subroutine glide_scale_params(model)
+    !*FD scale parameters
+    use glide_types
+    use physcon,  only: scyr
+    use paramets, only: thk0,tim0,len0
+    implicit none
+    type(glide_global_type)  :: model !*FD model instance
+
+    model%numerics%ntem = model%numerics%ntem * model%numerics%tinc
+    model%numerics%nvel = model%numerics%nvel * model%numerics%tinc
+    model%numerics%niso = model%numerics%niso * model%numerics%tinc
+
+    model%numerics%dt     = model%numerics%tinc * scyr / tim0
+    model%numerics%dttem  = model%numerics%ntem * scyr / tim0 
+    model%numerics%thklim = model%numerics%thklim  / thk0
+
+    model%numerics%dew = model%numerics%dew / len0
+    model%numerics%dns = model%numerics%dns / len0
+
+    model%paramets%isotim = model%paramets%isotim * scyr / tim0         
+    model%numerics%mlimit = model%numerics%mlimit / thk0
+  end subroutine glide_scale_params
+
+!-------------------------------------------------------------------------
+
+  subroutine glide_calclsrf(thck,topg,lsrf)
+
+    !*FD Calculates the elevation of the lower surface of the ice, 
+    !*FD by considering whether it is floating or not.
+
+    use glimmer_global, only : dp
+    use physcon, only : rhoi, rhoo
+
+    implicit none
+
+    real(dp), intent(in),  dimension(:,:) :: thck !*FD Ice thickness
+    real(dp), intent(in),  dimension(:,:) :: topg !*FD Bedrock topography elevation
+    real(dp), intent(out), dimension(:,:) :: lsrf !*FD Lower ice surface elevation
+
+    real(dp), parameter :: con = - rhoi / rhoo
+
+    where (topg < con * thck)
+      lsrf = con * thck
+    elsewhere
+      lsrf = topg
+    end where
+  end subroutine glide_calclsrf
+
+!-------------------------------------------------------------------------
+
+  subroutine glide_marinlim(which,whicht,thck,usrf,relx,topg,lati,mlimit)
+
+    !*FD Removes non-grounded ice, according to one of two altenative
+    !*FD criteria, and sets upper surface of non-ice-covered points 
+    !*FD equal to the topographic height, or sea-level, whichever is higher.
+
+    use glimmer_global, only : dp, sp
+    use paramets, only : f  
+
+    implicit none
+
+    !---------------------------------------------------------------------
+    ! Subroutine arguments
+    !---------------------------------------------------------------------
+
+    integer,                intent(in)    :: which   !*FD Option to choose ice-removal method
+                                                     !*FD \begin{description}
+                                                     !*FD \item[0] Set thickness to zero if 
+                                                     !*FD relaxed bedrock is below a given level.
+                                                     !*FD \item[1] Set thickness to zero if
+                                                     !*FD ice is floating.
+                                                     !*FD \end{description}
+    integer,                intent(in)    :: whicht  !*FD Thickness calculation option. Only acted on
+                                                     !*FD if equals six.
+    real(dp),dimension(:,:),intent(inout) :: thck    !*FD Ice thickness (scaled)
+    real(dp),dimension(:,:),intent(out)   :: usrf    !*FD Upper ice surface (scaled)
+    real(dp),dimension(:,:),intent(in)    :: relx    !*FD Relaxed topography (scaled)
+    real(dp),dimension(:,:),intent(in)    :: topg    !*FD Actual topography (scaled)
+    real(sp),dimension(:,:),intent(in)    :: lati    !*FD Array of latitudes (only used if 
+                                                     !*FD $\mathtt{whicht}=6$).
+    real(dp)                              :: mlimit  !*FD Lower limit on topography elevation for
+                                                     !*FD ice to be present (scaled). Used with 
+                                                     !*FD $\mathtt{which}=0$.
+
+    !---------------------------------------------------------------------
+
+    select case (which)
+
+    case(0) ! Set thickness to zero if relaxed bedrock is below a 
+            ! given level
+
+      where (relx < mlimit)
+        thck = 0.0d0
+        usrf = max(0.0d0,topg)
+      end where
+
+    case(1) ! Set thickness to zero if ice is floating
+
+      where (thck < f * topg)
+        thck = 0.0d0
+        usrf = max(0.0d0,topg)
+      end where
+ 
+    end select
+
+    !---------------------------------------------------------------------
+    ! Not sure what this option does - it's only used when whichthck=6
+    !---------------------------------------------------------------------
+
+    select case(whicht)
+    case(6)
+      where (lati == 0.0)
+        thck = 0.0d0
+        usrf = max(0.0d0,topg)
+      end where
+    end select
+  end subroutine glide_marinlim
+
+  subroutine glide_load_sigma(model,unit)
+
+    !*FD Loads a file containing
+    !*FD sigma vertical coordinates.
+    use glide_types
+    implicit none
+
+    ! Arguments
+    type(glide_global_type),intent(inout) :: model !*FD Ice model to use
+    integer,               intent(in)    :: unit  !*FD Logical file unit to use. 
+                                                  !*FD The logical file unit specified 
+                                                  !*FD must not already be in use
+
+    ! Internal variables
+
+    integer :: up,upn
+    logical :: there
+
+    ! Beginning of code
+
+    upn=model%general%upn
+
+    inquire (exist=there,file=model%funits%sigfile)
+  
+    if (there) then
+      open(unit,file=model%funits%sigfile)
+      read(unit,'(f5.2)',err=10,end=10) (model%numerics%sigma(up), up=1,upn)
+      close(unit)
+      return
+    end if
+
+10  print *, 'something wrong with sigma coord file'
+ 
+    stop
+
+  end subroutine glide_load_sigma
+
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! private procedures

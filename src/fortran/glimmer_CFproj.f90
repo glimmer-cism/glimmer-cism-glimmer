@@ -45,7 +45,7 @@ module glimmer_CFproj
   !*FD necessary for handling map projections
 
   private
-  public  CFproj_projection,CFproj_proj4,CFproj_GetProj,CFproj_PutProj
+  public  CFproj_projection,CFproj_proj4,CFproj_GetProj,CFproj_PutProj, CFproj_allocated
 
   integer, parameter :: proj4len=100
 
@@ -53,6 +53,7 @@ module glimmer_CFproj
   type CFproj_projection
      !*FD CF projection
      private 
+     logical                    :: found = .false.
      type(CFproj_laea), pointer :: laea=>NULL()
      type(CFproj_aea), pointer  :: aea=>NULL()
      type(CFproj_lcc), pointer  :: lcc=>NULL()
@@ -97,6 +98,15 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! public functions
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  function CFproj_allocated(projection)
+    !*FD return true if structure contains a known projection
+    implicit none
+    type(CFproj_projection) :: projection
+    logical CFproj_allocated
+
+    CFproj_allocated = projection%found
+  end function CFproj_allocated
+
   function CFproj_GetProj(ncid)
     !*FD read projection from netCDF file
     use netcdf
@@ -134,6 +144,7 @@ contains
     end do
 
     if (found_map) then
+       CFproj_GetProj%found = .true.
        if (index(mapname,'lambert_azimuthal_equal_area').ne.0) then
           CFproj_GetProj%laea => CFproj_get_laea(ncid,varid)
           return
@@ -147,9 +158,11 @@ contains
        else if (index(mapname,'stereographic').ne.0) then
           CFproj_GetProj%stere => CFproj_get_stere(ncid,varid)
        else
+          CFproj_GetProj%found = .false.
           write(*,*) 'Warning, do not know about this projection: ',trim(mapname)
        end if
     else
+       CFproj_GetProj%found = .false.
        write(*,*) 'Warning, no map projection found'
     end if
   end function CFproj_GetProj
@@ -158,6 +171,11 @@ contains
     implicit none
     character(len=proj4len), dimension(:), pointer :: CFproj_proj4
     type(CFproj_projection) :: projection
+
+    if (.not.CFproj_allocated(projection)) then
+       write(*,*) 'Warning, no projection found!'
+       return
+    end if
 
     if (associated(projection%laea)) then
        CFproj_proj4 => CFproj_proj4_laea(projection%laea)
@@ -183,6 +201,11 @@ contains
     type(CFproj_projection) :: projection
     integer, intent(in) :: ncid
     integer, intent(in) :: mapid
+
+    if (.not.CFproj_allocated(projection)) then
+       write(*,*) 'Warning, no projection found!'
+       return
+    end if
 
     if (associated(projection%laea)) then
        call CFproj_put_laea(ncid,mapid,projection%laea)

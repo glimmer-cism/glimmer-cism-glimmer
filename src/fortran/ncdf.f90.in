@@ -191,6 +191,7 @@ contains
        end if
        if (closefile) then
           status = nf90_close(oc%nc%id)
+          write(*,*) '*******************************************************************************'
           write(*,*) 'Closing output file ', trim(oc%nc%filename)
        end if
        deallocate(oc)
@@ -226,6 +227,7 @@ contains
        end if
        if (closefile) then
           status = nf90_close(ic%nc%id)
+          write(*,*) '*******************************************************************************'
           write(*,*) 'Closing input file ', trim(ic%nc%filename)
        end if
        deallocate(ic%times)

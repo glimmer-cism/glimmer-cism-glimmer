@@ -1,3 +1,15 @@
+2004-06-23 Magnus Hagdorn
+ * make mapping variable optional (glimmer_CFproj.f90, generate_ncvars.py, ncdf_file.f90.in, ncdf_file.f90.in)
+ * rename glimmer -> glide (ncdf_file.f90.in, ncdf_infile.f90.in, ncdf_params.f90.in)
+ * ncdf_vars.def: disabled some variables for now
+ * ncdf.f90.in: cosmetics
+ * glide_setup.f90: added some functions from glimmer_setup.f90
+ * glide_types.f90: added massbalance and surface temperature fields, added allocation/deallocation procedures
+ * glide.f90: the main ice sheet model procedures, so far: initialisation and finalisation routines
+ * added simple EISMINT type model (simple_glide.f90, simple_forcing.f90)
+ * added data for simple EISMINT runs (sigma.data, simple1.config)
+ * Makefile: handle new files
+	
 2004-06-22 Magnus Hagdorn
  * glimmer_config.f90: added double precision versions
  * glide_types.f90: contains model instance of the GLIDE core

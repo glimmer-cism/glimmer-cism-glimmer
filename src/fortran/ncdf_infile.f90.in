@@ -49,10 +49,10 @@ module glimmer_ncinfile
 contains
   subroutine openall_in(model)
     !*FD open all netCDF files for input
-    use glimmer_types
+    use glide_types
     use glimmer_ncdf
     implicit none
-    type(glimmer_global_type) :: model
+    type(glide_global_type) :: model
     
     ! local variables
     type(glimmer_nc_input), pointer :: ic
@@ -66,10 +66,10 @@ contains
 
   subroutine readall(model)
     !*FD read from netCDF file
-    use glimmer_types
+    use glide_types
     use glimmer_ncdf
     implicit none
-    type(glimmer_global_type) :: model
+    type(glide_global_type) :: model
 
     ! local variables
     type(glimmer_nc_input), pointer :: ic    
@@ -85,10 +85,10 @@ contains
 
   subroutine closeall_in(model)
     !*FD close all netCDF files for input
-    use glimmer_types
+    use glide_types
     use glimmer_ncdf
     implicit none
-    type(glimmer_global_type) :: model
+    type(glide_global_type) :: model
     
     ! local variables
     type(glimmer_nc_input), pointer :: ic
@@ -103,12 +103,12 @@ contains
   subroutine glimmer_nc_openfile(infile,model)
     !*FD open an existing netCDF file
     use glimmer_ncdf
-    use glimmer_types
+    use glide_types
     use glimmer_cfproj
     implicit none
     type(glimmer_nc_input), pointer :: infile
     !*FD structure containg input netCDF descriptor
-    type(glimmer_global_type) :: model
+    type(glide_global_type) :: model
     !*FD the model instance
 
     ! local variables
@@ -195,14 +195,14 @@ contains
   subroutine glimmer_nc_read(infile,model,scale_vars)
     !*FD read variables from a netCDF file
     use glimmer_ncdf
-    use glimmer_types
+    use glide_types
     use glimmer_global, only : dp
     use physcon, only : scyr
     use paramets, only : thk0, tim0, vel0, vis0, len0, tau0, acc0
     implicit none
     type(glimmer_nc_input), pointer :: infile
     !*FD structure containg output netCDF descriptor
-    type(glimmer_global_type) :: model
+    type(glide_global_type) :: model
     !*FD the model instance
     logical,optional :: scale_vars
     !*FD Specifies whether fields should be scaled by factors when read in.

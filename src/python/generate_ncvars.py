@@ -289,7 +289,9 @@ class PrintNCDF_FILE(PrintVars):
                                                                                                            spaces*' ',
                                                                                                            var[attrib]))
         if not is_dimvar(var) and 'spot' not in var['dimensions']:
-            self.stream.write("%s    status = nf90_put_att(NC%%id, %s, 'grid_mapping',mapvarname)\n"%(spaces*' ',id))
+            self.stream.write("%s    if (CFproj_allocated(model%%projection)) then\n"%(spaces*' '))
+            self.stream.write("%s       status = nf90_put_att(NC%%id, %s, 'grid_mapping',mapvarname)\n"%(spaces*' ',id))
+            self.stream.write("%s    end if\n"%(spaces*' '))
         if not is_dimvar(var) or 'spot' in var['dimensions']:
             self.stream.write("    end if\n")
         self.stream.write("\n")

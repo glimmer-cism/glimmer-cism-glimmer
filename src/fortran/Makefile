@@ -8,8 +8,8 @@ include $(ARC_FILE)
 GLIMMERFLAGS=$(F77FLAGS) $(GLIMMERPRECOPT)
 #
 SUBDIRS = SLAP_library
-LIBS = libglimmer.a
-PROGS = glimmer_example bin2ncdf input2ncdf relaxed
+LIBS = libglimmer.a libglide.a
+PROGS = glimmer_example bin2ncdf input2ncdf relaxed simple_glide
 TESTS = test_config test_setup
 DATA = ncdf_vars.def
 
@@ -45,6 +45,15 @@ $(SUBDIRS):
 libglimmer.a: $(OBJECTS) $(INCLUDE_FILES)
 	ar rcv $@ $(OBJECTS)
 	if [ "$(RANLIB)" != "" ] ; then $(RANLIB) $@ ; fi
+
+libglide.a:	glide.o glide_setup.o glide_types.o glimmer_config.o \
+	glimmer_paramets.o glimmer_CFproj.o\
+	ncdf.o ncdf_params.o ncdf_file.o ncdf_infile.o 
+		ar rcv $@ $^
+		if [ "$(RANLIB)" != "" ] ; then $(RANLIB) $@ ; fi
+
+simple_glide:	simple_forcing.o simple_glide.o libglide.a 
+		$(F77) -o $@ $^ $(LD_FLAGS)
 
 glimmer_example :  glimmer_example.o SLAP_library libglimmer.a
 	$(F77) $(GLIMMERFLAGS) -o $@ $< libglimmer.a SLAP_library/libslap.a $(LD_FLAGS)
