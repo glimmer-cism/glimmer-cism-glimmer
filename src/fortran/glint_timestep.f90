@@ -257,6 +257,10 @@ contains
     call glide_get_thk(instance%model,thck_temp)
     start_volume=sum(thck_temp)
 
+    ! Constrain accumulation according to topography and domain edges --------
+
+    call fix_acab(instance%ablt_save,instance%acab_save,instance%prcp_save,thck_temp,instance%local_orog)
+
     ! Do water budget accounting ---------------------------------------------
 
     if (out_f%water_out.or.out_f%total_wout.or.out_f%water_in .or.out_f%total_win) then
