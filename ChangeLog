@@ -8,3 +8,4 @@
  * added SUN WS f95 makros
  * (glimmer_restart.f90, glimmer_interp.f90) workaround for SUN WS compiler bug
  * (glimmer.f90, glimmer_velo.f90) avoid division by zero
+ * removed unused symbols and unused module symbols

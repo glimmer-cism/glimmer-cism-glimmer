@@ -128,8 +128,7 @@ contains
     ! Internal variables
 
     character(fname_length),dimension(:),allocatable :: fnamelist   ! The parameter filenames for each instance
-    integer :: i,j
-    real(rk) :: dlon
+    integer :: i
 
     ! ---------------------------------------------------------------
     ! Basic initialisation beginning with common initialisation
@@ -433,9 +432,11 @@ contains
   subroutine end_glimmer(params)
 
     !*FD perform tidying-up operations for glimmer
+    implicit none
 
     type(glimmer_params),intent(inout) :: params          !*FD parameters for this run
-       
+
+    integer i
     ! end individual instances
 
     do i=1,params%ninstances
@@ -462,6 +463,8 @@ contains
     !*FDRV \item[2 ---] Coverage array is the wrong size (fail)
     !*FDRV \end{description}
 
+    implicit none
+    
     type(glimmer_params),intent(in) :: params       !*FD ice model parameters
     real(rk),dimension(:,:),intent(out) :: coverage !*FD array to hold coverage map
     
@@ -490,6 +493,8 @@ contains
 !*FDRV The value of the 
 !*FDRV main logical file unit used by glimmer.
 
+    implicit none
+
     type(glimmer_params),intent(in) :: params !*FD Ice model parameters
    
     glimmer_main_funit=params%file_unit
@@ -502,6 +507,8 @@ contains
 
   !*FD sets the main logical 
   !*FD file unit used by glimmer.
+
+    implicit none
 
     type(glimmer_params),intent(inout) :: params !*FD ice model parameters
     integer,intent(in) :: unit !*FD number of logical file unit to be used
@@ -519,6 +526,8 @@ contains
     !*FD is not open at entry or exit to this subroutine.
 
     use glimmer_restart
+
+    implicit none
 
     type(glimmer_params),intent(in) :: params   !*FD ice model parameters
     integer,             intent(in) :: unit     !*FD logical file unit to use
@@ -647,6 +656,8 @@ contains
 
   !*FD allocates glimmer arrays
 
+    implicit none
+
     type(glimmer_params),intent(inout) :: params !*FD ice model parameters
 
     allocate(params%glat        (params%nyg))
@@ -675,6 +686,8 @@ contains
 
     use paramets, only: tau0,vel0,vis0,len0
     use physcon,  only: gn
+
+    implicit none
 
     integer :: unit !*FD file unit to use for the log file
     type(glimmer_params) :: params !*FD ice model parameters

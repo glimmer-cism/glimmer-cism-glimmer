@@ -53,7 +53,6 @@ contains
     !*FD of several alternative methods.
 
     use glimmer_global, only : dp
-    use physcon,        only : pmlt, rhoi, grav
     use paramets,       only : thk0
     use glimmer_velo
     use glimmer_thck
@@ -75,11 +74,10 @@ contains
 
     real(dp),dimension(size(model%numerics%sigma)) :: subd, diag, supd, rhsd
     real(dp),dimension(size(model%numerics%sigma)) :: prevtemp, iteradvt, diagadvt
-    real(dp) :: tempresid, restem
+    real(dp) :: tempresid
 
-    integer,dimension(3) :: locres
-    integer :: iter, notemppts, pt, ewf, ewl, ewi, nsf, nsl, nsi, noncon, again
-    integer :: ew,ns,up
+    integer :: iter, again
+    integer :: ew,ns
 
     real(dp),parameter :: tempthres = 0.001d0, floatlim = 10.0d0 / thk0
     integer, parameter :: mxit = 100
@@ -664,7 +662,7 @@ contains
     real(dp), dimension(:,:,:), intent(in) :: uvel, vvel
     real(dp), dimension(:,:), intent(in) :: thck
 
-    real(dp), dimension(size(temp,dim=1)) :: u, v, iteradvt, diagadvt
+    real(dp), dimension(size(temp,dim=1)) :: diagadvt
 
     integer :: ew,ns
 
@@ -839,7 +837,7 @@ contains
 
   subroutine finddisp(model,thck,stagthck,dusrfdew,dusrfdns,flwa)
 
-    use glimmer_global, only : dp, sp 
+    use glimmer_global, only : dp
     use glimmer_utils, only : hsum, lsum
     use physcon, only : rhoi, grav, shci, gn
     use paramets, only : vis0, len0, thk0, tim0
@@ -1041,8 +1039,8 @@ contains
   subroutine calcbwat(model,which,bmlt,bwat,thck,topg,btem,floater)
 
     use glimmer_global, only : dp 
-    use physcon, only : rhoi, grav, lhci, shci, pmlt, rhow, scyr
-    use paramets, only : tim0, thk0, len0 !, hydtim
+    use physcon, only : rhoi, grav, rhow, scyr
+    use paramets, only : tim0, thk0, len0 
 
     implicit none
 
@@ -1431,13 +1429,11 @@ contains
     integer, intent(in), dimension(:,:) :: mask
     integer, intent(in) :: unit
 
-    real(dp), allocatable, dimension(:,:,:) :: a
     real(dp), allocatable, dimension(:,:) :: flats, r
 
-    integer :: max_pos, ewp, nsp, ct, pt, tct
-    real(dp) :: a1, rg, max_val
+    integer :: ewp, nsp, ct, pt, tct
     real(dp) :: dd(9), diffs(model%general%ewn,model%general%nsn,9)
-    real(dp) :: sumd, dsq, ang(model%general%ewn,model%general%nsn), x, y, h
+    real(dp) :: sumd, dsq
     real(dp) :: da 
     integer :: ew,ns
 

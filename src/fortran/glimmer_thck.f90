@@ -50,8 +50,7 @@ contains
   subroutine timeevolthck(model,thckflag,usrf,thck,lsrf,acab,mask,uflx,vflx,dusrfdew,dusrfdns,totpts,logunit)
 
     use glimmer_global, only : dp, sp 
-    use paramets, only : thk0, vel0
-    use physcon, only : pi
+    use paramets, only : thk0
 
     implicit none
 
@@ -528,7 +527,7 @@ contains
   subroutine calcacab(numerics,params,pddcalc,which,usrf,artm,arng,prcp,ablt,lati,acab)
 
     use glimmer_global, only : dp, sp 
-    use paramets, only : len0, thk0, scyr, acc0
+    use paramets, only : len0
 
     use glimmer_degd
     use glimmer_types
@@ -645,9 +644,8 @@ contains
 
   subroutine nonlevolthck(model,thckflag,newtemps,logunit)
 
-    use glimmer_global, only : dp, sp 
+    use glimmer_global, only : dp
     use paramets, only : thk0, vel0
-    use physcon, only : pi
 
     use glimmer_velo
     use glimmer_types
@@ -660,11 +658,10 @@ contains
     integer,intent(in) :: logunit
 
     real(dp), dimension(5) :: sumd 
-    real(dp) :: err, resbnd
-    real(dp), dimension(:), allocatable :: bndthck   
+    real(dp) :: err
     real(dp), parameter :: tolbnd = 1.0d-6
 
-    integer :: linit, cntpts, itsbnd, again
+    integer :: linit
     integer, parameter :: mxtbnd = 10, ewbc = 1, nsbc = 1
 
 ! ewbc/nsbc set the type of boundary condition aplied at the end of

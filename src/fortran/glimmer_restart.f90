@@ -56,6 +56,8 @@ contains
 
     use glimmer_object
 
+    implicit none
+
     type(glimmer_instance),intent(in) :: instance !*FD The ice model instance to be written
     integer,            intent(in) :: unit     !*FD The logical file unit to use
 
@@ -261,7 +263,7 @@ contains
     if (temp) write(unit) instance%model%velowk% fslip
 
     temp = associated(instance%model%velowk% dintflwa)
-    write(unit) temo
+    write(unit) temp
     if (temp) write(unit) instance%model%velowk% dintflwa
 
     temp = associated(instance%model%velowk% dups)
@@ -366,6 +368,8 @@ contains
 
     use glimmer_object
     use glimmer_setup
+
+    implicit none
 
     type(glimmer_instance),intent(inout) :: instance !*FD The ice model instance to be written
     integer,            intent(in)    :: unit     !*FD The logical file unit to use

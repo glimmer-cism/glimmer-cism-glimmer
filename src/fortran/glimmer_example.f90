@@ -52,7 +52,7 @@ program glimmer_example
   implicit none
 
   type(glimmer_params) :: ice_sheet
-  integer :: np=1,nx,ny,i,j
+  integer :: nx,ny,i,j
   character(fname_length) :: paramfile='example.glp'
   real(rk) :: time
   real(rk),dimension(:,:),allocatable :: temp,precip,zonwind,merwind,orog,coverage

@@ -139,8 +139,8 @@ contains
     ! *** basal melt    m yr^-1
     ! *** basal water    m
 
-    use glimmer_global, only : sp, dp
-    use physcon, only : scyr, gn
+    use glimmer_global, only : dp
+    use physcon, only : scyr
     use paramets, only : thk0, tim0, vel0, vis0, len0, tau0
    
     implicit none
@@ -282,8 +282,8 @@ contains
     ! *** temperatures    deg. C
     ! *** flow constant    Pa^-3 yr^-1
 
-    use glimmer_global, only : sp, dp
-    use physcon, only : scyr, gn, rhoi, grav
+    use glimmer_global, only : dp
+    use physcon, only : scyr, gn
     use paramets, only : thk0, tim0, vel0, vis0, len0 
 
     implicit none
@@ -542,8 +542,6 @@ contains
 
     !*FD Sets up forcing data from time-series file (e.g. GRIP data)
 
-    use glimmer_global, only : sp
- 
     implicit none
 
     character(*), intent(in)          :: fname     !*FD filename to use

@@ -60,8 +60,7 @@ contains
     !*FD else).
 
     use glimmer_global, only : dp
-    use physcon, only : rhoi, grav, scyr
-    use paramets, only : vel0 
+    use physcon, only : rhoi, grav
 
     implicit none
 
@@ -182,7 +181,7 @@ contains
 
     use glimmer_global, only : dp
     use glimmer_utils, only : hsum
-    use physcon, only : rhoi, grav, gn, scyr
+    use physcon, only : rhoi, grav, gn
     use paramets, only : thk0, len0, vis0, vel0
 
     implicit none
@@ -454,7 +453,6 @@ contains
 
     use glimmer_global, only : dp
     use glimmer_utils, only : hsum 
-    use paramets, only : tim0, thk0
 
     implicit none
 
@@ -700,8 +698,6 @@ contains
     !*FD condition.
 
     use glimmer_global, only : dp, sp 
-    use paramets, only : acc0
-    use physcon, only : scyr
 
     implicit none
 

@@ -268,7 +268,7 @@ contains
 
     real(rk),dimension(2,2) :: f
     integer :: nxg,nyg,nxl,nyl,i,j,xx,yy
-    real(rk) :: stm,x,y
+    real(rk) :: x,y
 
     nxg=size(global,1) ; nyg=size(global,2)
     nxl=size(local,1)  ; nyl=size(local,2)
@@ -317,7 +317,6 @@ contains
     ! Internal variables
 
     integer :: nxl,nyl,i,j
-    real(rk) :: stm
 
     ! Beginning of code
 
@@ -402,7 +401,7 @@ contains
   
     ! Internal variables
 
-    integer :: nx,ny,i,j
+    integer :: nx,ny
 
     nx=size(lons) ; ny=size(lats)
 
