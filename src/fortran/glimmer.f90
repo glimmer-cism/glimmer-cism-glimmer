@@ -1,4 +1,5 @@
 
+
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! +                                                           +
 ! +  glimmer.f90 - part of the GLIMMER ice model              + 
@@ -432,9 +433,9 @@ contains
 
       params%g_av_precip = params%g_av_precip*(time-params%av_start_time)*hours2seconds
 
-      ! Calculate temperature range
+      ! Calculate temperature half-range
 
-      params%g_temp_range=params%g_max_temp-params%g_min_temp
+      params%g_temp_range=(params%g_max_temp-params%g_min_temp)/2.0
 
       ! Do a timestep for each instance
 

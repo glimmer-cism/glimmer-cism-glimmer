@@ -50,19 +50,22 @@ module glide_pdd
   !*FD regardless of which region the ice model is covering.
   !*FD 
   !*FD This file replaces glimmer_degd.f90.
+  !*FD {\bf N.B.} the module variables in this module are used for back-door 
+  !*FD message passing, to make the integration of the PDD table look more 
+  !*FD comprehensible, and avoid the need to have two customised copies of 
+  !*FD the integration code.
 
   use glimmer_types
 
   implicit none
 
-  ! These module variables are used for back-door message passing, to make the
-  ! integration of the PDD table look more comprehensible, and avoid the need to
-  ! have two customised copies of the integration code.
-
   real(sp) :: dd_sigma            !*FD The value of $\sigma$ in the PDD integral
   real(sp) :: t_a_prime           !*FD The value of $T'_{a}$ in the PDD integral
   real(sp) :: mean_annual_temp    !*FD Mean annual temperature
   real(sp) :: mean_july_temp      !*FD Mean july temperature
+
+  private :: dd_sigma, t_a_prime, mean_annual_temp, mean_july_temp
+  private :: pddtabgrn, inner_integral, pdd_integrand, romberg_int, findgrid
 
 contains
 
@@ -83,7 +86,7 @@ contains
     type(glimmer_pddcalc),    intent(inout) :: pddcalc !*FD The positive-degree-day parameters
     real(sp), dimension(:,:), intent(in)    :: artm    !*FD Annual mean air-temperature 
                                                        !*FD ($^{\circ}$C)
-    real(sp), dimension(:,:), intent(in)    :: arng    !*FD Annual temerature range ($^{\circ}$C)
+    real(sp), dimension(:,:), intent(in)    :: arng    !*FD Annual temerature half-range ($^{\circ}$C)
     real(sp), dimension(:,:), intent(in)    :: prcp    !*FD Annual accumulated precipitation 
                                                        !*FD (mm water equivalent)
     real(sp), dimension(:,:), intent(in)    :: lati    !*FD Latitudes of each point in the 
@@ -230,7 +233,7 @@ contains
 
     use glimmer_global, only: sp
     use glide_messages
- 
+
     implicit none
 
     type(glimmer_pddcalc),intent(inout) :: pddcalc !*FD PDD parameters
@@ -242,7 +245,7 @@ contains
     real(sp)           :: fac
     integer            :: mfin
     integer  :: kx,ky
-    
+
     !--------------------------------------------------------------------
     ! Main loops:
     !  tma  -- the mean annual temperature (y-axis of pdd table)
@@ -254,25 +257,25 @@ contains
 
     do tma = pddcalc%iy, pddcalc%iy+(pddcalc%ny-1)*pddcalc%dy, pddcalc%dy
 
-      ky = findgrid(tma,real(pddcalc%iy),real(pddcalc%dy))
+       ky = findgrid(tma,real(pddcalc%iy),real(pddcalc%dy))
 
-      do dtmj = pddcalc%ix, pddcalc%ix+(pddcalc%nx-1)*pddcalc%dx, pddcalc%dx
+       do dtmj = pddcalc%ix, pddcalc%ix+(pddcalc%nx-1)*pddcalc%dx, pddcalc%dx
 
-        mean_july_temp = tma + dtmj   
-        kx  = findgrid(dtmj,real(pddcalc%ix),real(pddcalc%dx)) 
+          mean_july_temp = tma + dtmj   
+          kx  = findgrid(dtmj,real(pddcalc%ix),real(pddcalc%dx)) 
 
-        ! need these lines to take account of the backdoor message passing used here
+          ! need these lines to take account of the backdoor message passing used here
 
-        mean_annual_temp=tma
-        dd_sigma=pddcalc%dd_sigma
-     
-        pddcalc%pddtab(kx,ky)=(1.0/(dd_sigma*sqrt(twopi)))*romberg_int(inner_integral,0.0,twopi)
-       
-        ! convert to days     
+          mean_annual_temp=tma
+          dd_sigma=pddcalc%dd_sigma
 
-        pddcalc%pddtab(kx,ky) = 365.0 * pddcalc%pddtab(kx,ky) / twopi
+          pddcalc%pddtab(kx,ky)=(1.0/(dd_sigma*sqrt(twopi)))*romberg_int(inner_integral,0.0,twopi)
 
-      end do
+          ! convert to days     
+
+          pddcalc%pddtab(kx,ky) = 365.0 * pddcalc%pddtab(kx,ky) / twopi
+
+       end do
     end do
 
     call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,'   ...done.')

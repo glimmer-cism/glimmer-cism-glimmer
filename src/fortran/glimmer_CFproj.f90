@@ -1,6 +1,6 @@
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! +                                                           +
-! +  glimmer_proj.f90 - part of the GLIMMER ice model         + 
+! +  glimmer_CFproj.f90 - part of the GLIMMER ice model       + 
 ! +                                                           +
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! 
@@ -41,55 +41,78 @@
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 module glimmer_CFproj
+
   !*FD Holds derived types and subroutines
-  !*FD necessary for handling map projections
+  !*FD necessary for handling map projections. Most of the component
+  !*FD names of the various derived types are self-explanatory.
+  !*FD Note that this doesn't currently interface with the proj4
+  !*FD library in anyway, it simply handles NetCDF data and projection
+  !*FD parameters in an appropriate format.
 
   private
   public  CFproj_projection,CFproj_proj4,CFproj_GetProj,CFproj_PutProj
 
   integer, parameter :: proj4len=100
 
-  ! type definitions for various projections
+  ! Type definitions for various projections -------------------
+
   type CFproj_projection
-     !*FD CF projection
+
+     !*FD CF projection type. This type contains a pointer to an
+     !*FD instance of each type of projection, all initialised to
+     !*FD \texttt{NULL}.
+
      private 
-     type(CFproj_laea), pointer :: laea=>NULL()
-     type(CFproj_aea), pointer  :: aea=>NULL()
-     type(CFproj_lcc), pointer  :: lcc=>NULL()
-     type(CFproj_stere), pointer:: stere=>NULL()
+     type(CFproj_laea),  pointer :: laea  => NULL() !*FD Pointer to Lambert azimuthal equal area type
+     type(CFproj_aea),   pointer :: aea   => NULL() !*FD Pointer to Albers equal area conic type
+     type(CFproj_lcc),   pointer :: lcc   => NULL() !*FD Pointer to Lambert conic conformal type
+     type(CFproj_stere), pointer :: stere => NULL() !*FD Pointer to Stereographic type
+
   end type CFproj_projection
 
+  !-------------------------------------------------------------
+
   type CFproj_stere
-     ! Stereographic
-     logical :: polar
-     real :: longitude_of_central_meridian
-     real :: latitude_of_projection_origin
-     real :: scale_factor_at_projection_origin = 0.
-     real :: standard_parallel = 0.
-     real :: false_easting, false_northing
+     !*FD Stereographic projection derived type 
+     logical :: polar                               !*FD Polar projection?
+     real :: longitude_of_central_meridian          
+     real :: latitude_of_projection_origin          
+     real :: scale_factor_at_projection_origin = 0. 
+     real :: standard_parallel = 0.                 
+     real :: false_easting          
+     real :: false_northing
   end type CFproj_stere
 
+  !-------------------------------------------------------------
+
   type CFproj_laea
-     ! Lambert Azimuthal Equal Area
+     !*FD Lambert Azimuthal Equal Area
      real :: longitude_of_central_meridian
      real :: latitude_of_projection_origin
-     real :: false_easting, false_northing
+     real :: false_easting
+     real :: false_northing
   end type CFproj_laea
 
+  !-------------------------------------------------------------
+
   type CFproj_aea
-     ! Albers Equal-Area Conic
+     !*FD Albers Equal-Area Conic
      real,dimension(2) :: standard_parallel
      real :: longitude_of_central_meridian
      real :: latitude_of_projection_origin
-     real :: false_easting, false_northing
+     real :: false_easting
+     real :: false_northing
   end type CFproj_aea
 
+  !-------------------------------------------------------------
+
   type CFproj_lcc
-     ! Lambert Conic Conformal
+     !*FD Lambert Conic Conformal
      real,dimension(2) :: standard_parallel
      real :: longitude_of_central_meridian
      real :: latitude_of_projection_origin
-     real :: false_easting, false_northing
+     real :: false_easting
+     real :: false_northing
   end type CFproj_lcc
 
 contains
@@ -97,13 +120,20 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! public functions
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
   function CFproj_GetProj(ncid)
-    !*FD read projection from netCDF file
+
+    !*FD Read projection from a given netCDF file, returning
+    !*FD an instance of type \texttt{CFproj\_projection}.
+    !*FDRV Derived type instance containing projection parameters
+
     use netcdf
     use glide_messages
+
     implicit none
+
     type(CFproj_projection) :: CFproj_GetProj
-    integer, intent(in) :: ncid
+    integer, intent(in) :: ncid                !*FD Handle of the file to be read.
     
     !local variables
     integer status
@@ -155,11 +185,17 @@ contains
     end if
   end function CFproj_GetProj
 
+  !-------------------------------------------------------------------------
+
   function CFproj_proj4(projection)
+    
+    !*FD Returns a proj4 parameter string for a given set of projection parameters
+    !*FDRV Pointer to array of projection parameter strings
+
     use glide_messages
     implicit none
     character(len=proj4len), dimension(:), pointer :: CFproj_proj4
-    type(CFproj_projection) :: projection
+    type(CFproj_projection) :: projection !*FD Projection of interest
 
     if (associated(projection%laea)) then
        CFproj_proj4 => CFproj_proj4_laea(projection%laea)
@@ -178,14 +214,20 @@ contains
     end if
   end function CFproj_proj4
 
+  !-------------------------------------------------------------------------
+
   subroutine CFproj_PutProj(ncid,mapid,projection)
-    !*FD write projection to netCDF file
+
+    !*FD write projection to a netCDF file.
+
     use netcdf
     use glide_messages
+
     implicit none
-    type(CFproj_projection) :: projection
-    integer, intent(in) :: ncid
-    integer, intent(in) :: mapid
+
+    type(CFproj_projection) :: projection   !*FD Projection to be written.
+    integer, intent(in) :: ncid             !*FD Handle of netCDF file.
+    integer, intent(in) :: mapid            !*FD Handle of map projection in netCDF file.
 
     if (associated(projection%laea)) then
        call CFproj_put_laea(ncid,mapid,projection%laea)
@@ -207,6 +249,7 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! private readers
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
   function CFproj_get_stere(ncid,mapid)
     use netcdf
     implicit none
@@ -498,4 +541,5 @@ contains
     status = nf90_put_att(ncid,mapid,'standard_parallel',lcc%standard_parallel)
     call nc_errorhandle(__FILE__,__LINE__,status)
   end subroutine CFproj_put_lcc
+
 end module glimmer_CFproj

@@ -1,11 +1,12 @@
+
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-!
-! This code is taken from the Generic Mapping Tools and was 
-! converted into Fortran 90 by Ian Rutt.
-!
-! Original code (in C) Copyright (c) 1991-2003 by P. Wessel and W. H. F. Smith
-!
-! Partial translation into Fortran 90 (c) 2004 Ian C. Rutt
+! +                                                           +
+! +  glimmer_config.f90 - part of the GLIMMER ice model       + 
+! +                                                           +
+! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+! 
+! Copyright (C) 2004 GLIMMER contributors - see COPYRIGHT file 
+! for list of contributors.
 !
 ! This program is free software; you can redistribute it and/or 
 ! modify it under the terms of the GNU General Public License as 
@@ -39,18 +40,12 @@
 ! http://forge.nesc.ac.uk/projects/glimmer/
 !
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-!
-! The Generic Mapping Tools are maintained by Paul Wessel and 
-! Walter H. F. Smith. The GMT homepage is:
-!
-! http://gmt.soest.hawaii.edu/
-!
-! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 module glimmer_config
-  !*FD configuration file parser
-  !*FD written by Magnus Hagdorn, May 2004
-  !*FD everything is a singly linked list
+
+  !*FD Configuration file parser,
+  !*FD written by Magnus Hagdorn, May 2004.
+  !*FD Everything is a singly linked list
 
   private :: handle_section, handle_value, InsertSection, InsertValue
 
@@ -59,15 +54,17 @@ module glimmer_config
   integer, parameter :: linelen=250
 
   type ConfigValue
-     character(len=namelen) :: name
-     character(len=valuelen) :: value
-     type(ConfigValue), pointer :: next=>NULL()
+     !*FD `Value' element of configuration linked list
+     character(len=namelen) :: name              !*FD Name of value element
+     character(len=valuelen) :: value            !*FD Value of this element
+     type(ConfigValue), pointer :: next=>NULL()  !*FD Pointer to next element
   end type ConfigValue
 
   type ConfigSection
-     character(len=namelen) :: name
-     type(ConfigValue), pointer :: values=>NULL()
-     type(ConfigSection), pointer :: next=>NULL()
+     !*FD `Section' element of configuration linked list
+     character(len=namelen) :: name               !*FD Name of this section
+     type(ConfigValue), pointer :: values=>NULL() !*FD Pointer to list of values
+     type(ConfigSection), pointer :: next=>NULL() !*FD Pointer to next section
   end type ConfigSection
 
   interface GetValue
@@ -75,13 +72,16 @@ module glimmer_config
   end interface
 
 contains
+
   subroutine ConfigRead(fname,config)
-    !*FD read configuration file
+
+    !*FD Read a configuration file.
+
     use glide_messages
     implicit none
-    character(len=*), intent(in) :: fname
-    !*FD name of configuration file
-    type(ConfigSection), pointer :: config
+
+    character(len=*), intent(in) :: fname    !*FD name of configuration file
+    type(ConfigSection), pointer :: config   !*FD pointer to first section
 
     ! local variables
     type(ConfigSection), pointer :: this_section
@@ -137,13 +137,19 @@ contains
     return
   end subroutine ConfigRead
 
+  !--------------------------------------------------------------------------
+
   subroutine PrintConfig(config)
+
+    !*FD Prints the contents of a configuration linked-list to the screen.
+
     use glide_messages
     implicit none
-    type(ConfigSection), pointer :: config
+
+    type(ConfigSection), pointer :: config !*FD Pointer to list to be printed.
 
     type(ConfigSection), pointer :: sec
-    type(ConfigValue), pointer ::  val
+    type(ConfigValue),   pointer :: val
     
     sec=>config
     do while(associated(sec))
@@ -158,12 +164,18 @@ contains
     end do
   end subroutine PrintConfig
 
+  !--------------------------------------------------------------------------
+
   subroutine GetSection(config,found,name)
-    !*FD Find and return section with name
+
+    !*FD Find and return section with name. The found section is
+    !*FD returned in \texttt{found}.
+
     implicit none
-    type(ConfigSection), pointer :: config
-    type(ConfigSection), pointer :: found
-    character(len=*),intent(in) :: name
+
+    type(ConfigSection), pointer :: config !*FD The start of the linked list
+    type(ConfigSection), pointer :: found  !*FD The found section
+    character(len=*),intent(in) :: name    !*FD The name of the required section
 
     found=>config
     do while(associated(found))
@@ -173,6 +185,8 @@ contains
        found=>found%next
     end do
   end subroutine GetSection
+
+  !--------------------------------------------------------------------------
 
   subroutine GetValueRealArray(section,name,val,numval)
     !*FD get real array value
@@ -206,6 +220,8 @@ contains
        val = tempval(1:i)
     end if
   end subroutine GetValueRealArray
+
+  !--------------------------------------------------------------------------
 
   subroutine GetValueIntArray(section,name,val,numval)
     !*FD get integer array value
@@ -241,6 +257,8 @@ contains
     end if
   end subroutine GetValueIntArray
 
+  !--------------------------------------------------------------------------
+
   subroutine GetValueReal(section,name,val)
     !*FD get real value
     implicit none
@@ -262,6 +280,8 @@ contains
     end if
   end subroutine GetValueReal
 
+  !--------------------------------------------------------------------------
+
   subroutine GetValueInt(section,name,val)
     !*FD get integer value
     implicit none
@@ -282,6 +302,8 @@ contains
        val = temp
     end if
   end subroutine GetValueInt
+
+  !--------------------------------------------------------------------------
 
   subroutine GetValueChar(section,name,val)
     !*FD get character value

@@ -259,7 +259,7 @@ contains
     real(rk),dimension(:),  intent(in)   :: lats         !*FD Latitudes of global grid points (degrees north)
     real(rk),dimension(:),  intent(in)   :: lons         !*FD Longitudes of global grid points (degrees east)
     real(rk),dimension(:,:),intent(in)   :: g_temp       !*FD Global mean surface temperature field ($^{\circ}$C)
-    real(rk),dimension(:,:),intent(in)   :: g_temp_range !*FD Global surface temperature range field ($^{\circ}$C)
+    real(rk),dimension(:,:),intent(in)   :: g_temp_range !*FD Global surface temperature half-range field ($^{\circ}$C)
     real(rk),dimension(:,:),intent(in)   :: g_precip     !*FD Global precip field total (mm)
     real(rk),dimension(:,:),intent(in)   :: g_zonwind    !*FD Global mean surface zonal wind (m/s)
     real(rk),dimension(:,:),intent(in)   :: g_merwind    !*FD Global mean surface meridonal wind (m/s)
@@ -357,7 +357,7 @@ contains
     call glimmer_remove_bath(instance%local_orog,1,1)
 
     ! ------------------------------------------------------------------------  
-    ! Calculate the surface temperature and range, if none are currently
+    ! Calculate the surface temperature and half-range, if none are currently
     ! available 
     ! ------------------------------------------------------------------------  
   

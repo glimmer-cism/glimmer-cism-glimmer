@@ -51,23 +51,76 @@ program glimmer_example
 
   implicit none
 
-  type(glimmer_params) :: ice_sheet
-  integer :: nx,ny,i,j,nxo,nyo
-  character(fname_length) :: paramfile='example.glp'
-  real(rk) :: time,twin,twout,ice_vol
-  real(rk),dimension(:,:),allocatable :: temp,precip,zonwind,merwind,orog,coverage,cov_orog
-  real(rk),dimension(:,:),allocatable :: albedo, orog_out, ice_frac, fw,fw_in
-  real(rk),dimension(:),allocatable :: lats,lons,lats_orog,lons_orog
-  logical :: out
-  
-  nx=64 ; ny=32
+  ! Program variables -------------------------------------------------------------------
 
-  nxo=200 ; nyo=100
+  type(glimmer_params) :: ice_sheet    ! This is the derived type variable that holds all 
+                                       ! domains of the ice model
+
+  character(fname_length) :: paramfile='example.glp'  ! The top-level configuration file
+
+  ! Arrays which hold the global fields used as input to GLIMMER ------------------------
+
+  real(rk),dimension(:,:),allocatable :: temp      ! Temperature     (degC)
+  real(rk),dimension(:,:),allocatable :: precip    ! Precipitation   (mm/s)
+  real(rk),dimension(:,:),allocatable :: zonwind   ! Zonal wind      (m/s)
+  real(rk),dimension(:,:),allocatable :: merwind   ! Meridional wind (m/s)
+  real(rk),dimension(:,:),allocatable :: orog      ! Orography       (m)
+
+  ! Arrays which hold information about the ice model instances -------------------------
+
+  real(rk),dimension(:,:),allocatable :: coverage ! Coverage map for normal global grid
+  real(rk),dimension(:,:),allocatable :: cov_orog ! Coverage map for orography grid
+
+  ! Arrays which hold output from the model ---------------------------------------------
+  ! These are all on the normal global grid, except for the orography
+
+  real(rk),dimension(:,:),allocatable :: albedo   ! Fractional albedo
+  real(rk),dimension(:,:),allocatable :: orog_out ! Output orography (m)
+  real(rk),dimension(:,:),allocatable :: ice_frac ! Ice coverage fraction
+  real(rk),dimension(:,:),allocatable :: fw       ! Freshwater output flux (mm/s)
+  real(rk),dimension(:,:),allocatable :: fw_in    ! Freshwater input flux (mm/s)
+
+  ! Arrays which hold information about the global grid ---------------------------------
+
+  real(rk),dimension(:),  allocatable :: lats      ! Latitudes of normal global gridpoints
+  real(rk),dimension(:),  allocatable :: lons      ! Longitudes of normal global gridpoints
+  real(rk),dimension(:),  allocatable :: lats_orog ! Latitudes of global orography gridpoints
+  real(rk),dimension(:),  allocatable :: lons_orog ! Longitudes of global oropraphy gridpoints
+
+  ! Scalars which hold information about the global grid --------------------------------
+
+  integer :: nx,ny   ! Size of normal global grid
+  integer :: nxo,nyo ! Size of global orography grid
+
+  ! Scalar model outputs ----------------------------------------------------------------
+
+  real(rk) :: twin     ! Timestep-integrated input water flux (kg)
+  real(rk) :: twout    ! Timestep-integrated output water flux (kg)
+  real(rk) :: ice_vol  ! Total ice volume (m^3)
+  
+  ! Other variables ---------------------------------------------------------------------
+
+  logical :: out    ! Outputs set flag
+  integer :: i,j    ! Array index counters
+  real(rk) :: time  ! Current time (hours)
+
+  ! -------------------------------------------------------------------------------------
+  ! Executable code starts here - Basic initialisation
+  ! -------------------------------------------------------------------------------------
+
+  ! Set dimensions of global grids
+
+  nx=64   ; ny=32           ! Normal global grid
+  nxo=200 ; nyo=100         ! Grid used for orographic output
+
+  ! Allocate arrays appropriately
 
   allocate(temp(nx,ny),precip(nx,ny),zonwind(nx,ny))
   allocate(merwind(nx,ny),lats(ny),lons(nx),orog(nx,ny))
   allocate(coverage(nx,ny),orog_out(nxo,nyo),albedo(nx,ny),ice_frac(nx,ny),fw(nx,ny))
   allocate(lats_orog(nyo),lons_orog(nxo),cov_orog(nxo,nyo),fw_in(nx,ny))
+
+  ! Set array contents to zero
 
   temp=0.0
   precip=0.0
@@ -79,19 +132,21 @@ program glimmer_example
   albedo=0.0
   orog_out=0.0
 
-! Calculate example orographic latitudes
+  ! Set up global grids ----------------------------------------------------------------
+
+  ! Calculate example orographic latitudes
 
   do j=1,nyo
     lats_orog(j)=-(180.0/nyo)*j+90.0+(90.0/nyo)
   enddo
 
-! Calculate example orographic longitudes
+  ! Calculate example orographic longitudes
 
   do i=1,nxo
     lons_orog(i)=(360.0/nxo)*i-(180.0/nxo)
   enddo
 
-! Load in latitudes
+  ! Load in latitudes for normal global grid
 
   open(20,file='latitudes.txt')
   do j=1,ny
@@ -99,7 +154,7 @@ program glimmer_example
   enddo
   close(20)
 
-! Load in longitudes
+  ! Load in longitudes for normal global grid
 
   open(20,file='longitudes.txt')
   do i=1,nx
@@ -107,7 +162,9 @@ program glimmer_example
   enddo
   close(20)
  
-! Load in sample temperature field
+  ! Load in example global fields ------------------------------------------------------
+
+  ! Load in sample temperature field
 
   open(20,file='tempfield.dat')
   do i=1,nx
@@ -117,7 +174,7 @@ program glimmer_example
   enddo
   close(20)
 
-! Load in sample precip field
+  ! Load in sample precip field
 
   open(20,file='precipfield.dat')
   do i=1,nx
@@ -127,7 +184,7 @@ program glimmer_example
   enddo
   close(20)
 
-! Load in sample zonal wind field
+  ! Load in sample zonal wind field
 
   open(20,file='zonwindfield.dat')
   do i=1,nx
@@ -137,7 +194,7 @@ program glimmer_example
   enddo
   close(20)
 
-! Load in sample meridional wind field
+  ! Load in sample meridional wind field
 
   open(20,file='merwindfield.dat')
   do i=1,nx
@@ -147,7 +204,7 @@ program glimmer_example
   enddo
   close(20)
 
-! Load large-scale orography
+  ! Load global (large-scale) orography
 
   open(20,file='largescale.orog')
   do i=1,nx
@@ -156,6 +213,8 @@ program glimmer_example
     enddo
   enddo
   close(20)
+
+  ! Do various bits of initialisation -------------------------------------------------------
 
   precip=precip/3600.0   ! Convert background precip rate from mm/h to mm/s
 
@@ -180,15 +239,18 @@ program glimmer_example
     stop
   endif
 
-  ! Do timesteps
+  ! Do timesteps ---------------------------------------------------------------------------
 
-  do time=0.0*24.0*360.0,50000.0*24.0*360.0,24.0*360.0
+  do time=0.0*24.0*360.0,50000.0*24.0*360.0,24.0*360.0   ! In this case, we do 50000 years
     call glimmer(ice_sheet,time,temp,precip,zonwind,merwind,orog, &
-                 orog_out=orog_out,albedo=albedo,output_flag=out, &
-                 ice_frac=ice_frac,water_out=fw,water_in=fw_in, &
-                 total_water_in=twin,total_water_out=twout,ice_volume=ice_vol) 
-	call glide_stars
+                 orog_out=orog_out,   albedo=albedo,         output_flag=out, &
+                 ice_frac=ice_frac,   water_out=fw,          water_in=fw_in, &
+                 total_water_in=twin, total_water_out=twout, ice_volume=ice_vol) 
+    call glide_stars    ! Print a row of stars (unless message level set lower than 6)
   enddo
+
+  ! Finalise/tidy up everything ------------------------------------------------------------
+
   call end_glimmer(ice_sheet)
 
 100 format(f9.5)

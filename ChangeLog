@@ -1,3 +1,9 @@
+2004-08-12 Ian Rutt
+ * Added comments to several files: glide_pdd.f90, glimmer_CFproj.f90,
+   glimmer_config.f90, glimmer_example.f90.
+ * Corrected passing of temperature range within model - should be the
+   half-range, so divided range by two in glimmer.f90
+
 2004-08-10 Ian Rutt
  * Updated top-level information files
  * Cleared out unneccessary variables and things from makefile.arc files
