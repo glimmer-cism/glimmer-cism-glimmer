@@ -172,6 +172,18 @@ contains
 
   end subroutine copy_global_grid
 
+  !-----------------------------------------------------------------------------
+
+  subroutine get_grid_dims(grid,nx,ny)
+
+    type(global_grid),intent(in)  :: grid
+    integer,intent(out) :: nx,ny
+
+    nx=grid%nx
+    ny=grid%ny
+
+  end subroutine get_grid_dims
+
 !-----------------------------------------------------------------------------
 
   subroutine calc_bounds_lon(lons,lonb)

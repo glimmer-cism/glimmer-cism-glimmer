@@ -65,17 +65,12 @@ program glint_example
 
   real(rk),dimension(:,:,:),pointer :: orog_clim     => null()  ! Orography
   real(rk),dimension(:,:,:),pointer :: precip_clim   => null()  ! Precip
-  real(rk),dimension(:,:,:),pointer :: precip_clim2  => null()  ! Precip
+  real(rk),dimension(:,:,:),pointer :: precip_clim_raw  => null()  ! Input precip
   real(rk),dimension(:,:,:),pointer :: surftemp_clim => null()  ! Surface temperature
 
   type(global_grid),pointer :: orog_grid   => null()
   type(global_grid),pointer :: precip_grid => null()
   type(global_grid),pointer :: temp_grid   => null()
-
-  ! arrays for interpolation ------------------------------------------------------------
-
-  logical,dimension(:,:),allocatable :: maskin,maskout
-  real,dimension(:,:),allocatable :: intin,intout
 
   ! Arrays which hold the global fields used as input to GLIMMER ------------------------
 
@@ -134,7 +129,7 @@ program glint_example
 
   ! Read in climate data
 
-  call read_ncdf_3d('monthly_precip_mean_1974-2003.nc','prate',precip_clim2,precip_grid)
+  call read_ncdf_3d('monthly_precip_mean_1974-2003.nc','prate',precip_clim_raw,precip_grid)
   call read_ncdf_3d('surf_temp_6h_1974-2003.nc','air_temperature',surftemp_clim,temp_grid)
   call read_ncdf_3d('global_orog.nc','hgt',orog_clim,orog_grid)
 
@@ -144,22 +139,21 @@ program glint_example
 
   ! Set dimensions of global grids
 
-  nx=size(surftemp_clim,1) ; ny=size(surftemp_clim,2) ! Normal global grid
-  nxp=size(precip_clim2,1) ; nyp=size(precip_clim2,2) ! Precip input grid
-  nxo=200 ; nyo=100                               ! Grid used for orographic output
+  call get_grid_dims(temp_grid,nx,ny)     ! Normal global grid
+  call get_grid_dims(precip_grid,nxp,nyp) ! Precip input grid
+
+  nxo=200 ; nyo=100 ! Example grid used for orographic output
 
   ! Do precip interpolation
 
   allocate(precip_clim(nx,ny,12))
-  allocate(intin(nxp,nyp),maskin(nxp,nyp))
-  allocate(intout(nx,ny),maskout(nx,ny))
 
   do i=1,12
-     intin=precip_clim2(:,:,i)
-     maskin=.true.
-     maskout=.true.
-     call global_interp(precip_grid,intin,temp_grid,intout,in_mask=maskin,out_mask=maskout,error=ierr)
-     precip_clim(:,:,i)=intout
+     call global_interp(precip_grid,precip_clim_raw(:,:,i),temp_grid,precip_clim(:,:,i),error=ierr)
+     if (ierr>0) then
+        Print*,'Interpolation error ',ierr
+        stop
+     end if
   end do
 
   ! start logging
@@ -201,8 +195,6 @@ program glint_example
   call glimmer_set_msg_level(6)
 
   ! Initialise the ice model
-
-  print*,size(lats),size(lons),size(orog_out),size(ice_frac),size(albedo),size(lons_orog),size(lats_orog)
 
   call initialise_glint(ice_sheet,temp_grid%lats,temp_grid%lons,paramfile,orog=orog_out,ice_frac=ice_frac, &
        albedo=albedo,orog_longs=lons_orog,orog_lats=lats_orog,daysinyear=365)

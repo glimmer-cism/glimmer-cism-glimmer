@@ -2,6 +2,7 @@
 module glint_global_interp
 
   use glint_global_grid
+  use glimmer_global
 
   implicit none
 
@@ -75,36 +76,36 @@ contains
     ! Subroutine arguments
     ! --------------------------------------------------------
 
-    type(global_grid)                             :: in_grid
-    real,   dimension(:,:),         intent(in)    :: a
-    type(global_grid)                             :: out_grid
-    real,   dimension(:,:),         intent(out)   :: ao
-    logical,dimension(:,:),optional,intent(inout) :: in_mask
-    logical,dimension(:,:),optional,intent(inout) :: out_mask
-    real,                  optional,intent(in)    :: missing
-    integer,               optional,intent(out)   :: error
+    type(global_grid)                              :: in_grid
+    real(rk),dimension(:,:),         intent(in)    :: a
+    type(global_grid)                              :: out_grid
+    real(rk),dimension(:,:),         intent(out)   :: ao
+    logical, dimension(:,:),optional,intent(inout) :: in_mask
+    logical, dimension(:,:),optional,intent(inout) :: out_mask
+    real(rk),               optional,intent(in)    :: missing
+    integer,                optional,intent(out)   :: error
 
     ! --------------------------------------------------------
     ! Automatic arrays
     ! --------------------------------------------------------
 
-    logical,dimension(size(a,1) ,size(a,2))  :: mask
-    logical,dimension(size(ao,1),size(ao,2)) :: masko
-    real,   dimension(size(a,1)+1)  :: alon
-    real,   dimension(size(a,2)+1)  :: alat
-    real,   dimension(size(ao,1)+1) :: alono
-    real,   dimension(size(ao,2)+1) :: alato
+    logical, dimension(size(a,1) ,size(a,2))  :: mask
+    logical, dimension(size(ao,1),size(ao,2)) :: masko
+    real(rk),dimension(size(a,1)+1)  :: alon
+    real(rk),dimension(size(a,2)+1)  :: alat
+    real(rk),dimension(size(ao,1)+1) :: alono
+    real(rk),dimension(size(ao,2)+1) :: alato
 
     ! --------------------------------------------------------
     ! Internal variables
     ! --------------------------------------------------------
 
-    integer :: idl,il,jl,idlo,ilo,jlo,ier
-    real :: api=3.1415926536
-    real :: amm,almx,almn,sgn,al,dln,almxo,almno,dlno,amnlto
-    real :: amxlto,amnlt,amxlt,amnlno,amxlno,amnln,amxln,wt,avg
-    real :: slatmx,wlat,slatmn,slon,slonp,slonmx,slonmn,delon
-    integer :: i,j,iil,iilo,j1,j2,jj,i1,i2,k,ii,iii,iip
+    integer  :: idl,il,jl,idlo,ilo,jlo,ier
+    real(rk) :: api=3.1415926536
+    real(rk) :: amm,almx,almn,sgn,al,dln,almxo,almno,dlno,amnlto
+    real(rk) :: amxlto,amnlt,amxlt,amnlno,amxlno,amnln,amxln,wt,avg
+    real(rk) :: slatmx,wlat,slatmn,slon,slonp,slonmx,slonmn,delon
+    integer  :: i,j,iil,iilo,j1,j2,jj,i1,i2,k,ii,iii,iip
 
     ! --------------------------------------------------------
     ! Set up array sizes and check things match up.
