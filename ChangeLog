@@ -1,3 +1,10 @@
+2004-06-22 Magnus Hagdorn
+ * glimmer_config.f90: added double precision versions
+ * glide_types.f90: contains model instance of the GLIDE core
+ * glide_setup.f90: read GLIDE configuration from file
+ * test_setup.f90: test glide_setup
+ * g_land.config: sample configuration file
+
 2004-06-18 Ian Rutt
  * Added possibility of reading in fields from netcdf file scaled or
    unscaled

@@ -10,6 +10,7 @@ GLIMMERFLAGS=$(F77FLAGS) $(GLIMMERPRECOPT)
 SUBDIRS = SLAP_library
 LIBS = libglimmer.a
 PROGS = glimmer_example bin2ncdf input2ncdf relaxed
+TESTS = test_config test_setup
 DATA = ncdf_vars.def
 
 AUTOGEN = ncdf.f90 ncdf_file.f90 ncdf_infile.f90 ncdf_params.f90
@@ -30,9 +31,8 @@ SOURCES = glimmer_degd.f90 glimmer_isot.f90 glimmer_setup.f90 \
 
 INCLUDE_FILES=
 
-OTHER_FILES=$(ARC_FILE) $(THIS_FILE)
+all:	$(LIBS) $(TESTS) $(PROGS)
 
-all: $(LIBS) $(PROGS)
 
 .PHONY:		clean all subdirs $(SUBDIRS)
 
@@ -42,7 +42,7 @@ $(SUBDIRS):
 		$(MAKE) -C $@
 
 
-libglimmer.a: $(OBJECTS) $(OTHER_FILES) $(INCLUDE_FILES)
+libglimmer.a: $(OBJECTS) $(INCLUDE_FILES)
 	ar rcv $@ $(OBJECTS)
 	if [ "$(RANLIB)" != "" ] ; then $(RANLIB) $@ ; fi
 
@@ -57,11 +57,14 @@ input2ncdf:	input2ncdf.o glimmer_global.o  ncdf.o ncdf_file.o glimmer_modu.o gli
 
 relaxed: relaxed.o glimmer_global.o ncdf.o ncdf_file.o ncdf_infile.o glimmer_modu.o glimmer_setup.o glimmer_physcon.o glimmer_paramets.o \
          glimmer_proj.o gmt.o glimmer_interp.o glimmer_utils.o glimmer_config.o ncdf_params.o glimmer_outp.o glimmer_temp.o \
-         glimmer_mbal.o glimmer_thck.o glimmer_velo.o glimmer_CFproj.o libslap.a glimmer_degd.o glimmer_CFproj.o
-	$(F77) -o $@ $^ $(LD_FLAGS) libslap.a
+         glimmer_mbal.o glimmer_thck.o glimmer_velo.o glimmer_CFproj.o glimmer_degd.o glimmer_CFproj.o
+	$(F77) -o $@ $^ $(LD_FLAGS) SLAP_library/libslap.a
 
 test_config:	test_config.o glimmer_config.o
 	$(F77) -o $@ $^ $(LD_FLAGS)
+
+test_setup:	glimmer_config.o glide_types.o glide_setup.o test_setup.o
+		$(F77) -o $@ $^ $(LD_FLAGS)
 
 # install glimmer
 install:	install-mod install-libs install-progs install-data
