@@ -1,0 +1,32 @@
+The original stand-alone ice model was written by Tony Payne. The 
+subsequent coupling, down/up-scaling and other associated code  was
+written by Ian Rutt. A significant amount of re-engineering of the original 
+model was done by Ian Rutt and Magnus Hagdorn. Magnus Hagdorn also added netCDF 
+support and changed the built system.
+
+The authors may be contacted at:
+
+School of Geographical Sciences
+University of Bristol
+University Road
+Bristol BS8 1SS
+United Kingdom
+
+Tel: +44 (0) 117 928 9954 (department office)
+Fax: +44 (0) 117 928 7878
+
+i.c.rutt@bristol.ac.uk   (maintainer)
+a.j.payne@bristol.ac.uk
+
+and
+
+School of GeoSciences
+The University of Edinburgh
+Grant Institute
+West Mains Road
+Edinburgh EH9 3JW
+Scotland
+PHONE: +44 (0) 131 650 8523
+FAX:   +44 (0) 131 668 3184
+
+Magnus.Hagdorn@ed.ac.uk 
