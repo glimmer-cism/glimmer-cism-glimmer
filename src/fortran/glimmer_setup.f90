@@ -249,11 +249,11 @@ contains
        end if
        call GetValue(section,'geot',  model%paramets%geot)
        call GetValue(section,'fiddle',model%paramets%fiddle)
-       call GetValue(section,'airt',  airt_temp)
-       call GetValue(section,'nmsb',  nmsb_temp)
+       call GetValue(section,'airt',  airt_temp,numval=size(model%paramets%airt))
+       call GetValue(section,'nmsb',  nmsb_temp,numval=size(model%paramets%nmsb))
        call GetValue(section,'hydtim',model%paramets%hydtim)
        call GetValue(section,'isotim',model%paramets%isotim)
-       call GetValue(section,'bpar',  bpar_temp)
+       call GetValue(section,'bpar',  bpar_temp,numval=size(model%paramets%bpar))
        call GetValue(section,'thklim',model%numerics%thklim)
        call GetValue(section,'mlimit',model%numerics%mlimit)
 
