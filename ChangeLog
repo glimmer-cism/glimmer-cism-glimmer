@@ -1,5 +1,6 @@
 2005-01-10 Ian Rutt
  * Merge part 3 - fixed glint build, under windows and Linux
+ * Removed redundant files
 
 2005-02-10 Magnus Hagdorn
  * merged documentation
