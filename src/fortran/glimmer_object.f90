@@ -684,6 +684,10 @@ contains
                         instance%model%options%whichthck, &
                         instance%newtemps,logunit)
 
+    case default
+
+       call glide_msg(GM_FATAL,__FILE__,__LINE__,'Unrecognised value of whichevol')
+
     end select
 
     ! ------------------------------------------------------------------------ 

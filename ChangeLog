@@ -1,6 +1,12 @@
+2004-08-17 Ian Rutt
+ * Added unrecognised option handling for whichevol and whichwvel
+ * Improved formatting of line numbers in glide_messages.f90
+ * Reformatted glimmer_thck.f90
+
 2004-08-16 Ian Rutt
  * Tidied up unrecognised option handling in a few places
  * Minor formatting changes
+ * Removed unused option whichstrs
 
 2004-08-13 Ian Rutt
  * Updated documentation a little

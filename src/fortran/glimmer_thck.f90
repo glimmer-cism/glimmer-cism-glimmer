@@ -62,7 +62,7 @@ contains
     integer, intent(in) :: totpts, thckflag
     real(dp), intent(inout), dimension(:,:) :: usrf, lsrf, thck 
     integer,intent(in) :: logunit
-    
+
     integer, parameter :: flag = 0
     real(dp), dimension(5) :: sumd 
     real(dp) :: err 
@@ -75,96 +75,98 @@ contains
     character(80) :: outtxt
 
     if (model%pcgdwk%first1) then
-      model%pcgdwk%fc = (/ model%numerics%alpha * model%numerics%dt / (2.0d0 * model%numerics%dew), &
-              model%numerics%alpha * model%numerics%dt / (2.0d0 * model%numerics%dew), model%numerics%dt, &
-              (1.0d0-model%numerics%alpha) / model%numerics%alpha/) 
-      model%pcgdwk%first1 = .false.
+       model%pcgdwk%fc = (/ model%numerics%alpha * model%numerics%dt / (2.0d0 * model%numerics%dew), &
+            model%numerics%alpha * model%numerics%dt / (2.0d0 * model%numerics%dew), model%numerics%dt, &
+            (1.0d0-model%numerics%alpha) / model%numerics%alpha/) 
+       model%pcgdwk%first1 = .false.
     end if
 
     if (model%geometry%empty) then
 
-      thck = dmax1(0.0d0,thck + acab * model%pcgdwk%fc(2))
-      usrf = thck + lsrf
-      write(timetxt,*)model%numerics%time
-      call glide_msg(GM_FATAL,__FILE__,__LINE__,"* thck empty - net accumulation added "//trim(timetxt))
+       thck = dmax1(0.0d0,thck + acab * model%pcgdwk%fc(2))
+       usrf = thck + lsrf
+       write(timetxt,*)model%numerics%time
+       call glide_msg(GM_INFO,__FILE__,__LINE__,"* thck empty - net accumulation added "//trim(timetxt))
     else
 
-      !* the number of grid points and the number of nonzero matrix elements (including bounary points)
-      model%pcgdwk%pcgsize = (/ totpts, totpts * 5 /)
+       !* the number of grid points and the number of nonzero matrix elements (including bounary points)
+       model%pcgdwk%pcgsize = (/ totpts, totpts * 5 /)
 
-      !* allocate sparse matrices of the appropriate size 
-      allocate (model%pcgdwk%pcgrow(model%pcgdwk%pcgsize(2)))
-      allocate (model%pcgdwk%pcgcol(model%pcgdwk%pcgsize(2)))
-      allocate (model%pcgdwk%pcgval(model%pcgdwk%pcgsize(2)))
-      allocate (model%pcgdwk%rhsd(model%pcgdwk%pcgsize(1)))
-      allocate (model%pcgdwk%answ(model%pcgdwk%pcgsize(1)))
+       !* allocate sparse matrices of the appropriate size 
+       allocate (model%pcgdwk%pcgrow(model%pcgdwk%pcgsize(2)))
+       allocate (model%pcgdwk%pcgcol(model%pcgdwk%pcgsize(2)))
+       allocate (model%pcgdwk%pcgval(model%pcgdwk%pcgsize(2)))
+       allocate (model%pcgdwk%rhsd(model%pcgdwk%pcgsize(1)))
+       allocate (model%pcgdwk%answ(model%pcgdwk%pcgsize(1)))
 
-      model%pcgdwk%ct = 1
+       model%pcgdwk%ct = 1
 
-      do ns = 1,model%general%nsn
-        do ew = 1,model%general%ewn 
-          if (mask(ew,ns) /= 0) then
-            if (ew == 1 .or. ew == model%general%ewn .or. ns == 1 .or. ns == model%general%nsn) then
-              call putpcgc(model%pcgdwk,1.0d0,mask(ew,ns),mask(ew,ns))           ! point (ew,ns)
-              model%pcgdwk%rhsd(mask(ew,ns)) = thck(ew,ns) 
-              model%pcgdwk%answ(mask(ew,ns)) = thck(ew,ns) 
-            else if (any((thck(ew-1:ew+1,ns-1:ns+1) == 0.0d0)) .and. thckflag == 5) then
-              call putpcgc(model%pcgdwk,1.0d0,mask(ew,ns),mask(ew,ns))           ! point (ew,ns)
-              model%pcgdwk%rhsd(mask(ew,ns)) = thck(ew,ns) + acab(ew,ns) * model%pcgdwk%fc(3) 
-              model%pcgdwk%answ(mask(ew,ns)) = thck(ew,ns) 
-            else
-              sumd = findsums(uflx(ew-1:ew,ns-1:ns),dusrfdew(ew-1:ew,ns-1:ns),&
+       do ns = 1,model%general%nsn
+          do ew = 1,model%general%ewn 
+             if (mask(ew,ns) /= 0) then
+                if (ew == 1 .or. ew == model%general%ewn .or. ns == 1 .or. ns == model%general%nsn) then
+                   call putpcgc(model%pcgdwk,1.0d0,mask(ew,ns),mask(ew,ns))           ! point (ew,ns)
+                   model%pcgdwk%rhsd(mask(ew,ns)) = thck(ew,ns) 
+                   model%pcgdwk%answ(mask(ew,ns)) = thck(ew,ns) 
+                else if (any((thck(ew-1:ew+1,ns-1:ns+1) == 0.0d0)) .and. thckflag == 5) then
+                   call putpcgc(model%pcgdwk,1.0d0,mask(ew,ns),mask(ew,ns))           ! point (ew,ns)
+                   model%pcgdwk%rhsd(mask(ew,ns)) = thck(ew,ns) + acab(ew,ns) * model%pcgdwk%fc(3) 
+                   model%pcgdwk%answ(mask(ew,ns)) = thck(ew,ns) 
+                else
+                   sumd = findsums(uflx(ew-1:ew,ns-1:ns),dusrfdew(ew-1:ew,ns-1:ns),&
                         vflx(ew-1:ew,ns-1:ns),dusrfdns(ew-1:ew,ns-1:ns),model%pcgdwk%fc)
-              call putpcgc(model%pcgdwk,sumd(1),mask(ew-1,ns),mask(ew,ns))       ! point (ew-1,ns)
-              call putpcgc(model%pcgdwk,sumd(2),mask(ew+1,ns),mask(ew,ns))       ! point (ew+1,ns)
-              call putpcgc(model%pcgdwk,sumd(3),mask(ew,ns-1),mask(ew,ns))       ! point (ew,ns-1)
-              call putpcgc(model%pcgdwk,sumd(4),mask(ew,ns+1),mask(ew,ns))       ! point (ew,ns+1)
-              call putpcgc(model%pcgdwk,1.0d0 + sumd(5),mask(ew,ns),mask(ew,ns)) ! point (ew,ns)
+                   call putpcgc(model%pcgdwk,sumd(1),mask(ew-1,ns),mask(ew,ns))       ! point (ew-1,ns)
+                   call putpcgc(model%pcgdwk,sumd(2),mask(ew+1,ns),mask(ew,ns))       ! point (ew+1,ns)
+                   call putpcgc(model%pcgdwk,sumd(3),mask(ew,ns-1),mask(ew,ns))       ! point (ew,ns-1)
+                   call putpcgc(model%pcgdwk,sumd(4),mask(ew,ns+1),mask(ew,ns))       ! point (ew,ns+1)
+                   call putpcgc(model%pcgdwk,1.0d0 + sumd(5),mask(ew,ns),mask(ew,ns)) ! point (ew,ns)
 
-              model%pcgdwk%rhsd(mask(ew,ns)) = thck(ew,ns) + acab(ew,ns) * model%pcgdwk%fc(3) - &
-                            model%pcgdwk%fc(4) * (usrf(ew,ns) * sumd(5) + &
-                            usrf(ew-1,ns) * sumd(1) + usrf(ew+1,ns) * sumd(2) + &
-                            usrf(ew,ns-1) * sumd(3) + usrf(ew,ns+1) * sumd(4))  
+                   model%pcgdwk%rhsd(mask(ew,ns)) = thck(ew,ns) + acab(ew,ns) * model%pcgdwk%fc(3) - &
+                        model%pcgdwk%fc(4) * (usrf(ew,ns) * sumd(5) + &
+                        usrf(ew-1,ns) * sumd(1) + usrf(ew+1,ns) * sumd(2) + &
+                        usrf(ew,ns-1) * sumd(3) + usrf(ew,ns+1) * sumd(4))  
 
-              model%pcgdwk%answ(mask(ew,ns)) = thck(ew,ns) 
+                   model%pcgdwk%answ(mask(ew,ns)) = thck(ew,ns) 
 
-            end if
-          end if
-        end do
-      end do
+                end if
+             end if
+          end do
+       end do
 
-      model%pcgdwk%pcgsize(2) = model%pcgdwk%ct - 1 
-      call slapsolv(model,.true.,linit,err,logunit)   
+       model%pcgdwk%pcgsize(2) = model%pcgdwk%ct - 1 
+       call slapsolv(model,.true.,linit,err,logunit)   
 
-      do ns = 1,model%general%nsn
-        do ew = 1,model%general%ewn 
+       do ns = 1,model%general%nsn
+          do ew = 1,model%general%ewn 
 
-          if (mask(ew,ns) /= 0) then
-            thck(ew,ns) = model%pcgdwk%answ(mask(ew,ns))
-          end if
+             if (mask(ew,ns) /= 0) then
+                thck(ew,ns) = model%pcgdwk%answ(mask(ew,ns))
+             end if
 
-        end do
-      end do
+          end do
+       end do
 
-      ! *tp+* implement bcs
+       ! *tp+* implement bcs
 
-      thck(1,:) = thck(2,:)
-      thck(model%general%ewn,:) = thck(model%general%ewn-1,:)
-      thck(:,1) = thck(:,2)
-      thck(:,model%general%nsn) = thck(:,model%general%nsn-1)
+       thck(1,:) = thck(2,:)
+       thck(model%general%ewn,:) = thck(model%general%ewn-1,:)
+       thck(:,1) = thck(:,2)
+       thck(:,model%general%nsn) = thck(:,model%general%nsn-1)
 
-      model%pcgdwk%tlinit = model%pcgdwk%tlinit + linit
-      model%pcgdwk%mlinit = max(linit,model%pcgdwk%mlinit)
+       model%pcgdwk%tlinit = model%pcgdwk%tlinit + linit
+       model%pcgdwk%mlinit = max(linit,model%pcgdwk%mlinit)
 
-      thck = max(0.0d0, thck)
-      usrf = thck + lsrf
+       thck = max(0.0d0, thck)
+       usrf = thck + lsrf
 
-      write(outtxt,*)"thck ", model%numerics%time, linit, model%pcgdwk%mlinit, model%pcgdwk%tlinit, totpts, &
-          real(thk0*thck(model%general%ewn/2+1,model%general%nsn/2+1))
-      call glide_msg(GM_TIMESTEP,__FILE__,__LINE__,trim(adjustl(outtxt)))
+       write(outtxt,*)"thck ", model%numerics%time, linit, model%pcgdwk%mlinit
+       call glide_msg(GM_TIMESTEP,__FILE__,__LINE__,trim(adjustl(outtxt)))
+       write(outtxt,*)"thck ",model%pcgdwk%tlinit, totpts, &
+            real(thk0*thck(model%general%ewn/2+1,model%general%nsn/2+1))
+       call glide_msg(GM_TIMESTEP,__FILE__,__LINE__,trim(adjustl(outtxt)))
 
-      deallocate(model%pcgdwk%pcgrow,model%pcgdwk%pcgcol)
-      deallocate(model%pcgdwk%pcgval,model%pcgdwk%rhsd,model%pcgdwk%answ)
+       deallocate(model%pcgdwk%pcgrow,model%pcgdwk%pcgcol)
+       deallocate(model%pcgdwk%pcgval,model%pcgdwk%rhsd,model%pcgdwk%answ)
 
     end if
 
@@ -175,11 +177,11 @@ contains
       use glimmer_global, only : dp
 
       implicit none
-          
+
       real(dp), intent(in), dimension(2,2) :: uf, dsx, vf, dsy
       real(dp), dimension(5) :: findsums
       real(dp),dimension(4),intent(in) :: fc
-     
+
       findsums(1) = (divider(uf(1,1),dsx(1,1)) + divider(uf(1,2),dsx(1,2))) / fc(1)
       findsums(2) = (divider(uf(2,1),dsx(2,1)) + divider(uf(2,2),dsx(2,2))) / fc(1)
       findsums(3) = (divider(vf(1,1),dsy(1,1)) + divider(vf(2,1),dsy(2,1))) / fc(2)
@@ -188,7 +190,7 @@ contains
       findsums(5) = - sum(findsums(1:4))
 
     end function findsums
-       
+
     function divider(b,a)
 
       use glimmer_global, only : dp
@@ -199,22 +201,22 @@ contains
       real(dp) :: divider
 
       if (a .ne. 0.0d0) then
-        divider = - b / a
+         divider = - b / a
       else
-        divider = 0.0d0 
+         divider = 0.0d0 
       end if
 
     end function divider
 
   end subroutine timeevolthck
 
-!---------------------------------------------------------------------------------
+  !---------------------------------------------------------------------------------
 
   subroutine slapsolv(model,first,iter,err,lunit)
 
     use glimmer_global, only : dp 
-  !use pcgdwk 
-  !use funits, only : ulog
+    !use pcgdwk 
+    !use funits, only : ulog
     use glide_messages
 
     implicit none
@@ -236,58 +238,58 @@ contains
     character(80) :: outtxt
 
     if (first) then
-      call ds2y(model%pcgdwk%pcgsize(1),model%pcgdwk%pcgsize(2), &
-                model%pcgdwk%pcgrow,model%pcgdwk%pcgcol, &
-                model%pcgdwk%pcgval,isym)
+       call ds2y(model%pcgdwk%pcgsize(1),model%pcgdwk%pcgsize(2), &
+            model%pcgdwk%pcgrow,model%pcgdwk%pcgcol, &
+            model%pcgdwk%pcgval,isym)
     end if
 
     mxnelt = 20 * model%pcgdwk%pcgsize(1)
 
     allocate(rwork(mxnelt),iwork(mxnelt))
 
-!**     solve the problem using the SLAP package routines     
-!**     -------------------------------------------------
-!**     n ... order of matrix a (in)
-!**     b ... right hand side vector (in)                        
-!**     x ... initial quess/final solution vector (in/out)                        
-!**     nelt ... number of non-zeroes in A (in)
-!**     ia, ja ... sparse matrix format of A (in)
-!**     a ... matrix helt in SLAT column format (in)
-!**     isym ... storage method (0 is complete) (in)
-!**     itol ... convergence criteria (2 recommended) (in)                     
-!**     tol ... criteria for convergence (in)
-!**     itmax ... maximum number of iterations (in)
-!**     iter ... returned number of iterations (out)
-!**     err ... error estimate of solution (out)
-!**     ierr ... returned error message (0 is ok) (out)
-!**     iunit ... unit for error writes during iteration (0 no write) (in)
-!**     rwork ... workspace for SLAP routines (in)
-!**     mxnelt ... maximum array and vector sizes (in)
-!**     iwork ... workspace for SLAP routines (in)
+    !**     solve the problem using the SLAP package routines     
+    !**     -------------------------------------------------
+    !**     n ... order of matrix a (in)
+    !**     b ... right hand side vector (in)                        
+    !**     x ... initial quess/final solution vector (in/out)                        
+    !**     nelt ... number of non-zeroes in A (in)
+    !**     ia, ja ... sparse matrix format of A (in)
+    !**     a ... matrix helt in SLAT column format (in)
+    !**     isym ... storage method (0 is complete) (in)
+    !**     itol ... convergence criteria (2 recommended) (in)                     
+    !**     tol ... criteria for convergence (in)
+    !**     itmax ... maximum number of iterations (in)
+    !**     iter ... returned number of iterations (out)
+    !**     err ... error estimate of solution (out)
+    !**     ierr ... returned error message (0 is ok) (out)
+    !**     iunit ... unit for error writes during iteration (0 no write) (in)
+    !**     rwork ... workspace for SLAP routines (in)
+    !**     mxnelt ... maximum array and vector sizes (in)
+    !**     iwork ... workspace for SLAP routines (in)
 
     call dslucs(model%pcgdwk%pcgsize(1),model%pcgdwk%rhsd,model%pcgdwk%answ,model%pcgdwk%pcgsize(2), &
-                model%pcgdwk%pcgrow,model%pcgdwk%pcgcol,model%pcgdwk%pcgval, &
-                isym,itol,tol,itmax,iter,err,ierr,0,rwork,mxnelt,iwork,mxnelt)
+         model%pcgdwk%pcgrow,model%pcgdwk%pcgcol,model%pcgdwk%pcgval, &
+         isym,itol,tol,itmax,iter,err,ierr,0,rwork,mxnelt,iwork,mxnelt)
 
     if (ierr /= 0) then
-      write(outtxt,*)'pcg error ', ierr, itmax, iter
-      call glide_msg(GM_ERROR,__FILE__,__LINE__,trim(outtxt))
-      call dcpplt(model%pcgdwk%pcgsize(1),model%pcgdwk%pcgsize(2),model%pcgdwk%pcgrow, &
-                model%pcgdwk%pcgcol,model%pcgdwk%pcgval,isym,lunit)
-      write(outtxt,*)model%pcgdwk%pcgval
-      call glide_msg(GM_FATAL,__FILE__,__LINE__,trim(outtxt))
+       write(outtxt,*)'pcg error ', ierr, itmax, iter
+       call glide_msg(GM_ERROR,__FILE__,__LINE__,trim(outtxt))
+       call dcpplt(model%pcgdwk%pcgsize(1),model%pcgdwk%pcgsize(2),model%pcgdwk%pcgrow, &
+            model%pcgdwk%pcgcol,model%pcgdwk%pcgval,isym,lunit)
+       !      Print*,model%pcgdwk%pcgval
+       call glide_msg(GM_FATAL,__FILE__,__LINE__,'STOPPING')
     end if
 
     deallocate(rwork,iwork)
 
-  end subroutine slapsolv 
+  end subroutine slapsolv
 
-!---------------------------------------------------------------------------------
+  !---------------------------------------------------------------------------------
 
   subroutine putpcgc(pcgdwk,value,col,row)
 
     use glimmer_global, only : dp
- ! use pcgdwk, only : pcgval, pcgcol, pcgrow, ct
+    ! use pcgdwk, only : pcgval, pcgcol, pcgrow, ct
 
     implicit none
 
@@ -296,15 +298,15 @@ contains
     real(dp), intent(in) :: value
 
     if (value /= 0.0d0) then
-      pcgdwk%pcgval(pcgdwk%ct) = value
-      pcgdwk%pcgcol(pcgdwk%ct) = col
-      pcgdwk%pcgrow(pcgdwk%ct) = row
-      pcgdwk%ct = pcgdwk%ct + 1
+       pcgdwk%pcgval(pcgdwk%ct) = value
+       pcgdwk%pcgcol(pcgdwk%ct) = col
+       pcgdwk%pcgrow(pcgdwk%ct) = row
+       pcgdwk%ct = pcgdwk%ct + 1
     end if
 
   end subroutine putpcgc
-  
-!---------------------------------------------------------------------------------
+
+  !---------------------------------------------------------------------------------
 
   subroutine geomders(numerics,ipvr,stagthck,opvrew,opvrns)
 
@@ -327,7 +329,7 @@ contains
 
     ewn=size(ipvr,1)
     nsn=size(ipvr,2)
- 	 
+
     do ns=1,nsn-1
        do ew = 1,ewn-1
           if (stagthck(ew,ns) /= 0.0d0) then
@@ -342,12 +344,12 @@ contains
 
   end subroutine geomders
 
-!---------------------------------------------------------------------------------
+  !---------------------------------------------------------------------------------
 
   subroutine geom2ders(model,ipvr,stagthck,opvrew,opvrns)
 
     use glimmer_global, only : dp ! ew, ewn, ns, nsn
-!    use numerics, only : dew, dns
+    !    use numerics, only : dew, dns
 
     implicit none 
 
@@ -362,65 +364,65 @@ contains
 
     dewsq4 = 4.0d0 * model%numerics%dew * model%numerics%dew
     dnssq4 = 4.0d0 * model%numerics%dns * model%numerics%dns
- 
+
     do ns = 2, model%general%nsn-2
-      do ew = 2, model%general%ewn-2
-        if (stagthck(ew,ns) .gt. 0.0d0) then
-          opvrew(ew,ns) = centerew(ew,ns)
-          opvrns(ew,ns) = centerns(ew,ns)
-        else
-          opvrew(ew,ns) = 0.0d0
-          opvrns(ew,ns) = 0.0d0
-        end if
-      end do
+       do ew = 2, model%general%ewn-2
+          if (stagthck(ew,ns) .gt. 0.0d0) then
+             opvrew(ew,ns) = centerew(ew,ns)
+             opvrns(ew,ns) = centerns(ew,ns)
+          else
+             opvrew(ew,ns) = 0.0d0
+             opvrns(ew,ns) = 0.0d0
+          end if
+       end do
     end do
 
-! *** 2nd order boundaries using upwinding
+    ! *** 2nd order boundaries using upwinding
 
     do ew = 1, model%general%ewn-1, model%general%ewn-2
 
-      pt = whichway(ew)
+       pt = whichway(ew)
 
-      do ns = 2, model%general%nsn-2 
-        if (stagthck(ew,ns) .gt. 0.0d0) then
-          opvrew(ew,ns) = boundyew(pt,ew,ns)
-          opvrns(ew,ns) = centerns(ew,ns)
-        else
-          opvrew(ew,ns) = 0.0d0
-          opvrns(ew,ns) = 0.0d0
-        end if
-      end do
-
-    end do
-
-    do ns = 1, model%general%nsn-1, model%general%nsn-2
-
-      pt = whichway(ns)
-
-      do ew = 2, model%general%ewn-2  
-        if (stagthck(ew,ns) .gt. 0.0d0) then
-          opvrew(ew,ns) = centerew(ew,ns)
-          opvrns(ew,ns) = boundyns(pt,ew,ns)
-        else
-          opvrew(ew,ns) = 0.0d0
-          opvrns(ew,ns) = 0.0d0
-        end if
-      end do
+       do ns = 2, model%general%nsn-2 
+          if (stagthck(ew,ns) .gt. 0.0d0) then
+             opvrew(ew,ns) = boundyew(pt,ew,ns)
+             opvrns(ew,ns) = centerns(ew,ns)
+          else
+             opvrew(ew,ns) = 0.0d0
+             opvrns(ew,ns) = 0.0d0
+          end if
+       end do
 
     end do
 
     do ns = 1, model%general%nsn-1, model%general%nsn-2
-      do ew = 1, model%general%ewn-1, model%general%ewn-2
-        if (stagthck(ew,ns) .gt. 0.0d0) then
-          pt = whichway(ew)
-          opvrew(ew,ns) = boundyew(pt,ew,ns)
-          pt = whichway(ns)
-          opvrns(ew,ns) = boundyns(pt,ew,ns)
-        else
-          opvrew(ew,ns) = 0.0d0
-          opvrns(ew,ns) = 0.0d0
-        end if
-      end do
+
+       pt = whichway(ns)
+
+       do ew = 2, model%general%ewn-2  
+          if (stagthck(ew,ns) .gt. 0.0d0) then
+             opvrew(ew,ns) = centerew(ew,ns)
+             opvrns(ew,ns) = boundyns(pt,ew,ns)
+          else
+             opvrew(ew,ns) = 0.0d0
+             opvrns(ew,ns) = 0.0d0
+          end if
+       end do
+
+    end do
+
+    do ns = 1, model%general%nsn-1, model%general%nsn-2
+       do ew = 1, model%general%ewn-1, model%general%ewn-2
+          if (stagthck(ew,ns) .gt. 0.0d0) then
+             pt = whichway(ew)
+             opvrew(ew,ns) = boundyew(pt,ew,ns)
+             pt = whichway(ns)
+             opvrns(ew,ns) = boundyns(pt,ew,ns)
+          else
+             opvrew(ew,ns) = 0.0d0
+             opvrns(ew,ns) = 0.0d0
+          end if
+       end do
     end do
 
   contains
@@ -433,9 +435,9 @@ contains
       integer ns,ew
 
       centerew = (sum(ipvr(ew+2,ns:ns+1)) + sum(ipvr(ew-1,ns:ns+1)) - &
-                  sum(ipvr(ew+1,ns:ns+1)) - sum(ipvr(ew,ns:ns+1))) / dewsq4
-    
-    end function centerew 
+           sum(ipvr(ew+1,ns:ns+1)) - sum(ipvr(ew,ns:ns+1))) / dewsq4
+
+    end function centerew
 
     function centerns(ew,ns)
 
@@ -445,9 +447,9 @@ contains
       integer ns,ew
 
       centerns = (sum(ipvr(ew:ew+1,ns+2)) + sum(ipvr(ew:ew+1,ns-1)) - &
-                  sum(ipvr(ew:ew+1,ns+1)) - sum(ipvr(ew:ew+1,ns))) / dnssq4
-  
-    end function centerns 
+           sum(ipvr(ew:ew+1,ns+1)) - sum(ipvr(ew:ew+1,ns))) / dnssq4
+
+    end function centerns
 
     function boundyew(pt,ew,ns)
 
@@ -458,7 +460,7 @@ contains
       integer ns,ew
 
       boundyew = pt(1) * (3.0d0 * sum(ipvr(pt(2),ns:ns+1)) - 7.0d0 * sum(ipvr(pt(2)+pt(1),ns:ns+1)) + &
-                 5.0d0 * sum(ipvr(pt(2)+2*pt(1),ns:ns+1)) - sum(ipvr(pt(2)+3*pt(1),ns:ns+1))) / dewsq4
+           5.0d0 * sum(ipvr(pt(2)+2*pt(1),ns:ns+1)) - sum(ipvr(pt(2)+3*pt(1),ns:ns+1))) / dewsq4
 
     end function boundyew
 
@@ -471,7 +473,7 @@ contains
       integer ns,ew
 
       boundyns = pt(1) * (3.0d0 * sum(ipvr(ew:ew+1,pt(2))) - 7.0d0 * sum(ipvr(ew:ew+1,pt(2)+pt(1))) + &
-                 5.0d0 * sum(ipvr(ew:ew+1,pt(2)+2*pt(1))) - sum(ipvr(ew:ew+1,pt(2)+3*pt(1)))) / dnssq4
+           5.0d0 * sum(ipvr(ew:ew+1,pt(2)+2*pt(1))) - sum(ipvr(ew:ew+1,pt(2)+3*pt(1)))) / dnssq4
 
     end function boundyns
 
@@ -483,21 +485,21 @@ contains
       integer :: whichway(2) 
 
       if (i == 1) then 
-        whichway = (/1,1/)
+         whichway = (/1,1/)
       else
-        whichway = (/-1,i+1/)
+         whichway = (/-1,i+1/)
       end if
 
     end function whichway
 
   end subroutine geom2ders
 
-!---------------------------------------------------------------------------------
+  !---------------------------------------------------------------------------------
 
   subroutine stagvarb(ipvr,opvr,ewn,nsn)
 
     use glimmer_global, only : dp ! ewn, nsn
- 
+
     implicit none 
 
     real(dp), intent(out), dimension(:,:) :: opvr 
@@ -505,11 +507,11 @@ contains
     integer :: ewn,nsn
 
     opvr(1:ewn-1,1:nsn-1) = (ipvr(2:ewn,1:nsn-1) + ipvr(1:ewn-1,2:nsn) + &
-                             ipvr(2:ewn,2:nsn)   + ipvr(1:ewn-1,1:nsn-1)) / 4.0d0
+         ipvr(2:ewn,2:nsn)   + ipvr(1:ewn-1,1:nsn-1)) / 4.0d0
 
   end subroutine stagvarb
 
-!---------------------------------------------------------------------------------
+  !---------------------------------------------------------------------------------
 
   subroutine timeders(thckwk,ipvr,opvr,mask,time,which)
 
@@ -526,20 +528,20 @@ contains
     integer, intent(in) :: which
 
     where (mask /= 0)
-      opvr = conv * (ipvr - thckwk%olds(:,:,which)) / (time - thckwk%oldtime)
+       opvr = conv * (ipvr - thckwk%olds(:,:,which)) / (time - thckwk%oldtime)
     elsewhere
-      opvr = 0.0d0
+       opvr = 0.0d0
     end where
 
     thckwk%olds(:,:,which) = ipvr
 
     if (which == thckwk%nwhich) then
-      thckwk%oldtime = time
+       thckwk%oldtime = time
     end if
 
   end subroutine timeders
 
-!---------------------------------------------------------------------------------
+  !---------------------------------------------------------------------------------
 
   subroutine calcacab(numerics,params,pddcalc,which,usrf,artm,arng,prcp,ablt,lati,acab)
 
@@ -618,7 +620,7 @@ contains
 
   end subroutine calcacab
 
-!---------------------------------------------------------------------------------
+  !---------------------------------------------------------------------------------
 
   subroutine filterthck(thck,ewn,nsn)
 
@@ -635,26 +637,26 @@ contains
     integer :: count
     integer :: ns,ew
 
-    character(40) :: outtxt
+    character(80) :: outtxt
 
     allocate(smth(ewn,nsn))
     count = 1
 
     do ns = 3,nsn-2
-      do ew = 3,ewn-2
+       do ew = 3,ewn-2
 
-        if (all((thck(ew-2:ew+2,ns) > 0.0d0)) .and. all((thck(ew,ns-2:ns+2) > 0.0d0))) then
-          smth(ew,ns) =  thck(ew,ns) + f * &
-                        (thck(ew-2,ns) - 4.0d0 * thck(ew-1,ns) + 12.0d0 * thck(ew,ns) - &
-                         4.0d0 * thck(ew+1,ns) + thck(ew+2,ns) + &
-                         thck(ew,ns-2) - 4.0d0 * thck(ew,ns-1) - &
-                         4.0d0 * thck(ew,ns+1) + thck(ew,ns+2))
-          count = count + 1
-        else
-          smth(ew,ns) = thck(ew,ns)
-        end if
+          if (all((thck(ew-2:ew+2,ns) > 0.0d0)) .and. all((thck(ew,ns-2:ns+2) > 0.0d0))) then
+             smth(ew,ns) =  thck(ew,ns) + f * &
+                  (thck(ew-2,ns) - 4.0d0 * thck(ew-1,ns) + 12.0d0 * thck(ew,ns) - &
+                  4.0d0 * thck(ew+1,ns) + thck(ew+2,ns) + &
+                  thck(ew,ns-2) - 4.0d0 * thck(ew,ns-1) - &
+                  4.0d0 * thck(ew,ns+1) + thck(ew,ns+2))
+             count = count + 1
+          else
+             smth(ew,ns) = thck(ew,ns)
+          end if
 
-      end do
+       end do
     end do
 
     thck(3:ewn-2,3:nsn-2) = smth(3:ewn-2,3:nsn-2)
@@ -665,7 +667,7 @@ contains
 
   end subroutine filterthck
 
-!---------------------------------------------------------------------------------
+  !---------------------------------------------------------------------------------
 
   subroutine nonlevolthck(model,thckflag,newtemps,logunit)
 
@@ -691,229 +693,229 @@ contains
 
     character(80) :: outtxt
 
-! ewbc/nsbc set the type of boundary condition aplied at the end of
-! the domain. a value of 0 implies zero gradient.
+    ! ewbc/nsbc set the type of boundary condition aplied at the end of
+    ! the domain. a value of 0 implies zero gradient.
 
     integer :: ew,ns
 
     if (model%pcgdwk%first1) then
-      model%pcgdwk%fc2 = (/ model%numerics%alpha * model%numerics%dt / (2.0d0 * model%numerics%dew * model%numerics%dew), &
-              model%numerics%dt, (1.0d0-model%numerics%alpha) / model%numerics%alpha, &
-              1.0d0 / model%numerics%alpha, model%numerics%alpha * model%numerics%dt / &
-              (2.0d0 * model%numerics%dns * model%numerics%dns), 0.0d0 /) 
-      model%pcgdwk%first1 = .false.
+       model%pcgdwk%fc2 = (/ model%numerics%alpha * model%numerics%dt / (2.0d0 * model%numerics%dew * model%numerics%dew), &
+            model%numerics%dt, (1.0d0-model%numerics%alpha) / model%numerics%alpha, &
+            1.0d0 / model%numerics%alpha, model%numerics%alpha * model%numerics%dt / &
+            (2.0d0 * model%numerics%dns * model%numerics%dns), 0.0d0 /) 
+       model%pcgdwk%first1 = .false.
     end if
 
     if (model%geometry%empty) then
 
-      model%geometry%thck = dmax1(0.0d0,model%geometry%thck + model%climate%acab * model%pcgdwk%fc2(2))
-      model%geometry%usrf = model%geometry%thck + model%geometry%lsrf
-      write(outtxt,*)"thck empty - net accumulation added", model%numerics%time
-      call glide_msg(GM_FATAL,__FILE__,__LINE__,trim(outtxt))
+       model%geometry%thck = dmax1(0.0d0,model%geometry%thck + model%climate%acab * model%pcgdwk%fc2(2))
+       model%geometry%usrf = model%geometry%thck + model%geometry%lsrf
+       write(outtxt,*)"thck empty - net accumulation added", model%numerics%time
+       call glide_msg(GM_FATAL,__FILE__,__LINE__,trim(outtxt))
 
     else
 
-      if (newtemps) then
-        call slipvelo(model%numerics,                &
-                      model%velowk,                  &
-                      model%paramets,                &
-                      model%geomderv,                &
-                      (/1,model%options%whichbtrc/), &
-                      model%temper%   bwat,          &
-                      model%velocity% btrc,          &
-                      model%geometry% relx,          &
-                      model%velocity% ubas,          &
-                      model%velocity% vbas)
-      end if
+       if (newtemps) then
+          call slipvelo(model%numerics,                &
+               model%velowk,                  &
+               model%paramets,                &
+               model%geomderv,                &
+               (/1,model%options%whichbtrc/), &
+               model%temper%   bwat,          &
+               model%velocity% btrc,          &
+               model%geometry% relx,          &
+               model%velocity% ubas,          &
+               model%velocity% vbas)
+       end if
 
-      call slipvelo(model%numerics,                &
-                    model%velowk,                  &
-                    model%paramets,                &
-                    model%geomderv,                &
-                    (/2,model%options%whichbtrc/), &
-                    model%temper%   bwat,          &
-                    model%velocity% btrc,          &
-                    model%geometry% relx,          &
-                    model%velocity% ubas,          &
-                    model%velocity% vbas)
+       call slipvelo(model%numerics,                &
+            model%velowk,                  &
+            model%paramets,                &
+            model%geomderv,                &
+            (/2,model%options%whichbtrc/), &
+            model%temper%   bwat,          &
+            model%velocity% btrc,          &
+            model%geometry% relx,          &
+            model%velocity% ubas,          &
+            model%velocity% vbas)
 
-      if (newtemps) then
-        call zerovelo(model%velowk,            &
-                      model%numerics%sigma,    &
-                      1,                       &
-                      model%geomderv%stagthck, &
-                      model%geomderv%dusrfdew, &
-                      model%geomderv%dusrfdns, &
-                      model%temper%flwa,       &
-                      model%velocity%ubas,     &
-                      model%velocity%vbas,     &
-                      model%velocity%uvel,     &
-                      model%velocity%vvel,     &
-                      model%velocity%uflx,     &
-                      model%velocity%vflx,     &
-                      model%velocity%diffu)
-      end if
+       if (newtemps) then
+          call zerovelo(model%velowk,            &
+               model%numerics%sigma,    &
+               1,                       &
+               model%geomderv%stagthck, &
+               model%geomderv%dusrfdew, &
+               model%geomderv%dusrfdns, &
+               model%temper%flwa,       &
+               model%velocity%ubas,     &
+               model%velocity%vbas,     &
+               model%velocity%uvel,     &
+               model%velocity%vvel,     &
+               model%velocity%uflx,     &
+               model%velocity%vflx,     &
+               model%velocity%diffu)
+       end if
 
-      call zerovelo(model%velowk,             &
-                    model%numerics%sigma,    &
-                    2,                       &
-                    model%geomderv%stagthck, &
-                    model%geomderv%dusrfdew, &
-                    model%geomderv%dusrfdns, &
-                    model%temper%flwa,       &
-                    model%velocity%ubas,     &
-                    model%velocity%vbas,     &
-                    model%velocity%uvel,     &
-                    model%velocity%vvel,     &
-                    model%velocity%uflx,     &
-                    model%velocity%vflx,     &
-                    model%velocity%diffu)
+       call zerovelo(model%velowk,             &
+            model%numerics%sigma,    &
+            2,                       &
+            model%geomderv%stagthck, &
+            model%geomderv%dusrfdew, &
+            model%geomderv%dusrfdns, &
+            model%temper%flwa,       &
+            model%velocity%ubas,     &
+            model%velocity%vbas,     &
+            model%velocity%uvel,     &
+            model%velocity%vvel,     &
+            model%velocity%uflx,     &
+            model%velocity%vflx,     &
+            model%velocity%diffu)
 
-      !* the number of grid points and the number of nonzero 
-      !* matrix elements (including bounary points)
-      model%pcgdwk%pcgsize = (/ model%geometry%totpts, model%geometry%totpts * 5 /)
+       !* the number of grid points and the number of nonzero 
+       !* matrix elements (including bounary points)
+       model%pcgdwk%pcgsize = (/ model%geometry%totpts, model%geometry%totpts * 5 /)
 
-      !* allocate sparse matrices of the appropriate size 
-      allocate (model%pcgdwk%pcgrow(model%pcgdwk%pcgsize(2)))
-      allocate (model%pcgdwk%pcgcol(model%pcgdwk%pcgsize(2)))
-      allocate (model%pcgdwk%pcgval(model%pcgdwk%pcgsize(2)))
-      allocate (model%pcgdwk%rhsd(model%pcgdwk%pcgsize(1)))
-      allocate (model%pcgdwk%answ(model%pcgdwk%pcgsize(1)))
+       !* allocate sparse matrices of the appropriate size 
+       allocate (model%pcgdwk%pcgrow(model%pcgdwk%pcgsize(2)))
+       allocate (model%pcgdwk%pcgcol(model%pcgdwk%pcgsize(2)))
+       allocate (model%pcgdwk%pcgval(model%pcgdwk%pcgsize(2)))
+       allocate (model%pcgdwk%rhsd(model%pcgdwk%pcgsize(1)))
+       allocate (model%pcgdwk%answ(model%pcgdwk%pcgsize(1)))
 
-      model%pcgdwk%ct = 1
+       model%pcgdwk%ct = 1
 
-      do ns = 1,model%general%nsn
-        do ew = 1,model%general%ewn 
+       do ns = 1,model%general%nsn
+          do ew = 1,model%general%ewn 
 
-          if (model%geometry%mask(ew,ns) /= 0) then
+             if (model%geometry%mask(ew,ns) /= 0) then
 
-            if (ew == 1 .or. ew == model%general%ewn .or. &
-                ns == 1 .or. &
-                ns == model%general%nsn) then
-    
-              call putpcgc(model%pcgdwk,&
-                           1.0d0, &
-                           model%geometry%mask(ew,ns), &
-                           model%geometry%mask(ew,ns))           ! point (ew,ns)
+                if (ew == 1 .or. ew == model%general%ewn .or. &
+                     ns == 1 .or. &
+                     ns == model%general%nsn) then
 
-              model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = model%geometry%thck(ew,ns) 
-              model%pcgdwk%answ(model%geometry%mask(ew,ns)) = model%geometry%thck(ew,ns) 
+                   call putpcgc(model%pcgdwk,&
+                        1.0d0, &
+                        model%geometry%mask(ew,ns), &
+                        model%geometry%mask(ew,ns))           ! point (ew,ns)
 
-            else if (any((model%geometry%thck(ew-1:ew+1,ns-1:ns+1) == 0.0d0)) .and. thckflag == 5) then
+                   model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = model%geometry%thck(ew,ns) 
+                   model%pcgdwk%answ(model%geometry%mask(ew,ns)) = model%geometry%thck(ew,ns) 
 
-              call putpcgc(model%pcgdwk, &
-                           1.0d0, &
-                           model%geometry%mask(ew,ns), &
-                           model%geometry%mask(ew,ns))           ! point (ew,ns)
+                else if (any((model%geometry%thck(ew-1:ew+1,ns-1:ns+1) == 0.0d0)) .and. thckflag == 5) then
 
-              model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = model%geometry%thck(ew,ns) + &
-                                                              model%climate%acab(ew,ns) * model%pcgdwk%fc2(2) 
-              model%pcgdwk%answ(model%geometry%mask(ew,ns)) = model%geometry%thck(ew,ns) 
+                   call putpcgc(model%pcgdwk, &
+                        1.0d0, &
+                        model%geometry%mask(ew,ns), &
+                        model%geometry%mask(ew,ns))           ! point (ew,ns)
 
-            else
+                   model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = model%geometry%thck(ew,ns) + &
+                        model%climate%acab(ew,ns) * model%pcgdwk%fc2(2) 
+                   model%pcgdwk%answ(model%geometry%mask(ew,ns)) = model%geometry%thck(ew,ns) 
 
-              call findsums(ew,ns,model%pcgdwk%fc2)
+                else
 
-              call putpcgc(model%pcgdwk,sumd(1), &
-                           model%geometry%mask(ew-1,ns), &
-                           model%geometry%mask(ew,ns))       ! point (ew-1,ns)
-              call putpcgc(model%pcgdwk,sumd(2), &
-                           model%geometry%mask(ew+1,ns), &
-                           model%geometry%mask(ew,ns))       ! point (ew+1,ns)
-              call putpcgc(model%pcgdwk,sumd(3), &
-                           model%geometry%mask(ew,ns-1), &
-                           model%geometry%mask(ew,ns))       ! point (ew,ns-1)
-              call putpcgc(model%pcgdwk,sumd(4), &
-                           model%geometry%mask(ew,ns+1), &
-                           model%geometry%mask(ew,ns))       ! point (ew,ns+1)
-              call putpcgc(model%pcgdwk,1.0d0 + sumd(5), &
-                           model%geometry%mask(ew,ns), &
-                           model%geometry%mask(ew,ns)) ! point (ew,ns)
+                   call findsums(ew,ns,model%pcgdwk%fc2)
 
-              model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = model%geometry%thck(ew,ns) * &
-                             (1.0d0 - model%pcgdwk%fc2(3) * sumd(5)) - model%pcgdwk%fc2(3) * &
-                             (model%geometry%thck(ew-1,ns) * sumd(1) + model%geometry%thck(ew+1,ns) * sumd(2) + &
-                              model%geometry%thck(ew,ns-1) * sumd(3) + model%geometry%thck(ew,ns+1) * sumd(4)) - &
-                              model%pcgdwk%fc2(4) * (model%geometry%lsrf(ew,ns) * sumd(5) + &
-                              model%geometry%lsrf(ew-1,ns) * sumd(1) + model%geometry%lsrf(ew+1,ns) * sumd(2) + &
-                              model%geometry%lsrf(ew,ns-1) * sumd(3) + model%geometry%lsrf(ew,ns+1) * sumd(4)) +  &
-                              model%climate%acab(ew,ns) * model%pcgdwk%fc2(2)
+                   call putpcgc(model%pcgdwk,sumd(1), &
+                        model%geometry%mask(ew-1,ns), &
+                        model%geometry%mask(ew,ns))       ! point (ew-1,ns)
+                   call putpcgc(model%pcgdwk,sumd(2), &
+                        model%geometry%mask(ew+1,ns), &
+                        model%geometry%mask(ew,ns))       ! point (ew+1,ns)
+                   call putpcgc(model%pcgdwk,sumd(3), &
+                        model%geometry%mask(ew,ns-1), &
+                        model%geometry%mask(ew,ns))       ! point (ew,ns-1)
+                   call putpcgc(model%pcgdwk,sumd(4), &
+                        model%geometry%mask(ew,ns+1), &
+                        model%geometry%mask(ew,ns))       ! point (ew,ns+1)
+                   call putpcgc(model%pcgdwk,1.0d0 + sumd(5), &
+                        model%geometry%mask(ew,ns), &
+                        model%geometry%mask(ew,ns)) ! point (ew,ns)
 
-              model%pcgdwk%answ(model%geometry%mask(ew,ns)) = model%geometry%thck(ew,ns) 
+                   model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = model%geometry%thck(ew,ns) * &
+                        (1.0d0 - model%pcgdwk%fc2(3) * sumd(5)) - model%pcgdwk%fc2(3) * &
+                        (model%geometry%thck(ew-1,ns) * sumd(1) + model%geometry%thck(ew+1,ns) * sumd(2) + &
+                        model%geometry%thck(ew,ns-1) * sumd(3) + model%geometry%thck(ew,ns+1) * sumd(4)) - &
+                        model%pcgdwk%fc2(4) * (model%geometry%lsrf(ew,ns) * sumd(5) + &
+                        model%geometry%lsrf(ew-1,ns) * sumd(1) + model%geometry%lsrf(ew+1,ns) * sumd(2) + &
+                        model%geometry%lsrf(ew,ns-1) * sumd(3) + model%geometry%lsrf(ew,ns+1) * sumd(4)) +  &
+                        model%climate%acab(ew,ns) * model%pcgdwk%fc2(2)
 
-            end if
-          end if
-        end do
-      end do
+                   model%pcgdwk%answ(model%geometry%mask(ew,ns)) = model%geometry%thck(ew,ns) 
 
-      model%pcgdwk%pcgsize(2) = model%pcgdwk%ct - 1 
+                end if
+             end if
+          end do
+       end do
 
-      call slapsolv(model,.true.,linit,err,logunit)   
-   
-      do ns = 1,model%general%nsn
-        do ew = 1,model%general%ewn 
+       model%pcgdwk%pcgsize(2) = model%pcgdwk%ct - 1 
 
-          if (model%geometry%mask(ew,ns) /= 0) then
-            model%geometry%thck(ew,ns) = model%pcgdwk%answ(model%geometry%mask(ew,ns))
-          end if
+       call slapsolv(model,.true.,linit,err,logunit)   
 
-        end do
-      end do
+       do ns = 1,model%general%nsn
+          do ew = 1,model%general%ewn 
 
-      ! *tp+* implement bcs
+             if (model%geometry%mask(ew,ns) /= 0) then
+                model%geometry%thck(ew,ns) = model%pcgdwk%answ(model%geometry%mask(ew,ns))
+             end if
 
-      call swapbndh(ewbc, &
-                    model%geometry%thck(1,:), &
-                    model%geometry%thck(2,:), &
-                    model%geometry%thck(model%general%ewn,:), &
-                    model%geometry%thck(model%general%ewn-1,:),0)
-      call swapbndh(nsbc, &
-                    model%geometry%thck(:,1), &
-                    model%geometry%thck(:,2), &
-                    model%geometry%thck(:,model%general%nsn), &
-                    model%geometry%thck(:,model%general%nsn-1),1)
-    
-      model%pcgdwk%tlinit = model%pcgdwk%tlinit + linit
-      model%pcgdwk%mlinit = max(linit,model%pcgdwk%mlinit)
+          end do
+       end do
 
-      model%geometry%thck = max(0.0d0, model%geometry%thck)
+       ! *tp+* implement bcs
 
-      model%geometry%usrf = model%geometry%thck + model%geometry%lsrf
+       call swapbndh(ewbc, &
+            model%geometry%thck(1,:), &
+            model%geometry%thck(2,:), &
+            model%geometry%thck(model%general%ewn,:), &
+            model%geometry%thck(model%general%ewn-1,:),0)
+       call swapbndh(nsbc, &
+            model%geometry%thck(:,1), &
+            model%geometry%thck(:,2), &
+            model%geometry%thck(:,model%general%nsn), &
+            model%geometry%thck(:,model%general%nsn-1),1)
 
-      call slipvelo(model%numerics,                &
-                    model%velowk,                  &
-                    model%paramets,                &
-                    model%geomderv,                &
-                    (/3,model%options%whichbtrc/), &
-                    model%temper%bwat,             &
-                    model%velocity%btrc,           &
-                    model%geometry%relx,           &
-                    model%velocity%ubas,           &
-                    model%velocity%vbas)
+       model%pcgdwk%tlinit = model%pcgdwk%tlinit + linit
+       model%pcgdwk%mlinit = max(linit,model%pcgdwk%mlinit)
 
-      call zerovelo(model%velowk,            &
-                    model%numerics%sigma,    &
-                    3,                       &
-                    model%geomderv%stagthck, &
-                    model%geomderv%dusrfdew, &
-                    model%geomderv%dusrfdns, &
-                    model%temper%flwa,       &
-                    model%velocity%ubas,     &
-                    model%velocity%vbas,     &
-                    model%velocity%uvel,     &
-                    model%velocity%vvel,     &
-                    model%velocity%uflx,     &
-                    model%velocity%vflx,     &
-                    model%velocity%diffu)
+       model%geometry%thck = max(0.0d0, model%geometry%thck)
 
-        write(outtxt,*)"thck ", model%numerics%time, linit, model%pcgdwk%mlinit, model%pcgdwk%tlinit, model%geometry%totpts
-        call glide_msg(GM_TIMESTEP,__FILE__,__LINE__,trim(adjustl(outtxt)))
-        write(outtxt,*)real(thk0*model%geometry%thck(model%general%ewn/2+1,model%general%nsn/2+1))
-        call glide_msg(GM_TIMESTEP,__FILE__,__LINE__,trim(adjustl(outtxt)))
-        write(outtxt,*)real(vel0*maxval(abs(model%velocity%ubas))), real(vel0*maxval(abs(model%velocity%vbas))) 
-        call glide_msg(GM_TIMESTEP,__FILE__,__LINE__,trim(adjustl(outtxt)))
+       model%geometry%usrf = model%geometry%thck + model%geometry%lsrf
 
-      deallocate(model%pcgdwk%pcgrow,model%pcgdwk%pcgcol,model%pcgdwk%pcgval,model%pcgdwk%rhsd,model%pcgdwk%answ)
+       call slipvelo(model%numerics,                &
+            model%velowk,                  &
+            model%paramets,                &
+            model%geomderv,                &
+            (/3,model%options%whichbtrc/), &
+            model%temper%bwat,             &
+            model%velocity%btrc,           &
+            model%geometry%relx,           &
+            model%velocity%ubas,           &
+            model%velocity%vbas)
+
+       call zerovelo(model%velowk,            &
+            model%numerics%sigma,    &
+            3,                       &
+            model%geomderv%stagthck, &
+            model%geomderv%dusrfdew, &
+            model%geomderv%dusrfdns, &
+            model%temper%flwa,       &
+            model%velocity%ubas,     &
+            model%velocity%vbas,     &
+            model%velocity%uvel,     &
+            model%velocity%vvel,     &
+            model%velocity%uflx,     &
+            model%velocity%vflx,     &
+            model%velocity%diffu)
+
+       write(outtxt,*)"thck ", model%numerics%time, linit, model%pcgdwk%mlinit, model%pcgdwk%tlinit, model%geometry%totpts
+       call glide_msg(GM_TIMESTEP,__FILE__,__LINE__,trim(adjustl(outtxt)))
+       write(outtxt,*)real(thk0*model%geometry%thck(model%general%ewn/2+1,model%general%nsn/2+1))
+       call glide_msg(GM_TIMESTEP,__FILE__,__LINE__,trim(adjustl(outtxt)))
+       write(outtxt,*)real(vel0*maxval(abs(model%velocity%ubas))), real(vel0*maxval(abs(model%velocity%vbas))) 
+       call glide_msg(GM_TIMESTEP,__FILE__,__LINE__,trim(adjustl(outtxt)))
+
+       deallocate(model%pcgdwk%pcgrow,model%pcgdwk%pcgcol,model%pcgdwk%pcgval,model%pcgdwk%rhsd,model%pcgdwk%answ)
 
     end if
 
@@ -922,25 +924,25 @@ contains
     subroutine findsums(ew,ns,fc)
 
       implicit none
-          
+
       integer, intent(in) :: ew, ns
       real(dp),intent(in),dimension(6) :: fc
 
       sumd(1) = fc(1) * (sum(model%velocity%diffu(ew-1,ns-1:ns)) + &
-                sum(model%velocity%ubas(ew-1,ns-1:ns)))
+           sum(model%velocity%ubas(ew-1,ns-1:ns)))
       sumd(2) = fc(1) * (sum(model%velocity%diffu(ew,ns-1:ns)) + &
-                sum(model%velocity%ubas(ew,ns-1:ns)))
+           sum(model%velocity%ubas(ew,ns-1:ns)))
       sumd(3) = fc(5) * (sum(model%velocity%diffu(ew-1:ew,ns-1)) + &
-                sum(model%velocity%ubas(ew-1:ew,ns-1)))
+           sum(model%velocity%ubas(ew-1:ew,ns-1)))
       sumd(4) = fc(5) * (sum(model%velocity%diffu(ew-1:ew,ns)) + &
-                sum(model%velocity%ubas(ew-1:ew,ns)))
+           sum(model%velocity%ubas(ew-1:ew,ns)))
       sumd(5) = - sum(sumd(1:4))
 
     end subroutine findsums
-       
+
   end subroutine nonlevolthck
 
-!----------------------------------------------------------------------
+  !----------------------------------------------------------------------
 
   subroutine swapbndh(bc,a,b,c,d,flag)
 
@@ -953,20 +955,20 @@ contains
     integer, intent(in) :: bc, flag
 
     if (bc == 0) then
-      a = b
-      c = d
+       a = b
+       c = d
     end if
 
   end subroutine swapbndh
 
-!------------------------------------------------------------------------
+  !------------------------------------------------------------------------
 
   subroutine stagleapthck(model,uflx,vflx,thck,usrf,lsrf,acab)
 
     use glimmer_global, only : dp, sp
 
     implicit none
- 
+
     type(glimmer_global_type) :: model
     real(dp), intent(in), dimension(:,:) :: uflx, vflx, lsrf 
     real(sp), intent(in), dimension(:,:) :: acab
@@ -977,12 +979,12 @@ contains
     integer :: ns,ew
 
     if (model%thckwk%first1) then
-      model%thckwk%few = model%numerics%dt / model%numerics%dew
-      model%thckwk%fns = model%numerics%dt / model%numerics%dns
-      allocate(model%thckwk%oldthck(model%general%ewn,model%general%nsn))
-      model%thckwk%oldthck = thck
-      allocate(model%thckwk%basestate(model%general%ewn,model%general%nsn))
-      model%thckwk%basestate = 0.0d0
+       model%thckwk%few = model%numerics%dt / model%numerics%dew
+       model%thckwk%fns = model%numerics%dt / model%numerics%dns
+       allocate(model%thckwk%oldthck(model%general%ewn,model%general%nsn))
+       model%thckwk%oldthck = thck
+       allocate(model%thckwk%basestate(model%general%ewn,model%general%nsn))
+       model%thckwk%basestate = 0.0d0
     end if
 
     allocate(newthck(model%general%ewn,model%general%nsn))
@@ -1003,20 +1005,20 @@ contains
     ! bndvflx(0,:) = (/0.0d0,vflx(1,:),0.0d0/) 
     ! bnduflx(model%general%ewn,:) = (/0.0d0,uflx(model%general%ewn-1,:),0.0d0/)
     ! bndvflx(model%general%ewn,:) = (/0.0d0,vflx(model%general%ewn-1,:),0.0d0/)
-  
+
     bnduflx(:,0) = (/0.0d0,uflx(:,1),0.0d0/)
     bndvflx(:,0) = (/0.0d0,vflx(:,1),0.0d0/);
     ! bnduflx(:,model%general%nsn) = (/0.0d0,uflx(:,model%general%nsn-1),0.0d0/)
     ! bnduflx(:,model%general%nsn) = (/0.0d0,vflx(:,model%general%nsn-1),0.0d0/)
 
     do ns = 1,model%general%nsn
-      do ew = 1,model%general%ewn
+       do ew = 1,model%general%ewn
 
-        newthck(ew,ns) = - &
-        (sum(bnduflx(ew,ns-1:ns)) - sum(bnduflx(ew-1,ns-1:ns))) * model%thckwk%few - &
-        (sum(bndvflx(ew-1:ew,ns)) - sum(bndvflx(ew-1:ew,ns-1))) * model%thckwk%fns 
+          newthck(ew,ns) = - &
+               (sum(bnduflx(ew,ns-1:ns)) - sum(bnduflx(ew-1,ns-1:ns))) * model%thckwk%few - &
+               (sum(bndvflx(ew-1:ew,ns)) - sum(bndvflx(ew-1:ew,ns-1))) * model%thckwk%fns 
 
-      end do
+       end do
     end do
 
     newthck = model%thckwk%oldthck  - model%thckwk%basestate  + newthck  
@@ -1029,15 +1031,15 @@ contains
     model%thckwk%oldthck = thck
 
     if (model%thckwk%first1) then
-      model%thckwk%basestate = newthck - model%thckwk%oldthck  
-      newthck = newthck - model%thckwk%basestate  
-      model%thckwk%first1 = .false.
+       model%thckwk%basestate = newthck - model%thckwk%oldthck  
+       newthck = newthck - model%thckwk%basestate  
+       model%thckwk%first1 = .false.
     end if
 
     where (newthck .gt. 0.0d0) 
-      thck = newthck
+       thck = newthck
     elsewhere
-      thck = 0.0d0
+       thck = 0.0d0
     end where
 
     usrf = thck + lsrf

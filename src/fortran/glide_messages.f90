@@ -112,7 +112,7 @@ contains
       if (gm_show(GM_ERROR))      write(*,*)'* ERROR: ',text
     case(GM_FATAL)
       if (gm_show(GM_FATAL)) then
-        write(*,*)'* FATAL ERROR (',trim(file),':',trim(linetxt),') ',text
+        write(*,*)'* FATAL ERROR (',trim(file),':',trim(adjustl(linetxt)),') ',text
       end if
       stop
     case default

@@ -24,7 +24,7 @@ NETCDF_PREFIX=/usr/local/netcdf-3.5.1
 
 # compilation flags for fortran compiler ---------------------------------
 
-F77FLAGS=-fpp -w -std95 -I$(NETCDF_PREFIX)/include
+F77FLAGS=-fpp -g -w -std95 -I$(NETCDF_PREFIX)/include
 
 # for SLAP ---------------------------------------------------------------
 

@@ -198,6 +198,10 @@ contains
                model%geometry%thck,                        &
                model%climate% acab)
 
+       case default
+
+          call glide_msg(GM_FATAL,__FILE__,__LINE__,'Unrecognised value of whichwvel')
+
        end select
 
        ! Allocate some arrays and initialise ----------------------------------------------
