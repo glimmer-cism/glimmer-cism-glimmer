@@ -275,7 +275,7 @@ contains
 
        model%tempwk%inittemp = 0.0d0
        model%tempwk%initadvt = 0.0d0
-       model%tempwk%dissip   = 0.0d0
+       !*MH model%tempwk%dissip   = 0.0d0  is also set to zero in finddisp
        ! ----------------------------------------------------------------------------------
 
        call finddisp(model, &
@@ -347,10 +347,10 @@ contains
 
        model%temper%niter = model%temper%niter + iter 
 
-       ! set temperature of thin or floating ice to the air temperature
+       ! set temperature of thin ice to the air temperature
        do ns = 1,model%general%nsn
           do ew = 1,model%general%ewn
-             if (is_float(model%geometry%thkmask(ew,ns)) .or. is_thin(model%geometry%thkmask(ew,ns))) then
+             if (is_thin(model%geometry%thkmask(ew,ns))) then
                 model%temper%temp(:,ew,ns) = min(0.0d0,dble(model%climate%artm(ew,ns)))
              end if
           end do
@@ -629,6 +629,7 @@ contains
           model%tempwk%inittemp(model%general%upn,ew,ns) = temp(model%general%upn) 
 
        end if
+       rhsd(model%general%upn) = model%tempwk%inittemp(model%general%upn,ew,ns)
     else 
 
        diag(model%general%upn) = 1.0d0 - subd(model%general%upn) + diagadvt(model%general%upn)
@@ -642,10 +643,10 @@ contains
                - model%tempwk%initadvt(model%general%upn,ew,ns) + model%tempwk%dissip(model%general%upn,ew,ns)
 
        end if
-
+       rhsd(model%general%upn) = model%tempwk%inittemp(model%general%upn,ew,ns) - iteradvt(model%general%upn)
     end if
 
-    rhsd(2:model%general%upn) = model%tempwk%inittemp(2:model%general%upn,ew,ns) - iteradvt(2:model%general%upn)
+    rhsd(2:model%general%upn-1) = model%tempwk%inittemp(2:model%general%upn-1,ew,ns) - iteradvt(2:model%general%upn-1)
 
   end subroutine findvtri
 

@@ -1,4 +1,8 @@
 2004-09-27 Magnus Hagdorn
+ * glimmer_temp.f90: applied Tony's fix for floating ice temperature problem
+   see http://forge.nesc.ac.uk/pipermail/glimmer-discuss/2004-September/000041.html
+	
+2004-09-27 Magnus Hagdorn
  * split up main time step into two parts so that we can write data before
    ice thicknesses are updated (glint_timestep.f90, glide_types.f90, simple_glide.f90, eis_glide.f90, glint_timestep.f90)
  * updated doc (glide.dia, glide.eps)
