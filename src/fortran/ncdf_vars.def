@@ -63,6 +63,12 @@ data:          model%climate%lati
 load:          1
 standard_name: latitude
 
+[mask]
+dimensions:    time, y1, x1
+long_name:     upscaling and downscaling mask
+data:          model%climate%out_mask
+load:          1
+
 [relx]
 dimensions:    time, y1, x1
 units:         meter

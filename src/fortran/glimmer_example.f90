@@ -183,7 +183,7 @@ program glimmer_example
                  orog_out=orog_out,albedo=albedo,output_flag=out, &
                  ice_frac=ice_frac,water_out=fw,water_in=fw_in, &
                  total_water_in=twin,total_water_out=twout,ice_volume=ice_vol) 
-    print*,out
+	print*,'**********************************'
   enddo
   call end_glimmer(ice_sheet)
 

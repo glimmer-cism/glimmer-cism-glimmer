@@ -151,7 +151,8 @@ contains
     call openall_out(instance%model)                            ! Initialise output files
     call calc_lats(instance%proj,instance%model%climate%lati)   ! Initialise the local latitude array. 
                                                                 ! This may be redundant, though.
-    call testinisthk(instance%model,unit,instance%first)        ! Load in initial surfaces, and other 2d fields
+    call testinisthk(instance%model,unit,instance%first, &
+	                 instance%newtemps,instance%global_orog) ! Load in initial surfaces, and other 2d fields
     call new_upscale(instance%ups,grid,instance%proj, &
                      instance%model%climate%out_mask)           ! Initialise upscaling parameters
     call calc_coverage(instance%proj, &                         ! Calculate coverage map
@@ -165,16 +166,16 @@ contains
     instance%frac_cov_orog=instance%frac_coverage        ! Set fractional coverage for orog to be same as
                                                          ! for other fields.
 
-    call timeevoltemp(instance%model,0,instance%global_orog)     ! calculate initial temperature distribution
-    instance%newtemps = .true.                                   ! we have new temperatures
+  !  call timeevoltemp(instance%model,0,instance%global_orog)     ! calculate initial temperature distribution
+  !  instance%newtemps = .true.                                   ! we have new temperatures
 
-    call calcflwa(instance%model%numerics,        &              ! Calculate Glen's A
-                  instance%model%velowk,          &
-                  instance%model%paramets%fiddle, &
-                  instance%model%temper%flwa,     &
-                  instance%model%temper%temp,     &
-                  instance%model%geometry%thck,   &
-                  instance%model%options%whichflwa)
+  !  call calcflwa(instance%model%numerics,        &              ! Calculate Glen's A
+  !                instance%model%velowk,          &
+  !                instance%model%paramets%fiddle, &
+  !                instance%model%temper%flwa,     &
+  !                instance%model%temper%temp,     &
+  !                instance%model%geometry%thck,   &
+  !                instance%model%options%whichflwa)
 
     if (present(start_time)) then
       instance%model%numerics%time = start_time       ! Initialise the counter.
@@ -370,6 +371,17 @@ contains
     ! ------------------------------------------------------------------------  
   
     if (instance%first) then
+	  call timeevoltemp(instance%model,0,instance%global_orog)     ! calculate initial temperature distribution
+	  instance%newtemps = .true.                                   ! we have new temperatures
+ 
+      call calcflwa(instance%model%numerics,        &              ! Calculate Glen's A
+                    instance%model%velowk,          &
+                    instance%model%paramets%fiddle, &
+                    instance%model%temper%flwa,     &
+                    instance%model%temper%temp,     &
+                    instance%model%geometry%thck,   &
+                    instance%model%options%whichflwa)
+
       call calcartm(instance%model,                       &
                     instance%model%options%whichartm,     &
                     instance%model%geometry%usrf,         &

@@ -51,14 +51,15 @@ program input2ncdf
   implicit none
 
   ! file names
-  character(len=30) :: latfile, topofile, rtopofile, surffile, precepfile, pressurf
+  character(len=30) :: latfile, topofile, rtopofile, surffile, precepfile, pressurf,mask
   integer unit, status
   type(glimmer_nc_output), pointer :: outfile
   type(glimmer_global_type) :: model
 
   integer nx,ny
   real time,delta
-  real(kind=sp), dimension(:,:), allocatable :: data
+  real(kind=sp), dimension(:,:), pointer :: data
+  integer,       dimension(:,:), pointer :: maskdata
 
   allocate(outfile)
   write(*,*) 'Enter name of latitude file.'
@@ -79,6 +80,10 @@ program input2ncdf
   write(*,*) 'Enter name of present ice surface file.'
   read(*,*) pressurf
   inquire(file=pressurf,exist=NC%do_var(NC_B_PRESUSRF))
+  write(*,*) 'Enter name of interface mask file.'
+  read(*,*) mask
+  inquire(file=mask,exist=NC%do_var(NC_B_MASK))
+
 
   write(*,*) 'Enter name of output netCDF file.'
   read(*,*) NC%filename
@@ -134,13 +139,19 @@ program input2ncdf
      call nc_errorhandle(__FILE__,__LINE__,status)
   end if
 
+  if (NC%do_var(NC_B_MASK)) then
+     call maskread(mask,maskdata,nx,ny)
+     status = nf90_put_var(NC%id, NC%varids(NC_B_MASK), maskdata, (/1,1,1/))
+     call nc_errorhandle(__FILE__,__LINE__,status)
+  end if
+
   status = nf90_close(NC%id)
 contains
   subroutine readplan(fname,data,time,ewn,nsn, delta)
     use glimmer_global, only : sp
     implicit none
     character(*),intent(in) :: fname
-    real(kind=sp), dimension(:,:), allocatable :: data
+    real(kind=sp), dimension(:,:), pointer :: data
     integer, intent(out) :: ewn,nsn
     real(kind=sp), intent(out) :: time, delta
 
@@ -150,7 +161,7 @@ contains
     logical :: here
     integer i,j
 
-    if (allocated(data)) then
+    if (associated(data)) then
        deallocate(data)
     end if
 
@@ -176,5 +187,62 @@ contains
 
     close(unit)
   end subroutine readplan
+
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  subroutine maskread(filename,data,nx,ny)
+
+    use glimmer_global, only : sp
+
+    implicit none
+
+    !*FD Reads a binary integer mask file
+
+    character(*),intent(in) :: filename
+    integer, dimension(:,:), pointer :: data
+    integer, intent(in) :: nx,ny
+
+	integer      :: unit=1    
+    logical      :: there
+    integer      :: i,j
+    real(sp)     :: rdum
+    character(4) :: cdum
+    integer      :: idum
+
+    if (associated(data)) then
+       deallocate(data)
+    end if
+	allocate(data(nx,ny))
+
+    inquire(file=filename,exist=there)
+    if ( .not. there ) then
+      print*,'mask file ',filename,' not found'
+      stop
+    endif
+
+#ifdef CVF
+    open(unit,file=filename,form='unformatted',convert='BIG_ENDIAN')
+    ! convert is a non-standard specifier and doesn't work with the
+    ! Intel compiler.
+    ! Substituting with
+
+#else
+
+    open(unit,file=filename,form='unformatted')
+
+#endif
+
+    read(unit,end=10) rdum, cdum, idum, rdum 
+    read(unit,end=10) ((data(i,j),i=1,nx),j=1,ny)
+
+    close(unit)
+
+    return
+
+10    print*, 'read past end of mask file'
+    Print*,'Reading file:',filename
+    stop
+
+  end subroutine maskread
 
 end program input2ncdf

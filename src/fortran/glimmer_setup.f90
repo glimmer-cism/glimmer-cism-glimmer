@@ -105,7 +105,7 @@ contains
 
     ! ...for funits
 
-    character(fname_length) :: forcfile,outmaskfile
+    character(fname_length) :: forcfile
 
     ! ...for other parameters
 
@@ -134,7 +134,7 @@ contains
                       whichevol, whichwvel, whichprecip
     namelist / nums / ntem, nvel, niso, nout, nstr, thklim, mlimit, dew, dns 
     namelist / pars / geot, fiddle, airt, nmsb, hydtim, isotim, bpar
-    namelist / dats / forcfile, outmaskfile
+    namelist / dats / forcfile
     namelist / cons / lapse_rate,precip_rate,air_temp,albedo
     namelist / forc / trun
 
@@ -188,7 +188,6 @@ contains
     ! For funits
 
     forcfile     = model%funits%forcfile
-    outmaskfile  = model%funits%outmaskfile
 
     ! For other parameters
 
@@ -289,7 +288,6 @@ contains
     ! copy funits type
 
     model%funits%forcfile = forcfile
-    model%funits%outmaskfile = outmaskfile
 
     ! filenames
 
@@ -347,7 +345,7 @@ contains
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine testinisthk(model,unit,first)
+  subroutine testinisthk(model,unit,first,newtemps,global_orog)
 
     !*FD Loads in relevant starting fields, and calculates the 
     !*FD present-day temperature field for the purposes of
@@ -363,6 +361,7 @@ contains
     use glimmer_outp
     use glimmer_temp
     use glimmer_thck
+	use glimmer_velo
     use glimmer_ncinfile
     implicit none
 
@@ -371,6 +370,8 @@ contains
     type(glimmer_global_type),intent(inout) :: model !*FD Model parameters being set
     integer,                  intent(in)    :: unit  !*FD File unit to use for read operations
     logical,                  intent(inout) :: first !*FD The `first time' flag for the instance
+	logical,                  intent(inout) :: newtemps !*FD The new temperatures flag
+	real(rk),dimension(:,:),  intent(in)    :: global_orog !*FD The global orography on the local grid
 
     ! Internal variables
 
@@ -378,23 +379,10 @@ contains
     type(glimmer_nc_input), pointer :: ic
     logical found_precip,found_presurf,found_usurf
 
-    ! -------------------------------------------------------------------
-    ! read outmask file if required
-    ! -------------------------------------------------------------------
-
-    if (trim(adjustl(model%funits%outmaskfile)) .ne. 'none') then
-      Print*,'Reading output mask file ',trim(model%funits%outmaskfile)
-      model%climate%out_mask = maskread(unit, &
-                                     model%funits%outmaskfile, &
-                                     model%general%ewn, &
-                                     model%general%nsn)
-    else
-      model%climate%out_mask = 1
-    end if
-
-    !--------------------------------------------------------------------
-
+	!-----------------------------------------------------
     ! open all netCDF input files
+	!-----------------------------------------------------
+
     call openall_in(model)
 
     ic=>model%funits%in_first
@@ -501,8 +489,18 @@ contains
        
        model%geometry%usrf = model%geometry%thck + model%geometry%lsrf
        
+       call timeevoltemp(model,0,global_orog)     ! calculate initial temperature distribution
+	   newtemps = .true.                          ! we have new temperatures
+
+	   call calcflwa(model%numerics,        &              ! Calculate Glen's A
+                     model%velowk,          &
+                     model%paramets%fiddle, &
+                     model%temper%flwa,     &
+                     model%temper%temp,     &
+                     model%geometry%thck,   &
+                     model%options%whichflwa)
+
        first=.false.
-       
        deallocate(arng) 
        
     else    
@@ -848,7 +846,7 @@ contains
     allocate(model%climate%g_artm(ewn,nsn));          model%climate%g_artm = 0.0
     allocate(model%climate%g_arng(ewn,nsn));          model%climate%g_arng = 0.0
     allocate(model%climate%lati(ewn,nsn));            model%climate%lati = 0.0
-    allocate(model%climate%out_mask(ewn,nsn));        model%climate%out_mask = 0.0
+    allocate(model%climate%out_mask(ewn,nsn));        model%climate%out_mask = 1.0
     allocate(model%climate%ablt(ewn,nsn));            model%climate%ablt = 0.0
     allocate(model%climate%prcp(ewn,nsn));            model%climate%prcp = 0.0
     allocate(model%climate%presprcp(ewn,nsn));        model%climate%presprcp = 0.0
