@@ -146,20 +146,19 @@ contains
     call initout(instance%model,unit)                           ! Initialise output files
     call calc_lats(instance%proj,instance%model%climate%lati)   ! Initialise the local latitude array. 
                                                                 ! This may be redundant, though.
-    call new_upscale(instance%ups,grid,instance%proj)           ! Index global boxes
-
+    call testinisthk(instance%model,unit,instance%first)        ! Load in initial surfaces, and other 2d fields
+    call new_upscale(instance%ups,grid,instance%proj, &
+                     instance%model%climate%out_mask)           ! Initialise upscaling parameters
     call calc_coverage(instance%proj, &                         ! Calculate coverage map
                        instance%ups,  &             
                        grid,          &
                        radea,         &
+                       instance%model%climate%out_mask, &
                        instance%frac_coverage)
-
     call copy_upscale(instance%ups,instance%ups_orog)    ! Set upscaling for orog output to same as for 
                                                          ! other fields.
     instance%frac_cov_orog=instance%frac_coverage        ! Set fractional coverage for orog to be same as
                                                          ! for other fields.
-
-    call testinisthk(instance%model,unit,instance%first)         ! Load in initial surfaces
 
     call timeevoltemp(instance%model,0,instance%global_orog)     ! calculate initial temperature distribution
     instance%newtemps = .true.                                   ! we have new temperatures
@@ -186,7 +185,7 @@ contains
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine glimmer_i_allocate(instance,nxg,nyg,re_alloc)
+  subroutine glimmer_i_allocate(instance,nxg,nyg)
 
     !*FD Allocate top-level arrays in
     !*FD the model instance, and ice model arrays.
@@ -196,19 +195,14 @@ contains
     type(glimmer_instance),intent(inout) :: instance    !*FD Instance whose elements are to be allocated.
     integer,               intent(in)    :: nxg         !*FD Longitudinal size of global grid (grid-points).
     integer,               intent(in)    :: nyg         !*FD Latitudinal size of global grid (grid-points).
-    logical,optional,      intent(in)    :: re_alloc    !*FD Set if we need to de-allocate first.
 
     ! First deallocate if necessary
 
-    if (present(re_alloc)) then
-      if (re_alloc) then
-        if (associated(instance%xwind))         deallocate(instance%xwind)
-        if (associated(instance%ywind))         deallocate(instance%ywind)
-        if (associated(instance%global_orog))   deallocate(instance%global_orog) 
-        if (associated(instance%local_orog))    deallocate(instance%local_orog)   
-        if (associated(instance%frac_coverage)) deallocate(instance%frac_coverage)
-      endif
-    endif
+    if (associated(instance%xwind))         deallocate(instance%xwind)
+    if (associated(instance%ywind))         deallocate(instance%ywind)
+    if (associated(instance%global_orog))   deallocate(instance%global_orog) 
+    if (associated(instance%local_orog))    deallocate(instance%local_orog)   
+    if (associated(instance%frac_coverage)) deallocate(instance%frac_coverage)
 
     ! Then reallocate...
     ! Wind field arrays
@@ -308,15 +302,11 @@ contains
     case(7)
       call interp_to_local(instance%proj,  &
                            g_temp,         &
-                           lats,           &
-                           lons,           &
                            instance%downs, &
                            localsp=instance%model%climate%g_artm)
 
       call interp_to_local(instance%proj,  &
                            g_temp_range,   &
-                           lats,           &
-                           lons,           &
                            instance%downs, &
                            localsp=instance%model%climate%g_arng)
     end select
@@ -327,8 +317,6 @@ contains
     case(1,2)
       call interp_to_local(instance%proj,  &
                            g_precip,       &
-                           lats,           &
-                           lons,           &
                            instance%downs, &
                            localsp=instance%model%climate%prcp)
     end select
@@ -337,8 +325,6 @@ contains
 
     call interp_to_local(instance%proj,    &
                          g_orog,           &
-                         lats,             &
-                         lons,             &
                          instance%downs,   &
                          localdp=instance%global_orog)
 
@@ -349,8 +335,6 @@ contains
       call interp_wind_to_local(instance%proj,    &
                                 g_zonwind,        &
                                 g_merwind,        &
-                                lats,             &
-                                lons,             &
                                 instance%downs,   &
                                 instance%xwind,instance%ywind)
     end select
@@ -558,7 +542,8 @@ contains
       call mean_to_global(instance%proj, &
                           instance%ups, &
                           upscale_temp, &
-                          g_fw_flux)
+                          g_fw_flux,    &
+                          instance%model%climate%out_mask)
 
     endif
 
@@ -680,7 +665,8 @@ contains
       call mean_to_global(instance%proj, &
                           instance%ups_orog, &
                           instance%model%geometry%usrf, &
-                          g_orog_out)
+                          g_orog_out,    &
+                          instance%model%climate%out_mask)
       g_orog_out=thk0*g_orog_out
     endif
 
@@ -701,7 +687,8 @@ contains
       call mean_to_global(instance%proj, &
                           instance%ups, &
                           upscale_temp, &
-                          g_albedo)
+                          g_albedo,    &
+                          instance%model%climate%out_mask)
 
       ! Copy to ice fraction
 
@@ -800,7 +787,7 @@ contains
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine calc_coverage(proj,ups,grid,radea,frac_coverage)
+  subroutine calc_coverage(proj,ups,grid,radea,mask,frac_coverage)
 
     !*FD Calculates the fractional
     !*FD coverage of the global grid-boxes by the ice model
@@ -816,6 +803,7 @@ contains
     type(upscale),          intent(in)  :: ups           !*FD Upscaling used
     type(global_grid),      intent(in)  :: grid          !*FD Global grid used
     real(rk),               intent(in)  :: radea         !*FD Radius of the earth (m)
+    integer, dimension(:,:),intent(in)  :: mask          !*FD Mask of points for upscaling
     real(rk),dimension(:,:),intent(out) :: frac_coverage !*FD Map of fractional 
                                                          !*FD coverage of global by local grid-boxes.
     ! Internal variables
@@ -829,7 +817,7 @@ contains
 
     do i=1,proj%nx
       do j=1,proj%ny
-        tempcount(ups%gboxx(i,j),ups%gboxy(i,j))=tempcount(ups%gboxx(i,j),ups%gboxy(i,j))+1
+        tempcount(ups%gboxx(i,j),ups%gboxy(i,j))=tempcount(ups%gboxx(i,j),ups%gboxy(i,j))+mask(i,j)
       enddo
     enddo
 
@@ -839,7 +827,7 @@ contains
           frac_coverage(i,j)=0.0
         else
           frac_coverage(i,j)=(tempcount(i,j)*proj%dx*proj%dy)/ &
-                 ((grid%lon_bound(i+1)-grid%lon_bound(i))*D2R*radea**2*    &
+                 (lon_diff(grid%lon_bound(i+1),grid%lon_bound(i))*D2R*radea**2*    &
                  (sin(grid%lat_bound(j)*D2R)-sin(grid%lat_bound(j+1)*D2R)))
         endif
       enddo
@@ -1033,5 +1021,25 @@ contains
     enddo
 
   end subroutine glimmer_find_bath
+
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  real(rk) function lon_diff(a,b)
+
+    implicit none
+
+    real(rk),intent(in) :: a,b
+    real(rk) :: aa,bb
+
+    aa=a ; bb=b
+
+      do
+        if (aa>bb) exit
+        aa=aa+360.0
+      enddo
+
+    lon_diff=aa-bb
+
+  end function lon_diff
 
 end module glimmer_object

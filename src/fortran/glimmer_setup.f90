@@ -108,7 +108,7 @@ contains
     integer,dimension(8)    :: indices0dx,indices0dy
     character(fname_length) :: usrffile, topgfile, relxfile
     character(fname_length) :: presusrffile, forcfile, prcpfile
-    character(fname_length) :: latifile
+    character(fname_length) :: latifile,outmaskfile
 
     ! ...for other parameters
 
@@ -139,7 +139,7 @@ contains
     namelist / pars / geot, fiddle, airt, nmsb, hydtim, isotim, bpar
     namelist / outs / indices0dx, indices0dy
     namelist / dats / usrffile, topgfile, relxfile, presusrffile, forcfile, &
-                      prcpfile, latifile
+                      prcpfile, latifile, outmaskfile
     namelist / cons / lapse_rate,precip_rate,air_temp,albedo
     namelist / forc / trun
 
@@ -201,6 +201,7 @@ contains
     forcfile     = model%funits%forcfile
     prcpfile     = model%funits%prcpfile
     latifile     = model%funits%latifile
+    outmaskfile  = model%funits%outmaskfile
 
     ! For other parameters
 
@@ -309,6 +310,7 @@ contains
     model%funits%presusrffile = presusrffile
     model%funits%forcfile = forcfile
     model%funits%latifile = latifile
+    model%funits%outmaskfile = outmaskfile
 
     ! filenames
 
@@ -392,6 +394,21 @@ contains
     ! Internal variables
 
     real(sp),dimension(:,:),allocatable :: arng
+
+
+    ! -------------------------------------------------------------------
+    ! read outmask file if required
+    ! -------------------------------------------------------------------
+
+    if (trim(adjustl(model%funits%outmaskfile)) .ne. 'none') then
+      Print*,'Reading output mask file ',trim(model%funits%outmaskfile)
+      model%climate%out_mask = maskread(unit, &
+                                     model%funits%outmaskfile, &
+                                     model%general%ewn, &
+                                     model%general%nsn)
+    else
+      model%climate%out_mask = 1
+    end if
 
     ! -------------------------------------------------------------------
     ! read latitude file if required - overwrites pre-calculated data
@@ -887,6 +904,7 @@ contains
     allocate(model%climate%g_artm(ewn,nsn));          model%climate%g_artm = 0.0
     allocate(model%climate%g_arng(ewn,nsn));          model%climate%g_arng = 0.0
     allocate(model%climate%lati(ewn,nsn))
+    allocate(model%climate%out_mask(ewn,nsn))
     allocate(model%climate%ablt(ewn,nsn))
     allocate(model%climate%prcp(ewn,nsn))
     allocate(model%climate%presprcp(ewn,nsn));        model%climate%presprcp = 0.0

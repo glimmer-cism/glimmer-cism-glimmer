@@ -314,6 +314,10 @@ module glimmer_types
     real(sp),dimension(:,:),pointer :: presprcp => null() !*FD Present-day annual precip (mm)
     real(sp),dimension(:,:),pointer :: presartm => null() !*FD Present-day mean air-temp ($^{\circ}$C)
     real(dp),dimension(:,:),pointer :: presusrf => null() !*FD Present-day upper surface (km)
+    integer, dimension(:,:),pointer :: out_mask => null() !*FD Array indicating whether a point 
+                                                          !*FD should be considered or ignored 
+                                                          !*FD when upscaling data for output. 
+                                                          !*FD 1 means use, 0 means ignore.
     real(sp) :: uprecip_rate =   0.5 !*FD Uniform precipitaion rate in m/a
     real(sp) :: usurftemp    = -20.0 !*FD Uniform surface temperature in $^{\circ}$C.
     real(sp) :: ice_albedo   =   0.4 !*FD Ice albedo. (fraction)
@@ -363,6 +367,7 @@ module glimmer_types
     character(fname_length) :: prcpfile     = 'none' !*FD Precipitation file
     character(fname_length) :: presusrffile = 'none' !*FD Present-day surface file
     character(fname_length) :: latifile     = 'none' !*FD File containing latitudes of all points
+    character(fname_length) :: outmaskfile  = 'none' !*FD File containing output mask
 
     ! Other input filenames ------------------------------------------
 

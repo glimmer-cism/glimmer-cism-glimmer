@@ -59,12 +59,15 @@ module glimmer_interp
     !*FD of the global grid-boxes within which the given
     !*FD local grid point lies.
 
-    integer, dimension(:,:),pointer :: il    => null() !*FD (see above)
-    integer, dimension(:,:),pointer :: ilp   => null() !*FD (see above)
-    integer, dimension(:,:),pointer :: jl    => null() !*FD (see above)
-    integer, dimension(:,:),pointer :: jlp   => null() !*FD (see above)
     real(rk),dimension(:,:),pointer :: llats => null() !*FD The latitude of each point in x-y space.
     real(rk),dimension(:,:),pointer :: llons => null() !*FD The longitude of each point in x-y space.
+
+    integer, dimension(:,:,:),pointer :: xloc => null() !*FD The x-locations of the corner points of the
+                                                        !*FD interpolation domain.
+    integer, dimension(:,:,:),pointer :: yloc => null() !*FD The y-locations of the corner points of the
+                                                        !*FD interpolation domain.
+    real(rk),dimension(:,:),  pointer :: xfrac => null()
+    real(rk),dimension(:,:),  pointer :: yfrac => null()
 
   end type downscale
 
@@ -108,16 +111,16 @@ contains
 
     ! Allocate arrays
 
-    allocate(downs%il   (proj%nx,proj%ny))
-    allocate(downs%ilp  (proj%nx,proj%ny))
-    allocate(downs%jl   (proj%nx,proj%ny))
-    allocate(downs%jlp  (proj%nx,proj%ny))
+    allocate(downs%xloc (proj%nx,proj%ny,4))
+    allocate(downs%yloc (proj%nx,proj%ny,4))
+    allocate(downs%xfrac(proj%nx,proj%ny))
+    allocate(downs%yfrac(proj%nx,proj%ny))
     allocate(downs%llons(proj%nx,proj%ny))
     allocate(downs%llats(proj%nx,proj%ny))
 
     ! index local boxes
 
-    call index_local_boxes(downs%il,downs%ilp,downs%jl,downs%jlp,grid%lons,grid%lats,proj)
+    call index_local_boxes(downs%xloc,downs%yloc,downs%xfrac,downs%yfrac,grid,proj)
 
     ! Find lats and lons
 
@@ -133,7 +136,7 @@ contains
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine interp_wind_to_local(proj,zonwind,merwind,lats,lons,downs,xwind,ywind)
+  subroutine interp_wind_to_local(proj,zonwind,merwind,downs,xwind,ywind)
 
     !*FD Interpolates a global wind field 
     !*FD (or any vector field) onto a given projected grid.
@@ -145,8 +148,6 @@ contains
     type(projection),       intent(in)  :: proj             !*FD Target map projection
     real(rk),dimension(:,:),intent(in)  :: zonwind          !*FD Zonal component (input)
     real(rk),dimension(:,:),intent(in)  :: merwind          !*FD Meridional components (input)
-    real(rk),dimension(:),  intent(in)  :: lats             !*FD Latitudes of global gridpoints 
-    real(rk),dimension(:),  intent(in)  :: lons             !*FD Longitudes of global gridpoints 
     type(downscale),        intent(in)  :: downs            !*FD Downscaling parameters
     real(rk),dimension(:,:),intent(out) :: xwind,ywind      !*FD x and y components on the projected grid (output)
 
@@ -161,8 +162,8 @@ contains
 
     ! Interpolate onto the projected grid
 
-    call interp_to_local(proj,zonwind,lats,lons,downs,localdp=tempzw)
-    call interp_to_local(proj,merwind,lats,lons,downs,localdp=tempmw)
+    call interp_to_local(proj,zonwind,downs,localdp=tempzw)
+    call interp_to_local(proj,merwind,downs,localdp=tempmw)
 
     ! Apply rotation
 
@@ -173,7 +174,7 @@ contains
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine interp_to_local(proj,global,lats,lons,downs,localsp,localdp,global_fn)
+  subroutine interp_to_local(proj,global,downs,localsp,localdp,global_fn)
 
     !*FD Interpolate a global scalar field
     !*FD onto a projected grid. 
@@ -191,11 +192,9 @@ contains
 
     type(projection),        intent(in)           :: proj      !*FD Target map projection
     real(rk), dimension(:,:),intent(in)           :: global    !*FD Global field (input)
-    real(rk), dimension(:),  intent(in)           :: lats      !*FD Latitudes of global gridpoints 
-    real(rk), dimension(:),  intent(in)           :: lons      !*FD Longitudes of global gridpoints 
     type(downscale),         intent(in)           :: downs     !*FD Downscaling parameters
-    real(sp),dimension(:,:),intent(out),optional :: localsp    !*FD Local field on projected grid (output) sp
-    real(dp),dimension(:,:),intent(out),optional :: localdp    !*FD Local field on projected grid (output) dp
+    real(sp),dimension(:,:), intent(out),optional :: localsp   !*FD Local field on projected grid (output) sp
+    real(dp),dimension(:,:), intent(out),optional :: localdp   !*FD Local field on projected grid (output) dp
     real(sp),optional :: global_fn                             !*FD Function returning values in global field. This  
                                                                !*FD may be used as an alternative to passing the
                                                                !*FD whole array in \texttt{global} if, for instance the
@@ -205,24 +204,9 @@ contains
 
     ! Local variable declarations
 
-    integer  :: nxg,nyg                      ! Dimensions of global fields
     integer  :: i,j                          ! Counter variables for main loop
-    real(rk) :: dx,dy,x,y,ilon,jlat          ! Intermediate variables in interpolation formula
-    real(rk),dimension(2,2) :: f             ! Temporary array holding the four points in the 
+    real(rk),dimension(4) :: f               ! Temporary array holding the four points in the 
                                              ! interpolation domain.
-
-    ! Retrieve the dimensions of the global domain
-
-    nxg=size(lons) ; nyg=size(lats)
-
-    ! Check to see that we have the right number of lats and lons
-
-    if (.not.present(global_fn)) then 
-       if ((nxg/=size(global,1)).or.(nyg/=size(global,2))) then
-          print*,'size mismatch in interp_to_local'
-          stop
-       end if
-    end if
 
     ! check we have one output at least...
 
@@ -235,44 +219,24 @@ contains
     do i=1,proj%nx
       do j=1,proj%ny
 
-        ! Find out where point i,j is in lat-lon space
-
-        ilon=downs%llons(i,j)
-        jlat=downs%llats(i,j)
-
         ! Compile the temporary array f from adjacent points 
 
         if (present(global_fn)) then
-          f(1,1)=global_fn(downs%il(i,j),downs%jl(i,j))
-          f(1,2)=global_fn(downs%il(i,j),downs%jlp(i,j))
-          f(2,1)=global_fn(downs%ilp(i,j),downs%jl(i,j))
-          f(2,2)=global_fn(downs%ilp(i,j),downs%jlp(i,j))
+          f(1)=global_fn(downs%xloc(i,j,1),downs%yloc(i,j,1))
+          f(2)=global_fn(downs%xloc(i,j,2),downs%yloc(i,j,2))
+          f(3)=global_fn(downs%xloc(i,j,3),downs%yloc(i,j,3))
+          f(4)=global_fn(downs%xloc(i,j,4),downs%yloc(i,j,4))
         else
-           f(1,1)=global(downs%il(i,j),downs%jl(i,j))
-           f(1,2)=global(downs%il(i,j),downs%jlp(i,j))
-           f(2,1)=global(downs%ilp(i,j),downs%jl(i,j))
-           f(2,2)=global(downs%ilp(i,j),downs%jlp(i,j))
+          f(1)=global(downs%xloc(i,j,1),downs%yloc(i,j,1))
+          f(2)=global(downs%xloc(i,j,2),downs%yloc(i,j,2))
+          f(3)=global(downs%xloc(i,j,3),downs%yloc(i,j,3))
+          f(4)=global(downs%xloc(i,j,4),downs%yloc(i,j,4))
         end if
 
-        ! Calculate dx of interpolation domain and correct for boundary effects
+         ! Apply the bilinear interpolation
 
-        dx=lons(downs%ilp(i,j))-lons(downs%il(i,j))
-        dx=loncorrect(dx)
-
-        ! Calculate dy of interpolation domain
-
-        dy=lats(downs%jl(i,j))-lats(downs%jlp(i,j))
-
-        ! Calculate location of interpolation point within the rectangle
-
-        x=ilon-lons(downs%il(i,j))
-        x=loncorrect(x)
-        y=lats(downs%jl(i,j))-jlat
-
-        ! Apply the bilinear interpolation
-
-        if (present(localsp)) localsp(i,j)=bilinear_interp(x,y,f,dx,dy)
-        if (present(localdp)) localdp(i,j)=bilinear_interp(x,y,f,dx,dy)
+        if (present(localsp)) localsp(i,j)=bilinear_interp(downs%xfrac(i,j),downs%yfrac(i,j),f)
+        if (present(localdp)) localdp(i,j)=bilinear_interp(downs%xfrac(i,j),downs%yfrac(i,j),f)
 
       enddo
     enddo
@@ -372,7 +336,7 @@ contains
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine pointwise_to_global(proj,local,lons,lats,global)
+  subroutine pointwise_to_global(proj,local,lons,lats,global,mask)
 
     !*FD Upscale to global domain by
     !*FD pointwise sampling.
@@ -387,12 +351,14 @@ contains
     real(rk),dimension(:,:),intent(out) :: global    !*FD Global field (output)
     real(rk),dimension(:),  intent(in)  :: lats      !*FD Latitudes of grid-points (degrees)
     real(rk),dimension(:),  intent(in)  :: lons      !*FD Longitudes of grid-points (degrees)
+    integer, dimension(:,:), intent(in),optional :: mask !*FD output mask for upscaling
 
     ! Internal variables
 
     real(rk),dimension(2,2) :: f
     integer :: nxg,nyg,nxl,nyl,i,j,xx,yy
     real(rk) :: x,y
+    real(rk),dimension(size(local,1),size(local,2)) :: tempmask
 
     nxg=size(global,1) ; nyg=size(global,2)
     nxl=size(local,1)  ; nyl=size(local,2)
@@ -404,8 +370,8 @@ contains
         if (nint(x)<=1.or.nint(x)>nxl-1.or.nint(y)<=1.or.nint(y)>nyl-1) then
           global(i,j)=0.0
         else
-          f=local(xx:xx+1,yy:yy+1)
-          global(i,j)=bilinear_interp(x-real(xx),y-real(yy),f,real(1.0,rk),real(1.0,rk))
+          f=local(xx:xx+1,yy:yy+1)*tempmask(xx:xx+1,yy:yy+1)
+          global(i,j)=bilinear_interp((x-real(xx))/real(1.0,rk),(y-real(yy))/real(1.0,rk),f)
         endif
       enddo
     enddo  
@@ -414,7 +380,7 @@ contains
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine mean_to_global_sp(proj,ups,local,global)
+  subroutine mean_to_global_sp(proj,ups,local,global,mask)
 
     !*FD Upscale to global domain by
     !*FD areal averaging.
@@ -433,10 +399,12 @@ contains
     type(upscale),          intent(in)  :: ups    !*FD Upscaling indexing data.
     real(sp),dimension(:,:),intent(in)  :: local  !*FD Data on projected grid (input).
     real(rk),dimension(:,:),intent(out) :: global !*FD Data on global grid (output).
+    integer, dimension(:,:),intent(in),optional :: mask !*FD Mask for upscaling
 
     ! Internal variables
 
     integer :: nxl,nyl,i,j
+    real(rk),dimension(size(local,1),size(local,2)) :: tempmask
 
     ! Beginning of code
 
@@ -444,9 +412,16 @@ contains
 
     global=0.0
 
+    if (present(mask)) then
+      tempmask=mask
+    else
+      tempmask=1
+    endif
+
     do i=1,nxl
       do j=1,nyl
-        global(ups%gboxx(i,j),ups%gboxy(i,j))=global(ups%gboxx(i,j),ups%gboxy(i,j))+local(i,j)
+        global(ups%gboxx(i,j),ups%gboxy(i,j))= &
+               global(ups%gboxx(i,j),ups%gboxy(i,j))+local(i,j)*tempmask(i,j)
        enddo
     enddo  
 
@@ -460,7 +435,7 @@ contains
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine mean_to_global_dp(proj,ups,local,global)
+  subroutine mean_to_global_dp(proj,ups,local,global,mask)
 
     !*FD Upscale to global domain by
     !*FD areal averaging.
@@ -479,10 +454,12 @@ contains
     type(upscale),          intent(in)  :: ups    !*FD Upscaling indexing data.
     real(dp),dimension(:,:),intent(in)  :: local  !*FD Data on projected grid (input).
     real(rk),dimension(:,:),intent(out) :: global !*FD Data on global grid (output).
+    integer, dimension(:,:),intent(in),optional :: mask !*FD Mask for upscaling
 
     ! Internal variables
 
     integer :: nxl,nyl,i,j
+    real(rk),dimension(size(local,1),size(local,2)) :: tempmask
 
     ! Beginning of code
 
@@ -490,9 +467,16 @@ contains
 
     global=0.0
 
+    if (present(mask)) then
+      tempmask=mask
+    else
+      tempmask=1
+    endif
+
     do i=1,nxl
       do j=1,nyl
-        global(ups%gboxx(i,j),ups%gboxy(i,j))=global(ups%gboxx(i,j),ups%gboxy(i,j))+local(i,j)
+        global(ups%gboxx(i,j),ups%gboxy(i,j))= &
+               global(ups%gboxx(i,j),ups%gboxy(i,j))+local(i,j)*tempmask(i,j)
        enddo
     enddo  
 
@@ -506,44 +490,25 @@ contains
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  real(rk) function bilinear_interp(x,y,f,dx,dy)
+  real(rk) function bilinear_interp(xp,yp,f)
 
     !*FD Performs bilinear interpolation 
     !*FD in a rectangular domain. Note that the bilinear interpolation formula is:
-    !*FD  \[f_{\mathtt{x},\mathtt{y}}=(1-t)(1-u)f_{1,1}+t(1-u)f_{2,1}+tuf_{2,2}+(1-t)uf_{1,2}\]
-    !*FD with
-    !*FD \[t=\frac{\mathtt{x}}{\mathtt{dx}}\] \[u=\frac{\mathtt{y}}{\mathtt{dy}}.\]
+    !*FD  \[f_{\mathtt{x},\mathtt{y}}=(1-X')(1-Y')f_{1}+X'(1-Y')f_{2}+X'Y'f_{3}+(1-X')Y'f_{4}\]
+    !*FD where $X'$ and $Y'$ are the fractional displacements of the target point within the domain.
     !*RV The value of \texttt{f} at \texttt{x,y}
 
     ! Argument declarations
 
-    real(rk),dimension(2,2),intent(in) :: f     !*FD The interpolation domain;
-                                                !*FD i.e. the four points surrounding the
-                                                !*FD target.
-    real(rk),               intent(in) :: dx    !*FD $x$-dimension of the rectangle contained in \texttt{f}.
-    real(rk),               intent(in) :: dy    !*FD $y$-dimension of the rectangle contained in \texttt{f}.
-    real(rk),               intent(in) :: x     !*FD The $x$-location of the target, offset from
-                                                !*FD the location of \texttt{f(1,1)}. Note: \emph{not}
-                                                !*FD the fractional displacement, but the \emph{actual}
-                                                !*FD displacement. The fractional displacement is 
-                                                !*FD in the function code.
-    real(rk),               intent(in) :: y     !*FD The $y$-location of the target, offset from
-                                                !*FD the location of \texttt{f(1,1)}. Note: \emph{not}
-                                                !*FD the fractional displacement, but the \emph{actual}
-                                                !*FD displacement. The fractional displacement is 
-                                                !*FD in the function code.
-    ! Local variables
-
-    real(rk) :: t,u                         ! Fractional displacement of target point
-
-    ! Calculate fractional displacement of target
-
-    t=x/dx
-    u=y/dy
-
+    real(rk),             intent(in) :: xp    !*FD The fractional $x$-displacement of the target.
+    real(rk),             intent(in) :: yp    !*FD The fractional $y$-displacement of the target.
+    real(rk),dimension(4),intent(in) :: f     !*FD The interpolation domain;
+                                              !*FD i.e. the four points surrounding the
+                                              !*FD target, presented anticlockwise from bottom-
+                                              !*FD left 
     ! Apply bilinear interpolation formula
 
-    bilinear_interp=(1-t)*(1-u)*f(1,1)+t*(1-u)*f(2,1)+t*u*f(2,2)+(1-t)*u*f(1,2)
+    bilinear_interp=(1-xp)*(1-yp)*f(1)+xp*(1-yp)*f(2)+xp*yp*f(3)+(1-xp)*yp*f(4)
 
   end function bilinear_interp
 
@@ -585,38 +550,43 @@ contains
 
     if ((lat<lats(ny)).and.(lat>-90.0)) then
       jl=ny
-    else
-      jl=1
-      do while (lat<=array_bcs_lats(lats,jl))
-        jl=jl+1
-      enddo
-      jl=jl-1
+      return
     endif
 
+    if ((lat>lats(1)).and.(lat<90.0)) then
+      jl=1
+      return
+    endif
+
+    jl=1
+    do 
+      if (lat>lats(jl)) exit
+      jl=jl+1
+    enddo
+    
   end subroutine find_ll_index
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine index_local_boxes(il,ilp,jl,jlp,lons,lats,proj)
+  subroutine index_local_boxes(xloc,yloc,xfrac,yfrac,grid,proj)
 
     !*FD Indexes the corners of the
     !*FD global grid box in which each local grid box sits.
 
     use glimmer_utils
+    use glimmer_global_grid
 
     ! Arguments
 
-    integer, dimension(:,:),intent(out) :: il,ilp,jl,jlp !*FD Array of indicies (see \texttt{downscale} type)
-    real(rk),dimension(:),  intent(in)  :: lons          !*FD Longitudinal positions of global grid points (degrees)
-    real(rk),dimension(:),  intent(in)  :: lats          !*FD Latitudinal positions of global grid points (degrees)
-    type(projection),       intent(in)  :: proj          !*FD Projection to be used
+    integer, dimension(:,:,:),intent(out) :: xloc,yloc   !*FD Array of indicies (see \texttt{downscale} type)
+    real(rk),dimension(:,:),  intent(out) :: xfrac,yfrac !*FD Fractional off-sets of grid points
+    type(global_grid),        intent(in)  :: grid        !*FD Global grid to be used
+    type(projection),         intent(in)  :: proj        !*FD Projection to be used
 
     ! Internal variables
 
-    integer :: i,j,nxg,nyg
-    real(rk) :: ilon,jlat
-
-    nxg=size(lons) ; nyg=size(lats)
+    integer :: i,j,il,jl,temp
+    real(rk) :: ilon,jlat,xa,ya,xb,yb,xc,yc,xd,yd
 
     do i=1,proj%nx
       do j=1,proj%ny
@@ -627,15 +597,68 @@ contains
 
         ! Index that location onto the global grid
 
-        call find_ll_index(il(i,j),jl(i,j),ilon,jlat,lons,lats)
+        call find_ll_index(il,jl,ilon,jlat,grid%lons,grid%lats)
 
-        ! Compile the temporary array f from adjacent points 
+        xloc(i,j,1)=il  ! This is the starting point - we now need to find
+        yloc(i,j,1)=jl  ! three other points that enclose the interpolation target
+        
+ 
+        if (jlat>grid%lats(grid%ny)) then
+          
+          ! For all points except on the bottom row
 
-        ilp(i,j)=il(i,j)+1
-        jlp(i,j)=jl(i,j)+1
+          xloc(i,j,2)=il+1
+          yloc(i,j,2)=jl
 
-        call fix_bcs2d(il(i,j) ,jl(i,j) ,nxg,nyg)
-        call fix_bcs2d(ilp(i,j),jlp(i,j),nxg,nyg)
+          xloc(i,j,3)=il+1
+          yloc(i,j,3)=jl-1
+
+          xloc(i,j,4)=il
+          yloc(i,j,4)=jl-1
+
+          call fix_bcs2d(xloc(i,j,2) ,yloc(i,j,2),grid%nx,grid%ny)
+          call fix_bcs2d(xloc(i,j,3) ,yloc(i,j,3),grid%nx,grid%ny)
+          call fix_bcs2d(xloc(i,j,4) ,yloc(i,j,4),grid%nx,grid%ny)
+
+          if (jl==1) then
+            temp=xloc(i,j,3)
+            xloc(i,j,3)=xloc(i,j,4)
+            xloc(i,j,4)=temp
+          endif
+
+        else
+
+          ! The bottom row
+
+          xloc(i,j,2)=il-1
+          yloc(i,j,2)=jl
+
+          xloc(i,j,3)=il-1
+          yloc(i,j,3)=jl+1
+
+          xloc(i,j,4)=il
+          yloc(i,j,4)=jl+1
+            
+          call fix_bcs2d(xloc(i,j,2) ,yloc(i,j,2),grid%nx,grid%ny)
+          call fix_bcs2d(xloc(i,j,3) ,yloc(i,j,3),grid%nx,grid%ny)
+          call fix_bcs2d(xloc(i,j,4) ,yloc(i,j,4),grid%nx,grid%ny)
+
+          temp=xloc(i,j,3)
+          xloc(i,j,3)=xloc(i,j,4)
+          xloc(i,j,4)=temp
+
+        endif
+
+        ! Now, find out where each of those points is on the projected
+        ! grid, and calculate fractional displacements accordingly
+
+        call ll_to_xy(grid%lons(xloc(i,j,1)),grid%lats(yloc(i,j,1)),xa,ya,proj)
+        call ll_to_xy(grid%lons(xloc(i,j,2)),grid%lats(yloc(i,j,2)),xb,yb,proj)
+        call ll_to_xy(grid%lons(xloc(i,j,3)),grid%lats(yloc(i,j,3)),xc,yc,proj)
+        call ll_to_xy(grid%lons(xloc(i,j,4)),grid%lats(yloc(i,j,4)),xd,yd,proj)
+
+        call calc_fractional(xfrac(i,j),yfrac(i,j),real(i,rk),real(j,rk), &
+                             xa,ya,xb,yb,xc,yc,xd,yd)
 
       enddo
     enddo
@@ -660,21 +683,21 @@ contains
 
     ! Beginning of code
     
-    temp = associated(downs%il)
-    write(unit) temp
-    if (temp)  write(unit) downs%il
+!   temp = associated(downs%il)
+!   write(unit) temp
+!   if (temp)  write(unit) downs%il
 
-    temp = associated(downs%ilp)
-    write(unit) temp
-    if (temp)  write(unit) downs%il
+!   temp = associated(downs%ilp)
+!   write(unit) temp
+!   if (temp)  write(unit) downs%il
 
-    temp = associated(downs%jl)
-    write(unit) temp
-    if (temp)  write(unit) downs%il
+!   temp = associated(downs%jl)
+!   write(unit) temp
+!   if (temp)  write(unit) downs%il
 
-    temp = associated(downs%jlp)
-    write(unit) temp
-    if (temp)  write(unit) downs%il
+!   temp = associated(downs%jlp)
+!   write(unit) temp
+!   if (temp)  write(unit) downs%il
 
   end subroutine downs_write_restart
 
@@ -691,20 +714,20 @@ contains
 
     logical :: tempflag
 
-    read(unit) tempflag
-    if(tempflag) read(unit) downs%il
-    read(unit) tempflag
-    if(tempflag) read(unit) downs%ilp
-    read(unit) tempflag
-    if(tempflag) read(unit) downs%jl
-    read(unit) tempflag
-    if(tempflag) read(unit) downs%jlp
+!    read(unit) tempflag
+!    if(tempflag) read(unit) downs%il
+!    read(unit) tempflag
+!    if(tempflag) read(unit) downs%ilp
+!    read(unit) tempflag
+!    if(tempflag) read(unit) downs%jl
+!    read(unit) tempflag
+!    if(tempflag) read(unit) downs%jlp
 
   end subroutine downs_read_restart
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine new_upscale(ups,grid,proj)
+  subroutine new_upscale(ups,grid,proj,mask)
 
     use glimmer_global_grid
 
@@ -717,6 +740,7 @@ contains
     type(upscale),         intent(out) :: ups        !*FD Upscaling type to be set
     type(global_grid),     intent(in)  :: grid       !*FD Global grid to be used
     type(projection),      intent(in)  :: proj       !*FD Projection being used
+    integer,dimension(:,:),intent(in)  :: mask       !*FD Upscaling mask to be used
     
     ! Internal variables
 
@@ -771,7 +795,7 @@ contains
 
     do i=1,nx
       do j=1,ny
-        ups%gboxn(ups%gboxx(i,j),ups%gboxy(i,j))=ups%gboxn(ups%gboxx(i,j),ups%gboxy(i,j))+1
+        ups%gboxn(ups%gboxx(i,j),ups%gboxy(i,j))=ups%gboxn(ups%gboxx(i,j),ups%gboxy(i,j))+mask(i,j)
       enddo
     enddo
 
@@ -842,5 +866,40 @@ contains
     endif
 
   end function lon_between
+
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  subroutine calc_fractional(x,y,xp,yp,xa,ya,xb,yb,xc,yc,xd,yd)
+
+    !*FD Performs a coordinate transformation to locate the point
+    !*FD $(X',Y')$ fractionally within an arbitrary quadrilateral, 
+    !*FD defined by the points $(x_A,y_A)$, $(x_B,y_B)$, 
+    !*FD $(x_C,y_C)$ and $(x_D,y_D)$, which are ordered 
+    !*FD anticlockwise.
+
+    real(rk),intent(out) :: x !*FD The fractional $x$ location.
+    real(rk),intent(out) :: y !*FD The fractional $y$ location.
+    real(rk),intent(in)  :: xp,yp,xa,ya,xb,yb,xc,yc,xd,yd
+
+    real(rk) :: a,b,c
+
+    a=(yb-ya)*(xc-xd)-(yc-yd)*(xb-xa)
+
+    b=xp*(yc-yd)-yp*(xc-xd) &
+     +xd*(yb-ya)-yd*(xb-xa) &
+     -xp*(yb-ya)+yp*(xb-xa) &
+     -xa*(yc-yd)+ya*(xc-xd) 
+         
+    c=xp*(yd-ya)+yp*(xa-xd)+ya*xd-xa*yd
+
+    if (a/=0.0) then
+      x=(-b-sqrt(b**2-4*a*c))/(2*a)
+    else
+      x=-c/b
+    endif
+
+    y=(yp-ya-x*(yb-ya))/(yd+x*(yc-yd-yb+ya)-ya)
+
+  end subroutine calc_fractional
 
 end module glimmer_interp

@@ -727,7 +727,8 @@ contains
 
       call new_upscale(params%instances(i)%ups_orog, &
                        params%g_grid_orog, &
-                       params%instances(i)%proj)
+                       params%instances(i)%proj, &
+                       params%instances(i)%model%climate%out_mask)
 
       ! Deallocate fractional coverage if necessary, and reallocate
 
@@ -741,6 +742,7 @@ contains
                          params%instances(i)%ups_orog,&             ! Calculate coverage map
                          params%g_grid_orog, &
                          params%radea, &
+                         params%instances(i)%model%climate%out_mask, &
                          params%instances(i)%frac_cov_orog)
 
       ! Add to total

@@ -492,6 +492,60 @@ contains
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+  function maskread(unit,filename,nx,ny)
+
+    use glimmer_global, only : sp
+
+    implicit none
+
+    !*FD Reads a binary integer mask file
+
+    integer,     intent(in)  :: unit
+    character(*),intent(in)  :: filename
+    integer,     intent(in)  :: nx
+    integer,     intent(in)  :: ny
+    integer,dimension(nx,ny) :: maskread
+    
+    logical      :: there
+    integer      :: i,j
+    real(sp)     :: rdum
+    character(4) :: cdum
+    integer      :: idum
+
+    inquire(file=filename,exist=there)
+    if ( .not. there ) then
+      print*,'mask file ',filename,' not found'
+      stop
+    endif
+
+#ifdef CVF
+    open(unit,file=filename,form='unformatted',convert='BIG_ENDIAN')
+    ! convert is a non-standard specifier and doesn't work with the
+    ! Intel compiler.
+    ! Substituting with
+
+#else
+
+    open(unit,file=filename,form='unformatted')
+
+#endif
+
+    read(unit,end=10) rdum, cdum, idum, rdum 
+    read(unit,end=10) ((maskread(i,j),i=1,nx),j=1,ny)
+
+    close(unit)
+
+    return
+
+10    print*, 'read past end of mask file'
+    Print*,'Reading file:',filename
+    stop
+
+
+  end function maskread
+
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
   subroutine redtsout(fname,unit,forcdata)
 
     !*FD Sets up forcing data from time-series file (e.g. GRIP data)

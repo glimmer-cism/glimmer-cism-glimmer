@@ -482,12 +482,25 @@ contains
     c = 2.0 * atan (hypot (xx, yy) * project_info%s_ic)
 
     if (project_info%north_pole) then
-      lon = project_info%central_meridian + d_atan2 (xx, -yy) * R2D  
+      ! This line is the orginal GMT code, but it didn't seem to work
+      !lon = project_info%central_meridian + d_atan2 (xx, -yy) * R2D  
+      lon = project_info%central_meridian + d_atan2 (xx, yy) * R2D + 90.0 
       lat = d_asin (cos (c)) * R2D
     else
-      lon = project_info%central_meridian + d_atan2 (xx, yy) * R2D  
+      !lon = project_info%central_meridian + d_atan2 (xx, yy) * R2D  
+      lon = project_info%central_meridian - d_atan2 (xx, yy) * R2D - 90.0  
       lat = d_asin (-cos (c)) * R2D
     endif
+
+    do
+    if (.not.(lon < -180.0)) exit
+    lon = lon+360.0
+    enddo 
+
+    do
+    if (.not.(lon > 180.0)) exit
+    lon = lon-360.0
+    enddo  
 
   end subroutine gmt_iplrs_sph
 
@@ -514,8 +527,21 @@ contains
 
     ! ---------------------------------------------------------------------------
 
-    dlon = D2R * (lon - project_info%central_meridian)
+    dlon = (lon - project_info%central_meridian)
+
+    do 
+    if (.not.(dlon < -180.0)) exit
+    dlon = dlon+360.0
+    enddo 
+
+    do
+    if (.not.(dlon > 180.0)) exit
+    dlon = dlon-360.0
+    enddo  
+
+    dlon = dlon*D2R
     dlat = lat*D2R
+
     call sincos (dlon,sin_dlon,cos_dlon)
     call sincos (dlat,s,c)
     cc=c*cos_dlon

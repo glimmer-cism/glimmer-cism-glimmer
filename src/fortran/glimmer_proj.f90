@@ -140,9 +140,7 @@ contains
   subroutine proj_allocate(proj)
 
     !*FD Allocates the array pointers in the \texttt{projection} type.
-    !*FD \texttt{re\_alloc} is necessary because it is not possible to 
-    !*FD detect whether the arrays are already allocated in Fortran 90.
-
+ 
     implicit none
 
     type(projection),intent(inout) :: proj     !*FD The projection being initialised

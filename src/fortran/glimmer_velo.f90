@@ -95,7 +95,7 @@ contains
 
     ! Get array sizes -------------------------------------------------------------------
 
-    ewn=size(btrc,1) ; nsn=size(btrc,1)    
+    ewn=size(btrc,1) ; nsn=size(btrc,2)    
 
     ! Allocate work array if this is the first call -------------------------------------
 
