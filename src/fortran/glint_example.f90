@@ -49,6 +49,7 @@ program glint_example
 
   use glint_main
   use glimmer_log
+  use glint_global_interp
   implicit none
 
   ! Program variables -------------------------------------------------------------------
@@ -151,12 +152,12 @@ program glint_example
   allocate(precip_clim(nx,ny,12))
   allocate(intin(nxp,nyp),maskin(nxp,nyp))
   allocate(intout(nx,ny),maskout(nx,ny))
-  maskin=.true.
-  maskout=.true.
 
   do i=1,12
      intin=precip_clim2(:,:,i)
-     call awi(nxp,nxp,lonbin,nyp,latbin,intin,maskin,nx,nx,lonbout,ny,latbout,intout,maskout,ierr)
+     maskin=.true.
+     maskout=.true.
+     call global_interp(nxp,nxp,lonbin,nyp,latbin,intin,maskin,nx,nx,lonbout,ny,latbout,intout,maskout,ierr)
      precip_clim(:,:,i)=intout
   end do
 

@@ -2,7 +2,9 @@
  * Extended length of variables used to construct log messages to 150
    chars
  * Fixed problem with single-precision compilation
-
+ * Converted awi.f to f90 (glint_global_interp.f90) - needs a bit more
+   work, but functions correctly.
+	
 2005-03-17 Ian Rutt
  * Removed printing of ierr after calling awi.f
  * Released at version 0.5.1
