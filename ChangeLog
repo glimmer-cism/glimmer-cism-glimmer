@@ -6,6 +6,11 @@
 	namelist reads to avoid confusion about default values.
  * Coded alternative, hopefully faster calc_coverage routine.
  * Made efficiency alterations to new_upscale code.
+ * Duplicated mean_to_global (glimmer_interp.f90) in single and
+	double precision copies (in terms of array local) and
+	added appropriate aliasing interface block. This was to
+	allow the addition of a compile flag to invoke a single-precision
+	interface (compile with GLIMMER_SP defined).
 
 2004-05-05 Ian Rutt
  * Realised several crucial aspects of the orography output were

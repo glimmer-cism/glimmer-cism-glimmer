@@ -524,7 +524,7 @@ contains
 
       artm=model%climate%usurftemp
       arng=0.0
-      call glimmer_lapserate(artm,usrf*thk0,real(model%climate%ulapse_rate,rk))
+      call glimmer_lapserate(artm,real(usrf*thk0,rk),real(model%climate%ulapse_rate,rk))
 
             ! ----------------------------------------------------------
     case(7) ! Supplied large-scale temperature and range
@@ -541,11 +541,11 @@ contains
 
       ! Reduce temperatures to sea-level
 
-        call glimmer_lapserate(artm,g_orog,real(-model%climate%ulapse_rate,rk))
+        call glimmer_lapserate(artm,real(g_orog,rk),real(-model%climate%ulapse_rate,rk))
 
       ! Raise them to high-res orography 
 
-        call glimmer_lapserate(artm,usrf*thk0,real(model%climate%ulapse_rate,rk))
+        call glimmer_lapserate(artm,real(usrf*thk0,rk),real(model%climate%ulapse_rate,rk))
 
       else
 

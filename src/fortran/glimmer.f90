@@ -682,10 +682,10 @@ contains
     implicit none
 
     type(glimmer_params),          intent(inout) :: params !*FD Ice model parameters.
-    real(dp),dimension(:),         intent(in)    :: lons   !*FD Global grid longitude locations (degrees)
-    real(dp),dimension(:),         intent(in)    :: lats   !*FD Global grid latitude locations (degrees)
-    real(dp),dimension(:),optional,intent(in)    :: lonb   !*FD Global grid-box boundaries in longitude (degrees)
-    real(dp),dimension(:),optional,intent(in)    :: latb   !*FD Global grid-box boundaries in latitude (degrees)
+    real(rk),dimension(:),         intent(in)    :: lons   !*FD Global grid longitude locations (degrees)
+    real(rk),dimension(:),         intent(in)    :: lats   !*FD Global grid latitude locations (degrees)
+    real(rk),dimension(:),optional,intent(in)    :: lonb   !*FD Global grid-box boundaries in longitude (degrees)
+    real(rk),dimension(:),optional,intent(in)    :: latb   !*FD Global grid-box boundaries in latitude (degrees)
 
     integer :: i, args
 

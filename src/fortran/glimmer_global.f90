@@ -64,8 +64,16 @@ module glimmer_global
   !*FD the -r8 flag), then this parameter may need to be set in agreement
   !*FD with that
 
-  integer,parameter :: rk=dp 
-  
+#ifdef GLIMMER_SP
+
+  integer,parameter :: rk=sp
+
+#else
+
+  integer,parameter :: rk=dp
+
+#endif
+
   !*FD Precision of glimmer module --- the general Fortran real-type kind value 
   !*FD for the Glimmer module and its interfaces.
   !*FD

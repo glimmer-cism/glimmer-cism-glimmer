@@ -69,11 +69,11 @@ module glimmer_object
 
     ! Arrays to hold downscaled versions of input data --------------------------
 
-    real(dp), dimension(:,:),pointer :: xwind         => null() 
+    real(rk), dimension(:,:),pointer :: xwind         => null() 
     
     !*FD $x$-component of surface winds on local grid.
     
-    real(dp), dimension(:,:),pointer :: ywind         => null() 
+    real(rk), dimension(:,:),pointer :: ywind         => null() 
     
     !*FD $y$-component of surface winds on local grid.
     
@@ -81,7 +81,7 @@ module glimmer_object
     
     !*FD Global orography on local coordinates.
     
-    real(dp), dimension(:,:),pointer :: local_orog    => null() 
+    real(rk), dimension(:,:),pointer :: local_orog    => null() 
     
     !*FD Local orography on local coordinates.
  

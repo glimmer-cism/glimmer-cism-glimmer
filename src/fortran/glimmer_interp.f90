@@ -82,6 +82,10 @@ module glimmer_interp
     logical                         :: set = .false.   !*FD Set if the type has been initialised.
   end type upscale
 
+  interface mean_to_global
+    module procedure mean_to_global_sp,mean_to_global_dp
+  end interface
+
 contains
 
   subroutine new_downscale(downs,proj,grid)
@@ -410,7 +414,7 @@ contains
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine mean_to_global(proj,ups,local,global)
+  subroutine mean_to_global_sp(proj,ups,local,global)
 
     !*FD Upscale to global domain by
     !*FD areal averaging.
@@ -427,7 +431,7 @@ contains
 
     type(projection),       intent(in)  :: proj   !*FD Projection of local grid.
     type(upscale),          intent(in)  :: ups    !*FD Upscaling indexing data.
-    real(rk),dimension(:,:),intent(in)  :: local  !*FD Data on projected grid (input).
+    real(sp),dimension(:,:),intent(in)  :: local  !*FD Data on projected grid (input).
     real(rk),dimension(:,:),intent(out) :: global !*FD Data on global grid (output).
 
     ! Internal variables
@@ -452,7 +456,53 @@ contains
       global=0.0
     endwhere  
 
-  end subroutine mean_to_global
+  end subroutine mean_to_global_sp
+
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  subroutine mean_to_global_dp(proj,ups,local,global)
+
+    !*FD Upscale to global domain by
+    !*FD areal averaging.
+    !*FD
+    !*FD Note that:
+    !*FD \begin{itemize}
+    !*FD \item \texttt{gboxx} and \texttt{gboxy} are the same size as \texttt{local}
+    !*FD \item \texttt{gboxn} is the same size as \texttt{global}
+    !*FD \item This method is \emph{not} the mathematical inverse of the
+    !*FD \texttt{interp\_to\_local} routine.
+    !*FD \end{itemize}
+
+    ! Arguments
+
+    type(projection),       intent(in)  :: proj   !*FD Projection of local grid.
+    type(upscale),          intent(in)  :: ups    !*FD Upscaling indexing data.
+    real(dp),dimension(:,:),intent(in)  :: local  !*FD Data on projected grid (input).
+    real(rk),dimension(:,:),intent(out) :: global !*FD Data on global grid (output).
+
+    ! Internal variables
+
+    integer :: nxl,nyl,i,j
+
+    ! Beginning of code
+
+    nxl=size(local,1) ; nyl=size(local,2)
+
+    global=0.0
+
+    do i=1,nxl
+      do j=1,nyl
+        global(ups%gboxx(i,j),ups%gboxy(i,j))=global(ups%gboxx(i,j),ups%gboxy(i,j))+local(i,j)
+       enddo
+    enddo  
+
+    where (ups%gboxn.ne.0)
+      global=global/ups%gboxn
+    elsewhere
+      global=0.0
+    endwhere  
+
+  end subroutine mean_to_global_dp
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
