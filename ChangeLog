@@ -1,3 +1,7 @@
+2005-03-04 Magnus Hagdorn
+ * glint_example.f90: renamed program to glint_example, fixed minor prob 
+   with NAG f95 compiler
+
 2005-03-03 Ian Rutt
  * Fixed array sized bug with glint orography output
  * New glint_example code - uses ncep-reanalysis-derived climatology 

@@ -41,7 +41,7 @@
 !
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-program glimmer_example
+program glint_example
 
 !*FD This program demonstrates the use of GLIMMER. It loads in
 !*FD some example global fields and associated grid data,
@@ -290,7 +290,7 @@ contains
     
     lower=int(real(day)/tst)
     upper=lower+1
-    pos=mod(real(day),tst)/tst
+    pos=mod(real(day,kind=rk),tst)/tst
     call fixbounds(lower,1,ntemp)
     call fixbounds(upper,1,ntemp)
     temp=linear_interp(temp_clim(:,:,lower),temp_clim(:,:,upper),pos)
@@ -299,7 +299,7 @@ contains
 
     lower=int(real(day)/tsp)
     upper=lower+1
-    pos=mod(real(day),tsp)/tsp
+    pos=mod(real(day,kind=rk),tsp)/tsp
     call fixbounds(lower,1,nprecip)
     call fixbounds(upper,1,nprecip)
     precip=linear_interp(precip_clim(:,:,lower),precip_clim(:,:,upper),pos)
@@ -332,4 +332,4 @@ contains
 
   end subroutine fixbounds
 
-end program glimmer_example
+end program glint_example
