@@ -46,7 +46,7 @@ module glide
   use glide_types
   use glide_stop
   use glide_nc_custom
-
+  use glide_io
   integer, private, parameter :: dummyunit=99
 
 contains
@@ -55,7 +55,6 @@ contains
     use glide_setup
     use glimmer_ncparams
     use glimmer_ncio
-    use glide_io
     use glide_velo
     use glide_thck
     use glide_temp
@@ -254,7 +253,6 @@ contains
     !*FD Performs second part of time-step of an ice model instance.
     !*FD write data and move ice
     use glimmer_global, only : rk
-    use glide_io
     use glide_thck
     use glide_velo
     use glide_setup

@@ -183,6 +183,7 @@ class PrintNC_template(PrintVars):
         self.handletoken['!GENVAR_VARDEF!'] = self.print_vardef
         self.handletoken['!GENVAR_WRITE!'] = self.print_var_write
         self.handletoken['!GENVAR_READ!'] = self.print_var_read
+        self.handletoken['GENVAR_ACCESSORS!'] = self.print_var_accessor
 
     def write(self,vars):
         """Merge ncdf.F90.in with definitions."""
@@ -377,12 +378,60 @@ class PrintNC_template(PrintVars):
                                                                                                                spaces,var['data'], dimstring))
                 self.stream.write("%s       call nc_errorhandle(__FILE__,__LINE__,status)\n"%(spaces))
                 if 'factor' in var:
-                    self.stream.write("%s       if (scale) %s = %s/(%s)\n"%(spaces,var['data'],var['data'],var['factor']))
+                    self.stream.write("%s       if (scale) then\n%s       %s = %s/(%s)\n%s       end if\n"%(spaces,spaces,var['data'],var['data'],var['factor'],spaces))
 
                 if  'level' in dims:
                     self.stream.write("       end do\n")
                 
             self.stream.write("    end if\n\n")
+
+    def print_var_accessor(self,var):
+        """Write accessor function to stream."""
+
+        dims = string.split(var['dimensions'],',')
+        dimlen = len(dims)-1
+        if dimlen>0:
+            dimstring = ", dimension(:"+",:"*(dimlen-1)+")"
+        else:
+            dimstring = ""
+        if not is_dimvar(var) and dimlen<3:
+            # get
+            self.stream.write("  subroutine %s_get_%s(data,outarray)\n"%(module['name'],var['name']))
+            self.stream.write("    use glimmer_scales\n")
+            self.stream.write("    use paramets\n")
+            self.stream.write("    use %s\n"%module['datamod'])
+            self.stream.write("    implicit none\n")
+            self.stream.write("    type(%s) :: data\n"%module['datatype'])
+            if var['type'] == 'int':
+                vtype = 'integer'
+            else:
+                vtype = 'real'
+            self.stream.write("    %s%s, intent(out) :: outarray\n\n"%(vtype,dimstring))
+            if 'factor' in var:
+                self.stream.write("    outarray = (%s)*(%s)\n"%(var['factor'], var['data']))
+            else:
+                self.stream.write("    outarray = %s\n"%(var['data']))
+            self.stream.write("  end subroutine %s_get_%s\n\n"%(module['name'],var['name']))
+            # set
+            # only creating set routine if the variable is not derived
+            if len(var['data'].split('data'))<3:
+                self.stream.write("  subroutine %s_set_%s(data,inarray)\n"%(module['name'],var['name']))
+                self.stream.write("    use glimmer_scales\n")
+                self.stream.write("    use paramets\n")
+                self.stream.write("    use %s\n"%module['datamod'])
+                self.stream.write("    implicit none\n")
+                self.stream.write("    type(%s) :: data\n"%module['datatype'])
+                if var['type'] == 'int':
+                    vtype = 'integer'
+                else:
+                    vtype = 'real'
+                self.stream.write("    %s%s, intent(in) :: inarray\n\n"%(vtype,dimstring))
+                if 'factor' in var:
+                    self.stream.write("    %s = inarray/(%s)\n"%(var['data'], var['factor']))
+                else:
+                    self.stream.write("    %s = inarray\n"%(var['data']))
+                self.stream.write("  end subroutine %s_set_%s\n\n"%(module['name'],var['name']))
+            
 
 def usage():
     """Short help message."""

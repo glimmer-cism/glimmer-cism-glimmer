@@ -213,4 +213,10 @@ contains
     ! check dimensions
     !GENVAR_CHECKDIM!
   end subroutine NAME_io_checkdim
+
+  !*********************************************************************
+  ! lots of accessor subroutines follow
+  !*********************************************************************
+  !GENVAR_ACCESSORS!
+
 end module NAME_io

@@ -1,4 +1,10 @@
 2005-02-16 Magnus Hagdorn
+ * glide.f90: load glide_io module into glide module name space
+ * glide_types.f90: added some static accessor functions
+ * ncdf_template.f90.in: add autogenerate accessors
+ * generate_ncvars.py: generate accessor functions
+
+2005-02-16 Magnus Hagdorn
  * configure.in: fixed bug where --enable-doc and --enable-profile were mixed
    up
  * glide_vars.def: load ubas and vbas

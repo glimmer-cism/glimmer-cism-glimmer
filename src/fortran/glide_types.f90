@@ -651,5 +651,73 @@ contains
     call isos_deallocate(model%isos)
 
   end subroutine glide_deallocarr
+
+  ! some accessor functions
+  function get_dew(model)
+    !*FD return scaled x node spacing
+    use paramets, only : len0
+    implicit none
+    real(dp) :: get_dew
+    type(glide_global_type) :: model
+
+    get_dew = model%numerics%dew * len0
+  end function get_dew
+
+  function get_dns(model)
+    !*FD return scaled y node spacing
+    use paramets, only : len0
+    implicit none
+    real(dp) :: get_dns
+    type(glide_global_type) :: model
+
+    get_dns = model%numerics%dns * len0
+  end function get_dns
+
+  function get_tstart(model)
+    !*FD return start time
+    implicit none
+    real(sp) :: get_tstart
+    type(glide_global_type) :: model
+    
+    get_tstart = model%numerics%tstart
+  end function get_tstart
+
+  function get_tend(model)
+    !*FD return end time
+    implicit none
+    real(sp) :: get_tend
+    type(glide_global_type) :: model
+    
+    get_tend = model%numerics%tend
+  end function get_tend
+
+  function get_tinc(model)
+    !*FD return time increment
+    implicit none
+    real(sp) :: get_tinc
+    type(glide_global_type) :: model
+    
+    get_tinc = model%numerics%tinc
+  end function get_tinc
+
+  function get_ewn(model)
+    !*FD get number of nodes in x dir
+    implicit none
+    integer get_ewn
+    type(glide_global_type) :: model
+
+    get_ewn = model%general%ewn
+  end function get_ewn
+
+  function get_nsn(model)
+    !*FD get number of nodes in y dir
+    implicit none
+    integer get_nsn
+    type(glide_global_type) :: model
+
+    get_nsn = model%general%ewn
+  end function get_nsn
+  
+
 end module glide_types
 
