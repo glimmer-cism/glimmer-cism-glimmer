@@ -56,6 +56,7 @@ contains
     implicit none
     type(glide_global_type) :: model        !*FD model instance
     logical, optional :: crash              !*FD set to true if the model died unexpectedly
+    character(len=100) :: message
 
     ! force last write if crashed
     if (present(crash)) then
@@ -68,6 +69,11 @@ contains
     call closeall_out(model)
     
     call glide_deallocarr(model)
+
+    ! write some statistics
+    call write_log('Some Stats')
+    write(message,*) 'Maximum temperature iterations: ',model%temper%niter
+    call write_log(message)
 
     call close_log
   end subroutine glide_finalise

@@ -117,11 +117,11 @@ contains
     model%tempwk%dups = 0.0d0
 
     do up = 2, model%general%upn-1
-       model%tempwk%dups(up,1) = (model%numerics%sigma(up+1) - model%numerics%sigma(up-1)) * &
-            (model%numerics%sigma(up)   - model%numerics%sigma(up-1))
-       model%tempwk%dups(up,2) = (model%numerics%sigma(up+1) - model%numerics%sigma(up-1)) *  &
-            (model%numerics%sigma(up+1) - model%numerics%sigma(up))
-       model%tempwk%dups(up,3) = model%numerics%sigma(up+1)  - model%numerics%sigma(up-1)
+       model%tempwk%dups(up,1) = 1.d0/((model%numerics%sigma(up+1) - model%numerics%sigma(up-1)) * &
+            (model%numerics%sigma(up)   - model%numerics%sigma(up-1)))
+       model%tempwk%dups(up,2) = 1.d0/((model%numerics%sigma(up+1) - model%numerics%sigma(up-1)) *  &
+            (model%numerics%sigma(up+1) - model%numerics%sigma(up)))
+       model%tempwk%dups(up,3) = 1.d0/(model%numerics%sigma(up+1)  - model%numerics%sigma(up-1))
     end do
 
     model%tempwk%zbed = 1.0d0 / thk0
@@ -219,6 +219,8 @@ contains
     real(dp),parameter :: tempthres = 0.001d0, floatlim = 10.0d0 / thk0
     integer, parameter :: mxit = 100
     integer, parameter :: ewbc = 1, nsbc = 1 
+
+    real(dp), dimension(size(model%numerics%sigma)) :: weff
 
 
     !------------------------------------------------------------------------------------
@@ -325,16 +327,66 @@ contains
             model%velocity%vvel, &
             model%geometry%thck)
 
+       ! zeroth iteration
        iter = 0
-       again = 0
+       tempresid = 0.0d0
+       do ns = 2,model%general%nsn-1
+          do ew = 2,model%general%ewn-1
+             if(model%geometry%thck(ew,ns)>model%numerics%thklim) then
 
-       do while (again .eq. 0)
+                weff = model%velocity%wvel(:,ew,ns) - model%velocity%wgrd(:,ew,ns)
+                if (maxval(abs(weff)) > model%tempwk%wmax) then
+                   weff = 0.0d0
+                end if
 
+                call hadvpnt(model%tempwk,                           &
+                     iteradvt,                               &
+                     diagadvt,                               &
+                     model%temper%temp(:,ew-2:ew+2,ns),      &
+                     model%temper%temp(:,ew,ns-2:ns+2),      &
+                     model%velocity%uvel(:,ew-1:ew,ns-1:ns), &
+                     model%velocity%vvel(:,ew-1:ew,ns-1:ns))
+                
+                call findvtri(model,ew,ns,subd,diag,supd,iteradvt,diagadvt, &
+                     model%temper%temp(:,ew,ns), &
+                     weff, &
+                     model%geometry%thck(ew,ns), &
+                     is_float(model%geometry%thkmask(ew,ns)))
+
+                call findvtri_init(model,ew,ns,subd,diag,supd,weff,model%temper%temp(:,ew,ns), &
+                     model%geometry%thck(ew,ns),is_float(model%geometry%thkmask(ew,ns)))
+
+                call findvtri_rhs(model,ew,ns,model%climate%artm(ew,ns),iteradvt,rhsd, &
+                     is_float(model%geometry%thkmask(ew,ns)))
+                
+                prevtemp = model%temper%temp(:,ew,ns)
+
+                call tridag(subd(2:model%general%upn), &
+                     diag(1:model%general%upn), &
+                     supd(1:model%general%upn-1), &
+                     rhsd(1:model%general%upn), &
+                     model%temper%temp(1:model%general%upn,ew,ns))
+
+                call corrpmpt(model%temper%temp(:,ew,ns),model%geometry%thck(ew,ns),model%temper%bwat(ew,ns), &
+                     model%numerics%sigma,model%general%upn)
+
+
+                tempresid = max(tempresid,maxval(abs(model%temper%temp(:,ew,ns)-prevtemp(:))))
+             endif
+          end do
+       end do
+
+       do while (tempresid.gt.tempthres .and. iter.le.mxit)
           tempresid = 0.0d0
 
           do ns = 2,model%general%nsn-1
              do ew = 2,model%general%ewn-1
                 if(model%geometry%thck(ew,ns)>model%numerics%thklim) then
+
+                   weff = model%velocity%wvel(:,ew,ns) - model%velocity%wgrd(:,ew,ns)
+                   if (maxval(abs(weff)) > model%tempwk%wmax) then
+                      weff = 0.0d0
+                   end if
 
                    call hadvpnt(model%tempwk,                           &
                         iteradvt,                               &
@@ -344,12 +396,13 @@ contains
                         model%velocity%uvel(:,ew-1:ew,ns-1:ns), &
                         model%velocity%vvel(:,ew-1:ew,ns-1:ns))
 
-                   call findvtri(model,iter,ew,ns,subd,diag,supd,rhsd,iteradvt,diagadvt, &
+                   call findvtri(model,ew,ns,subd,diag,supd,iteradvt,diagadvt, &
                         model%temper%temp(:,ew,ns), &
-                        model%velocity%wgrd(:,ew,ns), &
-                        model%velocity%wvel(:,ew,ns), &
+                        weff, &
                         model%geometry%thck(ew,ns), &
-                        model%climate%artm(ew,ns), &
+                        is_float(model%geometry%thkmask(ew,ns)))
+
+                   call findvtri_rhs(model,ew,ns,model%climate%artm(ew,ns),iteradvt,rhsd, &
                         is_float(model%geometry%thkmask(ew,ns)))
 
                    prevtemp = model%temper%temp(:,ew,ns)
@@ -363,24 +416,16 @@ contains
                    call corrpmpt(model%temper%temp(:,ew,ns),model%geometry%thck(ew,ns),model%temper%bwat(ew,ns), &
                         model%numerics%sigma,model%general%upn)
 
-                   tempresid = dmax1(tempresid,maxval(abs(model%temper%temp(:,ew,ns)-prevtemp(:))))
-
+                   tempresid = max(tempresid,maxval(abs(model%temper%temp(:,ew,ns)-prevtemp(:))))
                 endif
              end do
           end do
 
           iter = iter + 1
-
-          if (tempresid > tempthres .and. iter < mxit) then
-             again = 0
-          else 
-             again = 1
-          end if
-
        end do
 
-       model%temper%niter = model%temper%niter + iter 
-
+       model%temper%niter = max(model%temper%niter, iter )
+       
        ! set temperature of thin ice to the air temperature and set ice free nodes to zero
        do ns = 1,model%general%nsn
           do ew = 1,model%general%ewn
@@ -572,59 +617,37 @@ contains
 
   !-------------------------------------------------------------------------
 
-  subroutine findvtri(model,iter,ew,ns,subd,diag,supd,rhsd,iteradvt,diagadvt,temp,wgrd,wvel,thck,artm,float)
+  subroutine findvtri(model,ew,ns,subd,diag,supd,iteradvt,diagadvt,temp,weff,thck,float)
 
     use glimmer_global, only : dp, sp 
 
     implicit none
 
     type(glide_global_type) :: model
-    integer, intent(in) :: ew, ns, iter
-    real(dp), dimension(:), intent(in) :: temp, wgrd, wvel, iteradvt, diagadvt
+    integer, intent(in) :: ew, ns
+    real(dp), dimension(:), intent(in) :: temp, weff, iteradvt, diagadvt
     real(dp), intent(in) :: thck
-    real(sp), intent(in) :: artm 
-    real(dp), dimension(:), intent(out) :: subd, diag, supd, rhsd
+    real(dp), dimension(:), intent(out) :: subd, diag, supd
     logical, intent(in) :: float
 
-    real(dp) :: fact(3), dupnp1
-    real(dp), dimension(size(model%numerics%sigma)) :: weff
-    real(dp) :: slterm
-    integer ewp,nsp
-    integer slide_count
+    real(dp) :: dupnp1, fact(3)
 
-    fact(1) = VERT_DIFF*model%tempwk%cons(1) / thck**2
-    fact(2) = VERT_ADV*model%tempwk%cons(2) / thck
-
-    weff = wvel - wgrd
-
-    if (maxval(abs(weff)) > model%tempwk%wmax) then
-       weff = 0.0d0
-    end if
-
-    subd(2:model%general%upn-1) = fact(2) * weff(2:model%general%upn-1) / &
+    fact(1) = VERT_DIFF*model%tempwk%cons(1) / model%geometry%thck(ew,ns)**2
+    fact(2) = VERT_ADV*model%tempwk%cons(2) / model%geometry%thck(ew,ns)    
+    
+    subd(2:model%general%upn-1) = fact(2) * weff(2:model%general%upn-1) * &
          model%tempwk%dups(2:model%general%upn-1,3)
 
-    supd(2:model%general%upn-1) = - subd(2:model%general%upn-1) - fact(1) / &
+    supd(2:model%general%upn-1) = - subd(2:model%general%upn-1) - fact(1) * &
          model%tempwk%dups(2:model%general%upn-1,2)
 
-    subd(2:model%general%upn-1) = subd(2:model%general%upn-1) - fact(1) / &
+    subd(2:model%general%upn-1) = subd(2:model%general%upn-1) - fact(1) * &
          model%tempwk%dups(2:model%general%upn-1,1)
 
     diag(2:model%general%upn-1) = 1.0d0 - subd(2:model%general%upn-1) &
          - supd(2:model%general%upn-1) &
          + diagadvt(2:model%general%upn-1)
 
-    if (iter == 0) then
-       model%tempwk%inittemp(2:model%general%upn-1,ew,ns) = temp(2:model%general%upn-1) * &
-            (2.0d0 - diag(2:model%general%upn-1)) &
-            - temp(1:model%general%upn-2) * subd(2:model%general%upn-1) &
-            - temp(3:model%general%upn) * supd(2:model%general%upn-1) & 
-            - model%tempwk%initadvt(2:model%general%upn-1,ew,ns) &
-            + model%tempwk%dissip(2:model%general%upn-1,ew,ns)
-    end if
-
-    ! upper boundary condition
-    rhsd(1) = artm
     supd(1) = 0.0d0
     subd(1) = 0.0d0
     diag(1) = 1.0d0
@@ -639,55 +662,92 @@ contains
        subd(model%general%upn) = 0.0d0
        diag(model%general%upn) = 1.0d0
 
-       if (iter == 0) then
-
-          model%tempwk%inittemp(model%general%upn,ew,ns) = temp(model%general%upn) 
-
-       end if
-       rhsd(model%general%upn) = model%tempwk%inittemp(model%general%upn,ew,ns)
     else 
 
        supd(model%general%upn) = 0.0d0 
        subd(model%general%upn) = -0.5*fact(1)/(model%tempwk%dupn**2)
        diag(model%general%upn) = 1.0d0 - subd(model%general%upn) + diagadvt(model%general%upn)
 
-       if (iter == 0) then
-          ! sliding contribution to basal heat flux
-          slterm = 0.
-          slide_count = 0
-          ! only include sliding contrib if temperature node is surrounded by sliding velo nodes
-          do nsp = ns-1,ns
-             do ewp = ew-1,ew
-                if (abs(model%velocity%ubas(ewp,nsp)).gt.0.000001 .or. abs(model%velocity%vbas(ewp,nsp)).gt.0.000001) then
-                   slide_count = slide_count + 1
-                   slterm = slterm + (&
-                        model%geomderv%dusrfdew(ewp,nsp) * model%velocity%ubas(ewp,nsp) + &
-                        model%geomderv%dusrfdns(ewp,nsp) * model%velocity%vbas(ewp,nsp))
-                end if
-             end do
-          end do
-          if (slide_count.ge.4) then
-             slterm = 0.25*slterm
-          else
-             slterm = 0.
-          end if
-          model%tempwk%inittemp(model%general%upn,ew,ns) = temp(model%general%upn) * &
-               (2.0d0 - diag(model%general%upn)) &
-               - temp(model%general%upn-1) * subd(model%general%upn) &
-               - 0.5*model%tempwk%cons(3) / (thck * model%tempwk%dupn) & ! geothermal heat flux (diff)
-               - 0.5*model%tempwk%slide_f(1)*slterm &                    ! sliding heat flux    (diff)
-               - model%tempwk%cons(4) * weff(model%general%upn) &        ! geothermal heat flux (adv)
-               - model%tempwk%slide_f(2)*thck*slterm &                   ! sliding heat flux    (adv)
-               - model%tempwk%initadvt(model%general%upn,ew,ns)  &
-               + model%tempwk%dissip(model%general%upn,ew,ns)
-       end if
-       rhsd(model%general%upn) = model%tempwk%inittemp(model%general%upn,ew,ns) - iteradvt(model%general%upn)
     end if
-
-    rhsd(2:model%general%upn-1) = model%tempwk%inittemp(2:model%general%upn-1,ew,ns) - iteradvt(2:model%general%upn-1)
 
   end subroutine findvtri
 
+  subroutine findvtri_init(model,ew,ns,subd,diag,supd,weff,temp,thck,float)
+    !*FD called during first iteration to set inittemp
+    use glimmer_global, only : dp, sp 
+    implicit none
+    type(glide_global_type) :: model
+    integer, intent(in) :: ew, ns
+    real(dp), dimension(:), intent(in) :: temp,diag,subd,supd,weff
+    real(dp), intent(in) :: thck
+    logical, intent(in) :: float    
+
+    ! local variables
+    real(dp) :: slterm
+    integer ewp,nsp
+    integer slide_count
+
+    model%tempwk%inittemp(2:model%general%upn-1,ew,ns) = temp(2:model%general%upn-1) * &
+         (2.0d0 - diag(2:model%general%upn-1)) &
+         - temp(1:model%general%upn-2) * subd(2:model%general%upn-1) &
+         - temp(3:model%general%upn) * supd(2:model%general%upn-1) & 
+         - model%tempwk%initadvt(2:model%general%upn-1,ew,ns) &
+         + model%tempwk%dissip(2:model%general%upn-1,ew,ns)
+    
+    if (float) then
+       model%tempwk%inittemp(model%general%upn,ew,ns) = temp(model%general%upn) 
+    else 
+       ! sliding contribution to basal heat flux
+       slterm = 0.
+       slide_count = 0
+       ! only include sliding contrib if temperature node is surrounded by sliding velo nodes
+       do nsp = ns-1,ns
+          do ewp = ew-1,ew
+             if (abs(model%velocity%ubas(ewp,nsp)).gt.0.000001 .or. abs(model%velocity%vbas(ewp,nsp)).gt.0.000001) then
+                slide_count = slide_count + 1
+                slterm = slterm + (&
+                     model%geomderv%dusrfdew(ewp,nsp) * model%velocity%ubas(ewp,nsp) + &
+                     model%geomderv%dusrfdns(ewp,nsp) * model%velocity%vbas(ewp,nsp))
+             end if
+          end do
+       end do
+       if (slide_count.ge.4) then
+          slterm = 0.25*slterm
+       else
+          slterm = 0.
+       end if
+       model%tempwk%inittemp(model%general%upn,ew,ns) = temp(model%general%upn) * &
+            (2.0d0 - diag(model%general%upn)) &
+            - temp(model%general%upn-1) * subd(model%general%upn) &
+            - 0.5*model%tempwk%cons(3) / (thck * model%tempwk%dupn) & ! geothermal heat flux (diff)
+            - 0.5*model%tempwk%slide_f(1)*slterm &                    ! sliding heat flux    (diff)
+            - model%tempwk%cons(4) * weff(model%general%upn) &        ! geothermal heat flux (adv)
+            - model%tempwk%slide_f(2)*thck*slterm &                   ! sliding heat flux    (adv)
+            - model%tempwk%initadvt(model%general%upn,ew,ns)  &
+            + model%tempwk%dissip(model%general%upn,ew,ns)
+    end if
+  end subroutine findvtri_init
+
+  subroutine findvtri_rhs(model,ew,ns,artm,iteradvt,rhsd,float)
+    !*FD RHS of temperature tri-diag system
+    use glimmer_global, only : dp, sp 
+    implicit none
+    type(glide_global_type) :: model
+    integer, intent(in) :: ew, ns
+    real(sp), intent(in) :: artm 
+    real(dp), dimension(:), intent(in) :: iteradvt
+    real(dp), dimension(:), intent(out) :: rhsd
+    logical, intent(in) :: float    
+
+    ! upper boundary condition
+    rhsd(1) = artm
+    if (float) then
+       rhsd(model%general%upn) = model%tempwk%inittemp(model%general%upn,ew,ns)    
+    else
+       rhsd(model%general%upn) = model%tempwk%inittemp(model%general%upn,ew,ns) - iteradvt(model%general%upn)
+    end if
+    rhsd(2:model%general%upn-1) = model%tempwk%inittemp(2:model%general%upn-1,ew,ns) - iteradvt(2:model%general%upn-1)
+  end subroutine findvtri_rhs
   !-----------------------------------------------------------------------
 
   subroutine finddisp(model,thck,stagthck,dusrfdew,dusrfdns,flwa)
@@ -719,12 +779,13 @@ contains
        do ew = 2, model%general%ewn-1
           if (thck(ew,ns) > model%numerics%thklim) then
              
-             c2 = (sum(stagthck(ew-1:ew,ns-1:ns))/4.0d0 * dsqrt(sum((dusrfdew(ew-1:ew,ns-1:ns))/4.0d0)**2 &
-                  + sum((dusrfdns(ew-1:ew,ns-1:ns))/4.0d0)**2))**p1                      
+             c2 = (0.25*sum(stagthck(ew-1:ew,ns-1:ns)) * dsqrt((0.25*sum(dusrfdew(ew-1:ew,ns-1:ns)))**2 &
+                  + (0.25*sum(dusrfdns(ew-1:ew,ns-1:ns)))**2))**p1
              
-             model%tempwk%dissip(:,ew,ns) = c2 * model%tempwk%c1 * (hsum(flwa(:,ew-1:ew+1,ns-1:ns+1)) + flwa(:,ew,ns) &
-                  + lsum(flwa(:,ew-1:ew+1,ns)) + lsum(flwa(:,ew,ns-1:ns+1)))
-             
+             model%tempwk%dissip(:,ew,ns) = c2 * model%tempwk%c1 * ( &
+                  flwa(:,ew-1,ns-1) + flwa(:,ew-1,ns+1) + flwa(:,ew+1,ns+1) + flwa(:,ew+1,ns-1) + &
+                  2*(flwa(:,ew-1,ns)+flwa(:,ew+1,ns)+flwa(:,ew,ns-1)+flwa(:,ew,ns+1)) + &
+                  4*flwa(:,ew,ns))             
           end if
        end do
     end do
