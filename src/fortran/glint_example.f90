@@ -119,7 +119,7 @@ program glint_example
   ! Read in climate data
 
   call read_ncdf_3d('monthly_precip_mean_1974-2003.nc','pr_wtr',precip_clim,lats=lats,lons=lons)
-  call read_ncdf_3d('surf_temp_1974-2003.nc','air_temperature',surftemp_clim)
+  call read_ncdf_3d('surf_temp_6h_1974-2003.nc','air_temperature',surftemp_clim)
   call read_ncdf_3d('global_orog.nc','hgt',orog_clim)
 
   ! Fix up a few things
@@ -174,7 +174,7 @@ program glint_example
   ! Initialise the ice model
 
   call initialise_glint(ice_sheet,lats,lons,paramfile,orog=orog_out,ice_frac=ice_frac, &
-       albedo=albedo,orog_longs=lons_orog,orog_lats=lats_orog)
+       albedo=albedo,orog_longs=lons_orog,orog_lats=lats_orog,daysinyear=365)
 
   ! Get coverage maps for the ice model instances
 
@@ -190,8 +190,8 @@ program glint_example
 
   ! Do timesteps ---------------------------------------------------------------------------
 
-  do time=0*24*360,total_years*24*360,24
-     call example_climate(precip_clim,surftemp_clim,precip,temp,nint(real(time)/24.0))
+  do time=0,total_years*24*360,6
+     call example_climate(precip_clim,surftemp_clim,precip,temp,real(time,rk))
      call glint(ice_sheet,time,temp,precip,zonwind,merwind,orog, &
           orog_out=orog_out,   albedo=albedo,         output_flag=out, &
           ice_frac=ice_frac,   water_out=fw,          water_in=fw_in, &
@@ -286,35 +286,35 @@ contains
     end if
   end subroutine handle_err
 
-  subroutine example_climate(precip_clim,temp_clim,precip,temp,day)
+  subroutine example_climate(precip_clim,temp_clim,precip,temp,time)
 
     real(rk),dimension(:,:,:),intent(in) :: precip_clim,temp_clim
     real(rk),dimension(:,:),intent(out)  :: precip,temp
-    integer :: day
+    real(rk),intent(in) :: time
 
     integer :: ntemp,nprecip
     real(rk) :: tsp,tst
-    real(rk) :: daysinyear=360.0
+    real(rk) :: hoursinyear=365.0*24.0
     real(rk) :: pos
     integer :: lower,upper
 
     ntemp=size(temp_clim,3) ; nprecip=size(precip_clim,3)
-    tst=daysinyear/ntemp ; tsp=daysinyear/nprecip
+    tst=hoursinyear/ntemp ; tsp=hoursinyear/nprecip
     
     ! Temperature first
     
-    lower=int(real(day)/tst)
+    lower=int(time/tst)
     upper=lower+1
-    pos=mod(real(day,kind=rk),tst)/tst
+    pos=mod(time,tst)/tst
     call fixbounds(lower,1,ntemp)
     call fixbounds(upper,1,ntemp)
     temp=linear_interp(temp_clim(:,:,lower),temp_clim(:,:,upper),pos)
 
     ! precip
 
-    lower=int(real(day)/tsp)
+    lower=int(time/tsp)
     upper=lower+1
-    pos=mod(real(day,kind=rk),tsp)/tsp
+    pos=mod(time,tsp)/tsp
     call fixbounds(lower,1,nprecip)
     call fixbounds(upper,1,nprecip)
     precip=linear_interp(precip_clim(:,:,lower),precip_clim(:,:,upper),pos)

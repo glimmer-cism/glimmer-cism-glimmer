@@ -124,7 +124,7 @@ module glint_main
 contains
 
   subroutine initialise_glint(params,lats,longs,paramfile,latb,lonb,orog,albedo, &
-       ice_frac,orog_lats,orog_longs,orog_latb,orog_lonb,output_flag)
+       ice_frac,orog_lats,orog_longs,orog_latb,orog_lonb,output_flag,daysinyear)
 
     !*FD Initialises the model
 
@@ -159,6 +159,7 @@ contains
                                                                   !*FD boundaries of the grid-boxes (orography).
     logical,                optional,intent(out)   :: output_flag !*FD Flag to show output set (provided for
                                                                   !*FD consistency)
+    integer,                optional,intent(in)    :: daysinyear  !*FD Number of days in the year
 
     ! Internal variables -----------------------------------------------------------------------
 
@@ -168,6 +169,12 @@ contains
     integer :: i,args,o_args
     real(rk),dimension(:,:),allocatable :: orog_temp,if_temp,alb_temp ! Temporary output arrays
     integer,dimension(:),allocatable :: mbts ! Array of mass-balance timesteps
+
+    ! Initialise year-length -------------------------------------------------------------------
+
+    if (present(daysinyear)) then
+       call glint_set_year_length(daysinyear)
+    end if
 
     ! Initialise main global grid --------------------------------------------------------------
 
