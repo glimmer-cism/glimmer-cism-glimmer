@@ -670,9 +670,8 @@ contains
     
     ! Internal variables
 
-    integer :: i,j,ii,jj,nx,ny,gnx,gny
+    integer  :: i,j,ii,jj,nx,ny,gnx,gny
     real(rk) :: plon,plat
-    integer,dimension(proj%nx,proj%ny) :: tempmask
     
     ! Beginning of code
 
@@ -718,17 +717,11 @@ contains
       enddo
     enddo
 
-    tempmask=0
     ups%gboxn=0
 
-    do i=1,gnx
-      do j=1,gny
-        where (ups%gboxx==i.and.ups%gboxy==j) 
-          tempmask=1
-        elsewhere
-          tempmask=0
-        endwhere
-        ups%gboxn(i,j)=sum(tempmask)
+    do i=1,nx
+      do j=1,ny
+        ups%gboxn(ups%gboxx(i,j),ups%gboxy(i,j))=ups%gboxn(ups%gboxx(i,j),ups%gboxy(i,j))+1
       enddo
     enddo
 

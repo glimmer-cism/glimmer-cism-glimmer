@@ -820,31 +820,30 @@ contains
                                                          !*FD coverage of global by local grid-boxes.
     ! Internal variables
 
-    integer,dimension(proj%nx,proj%ny) :: tempmask
+    integer,dimension(grid%nx,grid%ny) :: tempcount
     integer :: i,j
-    real(rk) :: stm
 
     ! Beginning of code
 
-    tempmask=0
+    tempcount=0
+
+    do i=1,proj%nx
+      do j=1,proj%ny
+        tempcount(ups%gboxx(i,j),ups%gboxy(i,j))=tempcount(ups%gboxx(i,j),ups%gboxy(i,j))+1
+      enddo
+    enddo
 
     do i=1,grid%nx
       do j=1,grid%ny
-        where (ups%gboxx==i.and.ups%gboxy==j)
-          tempmask=1
-        elsewhere
-          tempmask=0
-        endwhere
-        stm=sum(tempmask)
-        if (stm==0) then
+        if (tempcount(i,j)==0) then
           frac_coverage(i,j)=0.0
         else
-          frac_coverage(i,j)=(stm*proj%dx*proj%dy)/ &
+          frac_coverage(i,j)=(tempcount(i,j)*proj%dx*proj%dy)/ &
                  ((grid%lon_bound(i+1)-grid%lon_bound(i))*D2R*radea**2*    &
                  (sin(grid%lat_bound(j)*D2R)-sin(grid%lat_bound(j+1)*D2R)))
         endif
       enddo
-    enddo  
+    enddo
 
     ! Fix points that should be 1.0 by checking their surroundings
 
