@@ -48,6 +48,7 @@ module glimmer_ncio
   !*FD written by Magnus Hagdorn, 2004
 
   use glimmer_ncdf
+  integer,parameter,private :: msglen=150
   
 contains
   !*****************************************************************************
@@ -101,7 +102,7 @@ contains
     ! local variables
     integer status
     integer i,mapid
-    character(len=100) message
+    character(len=msglen) message
 
     ! create new netCDF file
     status = nf90_create(NCO%filename,NF90_CLOBBER,NCO%id)
@@ -159,7 +160,7 @@ contains
     type(glide_global_type) :: model
     logical forcewrite
 
-    character(len=100) :: message
+    character(len=msglen) :: message
     integer status
 
     ! check if we are still in define mode and if so leave it
@@ -246,7 +247,7 @@ contains
     integer nvars
     integer i, dimsize
     integer status    
-    character(len=100) message
+    character(len=msglen) message
     
     ! open netCDF file
     status = nf90_open(NCI%filename,NF90_NOWRITE,NCI%id)
@@ -285,7 +286,7 @@ contains
     type(glide_global_type) :: model
     !*FD the model instance
 
-    character(len=100) :: message
+    character(len=msglen) :: message
 
     if (infile%current_time.le.infile%nt) then
        if (.not.NCI%just_processed) then

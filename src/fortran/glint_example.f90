@@ -240,8 +240,8 @@ contains
     use netcdf
 
     character(*) :: filename,varname
-    real(dp),dimension(:,:,:),pointer :: array
-    real(dp),dimension(:),pointer,optional :: lons,lats
+    real(rk),dimension(:,:,:),pointer :: array
+    real(rk),dimension(:),pointer,optional :: lons,lats
     real,dimension(:),pointer,optional :: lonbound,latbound
     integer :: ncerr,ncid,i,varid
     real(rk) :: offset=0.0,scale=1.0

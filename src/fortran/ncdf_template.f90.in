@@ -208,7 +208,7 @@ contains
     type(glide_global_type) :: model
 
     integer status,dimid,dimsize
-    character(len=100) message
+    character(len=150) message
 
     ! check dimensions
     !GENVAR_CHECKDIM!

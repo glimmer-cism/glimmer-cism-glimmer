@@ -1,3 +1,8 @@
+2005-03-23 Ian Rutt
+ * Extended length of variables used to construct log messages to 150
+   chars
+ * Fixed problem with single-precision compilation
+
 2005-03-17 Ian Rutt
  * Removed printing of ierr after calling awi.f
  * Released at version 0.5.1

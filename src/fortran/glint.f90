@@ -122,7 +122,7 @@ module glint_main
 
   ! Private names -----------------------------------------------
 
-  private glint_allocate_arrays
+  private glint_allocate_arrays,pi
   private glint_readconfig, calc_bounds
 
 contains
