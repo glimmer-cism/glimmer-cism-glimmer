@@ -348,8 +348,8 @@ contains
 
     ! Divide by number of contributing points and copy to output
 
-    if (present(localsp)) localsp=temp_out/real(mean_count,gdp)
-    if (present(localdp)) localdp=temp_out/real(mean_count,gdp)
+    if (present(localsp)) localsp=temp_out/real(mean_count,dp)
+    if (present(localdp)) localdp=temp_out/real(mean_count,dp)
  
   end subroutine mean_to_local
 
@@ -510,6 +510,7 @@ contains
     ! Internal variables
 
     integer :: nx,ny,i,j
+    integer,dimension(1) :: loc
 
     nx=size(lons) ; ny=size(lats)
 
