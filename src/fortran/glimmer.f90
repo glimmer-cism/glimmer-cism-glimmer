@@ -402,7 +402,6 @@ contains
     !*FD to the change in \texttt{ice\_volume}, after conversion between m$^3$ and kg.
 
     use glimmer_utils
-    use glint_mbal
     use glint_interp
     use glint_timestep
     implicit none

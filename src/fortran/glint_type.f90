@@ -47,7 +47,7 @@ module glint_type
   use glimmer_global
   use glint_proj
   use glint_interp
-  use glint_pdd
+  use glint_mbal
   use glide_types
 
   implicit none
@@ -62,46 +62,51 @@ module glint_type
     type(upscale)                    :: ups_orog           !*FD Upscaling parameters for orography (to cope
                                                            !*FD with need to convert to spectral form).
     type(glide_global_type)          :: model              !*FD The instance and all its arrays.
-    type(glint_pdd_params)           :: pddcalc            !*FD positive degree-day data
+    type(glint_mbal_params)          :: mbal_params        !*FD mass balance scheme parameters
     character(fname_length)          :: paramfile          !*FD The name of the configuration file.
-    logical                          :: newtemps           !*FD Flag to say we have new temperatures.
-    logical                          :: first     = .true. !*FD Is this the first timestep?
 
-    ! Arrays to hold downscaled versions of input data --------------------------
+    ! Climate inputs from global model --------------------------
 
-    real(rk), dimension(:,:),pointer :: xwind         => null() 
-    
-    !*FD $x$-component of surface winds on local grid.
-    
-    real(rk), dimension(:,:),pointer :: ywind         => null() 
-    
-    !*FD $y$-component of surface winds on local grid.
-    
-    real(dp), dimension(:,:),pointer :: global_orog   => null() 
-    
-    !*FD Global orography on local coordinates.
-    
-    real(sp), dimension(:,:),pointer :: local_orog    => null() 
-    
-    !*FD Local orography on local coordinates.
+    real(sp),dimension(:,:),pointer :: artm        => null() !*FD Annual mean air temperature
+    real(sp),dimension(:,:),pointer :: arng        => null() !*FD Annual air temperature half-range
+    real(sp),dimension(:,:),pointer :: prcp        => null() !*FD Precipitation (mm or m)
+    real(rk),dimension(:,:),pointer :: xwind       => null() !*FD $x$-component of surface winds (m/s)
+    real(rk),dimension(:,:),pointer :: ywind       => null() !*FD $y$-component of surface winds (m/s)
+    real(dp),dimension(:,:),pointer :: global_orog => null() !*FD Global orography (m)
+    real(sp),dimension(:,:),pointer :: local_orog  => null() !*FD Local orography (m)
  
-    ! Fractional coverage information ------------------------------------------- 
+    ! Locally calculated climate/mass-balance fields ------------
+
+    real(sp),dimension(:,:),pointer :: ablt => null() !*FD Annual ablation.
+    real(sp),dimension(:,:),pointer :: acab => null() !*FD Annual mass-balance.
+
+    ! Arrays to accumulate mass-balance quantities --------------
+
+    real(sp),dimension(:,:),pointer :: prcp_save => null() !*FD used to accumulate precip
+    real(sp),dimension(:,:),pointer :: ablt_save => null() !*FD used to accumulate ablation
+    real(sp),dimension(:,:),pointer :: acab_save => null() !*FD used to accumulate mass-balance
+    real(sp),dimension(:,:),pointer :: artm_save => null() !*FD used to average air-temperature
+
+    ! Fractional coverage information ---------------------------
     
-    real(rk) ,dimension(:,:),pointer :: frac_coverage => null() 
+    real(rk) ,dimension(:,:),pointer :: frac_coverage => null() !*FD Fractional coverage of each 
+                                                                !*FD global gridbox by the projected grid.
+    real(rk) ,dimension(:,:),pointer :: frac_cov_orog => null() !*FD Fractional coverage of each 
+                                                                !*FD global gridbox by the projected grid 
+                                                                !*FD (orography).
+    ! Output masking --------------------------------------------
+
+    integer, dimension(:,:),pointer :: out_mask => null() 
     
-    !*FD Fractional coverage of each global gridbox by the projected grid.
+    !*FD Array indicating whether a point should be considered or ignored 
+    !*FD when upscaling data for output. 1 means use, 0 means ignore.
 
-    real(rk) ,dimension(:,:),pointer :: frac_cov_orog => null() 
-    
-    !*FD Fractional coverage of each global gridbox by the projected grid (orography).
+    ! Accumulation information ----------------------------------
 
-    ! Accumulation information --------------------------------------------------
+    real(rk) :: accum_start = 0.0    !*FD Time when mass-balance accumulation started
+    logical  :: first_accum = .true. !*FD First time accumulation flag
 
-    real(rk) :: accum_start = 0.0 ! Time when mass-balance accumulation started
-    logical  :: first_accum = .true.  ! First time accumulation (difference from first, since
-                                      ! that relates to first dynamics step)
-
-    ! Climate things ------------------------------------------------------------
+    ! Climate options -------------------------------------------
 
     integer :: whichacab = 1
 
@@ -120,29 +125,17 @@ module glint_type
     !*FD \item[2] Use parameterization of \emph{Roe and Lindzen} 
     !*FD \end{description}
 
-    real(sp),dimension(:,:),pointer :: artm     => null() !*FD Annual mean air temperature
-    real(sp),dimension(:,:),pointer :: arng     => null() !*FD Annual air temperature half-range
-    real(sp),dimension(:,:),pointer :: ablt     => null() !*FD Annual ablation.
-    real(sp),dimension(:,:),pointer :: acab     => null() !*FD Annual mass-balance.
-    real(sp),dimension(:,:),pointer :: prcp     => null() !*FD Annual precipitation.
-    real(sp),dimension(:,:),pointer :: g_arng   => null() !*FD Global annual air temperature range
-    real(sp),dimension(:,:),pointer :: g_artm   => null() !*FD Global annual mean air temperature
-    integer, dimension(:,:),pointer :: out_mask => null() !*FD Array indicating whether a point 
-                                                          !*FD should be considered or ignored 
-                                                          !*FD when upscaling data for output. 
-                                                          !*FD 1 means use, 0 means ignore.
-    real(sp),dimension(:,:),pointer :: prcp_save => null() !*FD used to accumulate precip
-    real(sp),dimension(:,:),pointer :: ablt_save => null() !*FD used to accumulate ablation
-    real(sp),dimension(:,:),pointer :: acab_save => null() !*FD used to accumulate mass-balance
-    real(sp),dimension(:,:),pointer :: artm_save => null() !*FD used to average air-temperature
-    real(sp) :: uprecip_rate =   0.5 !*FD Uniform precipitaion rate in m/a
-    real(sp) :: usurftemp    = -20.0 !*FD Uniform surface temperature in $^{\circ}$C.
+    ! Climate parameters ----------------------------------------------------------
+
     real(sp) :: ice_albedo   =   0.4 !*FD Ice albedo. (fraction)
-    real(sp) :: ulapse_rate  =   8.0 !*FD Uniform lapse rate in deg C/km 
+    real(sp) :: lapse_rate   =   8.0 !*FD Uniform lapse rate in deg C/km 
                                      !*FD (N.B. This should be \emph{positive} for 
                                      !*FD temperature falling with height!)
-    real(sp) :: tinc_mbal = 1.0   !*FD mass-balance scheme timestep in years (set internally)
-    integer  :: av_count = 0
+    real(sp) :: tinc_mbal = 1.0      !*FD mass-balance scheme timestep in years (set internally)
+
+    ! Counter for averaging temperature input --------------------------------------
+
+    integer  :: av_count = 0 !*FD Counter for averaging temperature input
 
   end type glint_instance
 
@@ -171,58 +164,143 @@ contains
 
     implicit none
 
-    type(glint_instance),intent(inout) :: instance    !*FD Instance whose elements are to be allocated.
-    integer,               intent(in)    :: nxg       !*FD Longitudinal size of global grid (grid-points).
-    integer,               intent(in)    :: nyg       !*FD Latitudinal size of global grid (grid-points).
+    type(glint_instance),intent(inout) :: instance  !*FD Instance whose elements are to be allocated.
+    integer,             intent(in)    :: nxg       !*FD Longitudinal size of global grid (grid-points).
+    integer,             intent(in)    :: nyg       !*FD Latitudinal size of global grid (grid-points).
 
     integer ewn,nsn
 
-    ewn=instance%model%general%ewn
-    nsn=instance%model%general%nsn
+    ewn=get_ewn(instance%model)
+    nsn=get_nsn(instance%model)
 
     ! First deallocate if necessary
+    ! Downscaled global arrays
 
+    if (associated(instance%artm))          deallocate(instance%artm)
+    if (associated(instance%arng))          deallocate(instance%arng)
+    if (associated(instance%prcp))          deallocate(instance%prcp)
     if (associated(instance%xwind))         deallocate(instance%xwind)
     if (associated(instance%ywind))         deallocate(instance%ywind)
     if (associated(instance%global_orog))   deallocate(instance%global_orog) 
-    if (associated(instance%local_orog))    deallocate(instance%local_orog)   
+    if (associated(instance%local_orog))    deallocate(instance%local_orog)
+
+    ! Local climate arrays
+
+    if (associated(instance%ablt))          deallocate(instance%ablt)
+    if (associated(instance%acab))          deallocate(instance%acab)
+
+    ! Accumulation arrays
+
+    if (associated(instance%prcp_save))     deallocate(instance%prcp_save)
+    if (associated(instance%ablt_save))     deallocate(instance%ablt_save)
+    if (associated(instance%acab_save))     deallocate(instance%acab_save)
+    if (associated(instance%artm_save))     deallocate(instance%artm_save)
+
+    ! Fractional coverage
+
     if (associated(instance%frac_coverage)) deallocate(instance%frac_coverage)
+    if (associated(instance%frac_cov_orog)) deallocate(instance%frac_cov_orog)
 
-    ! Then reallocate...
-    ! Wind field arrays
+    ! Output mask
 
-    allocate(instance%xwind(ewn,nsn)) 
-    allocate(instance%ywind(ewn,nsn))
+    if (associated(instance%out_mask))      deallocate(instance%out_mask)
 
-    ! Local-global orog
+    ! Then reallocate and zero...
+    ! Global input fields
 
-    allocate(instance%global_orog(ewn,nsn))
+    allocate(instance%artm(ewn,nsn));        instance%artm = 0.0
+    allocate(instance%arng(ewn,nsn));        instance%arng = 0.0
+    allocate(instance%prcp(ewn,nsn));        instance%prcp        = 0.0
+    allocate(instance%xwind(ewn,nsn));       instance%xwind       = 0.0
+    allocate(instance%ywind(ewn,nsn));       instance%ywind       = 0.0
+    allocate(instance%global_orog(ewn,nsn)); instance%global_orog = 0.0
+    allocate(instance%local_orog(ewn,nsn));  instance%local_orog  = 0.0
 
-    ! Local-local orog
+    ! Local fields
 
-    allocate(instance%local_orog(ewn,nsn))
+    allocate(instance%ablt(ewn,nsn)); instance%ablt = 0.0
+    allocate(instance%acab(ewn,nsn)); instance%acab = 0.0
 
-    ! Global box indices and number of points contained therein
+    ! Accumulation arrays
+
+    allocate(instance%prcp_save(ewn,nsn)); instance%prcp_save = 0.0
+    allocate(instance%ablt_save(ewn,nsn)); instance%ablt_save = 0.0
+    allocate(instance%acab_save(ewn,nsn)); instance%acab_save = 0.0
+    allocate(instance%artm_save(ewn,nsn)); instance%artm_save = 0.0
 
     ! Fractional coverage map
 
-    allocate(instance%frac_coverage(nxg,nyg)) ! allocate fractional coverage map
-    allocate(instance%frac_cov_orog(nxg,nyg)) ! allocate fractional coverage map (orog)
+    allocate(instance%frac_coverage(nxg,nyg)); instance%frac_coverage = 0.0
+    allocate(instance%frac_cov_orog(nxg,nyg)); instance%frac_cov_orog = 0.0
 
-    ! allocate climate data
-    allocate(instance%artm(ewn,nsn));            instance%artm = 0.0
-    allocate(instance%arng(ewn,nsn));            instance%arng = 0.0
-    allocate(instance%ablt(ewn,nsn));            instance%ablt = 0.0
-    allocate(instance%acab(ewn,nsn));            instance%acab = 0.0
-    allocate(instance%prcp(ewn,nsn));            instance%prcp = 0.0
-    allocate(instance%g_artm(ewn,nsn));          instance%g_artm = 0.0
-    allocate(instance%g_arng(ewn,nsn));          instance%g_arng = 0.0
-    allocate(instance%out_mask(ewn,nsn));        instance%out_mask = 1.0
-    allocate(instance%prcp_save(ewn,nsn));       instance%prcp_save = 0.0
-    allocate(instance%ablt_save(ewn,nsn));       instance%ablt_save = 0.0
-    allocate(instance%acab_save(ewn,nsn));       instance%acab_save = 0.0
-    allocate(instance%artm_save(ewn,nsn));       instance%artm_save = 0.0
+    ! Output mask
+
+    allocate(instance%out_mask(ewn,nsn)); instance%out_mask = 1.0
 
   end subroutine glint_i_allocate
+
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  subroutine glint_i_readconfig(instance,config)
+
+    !*FD read glint configuration
+
+    use glimmer_config
+
+    implicit none
+
+    ! Arguments
+
+    type(ConfigSection), pointer       :: config      !*FD structure holding sections of configuration file   
+    type(glint_instance),intent(inout) :: instance    !*FD The instance being initialised.
+
+    ! Internals
+
+    type(ConfigSection), pointer :: section
+
+    ! GLINT projection parameters
+    call proj_readconfig(instance%proj,config)         ! read glint projection configuration
+    
+    call GetSection(config,section,'GLINT climate')
+    if (associated(section)) then
+       call GetValue(section,'precip_mode',instance%whichprecip)
+       call GetValue(section,'acab_mode',instance%whichacab)
+       call GetValue(section,'ice_albedo',instance%ice_albedo)
+       call GetValue(section,'lapse_rate',instance%lapse_rate)
+    end if
+
+  end subroutine glint_i_readconfig
+
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  subroutine glint_i_printconfig(instance)
+
+    use glimmer_log
+
+    implicit none
+
+    ! Argument
+
+    type(glint_instance),intent(inout) :: instance    !*FD The instance to be printed
+
+    ! Internal
+
+    character(len=100) :: message
+
+    call proj_printconfig(instance%proj)  ! Print projection info
+
+    call write_log('GLINT climate')
+    call write_log('-------------')
+    write(message,*) 'precip_mode ',instance%whichprecip
+    call write_log(message)
+    write(message,*) 'acab_mode   ',instance%whichacab
+    call write_log(message)
+    write(message,*) 'ice_albedo  ',instance%ice_albedo
+    call write_log(message)
+    write(message,*) 'lapse_rate  ',instance%lapse_rate
+    call write_log(message)
+    call write_log('')
+
+  end subroutine glint_i_printconfig
 
 end module glint_type

@@ -87,10 +87,5 @@ module glimmer_global
 
   !*FD Specifies the length of character string variables used to
   !*FD hold filenames.
-   
-  ! From module funits
-
-  integer,parameter :: n3d = 15 !*FD Number of 3-d output fields
-  integer,parameter :: n2d = 28 !*FD Number of 2-d output fields
 
 end module glimmer_global

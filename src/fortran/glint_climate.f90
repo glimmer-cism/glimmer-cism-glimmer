@@ -41,41 +41,75 @@
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 module glint_climate
-  !*FD handle glint climate
+
+  use glint_type
+
+  implicit none
+
+  !*FD Subroutines that do various things to prepare the glint climate
+
+  interface glint_lapserate
+    module procedure glint_lapserate_dp, glint_lapserate_sp
+  end interface
 
 contains
 
-  subroutine calcartm(usrf,artm,arng,g_orog,g_artm,g_arng,lapse_rate)
+  subroutine glint_calc_precip(instance)
 
-    !*FD Calculate the surface air temperature and mean annual range,
-    !*FD according to various different models.
+    use glint_precip_param
+    use glimmer_log
 
-    use glimmer_global, only : dp, sp 
-    use glint_mbal
-    implicit none
+    !*FD Process precip if necessary
 
-    real(sp),dimension(:,:),         intent(in)    :: usrf   !*FD Surface elevation (m)
-    real(sp),dimension(:,:),         intent(out)   :: artm   !*FD Surface annual mean air temperature ($^{\circ}$C)
-    real(sp),dimension(:,:),         intent(out)   :: arng   !*FD Surface annual air tempurature range ($^{\circ}$C)
-    real(dp),dimension(:,:),         intent(in)    :: g_orog !*FD Global orography on local grid (m)
-    real(sp),dimension(:,:),         intent(in)    :: g_artm !*FD Supplied global air temperatures ($^{\circ}$C)
-    real(sp),dimension(:,:),         intent(in)    :: g_arng !*FD Supplied global air temp range ($^{\circ}$C)
-    real(sp),                        intent(in)    :: lapse_rate !*FD Lapse rate for temperature correction
+    type(glint_instance) :: instance
 
-    ! Copy the fields
+    select case (instance%whichprecip)
+    case(1)
+       ! Do nothing to the precip field
+    case(2)
+       ! Use the Roe/Lindzen parameterisation
+       call glint_precip(instance%prcp, &
+            instance%xwind, &
+            instance%ywind, &
+            instance%artm, &
+            instance%local_orog, &
+            instance%proj%dx, &
+            instance%proj%dy, &
+            fixed_a=.true.)
+    case default
+       call write_log('Invalid value of whichprecip',GM_FATAL,__FILE__,__LINE__)
+    end select
+
+    ! Convert from mm to m - very important!
+
+    instance%prcp=instance%prcp*0.001
+
+  end subroutine glint_calc_precip
+
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  subroutine glint_downscaling(instance,g_temp,g_temp_range,g_precip,g_orog,g_zonwind,g_merwind)
+
+    use glint_interp
+
+    !*FD Downscale relevant fields
+
+    type(glint_instance) :: instance
+    real(rk),dimension(:,:),intent(in)   :: g_temp       !*FD Global mean surface temperature field ($^{\circ}$C)
+    real(rk),dimension(:,:),intent(in)   :: g_temp_range !*FD Global surface temperature half-range field ($^{\circ}$C)
+    real(rk),dimension(:,:),intent(in)   :: g_precip     !*FD Global precip field total (mm)
+    real(rk),dimension(:,:),intent(in)   :: g_orog       !*FD Input global orography (m)
+    real(rk),dimension(:,:),intent(in)   :: g_zonwind    !*FD Global mean surface zonal wind (m/s)
+    real(rk),dimension(:,:),intent(in)   :: g_merwind    !*FD Global mean surface meridonal wind (m/s)
+
+    call interp_to_local(instance%proj,g_temp,      instance%downs,localsp=instance%artm)
+    call interp_to_local(instance%proj,g_temp_range,instance%downs,localsp=instance%arng)
+    call interp_to_local(instance%proj,g_precip,    instance%downs,localsp=instance%prcp)
+    call interp_to_local(instance%proj,g_orog,      instance%downs,localdp=instance%global_orog)
     
-    arng=g_arng
-    artm=g_artm
-    
-    ! Reduce temperatures to sea-level
-    
-    call glint_lapserate(artm,real(g_orog,rk),real(-lapse_rate,rk))
-    
-    ! Raise them to high-res orography 
-    
-    call glint_lapserate(artm,real(usrf,rk),real(lapse_rate,rk))
-                
-  end subroutine calcartm
+    call interp_wind_to_local(instance%proj,g_zonwind,g_merwind,instance%downs,instance%xwind,instance%ywind)
+
+  end subroutine glint_downscaling
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -121,5 +155,53 @@ contains
     acab(nx,:)=0.0
 
   end subroutine fix_acab
+
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  subroutine glint_lapserate_dp(temp,topo,lr)
+
+    !*FD Corrects the temperature field
+    !*FD for height, using a constant lapse rate.
+    !*FD
+    !*FD This the double-precision version, aliased as \texttt{glimmer\_lapserate}.
+
+    implicit none
+
+    real(dp),dimension(:,:), intent(inout) :: temp !*FD temperature at sea-level in $^{\circ}$C
+                                                   !*FD used for input and output
+    real(rk),dimension(:,:), intent(in)    :: topo !*FD topography field (m above msl)
+    real(rk),                intent(in)    :: lr   !*FD Lapse rate ($^{\circ}\mathrm{C\,km}^{-1}$).
+                                                   !*FD
+                                                   !*FD NB: the lapse rate is positive for 
+                                                   !*FD falling temp with height\ldots
+
+    temp=temp-(lr*topo/1000.0)                     ! The lapse rate calculation.
+
+  end subroutine glint_lapserate_dp
+
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  subroutine glint_lapserate_sp(temp,topo,lr)
+
+    !*FD Corrects the temperature field
+    !*FD for height, using a constant lapse rate.
+    !*FD
+    !*FD This the single-precision version, aliased as \texttt{glimmer\_lapserate}.
+
+    implicit none
+
+    real(sp),dimension(:,:),intent(inout) :: temp !*FD temperature at sea-level in $^{\circ}$C
+                                                   !*FD used for input and output
+    real(rk),dimension(:,:), intent(in)    :: topo !*FD topography field (m above msl)
+    real(rk),                intent(in)    :: lr   !*FD Lapse rate ($^{\circ}\mathrm{C\,km}^{-1}$).
+                                                   !*FD
+                                                   !*FD NB: the lapse rate is positive for 
+                                                   !*FD falling temp with height\ldots
+
+    temp=temp-(lr*topo/1000.0)                     ! The lapse rate calculation.
+
+  end subroutine glint_lapserate_sp
+
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 end module glint_climate

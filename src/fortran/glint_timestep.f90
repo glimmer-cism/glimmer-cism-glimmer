@@ -62,7 +62,6 @@ contains
     use glide
     use glide_setup
     use glide_io
-    use glint_mbal
     use paramets
     use glint_io
     use glint_climate
@@ -118,112 +117,37 @@ contains
       instance%first_accum=.false.
     endif
 
-    ! ------------------------------------------------------------------------  
-    ! Downscale input fields
-    ! ------------------------------------------------------------------------  
+    ! Downscale input fields -------------------------------------------------
 
-    ! Temperature downscaling ------------------------------------------------
-
-    call interp_to_local(instance%proj,  &
-                         g_temp,         &
-                         instance%downs, &
-                         localsp=instance%g_artm)
-
-    call interp_to_local(instance%proj,  &
-                         g_temp_range,   &
-                         instance%downs, &
-                         localsp=instance%g_arng)
-
-    ! Precip downscaling -----------------------------------------------------
-
-    call interp_to_local(instance%proj,  &
-                         g_precip,       &
-                         instance%downs, &
-                         localsp=instance%prcp)
-
-    ! Orography downscaling --------------------------------------------------
-
-    call interp_to_local(instance%proj,    &
-                         g_orog,           &
-                         instance%downs,   &
-                         localdp=instance%global_orog)
-
-    ! Wind downscaling -------------------------------------------------------
-
-    call interp_wind_to_local(instance%proj,    &
-                              g_zonwind,        &
-                              g_merwind,        &
-                              instance%downs,   &
-                              instance%xwind,instance%ywind)
+    call glint_downscaling(instance,g_temp,g_temp_range,g_precip,g_orog,g_zonwind,g_merwind)
 
     ! ------------------------------------------------------------------------  
-    ! Sort out some local orography - scale orography by correct amount
+    ! Sort out some local orography and remove bathymetry. This relies on the 
+    ! point 1,1 being underwater. However, it's a better method than just 
+    ! setting all points < 0.0 to zero
     ! ------------------------------------------------------------------------  
 
     call glide_get_usurf(instance%model,instance%local_orog)
-
-    ! Remove bathymetry. This relies on the point 1,1 being underwater.
-    ! However, it's a better method than just setting all points < 0.0 to zero
-
     call glint_remove_bath(instance%local_orog,1,1)
 
     ! ------------------------------------------------------------------------  
-    ! Calculate or process the surface temperature and half-range
+    ! Adjust the surface temperatures using the lapse-rate, by reducing to
+    ! sea-level and then back up to high-res orography
     ! ------------------------------------------------------------------------  
+   
+    call glint_lapserate(instance%artm,real(instance%global_orog,rk),real(-instance%lapse_rate,rk))
+    call glint_lapserate(instance%artm,real(instance%local_orog,rk), real(instance%lapse_rate,rk))
+ 
+    ! Process the precipitation field if necessary ---------------------------
 
-    call calcartm(instance%local_orog,         &
-                  instance%artm,          &
-                  instance%arng,          &
-                  instance%global_orog,          &
-                  instance%g_artm, &
-                  instance%g_arng, &
-                  instance%ulapse_rate)
-
-    ! ------------------------------------------------------------------------  
-    ! Process the precipitation field if necessary
-    ! ------------------------------------------------------------------------  
-
-    select case (instance%whichprecip)
-    case(1)
-       ! Do nothing to the precip field
-    case(2)
-       ! Use the Roe/Lindzen parameterisation
-       call glint_precip(instance%prcp, &
-            instance%xwind, &
-            instance%ywind, &
-            instance%artm, &
-            instance%local_orog, &
-            instance%proj%dx, &
-            instance%proj%dy, &
-            fixed_a=.true.)
-    case default
-       call write_log('Invalid value of whichprecip',GM_FATAL,__FILE__,__LINE__)
-    end select
-
-    ! Convert from mm to m - very important!
-
-    instance%prcp=instance%prcp*0.001
+    call glint_calc_precip(instance)
 
     ! ------------------------------------------------------------------------ 
     ! Calculate ablation, and thus mass-balance
     ! ------------------------------------------------------------------------ 
 
-    select case(instance%whichacab)
-    case(1)
-       call glint_pdd_mbal(instance%pddcalc, &
-            instance%artm, &
-            instance%arng, &
-            instance%prcp, &
-            instance%ablt, &
-            instance%acab) 
-    case(2) 
-       instance%acab = instance%prcp
-    case(3)
-       ! The energy-balance model will go here...
-       call write_log('Energy-balance mass-balance model not implemented yet',GM_FATAL,__FILE__,__LINE__)
-    case default
-       call write_log('Invalid value of whichacab',GM_FATAL,__FILE__,__LINE__)
-    end select
+    call glint_mbal_calc(instance%mbal_params,instance%artm,instance%arng, &
+          instance%prcp,instance%ablt,instance%acab) 
 
     ! ------------------------------------------------------------------------ 
     ! Accumulate mass-balance if necessary
@@ -275,32 +199,6 @@ contains
 
     call glide_set_acab(instance%model,instance%acab_save)
     call glide_set_artm(instance%model,instance%artm_save/real(instance%av_count))
-
-    ! ------------------------------------------------------------------------  
-    ! If first step, use as seed...
-    ! ------------------------------------------------------------------------  
-!!$
-!!$    if (instance%first) then
-!!$      where (instance%local_orog>0.0)
-!!$        instance%model%geometry%thck = max(0.0d0, &
-!!$                                         instance%acab* &
-!!$                                         instance%model%numerics%dt)
-!!$      endwhere
-!!$
-!!$      call glide_calclsrf(instance%model%geometry%thck, &
-!!$                    instance%model%geometry%topg, &
-!!$                    instance%model%climate%eus, &
-!!$                    instance%model%geometry%lsrf)
-!!$      instance%model%geometry%usrf = instance%model%geometry%thck + &
-!!$                                     instance%model%geometry%lsrf
-!!$
-!!$      ! Reset mass-balance variables to zero, as we've already used these
-!!$
-!!$      instance%prcp = 0.0
-!!$      instance%ablt = 0.0
-!!$      instance%acab = 0.0
-!!$
-!!$    end if
 
     ! ------------------------------------------------------------------------
     ! do the first part of the glide time step
@@ -433,7 +331,6 @@ contains
     ! Tidy up ----------------------------------------------------------------
 
     deallocate(upscale_temp,accum_temp,ablat_temp,fudge_mask,routing_temp,thck_temp)
-    instance%first=.false.
  
   end subroutine glint_i_tstep
 

@@ -1,3 +1,10 @@
+2005-02-22 Ian Rutt
+ * Substantial reorganisation of GLINT. 
+ * Added wrapper for mass-balance schemes (glint_mbal.f90)
+ * Moved some parts of timestep into glint_climate.f90
+ * Build may need fixing under Linux
+ * Variable mass-balance timestep still to be reimplemented
+
 2005-02-22 Magnus Hagdorn
  * glide_types.f90: fixed two bugs where arrays had the wrong size
 

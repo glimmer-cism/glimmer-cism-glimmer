@@ -40,10 +40,9 @@
 !
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-module glint_mbal
+module glint_precip_param
 
-  !*FD Routines for calculating the mass-balance
-  !*FD of the ice-sheet, including precip down-scaling.
+  !*FD The Roe/Lindzen precip downscaling parameterization
 
   ! Author: Ian Rutt
   ! Date:   19/11/03
@@ -52,57 +51,7 @@ module glint_mbal
 
   private satvap,calc_w0,error_func
 
-  interface glint_lapserate
-    module procedure glint_lapserate_dp, glint_lapserate_sp
-  end interface
-
 contains
-
-  subroutine glint_lapserate_dp(temp,topo,lr)
-
-    !*FD Corrects the temperature field
-    !*FD for height, using a constant lapse rate.
-    !*FD
-    !*FD This the double-precision version, aliased as \texttt{glimmer\_lapserate}.
-
-    implicit none
-
-    real(dp),dimension(:,:), intent(inout) :: temp !*FD temperature at sea-level in $^{\circ}$C
-                                                   !*FD used for input and output
-    real(rk),dimension(:,:), intent(in)    :: topo !*FD topography field (m above msl)
-    real(rk),                intent(in)    :: lr   !*FD Lapse rate ($^{\circ}\mathrm{C\,km}^{-1}$).
-                                                   !*FD
-                                                   !*FD NB: the lapse rate is positive for 
-                                                   !*FD falling temp with height\ldots
-
-    temp=temp-(lr*topo/1000.0)                     ! The lapse rate calculation.
-
-  end subroutine glint_lapserate_dp
-
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-  subroutine glint_lapserate_sp(temp,topo,lr)
-
-    !*FD Corrects the temperature field
-    !*FD for height, using a constant lapse rate.
-    !*FD
-    !*FD This the single-precision version, aliased as \texttt{glimmer\_lapserate}.
-
-    implicit none
-
-    real(sp),dimension(:,:),intent(inout) :: temp !*FD temperature at sea-level in $^{\circ}$C
-                                                   !*FD used for input and output
-    real(rk),dimension(:,:), intent(in)    :: topo !*FD topography field (m above msl)
-    real(rk),                intent(in)    :: lr   !*FD Lapse rate ($^{\circ}\mathrm{C\,km}^{-1}$).
-                                                   !*FD
-                                                   !*FD NB: the lapse rate is positive for 
-                                                   !*FD falling temp with height\ldots
-
-    temp=temp-(lr*topo/1000.0)                     ! The lapse rate calculation.
-
-  end subroutine glint_lapserate_sp
-
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine glint_precip(precip,xwind,ywind,temp,topo,dx,dy,fixed_a)
 
@@ -350,4 +299,4 @@ contains
 
   end function error_func
 
-end module glint_mbal
+end module glint_precip_param

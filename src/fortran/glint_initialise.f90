@@ -82,10 +82,11 @@ contains
     ! read glint configuration
 
     call glint_i_readconfig(instance,config)    
+    call glint_i_printconfig(instance)    
 
-    ! initialise the pdd scheme (does this regardless of need at the moment)
+    ! initialise the mass-balance scheme
 
-    call glint_pdd_init(instance%pddcalc,config)
+    call glint_mbal_init(instance%mbal_params,config,instance%whichacab)
 
     ! setting nx,ny of proj
 
@@ -136,39 +137,6 @@ contains
     call glide_finalise(instance%model)
 
   end subroutine glint_i_end
-
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-  subroutine glint_i_readconfig(instance,config)
-    !*FD read glint configuration
-    use glimmer_config
-    use glimmer_log
-    implicit none
-    type(ConfigSection), pointer         :: config      !*FD structure holding sections of configuration file   
-    type(glint_instance),  intent(inout) :: instance    !*FD The instance being initialised.
-
-    type(ConfigSection), pointer :: section
-    character(len=100) :: message
-
-    ! GLINT projection parameters
-    call proj_readconfig(instance%proj,config)         ! read glint projection configuration
-    call proj_printconfig(instance%proj)               ! and print it
-    
-    call GetSection(config,section,'GLINT climate')
-    if (associated(section)) then
-       call GetValue(section,'precip_mode',instance%whichprecip)
-       call GetValue(section,'acab_mode',instance%whichacab)
-    end if
-
-    ! Print some configuration
-    call write_log('GLINT climate')
-    call write_log('-------------')
-    write(message,*) 'precip_mode ',instance%whichprecip
-    call write_log(message)
-    write(message,*) 'acab_mode   ',instance%whichacab
-    call write_log(message)
-    call write_log('')
-  end subroutine glint_i_readconfig
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
