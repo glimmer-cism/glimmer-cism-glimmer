@@ -415,9 +415,7 @@ contains
        return
     end if
     
-10  call error_log('something wrong with sigma coord file')
-    
-    stop
+10  call write_log('something wrong with sigma coord file',GM_FATAL)
     
   contains
     function f(x,n)
@@ -586,56 +584,47 @@ contains
     write(message,*) 'I/O parameter file      : ',trim(model%funits%ncfile)
     call write_log(message)
     if (model%options%whichtemp.lt.0 .or. model%options%whichtemp.ge.size(temperature)) then
-       call error_log('Error, temperature out of range')
-       stop
+       call write_log('Error, temperature out of range',GM_FATAL)
     end if
     write(message,*) 'temperature calculation : ',model%options%whichtemp,temperature(model%options%whichtemp)
     call write_log(message)
     if (model%options%whichflwa.lt.0 .or. model%options%whichflwa.ge.size(flow_law)) then
-       call error_log('Error, flow_law out of range')
-       stop
+       call write_log('Error, flow_law out of range',GM_FATAL)
     end if
     write(message,*) 'flow law                : ',model%options%whichflwa,flow_law(model%options%whichflwa)
     call write_log(message)
     if (model%options%whichslip.lt.0 .or. model%options%whichslip.ge.size(sliding)) then
-       call error_log('Error, sliding_law out of range')
-       stop
+       call write_log('Error, sliding_law out of range',GM_FATAL)
     end if
     write(message,*) 'sliding_law             : ',model%options%whichslip, sliding(model%options%whichslip)
     call write_log(message)
     if (model%options%whichbwat.lt.0 .or. model%options%whichbwat.ge.size(basal_water)) then
-       call error_log('Error, basal_water out of range')
-       stop
+       call write_log('Error, basal_water out of range',GM_FATAL)
     end if
     write(message,*) 'basal_water             : ',model%options%whichbwat,basal_water(model%options%whichbwat)
     call write_log(message)
     if (model%options%whichmarn.lt.0 .or. model%options%whichmarn.ge.size(marine_margin)) then
-       call error_log('Error, marine_margin out of range')
-       stop
+       call write_log('Error, marine_margin out of range',GM_FATAL)
     end if
     write(message,*) 'marine_margin           : ', model%options%whichmarn, marine_margin(model%options%whichmarn)
     call write_log(message)
     if (model%options%whichbtrc.lt.0 .or. model%options%whichbtrc.ge.size(slip_coeff)) then
-       write(*,*) 'Error, slip_coeff out of range'
-       stop
+       call write_log('Error, slip_coeff out of range',GM_FATAL)
     end if
     write(message,*) 'slip_coeff              : ', model%options%whichbtrc, slip_coeff(model%options%whichbtrc)
     call write_log(message)
     if (model%options%whichstrs.lt.0 .or. model%options%whichstrs.ge.size(stress)) then
-       call error_log('Error, stress_calc out of range')
-       stop
+       call write_log('Error, stress_calc out of range',GM_FATAL)
     end if
     write(message,*) 'stress_calc             : ', model%options%whichstrs, stress(model%options%whichstrs)
     call write_log(message)
     if (model%options%whichevol.lt.0 .or. model%options%whichevol.ge.size(evolution)) then
-       call error_log('Error, evolution out of range')
-       stop
+       call write_log('Error, evolution out of range',GM_FATAL)
     end if
     write(message,*) 'evolution               : ', model%options%whichevol, evolution(model%options%whichevol)
     call write_log(message)
     if (model%options%whichwvel.lt.0 .or. model%options%whichwvel.ge.size(vertical_integration)) then
-       call error_log('Error, vertical_integration out of range')
-       stop
+       call write_log('Error, vertical_integration out of range',GM_FATAL)
     end if
     write(message,*) 'vertical_integration    : ',model%options%whichwvel,vertical_integration(model%options%whichwvel)
     call write_log(message)
@@ -644,7 +633,7 @@ contains
     end if
     if (model%options%periodic_ew.eq.1) then
        call write_log('Periodic EW lateral boundary condition')
-       call write_log('  Warning slightly cheated with how temperature is implemented.')
+       call write_log('  Slightly cheated with how temperature is implemented.',GM_WARNING)
     end if
     if (model%options%hotstart.eq.1) then
        call write_log('Hotstarting model')

@@ -293,8 +293,7 @@ class PrintNC_template(PrintVars):
                 self.stream.write("       status = nf90_inquire_dimension(NCI%id,dimid,len=dimsize)\n")
                 self.stream.write("       if (dimsize.ne.%s) then\n"%dimensions[d])
                 self.stream.write("          write(message,*) 'Error, reading file ',trim(NCI%%filename),' size %s does not match: ',%s\n"%(d,dimensions[d]))
-                self.stream.write("          call error_log(message)\n")
-                self.stream.write("          stop\n")
+                self.stream.write("          call write_log(message,GM_FATAL)\n")
                 self.stream.write("       end if\n")
                 self.stream.write("    end if\n")
                 

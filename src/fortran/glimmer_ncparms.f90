@@ -159,8 +159,7 @@ contains
     ! get metadata
     call handle_metadata(section, handle_output%metadata,.false.)
     if (handle_output%nc%filename(1:1).eq.' ') then
-       call error_log('Error, no file name specified [netCDF output]')
-       stop
+       call write_log('Error, no file name specified [netCDF output]',GM_FATAL)
     end if  
   end function handle_output
   
@@ -182,8 +181,7 @@ contains
     handle_input%current_time = handle_input%get_time_slice
 
     if (handle_input%nc%filename(1:1).eq.' ') then
-       call error_log('Error, no file name specified [netCDF input]')
-       stop
+       call write_log('Error, no file name specified [netCDF input]',GM_FATAL)
     end if
   end function handle_input
 end module glimmer_ncparams

@@ -167,8 +167,7 @@ contains
        return
     end if    
 
-    call error_log('No EISMINT forcing selected')
-    stop
+    call write_log('No EISMINT forcing selected',GM_FATAL)
   end subroutine simple_readconfig
 
   subroutine simple_printconfig(climate)

@@ -1,3 +1,10 @@
+2005-02-10 Magnus Hagdorn
+ * glimmer_log: improved logging by allowing various severety levels (merged in Ian's implementation)
+ * hooked up logging (Makefile, bin2ncdf.f90, glide_pdd.f90, glide_setup.f90, glimmer_CFproj.f90, glimmer_config.f90,
+	glimmer_ncdf.f90, glimmer_ncparms.f90, glimmer_ts.f90, glimmer_utils.f90, gmt.f90, input2ncdf.f90, simple_forcing.f90,
+	generate_ncvars.py)
+ * removed obsolete netCDF stuff and isostasy code
+
 2005-02-09 Magnus Hagdorn
  * merged in new stuff part 1
 

@@ -113,7 +113,7 @@ contains
 
   subroutine gmt_set(p_type,latc,lonc,radea,std_par,project_info)
 
-    use glide_messages
+    use glimmer_log
 
     !*FD Initialise a GMT parameter type
 
@@ -148,7 +148,7 @@ contains
       call gmt_map_init_stereo(latc,lonc,project_info)
     case default
       write(errtxt,*)'* ERROR: ',p_type,' is not a valid projection type.'
-      call glide_msg(GM_FATAL,__FILE__,__LINE__,trim(errtxt))
+      call write_log(trim(errtxt),GM_FATAL,__FILE__,__LINE__)
     end select
 
   end subroutine gmt_set

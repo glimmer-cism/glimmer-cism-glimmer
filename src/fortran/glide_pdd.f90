@@ -259,7 +259,7 @@ contains
     !  tmj -- the actual july temperature
     !--------------------------------------------------------------------
 
-    call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,'Calculating PDD table...')
+    call write_log(GM_DIAGNOSTIC,'Calculating PDD table...')
 
     do tma = pddcalc%iy, pddcalc%iy+(pddcalc%ny-1)*pddcalc%dy, pddcalc%dy
 
@@ -284,7 +284,7 @@ contains
        end do
     end do
 
-    call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,'   ...done.')
+    call write_log(GM_DIAGNOSTIC,'   ...done.')
 
   end subroutine pddtabgrn
 

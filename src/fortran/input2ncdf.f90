@@ -73,6 +73,9 @@ program input2ncdf
   real(kind=sp), dimension(:,:), pointer :: data
   integer,       dimension(:,:), pointer :: maskdata
 
+  ! start logging
+  call open_log(unit=50)
+
   allocate(outfile)
   write(*,*) 'Enter name of latitude file.'
   read(*,*) latfile
@@ -216,6 +219,7 @@ program input2ncdf
   end if
 
   status = nf90_close(NC%id)
+  call close_log
 contains
   subroutine readplan(fname,data,time,ewn,nsn, delta)
     use glimmer_global, only : sp
@@ -239,8 +243,7 @@ contains
 
     inquire(file=fname,exist=here)
     if ( .not. here ) then
-      write(errtxt,*)'planform file ',trim(fname),' not found'
-      call glide_msg(GM_FATAL,__FILE__,__LINE__,trim(errtxt))
+      call write_log(GM_FATAL,'planform file '//trim(fname)//' not found',__FILE__,__LINE__)
     endif
 
 #ifdef CVF
@@ -265,7 +268,6 @@ contains
   subroutine maskread(filename,data,nx,ny)
 
     use glimmer_global, only : sp
-    use glide_messages
 
     implicit none
 
@@ -289,7 +291,7 @@ contains
 
     inquire(file=filename,exist=there)
     if ( .not. there ) then
-      call glide_msg(GM_FATAL,__FILE__,__LINE__,'mask file '//trim(filename)//' not found')
+      call write_log(GM_FATAL,'mask file '//trim(filename)//' not found',__FILE__,__LINE__)
     endif
 
 #ifdef CVF

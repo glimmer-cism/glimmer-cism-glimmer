@@ -217,7 +217,7 @@ contains
 
   subroutine check_conformal_2d_real(array1,array2,label)
 
-    use glide_messages
+    use glimmer_log
 
     !*FD Checks that two arrays
     !*FD are of the same size. Aliased as {\tt check\_conformal}.
@@ -228,9 +228,9 @@ contains
 
     if ((size(array1,1)/=size(array2,1)).or.(size(array1,2)/=size(array2,2))) then
       if (present(label)) then
-        call glide_msg(GM_FATAL,__FILE__,__LINE__,'Non-conformal arrays. Label: '//label)
+        call write_log('Non-conformal arrays. Label: '//label,GM_FATAL,__FILE__,__LINE__)
       else
-        call glide_msg(GM_FATAL,__FILE__,__LINE__,'ERROR: Non-conformal arrays. No label')
+        call write_log('ERROR: Non-conformal arrays. No label',GM_FATAL,__FILE__,__LINE__)
       endif
     endif
 

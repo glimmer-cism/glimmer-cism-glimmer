@@ -41,9 +41,55 @@
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 module glimmer_log
-  !*FD module providing file logging
+  !*FD module providing file logging and error/message handling
+  !*FD Six levels of message/error are defined:
+  !*FD \begin{itemize}
+  !*FD \item Diagnostic messages
+  !*FD \item Timestep enumeration and related information
+  !*FD \item Information messages
+  !*FD \item Warning messages
+  !*FD \item Error messages
+  !*FD \item Fatal error messages
+  !*FD \end{itemize}
+  !*FD These are numbered 1--6, with increasing severity, and the level of
+  !*FD message output may be set to output all messages, only those above a particular 
+  !*FD severity, or none at all. It should be noted that even if all messages are
+  !*FD turned off, the model will still halt if it encounters a fatal
+  !*FD error!
+  !*FD 
+  !*FD The other point to note is that when calling the messaging routines,
+  !*FD the numerical identifier of a message level should be replaced by the
+  !*FD appropriate parameter:
+  !*FD \begin{itemize}
+  !*FD \item \texttt{GM\_DIAGNOSTIC}
+  !*FD \item \texttt{GM\_TIMESTEP}
+  !*FD \item \texttt{GM\_INFO}
+  !*FD \item \texttt{GM\_WARNING}
+  !*FD \item \texttt{GM\_ERROR}
+  !*FD \item \texttt{GM\_FATAL}
+  !*FD \end{itemize}
 
   use glimmer_global, only : fname_length
+
+  integer,parameter :: GM_DIAGNOSTIC = 1 !*FD Numerical identifier for diagnostic messages.
+  integer,parameter :: GM_TIMESTEP   = 2 !*FD Numerical identifier for timestep messages.
+  integer,parameter :: GM_INFO       = 3 !*FD Numerical identifier for information messages.
+  integer,parameter :: GM_WARNING    = 4 !*FD Numerical identifier for warning messages.
+  integer,parameter :: GM_ERROR      = 5 !*FD Numerical identifier for (non-fatal) error messages.
+  integer,parameter :: GM_FATAL      = 6 !*FD Numerical identifier for fatal error messages.
+
+  integer, private, parameter            :: GM_levels = 6
+  logical, private, dimension(GM_levels) :: gm_show = .true.
+
+  character(len=*), parameter, dimension(0:GM_levels), private :: msg_prefix = (/ &
+       '* UNKNOWN      ', &
+       '*              ', &
+       '*              ', &
+       '               ', &
+       '* WARNING:     ', &
+       '* ERROR:       ', &
+       '* FATAL ERROR :' /)
+
 
   character(len=fname_length),private :: glimmer_logname !*FD name of log file
   integer,private :: glimmer_unit=6                      !*FD log unit
@@ -79,30 +125,45 @@ contains
     call write_log_div
   end subroutine open_log
 
-  subroutine write_log(message,file,line)
+  subroutine write_log(message,type,file,line)
     !*FD write to log
     implicit none
+    integer,intent(in),optional          :: type    !*FD Type of error to be generated (see list above).
     character(len=*),intent(in)          :: message !*FD message to be written
     character(len=*),intent(in),optional :: file    !*FD the name of the file which triggered the message
     integer,intent(in),optional          :: line    !*FD the line number at the which the message was triggered
 
-    if (present(file) .and. present(line)) then
-       write(glimmer_unit,*) '(',file,line,') ',message
+    ! local variables
+    character(len=200) :: msg
+    integer :: local_type
+
+    local_type = 0
+    if (present(type)) then
+       if (type.ge.1 .or. type.le.GM_levels) then
+          local_type = type
+       end if
     else
-       write(glimmer_unit,*) trim(message)
+       local_type = GM_INFO
+    end if
+
+    ! constructing message
+    if (present(file) .and. present(line)) then
+       write(msg,*) trim(msg_prefix(local_type))//' (',file,line,') '//message
+    else
+       write(msg,*) trim(msg_prefix(local_type))//' '//message
+    end if
+    ! messages are always written to file log
+    write(glimmer_unit,*) msg
+    ! and maybe to std out
+    if (local_type.ne.0) then
+       if (gm_show(type)) write(*,*) msg
+    end if
+    ! stop logging if we encountered a fatal error
+    if (local_type.eq.GM_FATAL) then
+       call close_log
+       stop
     end if
   end subroutine write_log
-    
-  subroutine error_log(message,file,line)
-    !*FD write an error to log and shut down
-    implicit none
-    character(len=*),intent(in)          :: message !*FD message to be written
-    character(len=*),intent(in),optional :: file    !*FD the name of the file which triggered the message
-    integer,intent(in),optional          :: line    !*FD the line number at the which the message was triggered
-
-    call write_log(message,file,line)
-    call close_log
-  end subroutine error_log
 
   subroutine write_log_div
     !*FD start a new section
@@ -132,4 +193,20 @@ contains
     close(glimmer_unit)
     open(unit=glimmer_unit,file=glimmer_logname, position="append", status='old')
   end subroutine sync_log
+
+  subroutine glimmer_set_msg_level(level)
+    !*FD Sets the output message level.
+    integer, intent(in) :: level !*FD The message level (6 is all messages; 0 is no messages). 
+    integer :: i
+
+    do i=1,GM_levels
+       if (i>(6-level)) then
+          gm_show(i)=.true.
+       else
+          gm_show(i)=.false.
+       endif
+    enddo
+
+  end subroutine glimmer_set_msg_level
+
 end module glimmer_log

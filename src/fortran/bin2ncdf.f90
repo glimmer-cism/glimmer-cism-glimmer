@@ -319,7 +319,7 @@ contains
           return
        end select
     end if
-    call glide_msg(GM_FATAL,__FILE__,__LINE__,'some error occured, we should not be here')
+    call write_log(GM_FATAL,'some error occured, we should not be here',__FILE__,__LINE__)
   end function map2d
 
   function map3d(id,index)
@@ -382,7 +382,7 @@ contains
           return
        end select
     end if
-    call glide_msg(GM_FATAL,__FILE__,__LINE__,'some error occured, we should not be here')
+    call write_log(GM_FATAL,'some error occured, we should not be here',__FILE__,__LINE__)
   end function map3d
 
   subroutine scan0d(vars)
@@ -484,7 +484,7 @@ contains
     real(kind=sp) :: rdummy, time
 
     do while (ios == 0)
-       call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,'nlub')
+       call write_log(GM_DIAGNOSTIC,'nlub')
        read(unit,iostat=ios) time,rdummy,rdummy,rdummy, ((data0d(i,v),i=1,numspots),v=1,numvar0d)
        call timeslice(time,outfile)
        do v=1,numvar0d
@@ -557,7 +557,7 @@ program bin2ncdf
   use bin2ncdf_mod
   use glimmer_ncdf
   use glimmer_ncfile
-  use glide_messages
+  use glimmer_log
   use glide_types
 
   use paramets, only : len0
@@ -576,24 +576,27 @@ program bin2ncdf
   write(*,*) 'Enter name of output netCDF file'
   read(*,*) NC%filename
 
+  ! start logging
+  call open_log(unit=50)
+
   ! first scan of input file to determine list of variables
   inquire (exist=do0d,file=trim(infile)//'.gl0')
   if (do0d) then
-     call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,'Doing 0d...')
+     call write_log(GM_DIAGNOSTIC,'Doing 0d...')
      call open0d(trim(infile)//'.gl0',unit0d)
      !call scan0d(NC%do_var)
      !NC%do_spot=.true.
   end if
   inquire (exist=do2d,file=trim(infile)//'.gl2')
   if (do0d) then
-     call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,'Doing 2d...')
+     call write_log(GM_DIAGNOSTIC,'Doing 2d...')
      call open2d(trim(infile)//'.gl2',unit2d)
      call scan2d(unit2d,NC%do_var)
      call close2d(unit2d)
   end if
   inquire (exist=do3d,file=trim(infile)//'.gl3')
   if (do3d) then
-     call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,'Doing 3d...')
+     call write_log(GM_DIAGNOSTIC,'Doing 3d...')
      call open3d(trim(infile)//'.gl3',unit3d)
      call scan3d(unit3d,NC%do_var)
      call close3d(unit3d)
@@ -626,6 +629,7 @@ program bin2ncdf
   end if
 
   status = nf90_close(NC%id)
+  call close_log
 end program bin2ncdf
   
   

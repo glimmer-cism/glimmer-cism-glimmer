@@ -305,7 +305,6 @@ subroutine nc_errorhandle(file,line,status)
   !*FD netCDF return value
   
   if (status.ne.NF90_NOERR) then
-     call error_log(nf90_strerror(status),file=file,line=line)
-     stop
+     call write_log(nf90_strerror(status),type=GM_FATAL,file=file,line=line)
   end if
 end subroutine nc_errorhandle

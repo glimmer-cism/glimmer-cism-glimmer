@@ -95,8 +95,7 @@ contains
 
     inquire (exist=there,file=fname)
     if (.not.there) then
-       call error_log('Cannot open configuration file '//trim(fname))
-       stop
+       call write_log('Cannot open configuration file '//trim(fname),GM_FATAL)
     end if
     
     unit=99
@@ -124,10 +123,9 @@ contains
           else
              ! handle value
              if (.not.associated(this_section)) then
-                call write_log('Error, no section defined yet')
+                call write_log('No section defined yet',GM_ERROR)
                 write(message,*) trim(adjustl(fname)), linenr
-                call error_log(message)
-                stop
+                call write_log(message,GM_FATAL)
              end if
              call handle_value(linenr,line,this_value)
              if (.not.associated(this_section%values)) then
@@ -415,8 +413,7 @@ contains
     end do
     if (line(i:i).ne.']') then
        write(message,*) 'Cannot find end of section ',linenr
-       call error_log(message)
-       stop
+       call write_log(message,GM_FATAL)
     end if
 
     call InsertSection(trim(adjustl(line(2:i-1))),section)
@@ -439,8 +436,7 @@ contains
     end do
     if (.not.(line(i:i).eq.'=' .or. line(i:i).eq.':')) then
        write(message,*) 'Cannot find = or : ',linenr
-       call error_log(message)
-       stop
+       call write_log(message,GM_FATAL)
     end if
 
     call InsertValue(trim(adjustl(line(:i-1))), trim(adjustl(line(i+1:))),value)

@@ -49,8 +49,6 @@ module glimmer_CFproj
   !*FD library in anyway, it simply handles NetCDF data and projection
   !*FD parameters in an appropriate format.
 
-  use glide_messages
-
   private
   public  CFproj_projection,CFproj_proj4,CFproj_GetProj,CFproj_PutProj,CFproj_define, CFproj_allocated
   public  CFP_LAEA,CFP_AEA,CFP_LCC,CFP_STERE
@@ -195,11 +193,11 @@ contains
           CFproj_GetProj%stere => CFproj_get_stere(ncid,varid)
        else
           CFproj_GetProj%found = .false.
-          write(*,*) 'Warning, do not know about this projection: ',trim(mapname)
+          call write_log('Do not know about this projection: '//(mapname),GM_ERROR)
        end if
     else
         CFproj_GetProj%found = .false.
-       call write_log('Warning, no map projection found')
+       call write_log('No map projection found',GM_WARNING)
     end if
   end function CFproj_GetProj
 
@@ -210,7 +208,6 @@ contains
     !*FD Returns a proj4 parameter string for a given set of projection parameters
     !*FDRV Pointer to array of projection parameter strings
 
-    use glide_messages
     use glimmer_log
 
     implicit none
@@ -218,7 +215,7 @@ contains
     type(CFproj_projection) :: projection !*FD Projection of interest
 
     if (.not.CFproj_allocated(projection)) then
-       call write_log('Warning, no projection found!')
+       call write_log('No known projection found!',GM_WARNING)
        return
     end if
 
@@ -235,8 +232,7 @@ contains
        CFproj_proj4 => CFproj_proj4_stere(projection%stere)
        return
     else
-       call glide_msg(GM_WARNING,__FILE__,__LINE__,'No projection found!')
-       call write_log('Warning, no known projection found!')
+       call write_log('No known projection found!',GM_WARNING)
     end if
   end function CFproj_proj4
 
@@ -247,7 +243,6 @@ contains
     !*FD write projection to a netCDF file.
 
     use netcdf
-    use glide_messages
     use glimmer_log
 
     implicit none
@@ -257,7 +252,7 @@ contains
     integer, intent(in) :: mapid            !*FD Handle of map projection in netCDF file.
 
     if (.not.CFproj_allocated(projection)) then
-       call write_log('Warning, no projection found!')
+       call write_log('No known projection found!',GM_WARNING)
        return
     end if
 
@@ -274,9 +269,7 @@ contains
        call CFproj_put_stere(ncid,mapid,projection%stere)
        return
     else
-       call glide_msg(GM_FATAL,__FILE__,__LINE__,'Could not find any projection')
-       call write_log('Warning, could not find any projection')
-
+       call write_log('No known projection found!',GM_WARNING)
     end if
   end subroutine CFproj_PutProj
 
@@ -291,7 +284,7 @@ contains
        false_easting, &
        false_northing)
 
-    use glide_messages
+    use glimmer_log
 
     type(CFproj_projection),intent(inout) :: cfp 
     integer,intent(in) :: ptype
@@ -360,7 +353,7 @@ contains
        if(present(false_northing)) &
             cfp%stere%false_northing = false_northing
     case default
-       call glide_msg(GM_FATAL,__FILE__,__LINE__,'Unrecognised projection type')
+       call write_log('Unrecognised projection type',GM_FATAL,__FILE__,__LINE__)
     end select
 
   end subroutine CFproj_define
@@ -395,7 +388,6 @@ contains
 
   function CFproj_get_stere_polar(ncid,mapid)
     use netcdf
-    use glide_messages
     use glimmer_log
     implicit none
     type(CFproj_stere), pointer :: CFproj_get_stere_polar
@@ -423,10 +415,8 @@ contains
        CFproj_get_stere_polar%standard_parallel = dummy
     end if
     if (CFproj_get_stere_polar%standard_parallel.ne.0 .and. CFproj_get_stere_polar%scale_factor_at_proj_origin.ne.0.) then
-       call glide_msg(GM_FATAL,__FILE__,__LINE__,'(stereographic projection), can only handle either'// &
-          ' standard_parallel or scale_factor_at_proj_origin')
-       call error_log('Error (stereographic projection), can only handle either standard_parallel or scale_at_orig')
-       stop
+       call write_log('Error (stereographic projection), can only handle either standard_parallel or scale_at_orig',&
+            GM_FATAL,__FILE__,__LINE__)
     end if
   end function CFproj_get_stere_polar
 

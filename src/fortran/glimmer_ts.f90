@@ -112,8 +112,7 @@ contains
     real, dimension(:)    :: value  !*FD interpolated value
        
     if (size(value).ne.ts%numv) then
-       call error_log('Error, wrong number of values',__file__,__line__)
-       stop
+       call write_log('Error, wrong number of values',GM_FATAL,__file__,__line__)
     end if
 
     value = ts%values(:,get_i(ts,time))
@@ -142,8 +141,7 @@ contains
     real,dimension(size(value)) :: slope
 
     if (size(value).ne.ts%numv) then
-       call error_log('Error, wrong number of values',__file__,__line__)
-       stop
+       call write_log('Error, wrong number of values',GM_FATAL,__file__,__line__)
     end if
     
     i = get_i(ts,time)

@@ -40,7 +40,7 @@ $(SUBDIRS):
 
 
 libglimmer.a: 	glimmer_CFproj.o glimmer_config.o glimmer_global.o glimmer_utils.o glimmer_log.o glimmer_ts.o\
-		glimmer_ncdf.o glimmer_ncio.o glimmer_ncparms.o glimmer_paramets.o glimmer_physcon.o gmt.o kelvin.o profile.o glide_messages.o
+		glimmer_ncdf.o glimmer_ncio.o glimmer_ncparms.o glimmer_paramets.o glimmer_physcon.o gmt.o kelvin.o profile.o
 		ar rcv $@ $^
 		if [ "$(RANLIB)" != "" ] ; then $(RANLIB) $@ ; fi
 
@@ -103,7 +103,7 @@ install-progs:	$(PROGS)
 
 # clean up
 clean : 
-	rm -f *.$(OBJ_EXT) *.mod f90_dep.mak $(PROGS) $(LIBS)
+	rm -f *.$(OBJ_EXT) *.mod f90_dep.mak $(PROGS) $(LIBS) $(AUTOGEN)
 	for dir in $(SUBDIRS); do \
 	  $(MAKE) -C $$dir clean; \
 	done
