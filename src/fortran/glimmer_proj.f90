@@ -73,9 +73,9 @@ module glimmer_project
     real(rk)       :: dy                         !*FD the nominal $y$ grid-spacing at the centre of the projection
     real(rk)       :: cpx,cpy                    !*FD The location of the map projection centre within the grid ($x$ and $y$)
     real(rk)       :: latc,lonc                  !*FD The location of the projection centre in lat/lon space (lat and lon)
-    real(rk),dimension(:,:),pointer :: sintheta  !*FD sines of grid angle relative to north.
-    real(rk),dimension(:,:),pointer :: costheta  !*FD coses of grid angle relative to north.
-    real(rk),dimension(:,:),pointer :: latitudes !*FD The latitude of each grid-point
+    real(rk),dimension(:,:),pointer :: sintheta => NULL()  !*FD sines of grid angle relative to north.
+    real(rk),dimension(:,:),pointer :: costheta => NULL() !*FD coses of grid angle relative to north.
+    real(rk),dimension(:,:),pointer :: latitudes => NULL() !*FD The latitude of each grid-point
   end type projection
 
   real(rk),parameter :: pi=3.141592654  !*FD The value of pi

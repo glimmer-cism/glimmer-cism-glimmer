@@ -1,3 +1,7 @@
+2004-06-09 Magnus Hagdorn
+ * initialised pointers in glimmer_proj.f90 with NULL()
+   (fixes bug)
+	
 2004-06-08 Ian Rutt
  * Merged netCDF_IO branch into main trunk - seems to work OK. 
    *** NB *** The new capability to mask out some parts of the domain
