@@ -1,4 +1,8 @@
 2004-06-25 Magnus Hagdorn
+ * added some more simple experiments
+ * glide_setup.f90: calculate sigma if no sigma file given
+
+2004-06-25 Magnus Hagdorn
  * added start and end time (glide_setup.f90, glide_types.f90, simple_glide.f90)
  * added and used logging
 	

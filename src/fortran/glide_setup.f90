@@ -367,16 +367,30 @@ contains
     inquire (exist=there,file=model%funits%sigfile)
   
     if (there) then
-      open(unit,file=model%funits%sigfile)
-      read(unit,'(f5.2)',err=10,end=10) (model%numerics%sigma(up), up=1,upn)
-      close(unit)
-      return
+       call write_log('Reading sigma file: '//model%funits%sigfile)
+       open(unit,file=model%funits%sigfile)
+       read(unit,'(f5.2)',err=10,end=10) (model%numerics%sigma(up), up=1,upn)
+       close(unit)
+       return
+    else
+       call write_log('Calculating sigma')
+       do up=1,upn
+          model%numerics%sigma(up) = f(real(up-1)/real(upn-1),2.)
+       end do
+       return
     end if
-
+    
 10  call error_log('something wrong with sigma coord file')
- 
+    
     stop
-
+    
+  contains
+    function f(x,n)
+      implicit none
+      real :: f,x,n
+      
+      f = (1-(x+1)**(-n))/(1-2**(-n))
+    end function f
   end subroutine glide_load_sigma
 
 
