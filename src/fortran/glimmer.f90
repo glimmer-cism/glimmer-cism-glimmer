@@ -357,8 +357,8 @@ contains
     real(rk),dimension(:,:),optional,intent(inout) :: orog_out        !*FD The fed-back, output orography (m)
     real(rk),dimension(:,:),optional,intent(inout) :: albedo          !*FD surface albedo
     real(rk),dimension(:,:),optional,intent(inout) :: ice_frac        !*FD grid-box ice-fraction
-    real(rk),dimension(:,:),optional,intent(inout) :: water_in        !*FD Input water flux          (mm/s)
-    real(rk),dimension(:,:),optional,intent(inout) :: water_out       !*FD Output water flux         (mm/s)
+    real(rk),dimension(:,:),optional,intent(inout) :: water_in        !*FD Input water flux          (mm)
+    real(rk),dimension(:,:),optional,intent(inout) :: water_out       !*FD Output water flux         (mm)
     real(rk),               optional,intent(inout) :: elapsed_time    !*FD Time over which output is valid (hours)
     real(rk),               optional,intent(inout) :: total_water_in  !*FD Area-integrated water flux in (kg)
     real(rk),               optional,intent(inout) :: total_water_out !*FD Area-integrated water flux out (kg)
@@ -540,17 +540,8 @@ contains
             params%instances(i)%frac_coverage, &
             params%cov_normalise)
             
-        if (present(water_in)) &
-            water_in=splice_field(water_in, &
-            win_temp, &
-            params%instances(i)%frac_coverage, &
-            params%cov_normalise)
-            
-        if (present(water_out)) &
-            water_out=splice_field(water_out, &
-            wout_temp, &
-            params%instances(i)%frac_coverage, &
-            params%cov_normalise)
+        if (present(water_in))  water_in =win_temp
+        if (present(water_out)) water_out=wout_temp
 
         ! Add total water variables to running totals
 

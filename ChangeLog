@@ -1,3 +1,6 @@
+2005-01-26 Ian Rutt
+ * Changed water flux fields so they replace the input rather than being spliced into it
+
 2005-01-18 Ian Rutt
  * Plumbed in flow-routing code (and corrected a bug)
 
