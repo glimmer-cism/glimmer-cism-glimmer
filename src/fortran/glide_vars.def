@@ -129,6 +129,7 @@ long_name:     basal slip velocity in x direction
 data:          data%velocity%ubas(1:data%general%ewn-1,1:data%general%nsn-1)
 factor:        scale2d_f5
 standard_name: land_ice_basal_x_velocity
+load:          1
 
 [vbas]
 dimensions:    time, y0, x0
@@ -137,6 +138,7 @@ long_name:     basal slip velocity in y direction
 data:          data%velocity%vbas(1:data%general%ewn-1,1:data%general%nsn-1)
 factor:        scale2d_f5
 standard_name: land_ice_basal_y_velocity
+load:          1
 
 [thk]
 dimensions:    time, y1, x1

@@ -1,3 +1,8 @@
+2005-02-16 Magnus Hagdorn
+ * configure.in: fixed bug where --enable-doc and --enable-profile were mixed
+   up
+ * glide_vars.def: load ubas and vbas
+
 2005-02-15 Magnus Hagdorn
  * configure.in: always check for programs required to built doc
  * installation.tex: updated do to reflect new built system
