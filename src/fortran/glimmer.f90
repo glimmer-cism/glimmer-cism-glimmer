@@ -156,7 +156,7 @@ contains
 
     ! Internal variables
 
-    character(fname_length),dimension(:),allocatable :: fnamelist   ! The parameter filenames for each instance
+    character(fname_length),dimension(:),pointer :: fnamelist=>null()   ! The parameter filenames for each instance
     integer :: i,args
 
     ! ---------------------------------------------------------------
@@ -206,28 +206,15 @@ contains
     params%g_av_merwind = 0.0
 
     ! ---------------------------------------------------------------
-    ! Open the namelist file and read in the parameters for each run,
+    ! Open the global configuration file and read in the parameters for each run,
     ! allocating appropriately
     ! ---------------------------------------------------------------
 
-    open (params%file_unit,file=paramfile)
+    call read_global_parameters(paramfile,params,fnamelist)
 
-    ! Read in global parameters from this file
+    ! Allocate the array of instances
 
-    call get_globals(params)
-
-    ! Allocate array of glimmer instances
-    ! and the list of associated namelist files
-
-    allocate(fnamelist(params%ninstances),params%instances(params%ninstances))
-
-    ! Get the list of namelist files
-
-    call get_fnamelist(params%file_unit,fnamelist)
-
-    ! Close the glimmer parameter file
-
-    close(params%file_unit)
+    allocate(params%instances(params%ninstances))
 
     ! ---------------------------------------------------------------
     ! Read namelist file for each glimmer instance, and
@@ -930,51 +917,57 @@ contains
 
 !======================================================
 
-  subroutine get_globals(params)
+  subroutine read_global_parameters(filename,params,fnamelist)
 
-    !*FD reads namelist of global
-    !*FD parameters from already-open file
-
-    implicit none
-
-    type(glimmer_params),intent(inout) :: params !*FD ice model parameters
-    integer :: ninst
-    real(rk) :: tinc
-
-    namelist /file_paras/ ninst
-    namelist /timesteps/ tinc
-
-    ninst=params%ninstances
-    tinc=params%tstep_main
-
-    read(params%file_unit,nml=timesteps)
-    read(params%file_unit,nml=file_paras)
-
-    params%ninstances=ninst
-    params%tstep_main=tinc
- 
-   end subroutine get_globals
-
-!=====================================================
-
-  subroutine get_fnamelist(unit,fnamelist)
-
-    !*FD reads namelist of parameter files 
-    !*FD for each instance from already open file
-
-    implicit none
-
-    integer,intent(in) :: unit !*FD logical file unit to use
-    character(*),dimension(:),intent(out) :: fnamelist !*FD array of namelist filenames
-    integer :: i
+    use glimmer_config
+    use glimmer_global
+    use glide_messages
     
-    do i=1,size(fnamelist)
-      read(unit,100)fnamelist(i)
-    enddo
+    implicit none
 
-100 format(A)
+    !*FD Reads the global configuration file, including the list
+    !*FD of configuration filenames for individual instances
 
-  end subroutine get_fnamelist
+    character(*),        intent(in)    :: filename  !*FD Filename of top-level configuration file
+    type(glimmer_params),intent(inout) :: params    !*FD ice model parameters
+    character(*),dimension(:),pointer :: fnamelist
+
+    ! Internal pointers/variables
+
+    type(ConfigSection), pointer :: config,section
+    character(20),dimension(1) :: allowed_sections=(/'parameters'/)
+    character(20),dimension(2) :: allowed_values=(/'time-step','instance filenames'/)
+    character(fname_length),dimension(:),pointer :: instance_fnames => null()
+    character(80) :: outtxt
+
+    call ConfigRead(filename,config)
+
+    if (ValidateSections(config,allowed_sections)/=0) then
+       write(outtxt,*)'Unexpected sections in configuration file: ',trim(filename)
+       call glide_msg(GM_FATAL,__FILE__,__LINE__,trim(outtxt))
+    end if
+
+    call GetSection(config,section,allowed_sections(1))
+    if (associated(section)) then
+       if (ValidateValueNames(section,allowed_values)/=0) then
+          write(outtxt,*)'Unexpected value names in configuration file: ',trim(filename)
+          call glide_msg(GM_FATAL,__FILE__,__LINE__,trim(outtxt))
+       end if
+       call GetValue(section,'time-step',params%tstep_main)
+       call GetValue(section,'instance filenames',instance_fnames)
+    else
+       write(outtxt,*)'No parameters section found in top-level confiuration file: ',trim(filename)
+       call glide_msg(GM_FATAL,__FILE__,__LINE__,trim(outtxt))
+    end if
+
+    if(associated(fnamelist)) deallocate(fnamelist)
+
+    allocate(fnamelist(size(instance_fnames)))
+
+    fnamelist=instance_fnames
+    params%ninstances=size(instance_fnames)
+    
+  end subroutine read_global_parameters
 
 !========================================================
 

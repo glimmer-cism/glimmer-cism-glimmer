@@ -1,7 +1,10 @@
 2004-08-25 Ian Rutt
  * Fixed problem with reading arrays from config files in
    glimmer_setup.f90
-
+ * Replaced top-level glimmer namelist with new-style configuration file.
+ * Began updating documentation
+ * Added character array handling to glimmer_config.f90
+	
 2004-08-24 Ian Rutt
  * Added user input to determine length of glimmer_example run
 

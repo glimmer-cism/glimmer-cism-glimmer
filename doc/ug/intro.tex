@@ -2,20 +2,23 @@
 
 \subsection{What is GLIMMER?}
 
-GLIMMER\footnote{GENIE Land-Ice Model with Multiply Enabled
-Regions} is the land ice component of GENIE\footnote{Grid-ENabled
-Integrated Earth-system model}. Its design is motivated by the desire to
+GLIMMER is the land ice component of GENIE, and integrated Earth-system model
+being developed as part of the UK e-science initiative, and funded by
+NERC. The name GLIMMER stands for Genie Land-Ice Model with Multiply-Enabled
+Regions, and its design is motivated by the desire to
 create an ice modelling system which is easy to interface to a wide variety of
-climate models, without 
-the user having to have a detailed knowledge of its inner workings. This is
+climate models, without the user having to have a detailed knowledge of its
+inner workings. This is
 accomplished by providing a very well-defined interface, which allows access to
 all the functionality required by the user. All model fields and
 time-dependent parameters required by the ice model are passed to it through
 the argument lists of the supplied subroutines. Initialisation data is
-supplied through namelist files, while netCDF\footnote{\texttt{http://www.unidata.ucar.edu/packages/netcdf/index.html}} 
-files are used for platform independent binary I/O. 
-Currently, a suite of Matlab routines is provided for visualisation,
-but these may be replaced in due course.
+supplied through easily-understood confuguration files, while 
+netCDF\footnote{\texttt{http://www.unidata.ucar.edu/packages/netcdf/index.html}} 
+files are used for platform independent binary I/O. Some simple visualisation
+code, built on Python, GMT and Proj4 is supplied, although this has not yet
+reached a level of functionality to supplant a fully-featured visualisation
+and programming environment such as Matlab.
 
 \subsection{What are `Multiply Enabled Regions'?}
 
@@ -49,19 +52,17 @@ In order to use GLIMMER, the following is necessary:
 \item Global input fields must be supplied on a latitude-longitude
   grid. The grid does not have to be uniform in latitude, meaning that
   Gaussian grids may be used. Irregular grids (e.g. icosahedral grids) are not
-  supported currently. 
-\item The boundaries between global grid boxes should be located halfway
-  between adjacent grid-points. This is not strictly true of a Gaussian grid,
-  but we make that approximation at the moment. Functionality may be provided
-  to deal with this in future versions, however.
+  supported currently. The boundaries of the grid boxes may be specified; if
+  not, they are assumed to lie half-way between the grid-points in lat-lon space.
 \item In the global field arrays, latitude must be indexed from north to south
-  -- i.e. the first row of the array is the northern-most one. Again, some
+  -- i.e. the first row of the array is the northern-most one. Some
   flexibility might be introduced into this in the future.
-\item The global grid must not have grid points at either of the poles.
+\item The global grid must not have grid points at either of the poles. This
+  restriction is not expected to be permanent, but in the meantime
+  can probably be overcome by moving the location of the polar points to be
+  fractionally short of the pole (e.g. at 89.9$^{\circ}$ and -89.9$^{\circ}$).
 \item The user must supply the bedrock topography for each of the ice model
-  instances. These grids are read from netCDF files.
-\item GLIMMER is written in FORTRAN 90/95, and may currently only be called from
-  other FORTRAN code. Work will begin soon on componentization of
-  all parts of GENIE, comprising the `wrapping' of components in Java,
-  etc. This will make the source language irrelevant, apparently.
+  instances. These data are read from netCDF files.
+\item GLIMMER is written in FORTRAN 95, and the Unix/Linux build system
+  requires Python, which may be obtained from \texttt{www.python.org}. 
 \end{itemize}
