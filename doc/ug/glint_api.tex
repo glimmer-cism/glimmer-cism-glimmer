@@ -169,9 +169,10 @@ available for feedback.
   small-scale precipitation parameterization is being used (with
   \texttt{whichprecip} set to 2). In other circumstances, \texttt{zonwind} and
   \texttt{merwind} must still be arrays of the correct rank, but need not be
-  the correct size, or may be unallocated if desired.
-\item The optional output fields only refers to the parts of the globe
-  covered by the GLINT ice model instances. The fraction of each global
+  the correct size, or may be unallocated if desired (this should be changed
+  at some point).
+\item The output field arguments only return data relevant to the parts of the globe
+  covered by the ice model instances. The fraction of each global
   grid-box covered by ice model instances may be obtained using the
   \texttt{glint\_coverage\_map} subroutine below. 
 \item The output orography field is given as a mean calculated over the part
@@ -200,8 +201,16 @@ What does this mean? Well, the ice model covers 70\% of the grid-box, and in
 that part the mean surface elevation is 200\,m. Of the part covered by the ice
 model, half is actually covered by ice. Thus, 35\% ($0.5\times 0.7$) of the global grid-box is
 covered by ice, and the ice has an mean albedo of 40\%. The model makes no suggestion for the
-albedo or elevation of the other 65\% of the grid-box.
+albedo or elevation of the other 65\% of the grid-box. Currently, ice albedo
+is a constant that may be changed in the appropriate configuration file, but
+this output field is provided against the possibility that the model may be
+extended at some point to include a model of ice albedo.
 %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% END_GLINT                                   %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+\newpage
 \section{Subroutine \texttt{end\_glint}}
 %
 \paragraph{Purpose} To perform general tidying-up operations, close files, etc.
@@ -215,16 +224,32 @@ albedo or elevation of the other 65\% of the grid-box.
 \paragraph{Arguments}
 %
 \begin{center}
-\begin{tabular}{llll}
-\texttt{params} & \texttt{type(glint\_params)} & \texttt{intent(inout)} & Ice model
-parameters \\
-\end{tabular}
+  \tablefirsthead{%
+    \hline
+  } 
+  \tablehead{%
+    \hline
+    \multicolumn{4}{|p{0.98\textwidth}|}{\emph{\small continued from previous page}}\\
+    \hline
+  } 
+  \tabletail{%
+    \hline
+    \multicolumn{4}{|r|}{\emph{\small continued on next page}}\\
+    \hline}
+      \tablelasttail{\hline}
+        \begin{supertabular}{lllp{5.5cm}}
+	  \texttt{params} & \texttt{type(glint\_params)} & \texttt{intent(inout)} & Ice model paramters \\
+\end{supertabular}
 \end{center}
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% GLINT_COVERAGE_MAP                          %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 \section{Function \texttt{glint\_coverage\_map}}
 %
 \paragraph{Purpose} To obtain a map of fractional coverage of global
-grid-boxes by GLINT ice model instances. The function returns a value
+grid-boxes by the ice model instances. The function returns a value
 indicating success, or giving error information.
 %
 \paragraph{Type, name and mandatory arguments}
@@ -236,19 +261,32 @@ indicating success, or giving error information.
 \paragraph{Arguments}
 %
 \begin{center}
-\begin{tabular}{llll}
-\texttt{params} & \texttt{type(glint\_params)} & \texttt{intent(in)} & Ice model parameters \\
+  \tablefirsthead{%
+    \hline
+  } 
+  \tablehead{%
+    \hline
+    \multicolumn{4}{|p{0.98\textwidth}|}{\emph{\small continued from previous page}}\\
+    \hline
+  } 
+  \tabletail{%
+    \hline
+    \multicolumn{4}{|r|}{\emph{\small continued on next page}}\\
+    \hline}
+      \tablelasttail{\hline}
+        \begin{supertabular}{lllp{5.5cm}}
+	\texttt{params} & \texttt{type(glint\_params)} & \texttt{intent(in)} & Ice model parameters \\
 \texttt{coverage(:,:)} & \texttt{real(rk)} & \texttt{intent(out)} & Coverage
 map (all fields except orography) \\
 \texttt{cov\_orog(:,:)} & \texttt{real(rk)} & \texttt{intent(out)} & Coverage
 map (orography) \\
-\end{tabular}
+\end{supertabular}
 \end{center}
 %
 \paragraph{Returned value}
 %
 \begin{center}
-\begin{tabular}{|c|l|}
+\begin{tabular}{cl}
 \hline
 Value & Meaning \\
 \hline
@@ -261,109 +299,9 @@ first \\
 \end{tabular}
 \end{center}
 %
-\section{Function \texttt{glint\_main\_funit}}
-%
-\paragraph{Purpose}
-%
-To return the value of the main logical file unit used by glint for writing
-and reading files. This unit is used for all read/write operations except for
-the glint log file (\texttt{glint.gll}), which uses a fixed unit (21). The
-default value for the unit is 20, but this may be changed at any time, even
-when the model is being run.
-%
-\paragraph{Type, name and mandatory arguments}
-%
-\begin{verbatim}
-  integer glint_main_funit(params)
-\end{verbatim}
-%
-\paragraph{Arguments}
-%
-\begin{center}
-\begin{tabular}{llll}
-\texttt{params} & \texttt{type(glint\_params)} & \texttt{intent(in)} & Ice model parameters \\
-\end{tabular}
-\end{center}
-%
-\paragraph{Returned value}
-%
-The returned value is the logical file unit being used.
-%
-\section{Subroutine \texttt{glint\_set\_main\_funit}}
-%
-\paragraph{Purpose}
-%
-To set the value of the logical file unit being used by glint for writing
-and reading files. See previous entry for more details.
-%
-\paragraph{Name and mandatory arguments}
-%
-\begin{verbatim}
-  glint_set_main_funit(params,unit)
-\end{verbatim}
-%
-\paragraph{Arguments}
-%
-\begin{center}
-\begin{tabular}{llll}
-\texttt{params} & \texttt{type(glint\_params)} & \texttt{intent(inout)} &
-Ice model parameters \\
-\texttt{unit} & \texttt{integer} & \texttt{intent(in)} & Logical file unit to
-be set \\
-\end{tabular}
-\end{center}
-%
-\section{Subroutine \texttt{glint\_write\_restart}}
-%
-\paragraph{Purpose}
-%
-To write a restart file containing the whole model state, including all ice
-model instances and associated projection data.
-%
-\paragraph{Name and mandatory arguments}
-%
-\begin{verbatim}
-  glint_write_restart(params,unit,filename)
-\end{verbatim}
-%
-\paragraph{Arguments}
-%
-\begin{center}
-\begin{tabular}{llll}
-\texttt{params} & \texttt{type(glint\_params)} & \texttt{intent(in)} &
-Ice model parameters \\
-\texttt{unit} & \texttt{integer} & \texttt{intent(in)} & Logical file unit to
-use \\
-\texttt{filename} & \texttt{character(*)} & \texttt{intent(in)} & Filename to
-write \\
-\end{tabular}
-\end{center}
-%
-\section{Subroutine \texttt{glint\_read\_restart}}
-%
-\paragraph{Purpose}
-%
-To read a restart file containing the whole model state, including all ice
-model instances and associated projection data.
-%
-\paragraph{Name and mandatory arguments}
-%
-\begin{verbatim}
-  glint_read_restart(params,unit,filename)
-\end{verbatim}
-%
-\paragraph{Arguments}
-%
-\begin{center}
-\begin{tabular}{llll}
-\texttt{params} & \texttt{type(glint\_params)} & \texttt{intent(out)} &
-Ice model parameters \\
-\texttt{unit} & \texttt{integer} & \texttt{intent(in)} & Logical file unit to
-use \\
-\texttt{filename} & \texttt{character(*)} & \texttt{intent(in)} & Filename to
-read \\
-\end{tabular}
-\end{center}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% GLINT_SET_OROG_RES                          %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 \section{Subroutine \texttt{glint\_set\_orog\_res}}
 %
@@ -381,29 +319,35 @@ orography to spectral space before use.
 \paragraph{Arguments}
 %
 \begin{center}
-\begin{tabular}{llll}
-\texttt{params} & \texttt{type(glint\_params)} & \texttt{intent(inout)} &
-Ice model parameters \\
-\texttt{lons(:)} & \texttt{real(rk)} & \texttt{intent(in)} & Longitudinal
-locations of grid-points.\\ 
-\texttt{lats(:)} & \texttt{real(rk)} & \texttt{intent(in)} & Latitudinal
-locations of grid-points.\\ 
-\end{tabular}
-\end{center}
-%
-\paragraph{Optional arguments}
-%
-\begin{center}
-\begin{tabular}{llll}
-\texttt{lonb(:)} & \texttt{real(rk)} & \texttt{intent(in)} & Longitudinal
-locations of grid-box \\
- & & & boundaries --- this array has one more element \\
- & & & than \texttt{lons}. \\
-\texttt{latb(:)} & \texttt{real(rk)} & \texttt{intent(in)} & Latitudinal
-locations of grid-box \\
- & & & boundaries --- this array has one more element \\
- & & & than \texttt{lats}. \\
-\end{tabular}
+  \tablefirsthead{%
+     \hline
+     } 
+  \tablehead{%
+    \hline
+    \multicolumn{4}{|p{0.98\textwidth}|}{\emph{\small continued from previous page}}\\
+    \hline
+  } 
+  \tabletail{%
+    \hline
+    \multicolumn{4}{|r|}{\emph{\small continued on next page}}\\
+    \hline}
+      \tablelasttail{\hline}
+          \begin{supertabular}{lllp{5.5cm}}
+	      \multicolumn{4}{|l|}{{\bf Mandatory}}\\
+	      \hline  
+	      \texttt{params} & \texttt{type(glint\_params)} &
+     \texttt{intent(inout)} & Ice model parameters \\
+     \texttt{lons(:)} & \texttt{real(rk)} & \texttt{intent(in)} & Longitudinal
+     locations of grid-points.\\ 
+     \texttt{lats(:)} & \texttt{real(rk)} & \texttt{intent(in)} & Latitudinal locations of grid-points.\\ 
+     \hline
+     \multicolumn{4}{|l|}{{\bf Optional}}\\
+     \hline  
+     \texttt{lonb(:)} & \texttt{real(rk)} & \texttt{intent(in)} & Longitudinal
+     locations of grid-box boundaries --- this array has one more element than \texttt{lons}.\\ 
+     \texttt{latb(:)} & \texttt{real(rk)} & \texttt{intent(in)} & Latitudinal
+     locations of grid-box boundaries --- this array has one more element than \texttt{lats}.\\ 
+     \end{supertabular}
 \end{center}
 %
 
