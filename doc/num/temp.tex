@@ -1,12 +1,14 @@
 \section{Temperature Solver}
-This document summarises what I have learned by staring at the GLIMMER code and reading various papers.
-
-The ice temperature, $T$, evolves according to
-\begin{multline}
+The flow law, Equation \eqref{kin.eq.flowlaw}, depends on the temperature of ice. It is, therefore, necessary to determine how the distribution of ice temperatures changes with a changing ice sheet configuration. The thermal evolution of the ice sheet is described by
+\begin{equation}
+  \label{temp.eq.temp_z}
+  \frac{\pd T}{\pd t}=\frac{k}{\rho c}\nabla^2T-\vec{u}\cdot\vec\nabla T+\frac\Phi{\rho c}-w\frac{\pd T}{\pd z},
+\end{equation}
+where $T$ is the absolute temperature, $k$ is the thermal conductivity of ice, $c$ is the specific heat capacity and $\Phi$ is the heat generated due to internal friction. In the $\sigma$--coordinate system, Equation \eqref{temp.eq.temp_z}, becomes
+\begin{equation}
   \label{temp.eq.temp}
-  \frac{\pd T}{\pd t} = \frac{k}{\rho cH^2}\frac{\pd^2T}{\pd\sigma^2} - \vec{U}\cdot\vec\nabla T + \frac{\sigma g}c\frac{\pd \vec{U}}{\pd\sigma}\cdot\vec\nabla s \\
-  + \frac1H\frac{\pd T}{\pd\sigma}\left[w-\frac{\pd s}{\pd t}-\vec{U}\cdot\vec\nabla s+\sigma\left(\frac{\pd H}{\pd t}+\vec{U}\cdot\vec\nabla H\right)\right]
-\end{multline}
+  \frac{\pd T}{\pd t} = \frac{k}{\rho cH^2}\frac{\pd^2T}{\pd\sigma^2} - \vec{u}\cdot\vec\nabla T + \frac{\sigma g}c\frac{\pd \vec{u}}{\pd\sigma}\cdot\vec\nabla s + \frac1H\frac{\pd T}{\pd\sigma}\left(w-w_{\text{grid}}\right)
+\end{equation}
 The terms represents (1) vertical diffusion, (2) horizontal advection, (3) internal heat generation due to friction and (4) vertical advection and a correction due to the sigma coordinate system. Let's rewrite \eqref{temp.eq.temp} to introduce some names:
 \begin{equation}
   \label{temp.eq.temp2}
@@ -17,18 +19,11 @@ where
   \begin{align}
     a&=\frac{k}{\rho cH^2} \\
     \label{temp.eq.hadv}
-    b(\sigma)&=-\vec{U}\cdot\vec\nabla T\\
-    \Phi(\sigma)&=\frac{\sigma g}c\frac{\pd \vec{U}}{\pd\sigma}\cdot\vec\nabla s \\
-    c(\sigma)&=\frac1H\left[w-\frac{\pd s}{\pd t}-\vec{U}\cdot\vec\nabla s+\sigma\left(\frac{\pd H}{\pd t}+\vec{U}\cdot\vec\nabla H\right)\right]
+    b(\sigma)&=-\vec{u}\cdot\vec\nabla T\\
+    \Phi(\sigma)&=\frac{\sigma g}c\frac{\pd \vec{u}}{\pd\sigma}\cdot\vec\nabla s \\
+    c(\sigma)&=\frac1H\left(w-w_{\text{grid}}\right)
   \end{align}
 \end{subequations}
-
-The horizontal velocity in $x$ direction is given by:
-\begin{equation}
-  \label{temp.eq.horiz_velo}
-  u_x(\sigma) = -2(\rho g)^nH^{n+1}|\vec\nabla s|^{n-1}\frac{\pd s}{\pd x}\int_1^\sigma A(T^\ast)\sigma^nd\sigma+u_x(1)
-\end{equation}
-The equation for the $y$--velocity, $u_y$ is similar.
 
 \subsection{Vertical Diffusion}
 Discretisation of $\pd^2T/\pd\sigma^2$ is slightly complicated because the vertical grid is irregular. Using Taylor series the central difference formulas are
@@ -54,7 +49,7 @@ Finally, the terms of equation \eqref{temp.eq.d4} are rearranged:
 \end{multline}
 
 \subsection{Horizontal Advection}
-The horizontal advection term, $- \vec{U}\cdot\vec\nabla T$ is solved using an upwinding scheme. Let's start with the 1--dimensional case. The method discussed can be straightforwadly extented to 2D. As always, the temperature function is expressed as a Taylor series.
+The horizontal advection term, $- \vec{u}\cdot\vec\nabla T$ is solved using an upwinding scheme. Let's start with the 1--dimensional case. The method discussed can be straightforwadly extented to 2D. As always, the temperature function is expressed as a Taylor series.
 \begin{subequations}
   \begin{align}
     \label{temp.eq.taylor1}
@@ -83,38 +78,34 @@ So the horizontal advection term in one dimensions becomes:
 \end{equation}
 A similar expression is found for $b_y$ by simply substituting $y$ for $x$. Finally, the combined horizontal advection term, is simply
 \begin{equation}
-  b=-\vec{U}\cdot\vec\nabla T=-\left(u_x\frac{\pd T}{\pd x}+u_y\frac{\pd T}{\pd y}\right)=b_x+b_y=b_1+b_2T_i
+  b=-\vec{u}\cdot\vec\nabla T=-\left(u_x\frac{\pd T}{\pd x}+u_y\frac{\pd T}{\pd y}\right)=b_x+b_y=b_1+b_2T_i
 \end{equation}
 
 \subsection{Heat Generation}
-Taking the derivative of \eqref{temp.eq.horiz_velo} with respect to $\sigma$, we get
+Taking the derivative of \eqref{kin.eq.vert_velo_sigma} with respect to $\sigma$, we get
 \begin{equation}
   \frac{\pd u_x}{\pd\sigma} = -2(\rho g)^nH^{n+1}|\vec\nabla s|^{n-1}\frac{\pd s}{\pd x}A(T^\ast)\sigma^n
 \end{equation}
 Thus,
 \begin{equation}
 \begin{split}
-  \Phi(\sigma) &= \frac{\sigma g}c\frac{\pd \vec{U}}{\pd\sigma}\cdot\vec\nabla s  = \frac{\sigma g}c\left(\frac{\pd u_x}{\pd \sigma}\frac{\pd s}{\pd x} + \frac{\pd u_y}{\pd \sigma}\frac{\pd s}{\pd y}\right)\\
+  \Phi(\sigma) &= \frac{\sigma g}c\frac{\pd \vec{u}}{\pd\sigma}\cdot\vec\nabla s  = \frac{\sigma g}c\left(\frac{\pd u_x}{\pd \sigma}\frac{\pd s}{\pd x} + \frac{\pd u_y}{\pd \sigma}\frac{\pd s}{\pd y}\right)\\
        &= -2(\rho g)^nH^{n+1}|\vec\nabla s|^{n-1}\frac{\sigma g}cA(T^\ast)\sigma^n \left(\left(\frac{\pd s}{\pd x}\right)^2+\left(\frac{\pd s}{\pd y}\right)^2\right) \\
        &= -\frac2{c\rho}(g\sigma\rho)^{n+1}\left(H|\vec\nabla s|\right)^{n+1}A(T^\ast)
 \end{split}  
 \end{equation}
 
-The constant factor $\frac2{c\rho}(g\sigma\rho)^{n+1}$ is calculated during initialisation in the subroutine \texttt{init\_temp}. This factor is assigned to array \texttt{c1(1:upn)}. \texttt{c1} also includes various scaling factors and the factor $1/16$ to normalise $\bar{A}$.
+The constant factor $\frac2{c\rho}(g\sigma\rho)^{n+1}$ is calculated during initialisation in the subroutine \texttt{init\_temp}. This factor is assigned to array \texttt{c1(1:upn)}. \texttt{c1} also includes various scaling factors and the factor $1/16$ to normalise $\mathcal{A}$.
 
 The next factor, $\left(H|\vec\nabla s|\right)^{n+1}$ is calculated in the subroutine \texttt{finddisp}:
 \begin{equation}
   {c_2}_{i,j} = \left(\tilde{H}_{i,j}\sqrt{\tilde{S_x}_{i,j}^2+\tilde{S_y}_{i,j}^2}\right)^{n+1},
 \end{equation}
-where
-\begin{equation}
-  \tilde{F}_{i,j}=\frac{F^\ast_{i-1/2,j}+F^\ast_{i+1/2,j}+F^\ast_{i,j-1/2}+F^\ast_{i,j+1/2}}4
-\end{equation}
-and $F^\ast$ denotes a quantity in the velocity grid.
+
 
 The final factor is found by averaging over the neighbouring nodes:
 \begin{equation}
-  \bar{A}_{i,j}=4A_{i,j}+2(A_{i-1,j}+A_{i+1,j}+A_{i,j-1}+A_{i,j+1})+(A_{i-1,j-1}+A_{i+1,j-1}+A_{i+1,j+1}+A_{i-1,j+1})
+  \mathcal{A}_{i,j}=4A_{i,j}+2(A_{i-1,j}+A_{i+1,j}+A_{i,j-1}+A_{i,j+1})+(A_{i-1,j-1}+A_{i+1,j-1}+A_{i+1,j+1}+A_{i-1,j+1})
 \end{equation}
 
 \subsection{Vertical Advection}
