@@ -1,80 +1,60 @@
-\section{Namelist files}
+\section{Configuration files}
 %
-This section contains information about the contents of the namelist files
+This section contains information about the contents of the files
 used to configure GLIMMER.
 %
 \subsection{Top-level GLIMMER configuration file}
 %
-The top-level configuration file contains the following elements in the
-following order:
-\begin{center}
-\begin{tabular}{l}
-\texttt{timesteps} namelist \\
-\texttt{file\_paras} namelist \\
-List of instance-specific configuration files \\
-\end{tabular}
-\end{center}
-%
-\subsubsection {Possible \texttt{timesteps} namelist entry}
-%
+The top-level configuration file contains only a single section,
+\texttt{[parameters]}, which contains two possible entries:
 \begin{center}
 \begin{tabular}{|c|c|c|l|}
 \hline
 Name & Type & Default & Description (units) \\
 \hline
 \hline
-\texttt{tinc} & real & 1.0 & Main model time-step (years) \\
+\texttt{time-step} & real & 1.0 & Main model time-step (years) \\
+\hline
+\texttt{instance filenames} & character array & --- & List of
+instance-specific filenames \\
 \hline
 \end{tabular}
 \end{center}
 %
-\subsubsection{Possible \texttt{file\_params} namelist entry}
-\begin{center}
-\begin{tabular}{|c|c|c|l|}
-\hline
-Name & Type & Default & Description (units) \\
-\hline
-\hline
-\texttt{ninst} & integer & 1 & Number of ice model instances \\
-\hline 
-\end{tabular}
-\end{center}
-%
-\subsubsection{List of instance-specific configuration files}
-%
-These filenames are given relative to the working directory of the climate
-model. They must not be longer than 70 characters, though this may be altered
-by changing the value of the parameter \texttt{fname\_length} in file
-\texttt{glimmer\_global.f90}. The filenames should be given as plain text,
-without quotation marks, and separated by newlines. 
+Note that the number of ice model instances created is determined by the
+number of elements in the array of instance-specific filenames given
+here. Thus, it is essential to list at least one filename.
 %
 \subsection{Instance-specific configuration files}
 %
-The instance-specific configuration files contain the following elements in
-the following order:
+The instance-specific configuration files may contain the following sections:
 \begin{center}
 \begin{tabular}{l}
-netCDF configuration file \\
-\texttt{sizs} namelist \\
-\texttt{prj} namelist \\
-Name of sigma file \\
-\texttt{opts} namelist \\
-\texttt{nums} namelist \\
-\texttt{pars} namelist \\
-\texttt{dats} namelist \\
-\texttt{cons} namelist \\
-\texttt{forc} namelist \\
+\texttt{[output]} \\
+\texttt{[domain size]} \\
+\texttt{[projection]} \\
+\texttt{[sigma coordinates]} \\
+\texttt{[options]} \\
+\texttt{[timesteps]} \\
+\texttt{[grid-lengths]} \\
+\texttt{[parameters]} \\
+\texttt{[forcing]} \\
+\texttt{[constants]} \\
+\texttt{[PDD scheme]} \\
 \end{tabular}
 \end{center}
 %
-\subsubsection{netCDF configuration file}
+\subsubsection{Possible \texttt{[output]} section entries}
 %
-As noted above, netCDF I/O is controlled by a separate configuration file. The configuration file is described on detail in Section \ref{ug.sec.ncconf}. Each model instance needs to be supplied with its own netCDF configuration file.
+This section may only have one entry, \texttt{configuration file}, which
+gives the name of the NetCDF I/O configuration file for this instance. As
+noted above, netCDF I/O is controlled by a separate configuration file, which
+is described on detail in Section \ref{ug.sec.ncconf}. 
 %
-\subsubsection{Possible \texttt{sizs} namelist entries}
+\subsubsection{Possible \texttt{[domain size]} section entries}
 %
-The \texttt{sizs} namelist specifies the model domain,
-and may contain these elements:
+The \texttt{[domain size]} section specifies the model domain,
+and may contain these entries:
 %
 \begin{center}
 \begin{tabular}{|c|c|c|l|}
@@ -82,18 +62,20 @@ and may contain these elements:
 Name & Type & Default & Description (units) \\
 \hline
 \hline
-\texttt{ewn} & integer & -- & Number of grid-points in the east-west
+\texttt{east-west} & integer & -- & Number of grid-points in the east-west
 direction \\
-\texttt{nsn} & integer & -- & Number of grid-points in the north-south
+\hline
+\texttt{north-south} & integer & -- & Number of grid-points in the north-south
 direction \\
-\texttt{upn} & integer & 11 & Number of model levels \\
+\hline
+\texttt{vertical} & integer & 11 & Number of model levels \\
 \hline
 \end{tabular}
 \end{center}
 %
-\subsubsection{Possible \texttt{prj} namelist entries}
+\subsubsection{Possible \texttt{[projection]} section entries}
 %
-The \texttt{prj} namelist specifies the parameters of the map projection, and
+The \texttt{[projection]} section specifies the parameters of the map projection, and
 may contain these elements:
 %
 \begin{center}
@@ -102,29 +84,38 @@ may contain these elements:
 Name & Type & Default & Description (units) \\
 \hline
 \hline
-\texttt{p\_type} & integer & 1 & Type of projection: \\
+\texttt{type} & integer & 1 & Type of projection: \\
  & & & 1) Lambert Equal Area \\
  & & & 2) Spherical polar \\
  & & & 3) Spherical stereographic (oblique) \\
  & & & 4) Spherical stereographic (equatorial) \\
 \hline  
-\texttt{lonc} & real & -- & Longitide of projection centre (degrees east) \\
-\texttt{latc} & real & -- & Latitude of projection centre (degrees)\\
-\texttt{cpx} & real & -- & Local $x$-coordinate of projection centre
+\texttt{central meridian} & real & -- & Longitide of projection centre (degrees east) \\
+\hline
+\texttt{parallel} & real & -- & Latitude of projection centre (degrees)\\
+\hline
+\texttt{false easting} & real & -- & Local $x$-coordinate of projection centre
 (grid-points) \\
-\texttt{cpy} & real & -- & Local $y$-coordinate of projection centre
+\hline
+\texttt{false northing} & real & -- & Local $y$-coordinate of projection centre
 (grid-points) \\
+\hline
+\texttt{standard parallel} & real & -- & Standard parallel, where the
+projection \\
+ & & & requires it, and where it is different to the \\
+ & & & main parallel specified above. \\ 
 \hline
 \end{tabular}
 \end{center}
 %
-\subsubsection{Name of sigma file}
+\subsubsection{Possible \texttt{[sigma coordinates]} section entries}
 %
-Conforms to the same rules as other filenames.
+There is only one possible entry, \texttt{file}, which gives the name a file
+containg the list of sigma coordinates.
 %
-\subsubsection{Possible \texttt{opts} namelist entries}
+\subsubsection{Possible \texttt{[options]} section entries}
 %
-The \texttt{opts} namelist specifies various ice model options, and may
+The \texttt{[options]} section specifies various ice model options, and may
 contain these elements:
 %
 \begin{center}
@@ -236,19 +227,6 @@ Basal slip coefficient: \\
 2 & Accumulation only\\
 \end{tabular}}\\
 \hline
-\texttt{whichstrs} & integer & 2 & {\raggedright
-Stress solution: \\
-\begin{tabular}{lp{7cm}}
-0 & Zeroth-order\\
-1 & First-order\\
-2 & Vertically-integrated first-order\\
-3 & No action (use when velocity found elsewhere)\\
-\end{tabular}}\\
-\hline
-\texttt{whichefvs} & integer & ? & ?? \\
-\hline
-\texttt{whichbabc} & integer & 0 &  {\raggedright Basal boundary condition? No options!}\\
-\hline
 \texttt{whichevol} & integer & 0 & {\raggedright
 Thickness evolution method:\\
 \begin{tabular}{lp{7cm}}
@@ -274,41 +252,46 @@ Source of precipitation:\\
 \end{supertabular}
 \end{center}
 %
-\subsubsection{Possible \texttt{nums} namelist entries}
+\subsubsection{Possible \texttt{[timesteps]} section entries}
 %
+These entries specify the time-steps of the various model components as a
+multiple of the main time-step.
 \begin{center}
 \begin{tabular}{|c|c|c|l|}
 \hline
 Name & Type & Default & Description (units)\\
 \hline
 \hline
-\texttt{ntem}    & real & 1 & Length of temperature time-step as \\
+\texttt{temperature} & real & 1 & Length of temperature time-step as \\
  & & & a multiple of main timestep \\
 \hline
-\texttt{nvel}    & real & 1 & Length of velocity time-step as \\
+\texttt{velocity}    & real & 1 & Length of velocity time-step as \\
  & & & a multiple of main time-step\\
 \hline
-\texttt{niso}    & real & 1 & Length of isostasy time-step as \\
+\texttt{isostasy}    & real & 1 & Length of isostasy time-step as \\
  & & & a multiple of main time-step\\
-\hline
-\texttt{nout(3)} & real & (1,10,10) & Time between outputs for time-series, \\
- & & & 2D and 3D fields (years)\\
-\hline
-\texttt{nstr}    & real & & Start-time for 2D and 3D output (years) \\
-\hline
-\texttt{thklim} & real & 100 & Lower limit for 3D ice calculations (m?) \\
-\hline
-\texttt{mlimit} & real & -- & ? \\
-\hline
-\texttt{dew} & real & -- & Horizontal grid spacing in east-west direction (m)
-\\
-\hline
-\texttt{dns} & real & -- & Horizontal grid spacing in north-south direction (m) \\
 \hline
 \end{tabular}
 \end{center}
 %
-\subsubsection{Possible \texttt{pars} namelist entries}
+\subsubsection{Possible \texttt{[grid-lengths]} section entries}
+%
+These entries specify the dimensions of the grid-boxes used in the model instance.
+\begin{center}
+\begin{tabular}{|c|c|c|l|}
+\hline
+Name & Type & Default & Description (units)\\
+\hline
+\hline
+\texttt{east-west} & real & -- & Horizontal grid spacing in east-west direction (m)
+\\
+\hline
+\texttt{north-south} & real & -- & Horizontal grid spacing in north-south direction (m) \\
+\hline
+\end{tabular}
+\end{center}
+%
+\subsubsection{Possible \texttt{[parameters]} section entries}
 %
 \begin{center}
 \begin{tabular}{|c|c|c|l|}
@@ -321,13 +304,13 @@ Name & Type & Default & Description (units)\\
 \hline
 \texttt{fiddle} & real & 3.0 & Multiplier for flow factor \\
 \hline
-\texttt{airt(2)} & real & (-3.15,-0.01) & Air temperature parameterization
+\texttt{airt} & real & (-3.15,-0.01) & Air temperature parameterization
 factors \\
- & & & (K, $\mathrm{K}\,\mathrm{km}^{-3}$) \\
+(2 elements)& & & (K, $\mathrm{K}\,\mathrm{km}^{-3}$) \\
 \hline
-\texttt{nmsb(3)} & real & (0.5, $1.05\times 10^{-5}$,  & Net accumulation
+\texttt{nmsb} & real & (0.5, $1.05\times 10^{-5}$,  & Net accumulation
 factors used in \\
- & & $4.5\times 10^{5}$) & combination with $\mathtt{whichthck}=2,3$ \\
+(3 elements) & & $4.5\times 10^{5}$) & combination with $\mathtt{whichthck}=2,3$ \\
  & & & ($\mathrm{m}\,\mathrm{yr}^{-1}$, $\mathrm{yr}^{-1}$, m) \\
 \hline
 \texttt{hydtim} & real & 1000 & 1) Basal hydrology time constant (When \\
@@ -338,14 +321,18 @@ factors used in \\
 \texttt{isotim} & real & 3000 & Isostasy time-constant (used in combination \\
  & & & with \texttt{whichisot} (yr) \\
 \hline 
-\texttt{bpar(5)} & real & (2.0, 10.0, 10.0, & Basal traction factors (used in \\
- & & 0.0, 1.0) & combination with \texttt{whichbtrc}). These describe the \\
- & & & form of the $B=\tanh(W)$ function: \\
+\texttt{bpar}  & real & (2.0, 10.0, 10.0, & Basal traction factors (used in \\
+ (5 elements)& & 0.0, 1.0) & combination with \texttt{whichbtrc}). These describe \\
+ & & & the form of the $B=\tanh(W)$ function: \\
  & & & (1) Width of tanh curve \\
  & & & (2) $W$ at midpoint of tanh curve (m) \\
  & & & (3) $B$ minimum ($\mathrm{m}\,\mathrm{yr}^{-1}\,\mathrm{Pa}^{-1}$) \\
  & & & (4) $B$ maximum ($\mathrm{m}\,\mathrm{yr}^{-1}\,\mathrm{Pa}^{-1}$) \\
  & & & (5) multiplier for marine sediments \\
+\hline
+\texttt{thklim} & real & 100 & Lower limit for 3D ice calculations (m?) \\
+\hline
+\texttt{mlimit} & real & -- & ? \\
 \hline
 \end{tabular}
 \end{center}
