@@ -140,7 +140,15 @@ Sections and keys are case sensitive and may contain white space. However, the c
     \texttt{flow\_factor} & (real) the flow law is enhanced with this factor \\
     \texttt{hydro\_time} & (real) basal hydrology time constant \\
     \texttt{isos\_time} & (real) isostasy time constant \\
-    \texttt{basal\_tract} & (real(5) or real) basal traction factors \\
+    \texttt{basal\_tract\_const} & constant basal traction parameter\\
+    \texttt{basal\_tract} & (real(5)) basal traction factors. Basal traction is set to $B=\tanh(W)$ where the parameters
+      \begin{tabular}{cp{7cm}}
+       (1) & width of the $\tanh$ curve\\
+       (2) & $W$ at midpoint of $\tanh$ curve [m]\\
+       (3) & $B$ minimum [ma$^{-1}$Pa$^{-1}$] \\
+       (4) & $B$ maximum [ma$^{-1}$Pa$^{-1}$] \\
+       (5) & multiplier for marine sediments \\
+     \end{tabular}\\
     \hline
     
   \end{supertabular}

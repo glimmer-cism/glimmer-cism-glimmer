@@ -574,6 +574,8 @@ contains
 
     allocate(model%thckwk%olds(ewn,nsn,model%thckwk%nwhich))
                                                       model%thckwk%olds = 0.0d0
+    allocate(model%thckwk%oldthck(ewn,nsn));          model%thckwk%oldthck = 0.0d0
+    allocate(model%thckwk%basestate(ewn,nsn));        model%thckwk%basestate = 0.0d0
     allocate(model%isotwk%load(ewn,nsn));             model%isotwk%load = 0.0d0 
     allocate(model%numerics%sigma(upn))
 
@@ -621,6 +623,8 @@ contains
     deallocate(model%geometry%mask)
 
     deallocate(model%thckwk%olds)
+    deallocate(model%thckwk%oldthck)
+    deallocate(model%thckwk%basestate)
     deallocate(model%isotwk%load)
     deallocate(model%numerics%sigma)
   end subroutine glide_deallocarr

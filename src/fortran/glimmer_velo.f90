@@ -607,8 +607,8 @@ contains
     !*FD \texttt{fiddle}\ \textbf{is set to 3.0. This needs checking} 
 
     use glimmer_global, only : dp
-    use physcon, only : grav, rhoi, pmlt,scyr
-    use paramets, only : thk0,vis0
+    use physcon, only : grav, rhoi, pmlt
+    use paramets, only : thk0
 
     implicit none
 

@@ -288,7 +288,7 @@ contains
 
     ewct = real(model%general%ewn+1) / 2.0
     nsct = real(model%general%nsn+1) / 2.0
-    grid = model%numerics%dew * len0
+    grid = model%numerics%dew * len0 * 1e-3
 
     select case(climate%eismint_type)
     case(1)

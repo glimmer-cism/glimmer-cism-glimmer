@@ -1,3 +1,12 @@
+2004-08-24 Magnus Hagdorn
+ * the automatic detection of the length of an array in glimmer_config does not work
+   so we need a separate variable for the constant basal traction case (glide_setup.f90, glide.tex)
+ * glide_types.f90: some arrays for the staggered leap frog were not initialised, it still doesn't work
+   though
+ * glimmer_paramets.f90: adjust vis0 to match EISMINT cases
+ * simple_forcing.f90: surface temperature distribution of EISMINT-1 case was not scaled propperly
+ * some tidying up of unused symbols (glimmer_velo.f90, ncdf_file.f90.in, ncdf_infile.f90.in)
+	
 2004-08-20 Magnus Hagdorn
  * changed vis0 scale to match EISMINT-1 cases (glimmer_velo.f90)
  * added module holding variable scales (ncdf.f90.in)

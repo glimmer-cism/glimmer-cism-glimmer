@@ -236,9 +236,7 @@ contains
     use glimmer_log
     use glimmer_ncdf
     use glide_types
-    use glimmer_global, only : dp
-    use physcon, only : scyr
-    use paramets, only : thk0, acc0
+    use paramets, only : thk0
     use glimmer_scales
     implicit none
     type(glimmer_nc_input), pointer :: infile

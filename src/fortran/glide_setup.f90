@@ -637,18 +637,12 @@ contains
     call GetValue(section,'flow_factor',model%paramets%fiddle)
     call GetValue(section,'hydro_time',model%paramets%hydtim)
     call GetValue(section,'isos_time',model%paramets%isotim)
-    call GetValue(section,'basal_tract',temp)
+    call GetValue(section,'basal_tract',temp,5)
     if (associated(temp)) then
-       if (size(temp).eq.1) then
-          model%paramets%btrac_const=temp(1)
-       else if (size(temp).eq.5) then
-          model%paramets%bpar = temp
-       else
-          call error_log('Wrong number of basal traction parameters (should be 1 or 5)')
-          stop
-       end if         
+       model%paramets%btrac_const=temp(1)
        deallocate(temp)
     end if
+    call GetValue(section,'basal_tract_const',model%paramets%btrac_const)
   end subroutine handle_parameters
 
   subroutine print_parameters(model)
