@@ -50,6 +50,8 @@ contains
     !*FD initialise work data for ice thickness evolution
     implicit none
     type(glide_global_type) :: model
+
+    allocate(model%thckwk%float(model%general%ewn,model%general%nsn))
     
     select case(model%options%whichevol)
     case(0)
@@ -64,18 +66,18 @@ contains
     end select
   end subroutine init_thck
 
-  subroutine timeevolthck(model,thckflag,usrf,thck,lsrf,acab,mask,uflx,vflx,dusrfdew,dusrfdns,totpts,logunit)
+  subroutine timeevolthck(model,thckflag,usrf,thck,acab,mask,uflx,vflx,dusrfdew,dusrfdns,totpts,logunit)
 
     use glimmer_global, only : dp, sp 
 
     implicit none
 
     type(glide_global_type) :: model
-    real(dp), intent(in), dimension(:,:) :: uflx, vflx, dusrfdew, dusrfdns
+    real(dp), intent(in), dimension(:,:) :: uflx, vflx, dusrfdew, dusrfdns, usrf
     real(sp), intent(in), dimension(:,:) :: acab 
     integer, intent(in), dimension(:,:) :: mask
     integer, intent(in) :: totpts, thckflag
-    real(dp), intent(inout), dimension(:,:) :: usrf, lsrf, thck 
+    real(dp), intent(inout), dimension(:,:) :: thck 
     integer,intent(in) :: logunit
     
     integer, parameter :: flag = 0
@@ -90,7 +92,6 @@ contains
     if (model%geometry%empty) then
 
       thck = dmax1(0.0d0,thck + acab * model%pcgdwk%fc(2))
-      usrf = thck + lsrf
       print *, "* thck empty - net accumulation added", model%numerics%time
 
     else
@@ -163,7 +164,6 @@ contains
       model%pcgdwk%mlinit = max(linit,model%pcgdwk%mlinit)
 
       thck = max(0.0d0, thck)
-      usrf = thck + lsrf
 
 #ifdef DEBUG
       print *, "* thck ", model%numerics%time, linit, model%pcgdwk%mlinit, model%pcgdwk%tlinit, totpts, &
@@ -622,7 +622,6 @@ contains
     if (model%geometry%empty) then
 
       model%geometry%thck = dmax1(0.0d0,model%geometry%thck + model%climate%acab * model%pcgdwk%fc2(2))
-      model%geometry%usrf = model%geometry%thck + model%geometry%lsrf
       print *, "* thck empty - net accumulation added", model%numerics%time
 
     else
@@ -790,8 +789,6 @@ contains
 
       model%geometry%thck = max(0.0d0, model%geometry%thck)
 
-      model%geometry%usrf = model%geometry%thck + model%geometry%lsrf
-
       call slipvelo(model%numerics,                &
                     model%velowk,                  &
                     model%geomderv,                &
@@ -870,16 +867,15 @@ contains
 
 !------------------------------------------------------------------------
 
-  subroutine stagleapthck(model,uflx,vflx,thck,usrf,lsrf)
+  subroutine stagleapthck(model,uflx,vflx,thck)
 
     use glimmer_global, only : dp
 
     implicit none
  
     type(glide_global_type) :: model
-    real(dp), intent(in), dimension(:,:) :: uflx, vflx, lsrf 
+    real(dp), intent(in), dimension(:,:) :: uflx, vflx
     real(dp), intent(inout), dimension(:,:) :: thck
-    real(dp), intent(out), dimension(:,:) :: usrf
 
     real(dp), dimension(:,:), allocatable :: newthck, bnduflx, bndvflx 
     integer :: ns,ew
@@ -938,8 +934,6 @@ contains
     elsewhere
       thck = 0.0d0
     end where
-
-    usrf = thck + lsrf
 
     deallocate(newthck,bnduflx,bndvflx)
 

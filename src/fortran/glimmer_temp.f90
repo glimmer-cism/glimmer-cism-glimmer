@@ -431,7 +431,7 @@ contains
   subroutine hadvpnt(tempwk,iteradvt,diagadvt,tempx,tempy,uvel,vvel)
 
     use glimmer_global, only : dp
-    use glimmer_utils, only: hsum
+    use glimmer_utils, only: hsum4
 
     implicit none
 
@@ -445,8 +445,8 @@ contains
     iteradvt = 0.0d0
     diagadvt = 0.0d0
 
-    u = tempwk%advconst(1) * hsum(uvel(:,:,:))
-    v = tempwk%advconst(2) * hsum(vvel(:,:,:))
+    u = tempwk%advconst(1) * hsum4(uvel(:,:,:))
+    v = tempwk%advconst(2) * hsum4(vvel(:,:,:))
 
     if (u(1) > 0.0d0) then
        iteradvt = u * (- 4.0d0*tempx(:,2) + tempx(:,1))

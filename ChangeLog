@@ -1,3 +1,17 @@
+2004-09-10 Magnus Hagdorn
+ * data_dep.dot: removed initialisation from graph and moved bedrock adjustment and surface calcs to end of 
+   time step
+ * data_dep-legend.fig: legend for data dependency plot
+ * glide.tex: updated documentation for new calving code
+ * glide.f90: moved upper and lower ice surface and bed rock adjustment calculations to end of time step
+ * glide_setup.f90: new calving mode uses glide_mask to find floating ice. this routine is a bit of a hack 
+   at the moment.
+ * glide_types.f90: moved marine margin options around
+ * glimmer_temp.f90: changed hsum to hsum4 which makes hadvpt twice as fast :-)
+ * glimmer_thck.f90: removed lower ice surface calculations
+ * f90_dependencies.py: fixed a bug where only the last module in a file was picked up. The fix is somewhat fragile
+   and depends on 'end module' with a single space, we should use regular expressions or normalise the source code
+	
 2004-09-06 Magnus Hagdorn
  * glide_types.f90: add temporary arrays for both U and T grids
  * netCDF output can start at later time (ncdf_file.f90.in, ncdf_params.f90.in)

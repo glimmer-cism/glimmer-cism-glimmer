@@ -62,6 +62,7 @@ contains
     use glimmer_config
     use glide_mask
     use glimmer_scales
+    use glide_mask
     implicit none
     type(glide_global_type) :: model        !*FD model instance
     type(ConfigSection), pointer :: config  !*FD structure holding sections of configuration file
@@ -111,11 +112,14 @@ contains
        ! initialise Glen's flow parameter A using an isothermal temperature distribution
        call timeevoltemp(model,0)
     end if
+
     ! calculate mask
     call glide_set_mask(model)
+
     ! and calculate lower and upper ice surface
     call glide_calclsrf(model%geometry%thck, model%geometry%topg, model%geometry%lsrf)
     model%geometry%usrf = model%geometry%thck + model%geometry%lsrf
+
   end subroutine glide_initialise
   
   subroutine glide_tstep(model,time)
@@ -128,7 +132,8 @@ contains
     use glide_setup
     use glide_temp
     use glide_mask
-   implicit none
+    implicit none
+
     type(glide_global_type) :: model        !*FD model instance
     real(rk),  intent(in)   :: time         !*FD Current time in years
 
@@ -140,15 +145,6 @@ contains
     ! and possibly write to file
     call writeall(model)
     newtemps = .false.
-    ! ------------------------------------------------------------------------ 
-    ! Calculate isostasy
-    ! ------------------------------------------------------------------------ 
-    call isosevol(model%numerics,   & 
-         model%isotwk,              &                                      
-         model%options%  whichisot, &
-         model%geometry% thck,      &
-         model%geometry% topg,      &
-         model%geometry% relx)
 
     ! ------------------------------------------------------------------------ 
     ! Calculate various derivatives...
@@ -200,6 +196,7 @@ contains
             model%velocity% uflx,     &
             model%velocity% vflx,     &
             model%velocity% diffu)
+
     end if
 
     call glide_maskthck(0, &                                    !magi a hack, someone explain what whichthck=5 does
@@ -228,7 +225,6 @@ contains
             0, &                                        !magi a hack, someone explain what whichthck=5 does
             model%geometry% usrf,      &
             model%geometry% thck,      &
-            model%geometry% lsrf,      &
             model%climate%  acab,      &
             model%geometry% mask,      &
             model%velocity% uflx,      &
@@ -243,9 +239,7 @@ contains
        call stagleapthck(model, &
             model%velocity% uflx, &
             model%velocity% vflx, &
-            model%geometry% thck, &
-            model%geometry% usrf, &
-            model%geometry% lsrf)
+            model%geometry% thck)
 
     case(2) ! Use non-linear calculation that incorporates velocity calc -----
 
@@ -253,32 +247,40 @@ contains
 
     end select
 
+    ! ------------------------------------------------------------------------
+    ! get new mask
+    ! ------------------------------------------------------------------------
+    call glide_set_mask(model)
+
     ! ------------------------------------------------------------------------ 
     ! Remove ice which is either floating, or is present below prescribed
     ! depth, depending on value of whichmarn
     ! ------------------------------------------------------------------------ 
-
     call glide_marinlim(model%options%  whichmarn, &
          0, &                                        !magi a hack, someone explain what whichthck=6 does
          model%geometry% thck,      &
-         model%geometry% usrf,      &
          model%geometry% relx,      &
          model%geometry% topg,      &
          model%climate%  lati,      &
+         model%geometry%thkmask,    &
          model%numerics%mlimit,     &
          model%climate%eus)
 
     ! ------------------------------------------------------------------------ 
-    ! Calculate the lower surface elevation
+    ! Calculate isostasy
     ! ------------------------------------------------------------------------ 
-    call glide_calclsrf(model%geometry%thck, &
-         model%geometry%topg, &
-         model%geometry%lsrf)
+    call isosevol(model%numerics,   & 
+         model%isotwk,              &                                      
+         model%options%  whichisot, &
+         model%geometry% thck,      &
+         model%geometry% topg,      &
+         model%geometry% relx)
 
     ! ------------------------------------------------------------------------
-    ! get new mask
+    ! calculate upper and lower ice surface
     ! ------------------------------------------------------------------------
-    ! call glide_set_mask(model)
+    call glide_calclsrf(model%geometry%thck, model%geometry%topg, model%geometry%lsrf)
+    model%geometry%usrf = max(0.d0,model%geometry%thck + model%geometry%lsrf)
 
   end subroutine glide_tstep
 

@@ -1,59 +1,15 @@
 digraph G
 {
- // inputs
- thck0 [style = filled,color=greenyellow];
- topg0 [style = filled,color=greenyellow];
- bwat0 [style = filled,color=greenyellow];
- bmlt0 [style = filled,color=greenyellow];
- flwa0 [style = filled,color=greenyellow];
- temp0 [style = filled,color=greenyellow];
-
- // forcing
- artm0 [color=salmon2];
- acab0 [color=salmon2];
- lati [style = filled,color=salmon2];
- relx [style = filled,color=salmon2];
-
- // outputs
- thck2 [color=greenyellow];
- lsrf2 [color=greenyellow];
- usrf2 [color=greenyellow];
- uflx1 [color=greenyellow];
- diffu1 [color=greenyellow];
- uvel1 [color=greenyellow];
- vvel1 [color=greenyellow];
- btrc1 [color=greenyellow];
- vbas1 [color=greenyellow];
- ubas1 [color=greenyellow];
- vflx1 [color=greenyellow];
- bwat1 [color=greenyellow];
- wgrd [color=greenyellow];
- flwa1 [color=greenyellow];
- temp1 [color=greenyellow];
- bmlt1 [color=greenyellow];
- wvel [color=greenyellow];
- 
  //glide_initialise
- glide_initialise [shape = box];
- thck0->glide_initialise;
- topg0->glide_initialise;
- relx->glide_initialise;
- glide_initialise->lsrf0;
- glide_initialise->usrf0;
-
- //timeevoltemp0
- timeevoltemp0 [shape = box];
- artm0->timeevoltemp0;
- thck0->timeevoltemp0;
- timeevoltemp0->temp0;
- timeevoltemp0->flwa0;
-
- //isosevol
- isosevol [shape = box];
- thck0->isosevol;
- topg0->isosevol;
- relx->isosevol;
- isosevol->topg1;
+// glide_initialise [shape = box,style = filled,color=greenyellow];
+// thck0->glide_initialise;
+// topg0->glide_initialise;
+// relx->glide_initialise;
+// artm0->glide_initialise;
+// glide_initialise->temp0;
+// glide_initialise->flwa0;
+// glide_initialise->lsrf0;
+// glide_initialise->usrf0;
 
  //slipvelo
  slipvelo [shape = box];
@@ -131,7 +87,6 @@ digraph G
  flwa1->nonlevolthck;
  mask->nonlevolthck;
  nonlevolthck->thck1;
- nonlevolthck->usrf1;
  nonlevolthck->ubas1;
  nonlevolthck->vbas1;
  nonlevolthck->btrc1;
@@ -144,11 +99,57 @@ digraph G
  //glide_marinlim
  glide_marinlim [shape = box];
  lati->glide_marinlim;
- usrf1->glide_marinlim;
  relx->glide_marinlim;
- topg1->glide_marinlim;
+ topg0->glide_marinlim;
  thck1->glide_marinlim;
- glide_marinlim->usrf2;
- glide_marinlim->lsrf2;
  glide_marinlim->thck2;
+
+ //isosevol
+ isosevol [shape = box];
+ thck2->isosevol;
+ topg0->isosevol;
+ relx->isosevol;
+ isosevol->topg1;
+
+ thck2->lsrf1;
+ topg1->lsrf1;
+ topg1->usrf1;
+ lsrf1->usrf1 [constraint=false];
+
+ // inputs
+ thck0 [style = filled,color=greenyellow];
+ topg0 [style = filled,color=greenyellow];
+ bwat0 [style = filled,color=greenyellow];
+ bmlt0 [style = filled,color=greenyellow];
+ flwa0 [style = filled,color=greenyellow];
+ temp0 [style = filled,color=greenyellow];
+ lsrf0 [style = filled,color=cadetblue1];
+ usrf0 [style = filled,color=cadetblue1];
+
+ // forcing
+ artm0 [color=salmon2];
+ acab0 [color=salmon2];
+ lati [style = filled,color=salmon2];
+ relx [style = filled,color=salmon2];
+
+ // outputs
+ thck2 [color=greenyellow];
+ topg1 [color=greenyellow];
+ lsrf1 [color=greenyellow];
+ usrf1 [color=greenyellow];
+ uflx1 [color=cadetblue1];
+ diffu1 [color=cadetblue1];
+ uvel1 [color=cadetblue1];
+ vvel1 [color=cadetblue1];
+ btrc1 [color=cadetblue1];
+ vbas1 [color=cadetblue1];
+ ubas1 [color=cadetblue1];
+ vflx1 [color=cadetblue1];
+ bwat1 [color=greenyellow];
+ wgrd [color=cadetblue1];
+ flwa1 [color=greenyellow];
+ temp1 [color=greenyellow];
+ bmlt1 [color=greenyellow];
+ wvel [color=cadetblue1];
+ 
 }

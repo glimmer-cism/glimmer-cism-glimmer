@@ -90,10 +90,11 @@ Sections and keys are case sensitive and may contain white space. However, the c
       {\bf 2} & none\\
     \end{tabular}\\
     \texttt{marine\_margin} & 
-    \begin{tabular}[t]{cl}
-      {\bf 0} & threshold\\
-      1 & no ice shelf\\
-      2 & ignore marine margin\\
+    \begin{tabular}[t]{cp{8cm}}
+      0 & ignore marine margin\\
+      {\bf 1} & Set thickness to zero if relaxed bedrock is more than certain water depth\\
+      2 & Set thickness to zero if floating\\
+      3 & Lose fraction of ice when edge cell\\
     \end{tabular}\\
     \texttt{slip\_coeff} & 
     \begin{tabular}[t]{cl}

@@ -125,14 +125,15 @@ module glide_types
     !*FD \item[2] Set to zero everywhere 
     !*FD \end{description}
 
-    integer :: whichmarn = 0
+    integer :: whichmarn = 1
 
     !*FD Ice thickness: 
     !*FD \begin{description} 
-    !*FD \item[0] Set thickness to zero if relaxed bedrock is more 
-    !*FD than certain water depth (??) 
-    !*FD \item[1] Set thickness to zero if floating 
-    !*FD \item[2] No action 
+    !*FD \item[0] No action 
+    !*FD \item[1] Set thickness to zero if relaxed bedrock is more 
+    !*FD than certain water depth  
+    !*FD \item[2] Set thickness to zero if floating 
+    !*FD \item[3] Lose fraction of ice when edge cell
     !*FD \end{description}
 
     integer :: whichbtrc = 0

@@ -269,7 +269,7 @@ contains
 
 !-------------------------------------------------------------------------
 
-  subroutine glide_marinlim(which,whicht,thck,usrf,relx,topg,lati,mlimit,eus)
+  subroutine glide_marinlim(which,whicht,thck,relx,topg,lati,mask,mlimit,eus)
 
     !*FD Removes non-grounded ice, according to one of two altenative
     !*FD criteria, and sets upper surface of non-ice-covered points 
@@ -277,7 +277,8 @@ contains
 
     use glimmer_global, only : dp, sp
     use paramets, only : f  
-
+    use physcon, only : rhoi, rhoo
+    use glide_mask
     implicit none
 
     !---------------------------------------------------------------------
@@ -294,35 +295,46 @@ contains
     integer,                intent(in)    :: whicht  !*FD Thickness calculation option. Only acted on
                                                      !*FD if equals six.
     real(dp),dimension(:,:),intent(inout) :: thck    !*FD Ice thickness (scaled)
-    real(dp),dimension(:,:),intent(out)   :: usrf    !*FD Upper ice surface (scaled)
     real(dp),dimension(:,:),intent(in)    :: relx    !*FD Relaxed topography (scaled)
     real(dp),dimension(:,:),intent(in)    :: topg    !*FD Actual topography (scaled)
     real(sp),dimension(:,:),intent(in)    :: lati    !*FD Array of latitudes (only used if 
                                                      !*FD $\mathtt{whicht}=6$).
+    integer, dimension(:,:),pointer       :: mask    !*FD grid type mask
     real(dp)                              :: mlimit  !*FD Lower limit on topography elevation for
                                                      !*FD ice to be present (scaled). Used with 
                                                      !*FD $\mathtt{which}=0$.
-    real, intent(in) :: eus                          !*FD eustatic sea level
-
+    real, intent(inout) :: eus                       !*FD eustatic sea level
+    
+    integer ew,ns
+    real :: finv = 1./f
+    real(dp), parameter :: con = - rhoi / rhoo
     !---------------------------------------------------------------------
 
+    !MAGI! this is quite a hack
+    ! eustatic sea level isn't really supported yet
+    eus = 0.
     select case (which)
-
-    case(0) ! Set thickness to zero if relaxed bedrock is below a 
-            ! given level
-
-      where (relx < mlimit+eus)
-        thck = 0.0d0
-        usrf = max(0.0d0,topg)
-      end where
-
+        
     case(1) ! Set thickness to zero if ice is floating
-
       where (thck < f * topg)
         thck = 0.0d0
-        usrf = max(0.0d0,topg)
       end where
- 
+
+    case(2) ! Set thickness to zero if relaxed bedrock is below a 
+       ! given level
+       where (relx < mlimit+eus)
+          thck = 0.0d0
+       end where
+
+    case(3) ! remove fraction of ice when floating
+       do ns = 2,size(thck,2)-1
+          do ew = 2,size(thck,1)-1
+             if (is_calving(mask(ew,ns))) then
+                thck(ew,ns) =  0.
+                mask(ew,ns) = glide_mask_ocean
+             end if
+          end do
+       end do
     end select
 
     !---------------------------------------------------------------------
@@ -333,7 +345,6 @@ contains
     case(6)
       where (lati == 0.0)
         thck = 0.0d0
-        usrf = max(0.0d0,topg)
       end where
     end select
   end subroutine glide_marinlim
@@ -526,10 +537,11 @@ contains
          'local water balance', &
          'local + const flux ', &
          'none               ' /)
-    character(len=*), dimension(0:2), parameter :: marine_margin = (/ &
-         'threshold   ', &
-         'no ice shelf', &
-         'none        ' /)
+    character(len=*), dimension(0:3), parameter :: marine_margin = (/ &
+         'ignore            ', &
+         'no ice shelf      ', &
+         'threshold         ', &
+         'const calving rate' /)
     character(len=*), dimension(0:3), parameter :: slip_coeff = (/ &
          'zero        ', &
          'const       ', &
