@@ -92,7 +92,11 @@ contains
     if (VERT_ADV.eq.0.) call write_log('Vertical advection is switched off')
     if (STRAIN_HEAT.eq.0.) call write_log('Strain heating is switched off')
 
+    ! horizontal advection stuff
+    allocate(model%tempwk%hadv_u(model%general%upn,model%general%ewn,model%general%nsn))
+    allocate(model%tempwk%hadv_v(model%general%upn,model%general%ewn,model%general%nsn))
     allocate(model%tempwk%initadvt(model%general%upn,model%general%ewn,model%general%nsn))
+
     allocate(model%tempwk%inittemp(model%general%upn,model%general%ewn,model%general%nsn))
     allocate(model%tempwk%dissip(model%general%upn,model%general%ewn,model%general%nsn))
 
@@ -191,6 +195,7 @@ contains
     !*FD Calculates the ice temperature, according to one
     !*FD of several alternative methods.
 
+    use glimmer_utils, only: hsum4
     use glimmer_global, only : dp
     use paramets,       only : thk0
     use glide_velo
@@ -321,6 +326,14 @@ contains
             model%geomderv%dusrfdns, &
             model%temper%flwa)
 
+       ! translate velo field
+       do ns = 2,model%general%nsn-1
+          do ew = 2,model%general%ewn-1
+             model%tempwk%hadv_u(:,ew,ns) = model%tempwk%advconst(1) * hsum4(model%velocity%uvel(:,ew-1:ew,ns-1:ns))
+             model%tempwk%hadv_v(:,ew,ns) = model%tempwk%advconst(2) * hsum4(model%velocity%vvel(:,ew-1:ew,ns-1:ns))
+          end do
+       end do
+
        call hadvall(model, &
             model%temper%temp, &
             model%velocity%uvel, &
@@ -344,9 +357,9 @@ contains
                      diagadvt,                               &
                      model%temper%temp(:,ew-2:ew+2,ns),      &
                      model%temper%temp(:,ew,ns-2:ns+2),      &
-                     model%velocity%uvel(:,ew-1:ew,ns-1:ns), &
-                     model%velocity%vvel(:,ew-1:ew,ns-1:ns))
-                
+                     model%tempwk%hadv_u(:,ew,ns), &
+                     model%tempwk%hadv_v(:,ew,ns))
+               
                 call findvtri(model,ew,ns,subd,diag,supd,iteradvt,diagadvt, &
                      model%temper%temp(:,ew,ns), &
                      weff, &
@@ -393,8 +406,8 @@ contains
                         diagadvt,                               &
                         model%temper%temp(:,ew-2:ew+2,ns),      &
                         model%temper%temp(:,ew,ns-2:ns+2),      &
-                        model%velocity%uvel(:,ew-1:ew,ns-1:ns), &
-                        model%velocity%vvel(:,ew-1:ew,ns-1:ns))
+                        model%tempwk%hadv_u(:,ew,ns), &
+                        model%tempwk%hadv_v(:,ew,ns))
 
                    call findvtri(model,ew,ns,subd,diag,supd,iteradvt,diagadvt, &
                         model%temper%temp(:,ew,ns), &
@@ -501,25 +514,19 @@ contains
 
   !-------------------------------------------------------------------------
 
-  subroutine hadvpnt(tempwk,iteradvt,diagadvt,tempx,tempy,uvel,vvel)
+  subroutine hadvpnt(tempwk,iteradvt,diagadvt,tempx,tempy,u,v)
 
     use glimmer_global, only : dp
-    use glimmer_utils, only: hsum4
 
     implicit none
 
     type(glide_tempwk) :: tempwk
-    real(dp), dimension(:,:,:), intent(in) :: uvel, vvel
+    real(dp), dimension(:), intent(in) :: u,v
     real(dp), dimension(:,:), intent(in) :: tempx, tempy
     real(dp), dimension(:), intent(out) :: iteradvt, diagadvt
 
-    real(dp), dimension(size(iteradvt)) :: u, v
-
     iteradvt = 0.0d0
     diagadvt = 0.0d0
-
-    u = tempwk%advconst(1) * hsum4(uvel(:,:,:))
-    v = tempwk%advconst(2) * hsum4(vvel(:,:,:))
 
     if (u(1) > 0.0d0) then
        iteradvt = u * (- 4.0d0*tempx(:,2) + tempx(:,1))
@@ -607,8 +614,8 @@ contains
                   diagadvt,                       &
                   temp(:,ew-2:ew+2,ns),           &
                   temp(:,ew,ns-2:ns+2),           &
-                  uvel(:,ew-1:ew,ns-1:ns),        &
-                  vvel(:,ew-1:ew,ns-1:ns))
+                  model%tempwk%hadv_u(:,ew,ns), &
+                  model%tempwk%hadv_v(:,ew,ns))
           end if
        end do
     end do

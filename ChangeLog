@@ -1,4 +1,7 @@
 2005-01-26 Magnus Hagdorn
+ * some more minor optimisations to glimmer_temp.f90
+
+2005-01-26 Magnus Hagdorn
  * glide_stop.f90: output some runtime statistics to log
  * glimmer_temp.f90: optimise by reducing deep if clauses, avoiding
  divisions, etc

@@ -400,6 +400,8 @@ module glide_types
     real(dp),dimension(:,:),  pointer :: fluxns   => null()
     real(dp),dimension(:,:),  pointer :: bint     => null()
     real(dp),dimension(:,:),  pointer :: smth     => null()
+    real(dp),dimension(:,:,:),pointer :: hadv_u   => null()
+    real(dp),dimension(:,:,:),pointer :: hadv_v   => null()
     real(dp),dimension(4)             :: cons     = 0.0
     real(dp),dimension(4)             :: f        = 0.0
     real(dp),dimension(8)             :: c        = 0.0
