@@ -2,6 +2,9 @@
  * Updated GLINT documetation, resurrected some old stuff about using
    GLINT, and added a diagram about timestepping. This is perhaps a bit big
    atm...
+ * Changed doc build so that DIA doesn't display splash screen (added -n)
+ * Added old LaTeX for GLINT API as appendix and started updating
+   it. Incomplete, though.
 
 2005-02-23 Ian Rutt
  * Renamed modules of mass-balance schemes to glimmer_*
