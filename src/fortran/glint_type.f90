@@ -64,6 +64,8 @@ module glint_type
     type(glide_global_type)          :: model              !*FD The instance and all its arrays.
     type(glint_mbal_params)          :: mbal_params        !*FD mass balance scheme parameters
     character(fname_length)          :: paramfile          !*FD The name of the configuration file.
+    integer                          :: ice_tstep          !*FD Ice timestep in hours
+    integer                          :: mbal_tstep         !*FD Mass-balance timestep in hours
 
     ! Climate inputs from global model --------------------------
 

@@ -73,6 +73,7 @@ module glint_proj
     real(rk)       :: cpx,cpy                    !*FD The location of the map projection centre within the grid ($x$ and $y$)
     real(rk)       :: latc,lonc                  !*FD The location of the projection centre in lat/lon space (lat and lon)
     real(rk)       :: std_par=90.0               !*FD Standard parallel (polar stereographic only)
+    real(rk)       :: radea=6.37e6               !*FD Radius of the earth (m)
     real(rk),dimension(:,:),pointer :: sintheta => NULL()  !*FD sines of grid angle relative to north.
     real(rk),dimension(:,:),pointer :: costheta => NULL() !*FD coses of grid angle relative to north.
     real(rk),dimension(:,:),pointer :: latitudes => NULL() !*FD The latitude of each grid-point
@@ -102,6 +103,7 @@ contains
        call GetValue(section,'cpx',proj%cpx)
        call GetValue(section,'cpy',proj%cpy)
        call GetValue(section,'std parallel',proj%std_par)
+       call GetValue(section,'earth_radius',proj%radea)
     end if
   end subroutine proj_readconfig
 
@@ -126,10 +128,12 @@ contains
     call write_log(message)
     write(message,*) 'std parallel : ',proj%std_par
     call write_log(message)
+    write(message,*) 'earth radius : ',proj%radea
+    call write_log(message)
     call write_log('')
   end subroutine proj_printconfig
 
-  subroutine new_proj(proj,radea,p_type,nx,ny,dx,dy,cpx,cpy,latc,lonc,std_par)
+  subroutine new_proj(proj,p_type,nx,ny,dx,dy,cpx,cpy,latc,lonc,std_par)
 
     !*FD Initialise new map projection area. The subroutine may be used without the optional
     !*FD arguments to initialise a projection when these parameters
@@ -140,7 +144,6 @@ contains
     implicit none
 
     type(projection),intent(inout) :: proj   !*FD The projection parameters to be initialised
-    real(rk),intent(in)            :: radea  !*FD The radius of the Earth (m)   
     integer, intent(in),optional   :: p_type !*FD The type of projection
     integer, intent(in),optional   :: nx     !*FD The number of grid-points in the $x$-direction
     integer, intent(in),optional   :: ny     !*FD The number of grid-points in the $y$-direction
@@ -152,32 +155,22 @@ contains
     real(rk),intent(in),optional   :: lonc   !*FD The longituidinal location of the projection centre (degrees east)
     real(rk),intent(in),optional   :: std_par !*FD The standard parallel (polar stereographic only, degrees north)
 
-    if (present(p_type).and. &
-        present(nx).and. &
-        present(ny).and. &
-        present(dx).and. &
-        present(dy).and. &
-        present(cpx).and. &
-        present(cpy).and. &
-        present(latc).and. &
-        present(lonc)) then
-
-      proj%p_type=p_type
-
-      proj%nx=nx     ; proj%ny=ny
-      proj%dx=dx     ; proj%dy=dy
-      proj%cpx=cpx   ; proj%cpy=cpy
-      proj%latc=latc ; proj%lonc=lonc
-
-    endif
-
+    if (present(p_type))  proj%p_type=p_type
+    if (present(nx))      proj%nx=nx     
+    if (present(ny))      proj%ny=ny
+    if (present(dx))      proj%dx=dx     
+    if (present(dy))      proj%dy=dy
+    if (present(cpx))     proj%cpx=cpx   
+    if (present(cpy))     proj%cpy=cpy
+    if (present(latc))    proj%latc=latc 
+    if (present(lonc))    proj%lonc=lonc
     if (present(std_par)) proj%std_par=std_par
 
     call proj_allocate(proj)
 
     proj%sintheta=0.0 ; proj%costheta=0.0
 
-    call gmt_set(proj%p_type,proj%latc,proj%lonc,radea,proj%std_par,proj%gmt_params)
+    call gmt_set(proj%p_type,proj%latc,proj%lonc,proj%radea,proj%std_par,proj%gmt_params)
 
     call calc_grid_angle(proj)
 

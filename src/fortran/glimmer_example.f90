@@ -104,7 +104,7 @@ program glimmer_example
 
   logical :: out    ! Outputs set flag
   integer :: i,j    ! Array index counters
-  real(rk) :: time  ! Current time (hours)
+  integer :: time   ! Current time (hours)
 
   ! -------------------------------------------------------------------------------------
   ! Executable code starts here - Basic initialisation
@@ -223,8 +223,6 @@ program glimmer_example
 
   precip=precip/3600.0   ! Convert background precip rate from mm/h to mm/s
 
-  time=24.0*360.0
-
   ! Set the message level (6 is the default - all messages on)
 
   call glimmer_set_msg_level(6)
@@ -251,7 +249,7 @@ program glimmer_example
 
   ! Do timesteps ---------------------------------------------------------------------------
 
-  do time=0.0*24.0*360.0,total_years*24.0*360.0,24.0*360.0   ! In this case, we do 50000 years
+  do time=0*24*360,total_years*24*360,24*360
     call glint(ice_sheet,time,temp,precip,zonwind,merwind,orog, &
                  orog_out=orog_out,   albedo=albedo,         output_flag=out, &
                  ice_frac=ice_frac,   water_out=fw,          water_in=fw_in, &

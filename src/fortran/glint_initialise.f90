@@ -51,7 +51,7 @@ module glint_initialise
 
 contains
 
-  subroutine glint_i_initialise(config,instance,radea,grid,time_step,start_time)
+  subroutine glint_i_initialise(config,instance,grid,mbts)
 
     !*FD Initialise a GLINT ice model instance
 
@@ -59,25 +59,23 @@ contains
     use glint_global_grid
     use glint_io
     use glide
+    use glint_constants
     implicit none
 
     ! Arguments
     type(ConfigSection), pointer         :: config      !*FD structure holding sections of configuration file   
     type(glint_instance),  intent(inout) :: instance    !*FD The instance being initialised.
-    real(rk),              intent(in)    :: radea       !*FD Radius of the earth (m).
     type(global_grid),     intent(in)    :: grid        !*FD Global grid to use
-    real(rk),              intent(in)    :: time_step   !*FD Model time-step (years).
-    real(rk),optional,     intent(in)    :: start_time  !*FD Start time of model (years).
+    integer,               intent(out)   :: mbts        !*FD mass-balance time-step (hours)
 
     ! initialise model
 
     call glide_initialise(instance%model,config)
+    instance%ice_tstep=get_tinc(instance%model)*years2hours
 
     ! create glint variables
 
     call glint_io_createall(instance%model)
-
-    instance%model%numerics%tinc=time_step             ! Initialise the model time step
 
     ! read glint configuration
 
@@ -87,27 +85,25 @@ contains
     ! initialise the mass-balance scheme
 
     call glint_mbal_init(instance%mbal_params,config,instance%whichacab)
+    instance%mbal_tstep=instance%mbal_params%tstep
+    mbts=instance%mbal_tstep
 
-    ! setting nx,ny of proj
+    ! New projection and downscaling
 
-    instance%proj%nx = get_ewn(instance%model)
-    instance%proj%ny = get_nsn(instance%model)
-    instance%proj%dx = get_dew(instance%model)
-    instance%proj%dy = get_dns(instance%model)
-
-    call new_proj(instance%proj,radea)                        ! Initialise the projection
+    call new_proj(instance%proj, &                       ! Initialise the projection
+                  nx=get_ewn(instance%model), &
+                  ny=get_nsn(instance%model), &
+                  dx=get_dew(instance%model), &
+                  dy=get_dns(instance%model))
     call new_downscale(instance%downs,instance%proj,grid)     ! Initialise the downscaling
+
     call glint_i_allocate(instance,grid%nx,grid%ny)           ! Allocate arrays appropriately
-
     call glint_i_readdata(instance)
-
-    call new_upscale(instance%ups,grid,instance%proj, &
-                     instance%out_mask)           ! Initialise upscaling parameters
+    call new_upscale(instance%ups,grid,instance%proj,instance%out_mask) ! Initialise upscaling parameters
 
     call calc_coverage(instance%proj, &                         ! Calculate coverage map
                        instance%ups,  &             
                        grid,          &
-                       radea,         &
                        instance%out_mask, &
                        instance%frac_coverage)
 
@@ -115,12 +111,6 @@ contains
                                                          ! other fields.
     instance%frac_cov_orog=instance%frac_coverage        ! Set fractional coverage for orog to be same as
                                                          ! for other fields.
-
-    if (present(start_time)) then
-      instance%model%numerics%time = start_time       ! Initialise the counter.
-    else                                              ! Despite being in the GLIMMER framework,
-      instance%model%numerics%time = 0.0              ! each instance has a copy of the counter
-    endif                                             ! for simplicity.
 
   end subroutine glint_i_initialise
 
@@ -163,7 +153,7 @@ contains
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine calc_coverage(proj,ups,grid,radea,mask,frac_coverage)
+  subroutine calc_coverage(proj,ups,grid,mask,frac_coverage)
 
     !*FD Calculates the fractional
     !*FD coverage of the global grid-boxes by the ice model
@@ -178,7 +168,6 @@ contains
     type(projection),       intent(in)  :: proj          !*FD Projection to be used
     type(upscale),          intent(in)  :: ups           !*FD Upscaling used
     type(global_grid),      intent(in)  :: grid          !*FD Global grid used
-    real(rk),               intent(in)  :: radea         !*FD Radius of the earth (m)
     integer, dimension(:,:),intent(in)  :: mask          !*FD Mask of points for upscaling
     real(rk),dimension(:,:),intent(out) :: frac_coverage !*FD Map of fractional 
                                                          !*FD coverage of global by local grid-boxes.
@@ -203,7 +192,7 @@ contains
           frac_coverage(i,j)=0.0
         else
           frac_coverage(i,j)=(tempcount(i,j)*proj%dx*proj%dy)/ &
-                 (lon_diff(grid%lon_bound(i+1),grid%lon_bound(i))*D2R*radea**2*    &
+                 (lon_diff(grid%lon_bound(i+1),grid%lon_bound(i))*D2R*proj%radea**2*    &
                  (sin(grid%lat_bound(j)*D2R)-sin(grid%lat_bound(j+1)*D2R)))
         endif
       enddo

@@ -1,3 +1,15 @@
+2005-02-23 Ian Rutt
+ * More reorganisation and pruning
+ * Set all times and timesteps in GLINT to be in *hours*, converted to
+   years when calling GLIDE
+ * All times in GLINT are integer type
+ * Implemented mass-balance timesteps in GLINT - all instances must have
+   the same mass-balance timestep
+ * Moved specification of earth's radius in glimmer_proj.f90 to config file
+   input
+ * New file - glint_constants.f90 - mostly for conversion between different
+   time units.
+
 2005-02-22 Ian Rutt
  * Substantial reorganisation of GLINT. 
  * Added wrapper for mass-balance schemes (glint_mbal.f90)

@@ -50,6 +50,7 @@ module glint_main
   use glimmer_global
   use glint_type
   use glint_global_grid
+  use glint_constants
 
   ! ------------------------------------------------------------
   ! GLIMMER_PARAMS derived type definition
@@ -74,9 +75,7 @@ module glint_main
 
      ! Global model parameters ----------------------------------
 
-     real(rk) :: radea      = 6.37e6 !*FD Radius of the earth (m)
-     real(rk) :: tstep_main = 1.0    !*FD Main timestep (years)
-     real(rk) :: tstep_mbal = 1.0    !*FD Mass-balance timestep (years)
+     real(rk) :: tstep_mbal = 1.0    !*FD Mass-balance timestep (hours)
 
      ! Averaging parameters -------------------------------------
 
@@ -120,20 +119,10 @@ module glint_main
 
   end type glint_params
 
-  ! ------------------------------------------------------------
-  ! global parameters/constants
-  ! ------------------------------------------------------------
-
-  integer, parameter :: days_in_year=360                   !*FD The number of days in a year  
-  real(rk),parameter :: pi=3.141592654                     !*FD The value of pi
-  real(rk),parameter :: years2hours=24.0*days_in_year      !*FD Years to hours conversion factor
-  real(rk),parameter :: hours2years=1/years2hours          !*FD Hours to years conversion factor
-  real(rk),parameter :: hours2seconds=3600.0               !*FD Hours to seconds conversion factor
-
   ! Private names -----------------------------------------------
 
   private glint_allocate_arrays
-  private glint_readconfig, calc_bounds,pi
+  private glint_readconfig, calc_bounds
 
 contains
 
@@ -173,6 +162,7 @@ contains
     character(fname_length):: instance_fname      ! name of instance specific configuration file
     integer :: i,args
     real(rk),dimension(:,:),allocatable :: orog_temp,if_temp,alb_temp ! Temporary output arrays
+    integer,dimension(:),allocatable :: mbts ! Array of mass-balance timesteps
 
     ! Initialise main global grid --------------------------------------------------------------
 
@@ -221,6 +211,7 @@ contains
     ! and the array of mass-balance timesteps
 
     allocate(params%instances(params%ninstances))
+    allocate(mbts(params%ninstances))
 
     ! ---------------------------------------------------------------
     ! Zero coverage maps and normalisation fields for main grid and
@@ -258,11 +249,7 @@ contains
        ! initialise the single instance
 
        call write_log(trim(paramfile))
-       call glint_i_initialise(global_config, &
-            params%instances(1), &
-            params%radea,        &
-            params%g_grid,       &
-            params%tstep_main)
+       call glint_i_initialise(global_config,params%instances(1),params%g_grid,mbts(1))
        call write_log('')
 
        ! Update the coverage and normalisation fields
@@ -289,16 +276,10 @@ contains
           call GetValue(section,'name',instance_fname)
           call write_log(trim(instance_fname))
           call ConfigRead(instance_fname,instance_config)
-          call glint_i_initialise(instance_config, &
-               params%instances(i), &
-               params%radea,        &
-               params%g_grid,       &
-               params%tstep_main)
+          call glint_i_initialise(instance_config,params%instances(i),params%g_grid,mbts(i))
 
-          params%total_coverage = params%total_coverage &
-               + params%instances(i)%frac_coverage
-          params%total_cov_orog = params%total_cov_orog &
-               + params%instances(i)%frac_cov_orog
+          params%total_coverage = params%total_coverage + params%instances(i)%frac_coverage
+          params%total_cov_orog = params%total_cov_orog + params%instances(i)%frac_cov_orog
 
           where (params%total_coverage>0.0) params%cov_normalise=params%cov_normalise+1.0
           where (params%total_cov_orog>0.0) params%cov_norm_orog=params%cov_norm_orog+1.0
@@ -322,7 +303,7 @@ contains
     ! assign that value to the top-level variable
     ! **** Not implemented - v. strange bug, so have removed this code ****
 
-    params%tstep_mbal=1.0
+    params%tstep_mbal=check_mbts(mbts)
 
     ! Check we don't have coverage greater than one at any point.
 
@@ -409,7 +390,7 @@ contains
     ! Subroutine argument declarations -------------------------------------------------------------
 
     type(glint_params),              intent(inout) :: params          !*FD parameters for this run
-    real(rk),                        intent(in)    :: time            !*FD Current model time        (hours)
+    integer,                         intent(in)    :: time            !*FD Current model time        (hours)
     real(rk),dimension(:,:),         intent(in)    :: temp            !*FD Surface temperature field (celcius)
     real(rk),dimension(:,:),         intent(in)    :: precip          !*FD Precipitation rate        (mm/s)
     real(rk),dimension(:,:),         intent(in)    :: zonwind,merwind !*FD Zonal and meridional components 
@@ -468,7 +449,7 @@ contains
     ! for each model instance
     ! ---------------------------------------------------------
 
-    if (time-params%av_start_time.ge.nint(params%tstep_mbal*years2hours)) then
+    if (time-params%av_start_time.ge.params%tstep_mbal) then
 
        ! Set output_flag
 
@@ -563,7 +544,7 @@ contains
        ! Do a timestep for each instance
 
        do i=1,params%ninstances
-          call glint_i_tstep(time*hours2years,&
+          call glint_i_tstep(time,&
                params%instances(i),          &
                params%g_grid%lats,           &
                params%g_grid%lons,           &
@@ -790,7 +771,6 @@ contains
        call calc_coverage(params%instances(i)%proj, &
             params%instances(i)%ups_orog,&             ! Calculate coverage map
             params%g_grid_orog, &
-            params%radea, &
             params%instances(i)%out_mask, &
             params%instances(i)%frac_cov_orog)
 
@@ -886,7 +866,6 @@ contains
     call GetSection(config,section,'GLINT')
     if (associated(section)) then
        call GetValue(section,'n_instance',params%ninstances)
-       call GetValue(section,'timestep',params%tstep_main)
     end if
 
     ! Print some configuration information
@@ -894,8 +873,6 @@ contains
     call write_log('GLINT global')
     call write_log('------------')
     write(message,*) 'number of instances :',params%ninstances
-    call write_log(message)
-    write(message,*) 'main time step      :',params%tstep_main
     call write_log(message)
     call write_log('')
 
@@ -970,13 +947,13 @@ contains
 
     implicit none
 
-    real(rk),dimension(:) :: timesteps !*FD Array of mass-balance timsteps
+    integer,dimension(:) :: timesteps !*FD Array of mass-balance timsteps
 
     integer :: n,i
 
     n=size(timesteps)
     if (n==0) then
-       check_mbts=0.0
+       check_mbts=0
        return
     endif
 

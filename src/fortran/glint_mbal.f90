@@ -52,6 +52,7 @@ module glint_mbal
   type glint_mbal_params
     type(glint_pdd_params),pointer :: annual_pdd !*FD Pointer to annual PDD params
     integer :: which !*FD Flag for chosen mass-balance type
+    integer :: tstep !*FD Timestep of mass-balance scheme in hours
   end type glint_mbal_params
 
 contains
@@ -60,6 +61,7 @@ contains
 
     use glimmer_config
     use glimmer_log
+    use glint_constants
 
     !*FD Initialise mass-balance schemes
 
@@ -82,11 +84,13 @@ contains
     case(1)
       allocate(params%annual_pdd)
       call glint_pdd_init(params%annual_pdd,config)
+      params%tstep=years2hours
     case(2)
-      ! Do nothing
+      params%tstep=years2hours
     case(3)
       ! The energy-balance model will go here...
       call write_log('Energy-balance mass-balance model not implemented yet',GM_FATAL,__FILE__,__LINE__)
+      params%tstep=1
     case default
       call write_log('Invalid value of whichacab',GM_FATAL,__FILE__,__LINE__)
     end select

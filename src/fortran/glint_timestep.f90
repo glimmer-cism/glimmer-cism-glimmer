@@ -44,6 +44,7 @@ module glint_timestep
   !*FD timestep of a GLINT instance
 
   use glint_type
+  use glint_constants
   private
   public glint_i_tstep
 
@@ -73,7 +74,7 @@ contains
     ! Arguments
     ! ------------------------------------------------------------------------  
 
-    real(rk),               intent(in)   :: time         !*FD Current time in years
+    integer,                intent(in)   :: time         !*FD Current time in hours
     type(glint_instance), intent(inout)  :: instance     !*FD Model instance
     real(rk),dimension(:),  intent(in)   :: lats         !*FD Latitudes of global grid points (degrees north)
     real(rk),dimension(:),  intent(in)   :: lons         !*FD Longitudes of global grid points (degrees east)
@@ -160,7 +161,7 @@ contains
 
     ! If it's not time for a dynamics/temp/velocity timestep, return
 
-    if (time-instance%accum_start.lt.instance%model%numerics%tinc) return
+    if (time-instance%accum_start.lt.instance%ice_tstep) return
 
     ! ------------------------------------------------------------------------  
     ! ICE TIMESTEP begins HERE ***********************************************
@@ -204,7 +205,7 @@ contains
     ! do the first part of the glide time step
     ! ------------------------------------------------------------------------
 
-    call glide_tstep_p1(instance%model,time)
+    call glide_tstep_p1(instance%model,real(time,rk)*hours2years)
     
     ! write glint data to file
     call glint_io_writeall(instance,instance%model)
