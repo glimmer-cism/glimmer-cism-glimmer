@@ -1,4 +1,8 @@
 2005-04-04 Magnus Hagdorn
+ * glide_velo.f90: grr, used wrong derivatives for basal shear calcs,
+   fixed
+
+2005-04-04 Magnus Hagdorn
  * glide_thck.f90: move surface and horiz deriv calculations to
    thck_evolve
  * glide_types.f90: added basal shear stress variables

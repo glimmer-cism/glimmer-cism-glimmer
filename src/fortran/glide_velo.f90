@@ -1084,8 +1084,8 @@ contains
 
 
     model%velocity%tau_x = -rhoi*grav*model%geomderv%stagthck
-    model%velocity%tau_y = model%velocity%tau_x * model%geomderv% dthckdns
-    model%velocity%tau_x = model%velocity%tau_x * model%geomderv% dthckdew
+    model%velocity%tau_y = model%velocity%tau_x * model%geomderv%dusrfdns
+    model%velocity%tau_x = model%velocity%tau_x * model%geomderv%dusrfdew
   end subroutine calc_basal_shear
 
 end module glide_velo
