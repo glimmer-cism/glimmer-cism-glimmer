@@ -1,3 +1,9 @@
+2005-04-05 Ian Rutt
+ * New climate driver for glint_example.f90, called
+   glint_example_clim.f90, now handles netcdf input files more flexibly.
+ * Added error-handling code to glint_global_interp.f90
+ * Added various operator overloadings to glint_global_grid.f90
+	
 2005-04-04 Magnus Hagdorn
  * glide_velo.f90: grr, used wrong derivatives for basal shear calcs,
    fixed

@@ -46,9 +46,37 @@ module glint_global_grid
 
   private pi
 
+  interface min
+     module procedure grid_min
+  end interface
+
+  interface operator(==)
+     module procedure grid_equiv
+  end interface
+
+  interface operator(/=)
+     module procedure grid_nequiv
+  end interface
+
+  interface assignment(=)
+     module procedure grid_assign
+  end interface
+
+  interface operator(>)
+     module procedure grid_greater_than
+  end interface
+
+  interface operator(<)
+     module procedure grid_less_than
+  end interface
+
+  interface grid_alloc
+     module procedure grid_alloc_2d,grid_alloc_3d
+  end interface
+
 contains
 
-  subroutine new_global_grid(grid,lons,lats,lonb,latb,radius)
+  subroutine new_global_grid(grid,lons,lats,lonb,latb,radius,correct)
 
     use glimmer_log
 
@@ -60,12 +88,22 @@ contains
     real(rk),dimension(:),optional,intent(in)    :: lonb !*FD Longitudinal boundaries of grid-boxes (degrees)
     real(rk),dimension(:),optional,intent(in)    :: latb !*FD Latitudinal boundaries of grid-boxes (degrees)
     real(rk),             optional,intent(in)    :: radius !*FD The radius of the Earth (m)
+    logical,              optional,intent(in)    :: correct !*FD Set to correct for boundaries (default is .true.)
 
     ! Internal variables
 
     real(rk) :: radea=1.0
     integer :: i,j
+    logical :: cor
+    
+    ! Deal with optional non-correction
 
+    if (present(correct)) then
+       cor=correct
+    else
+       cor=.true.
+    end if
+   
     ! Check to see if things are allocated, and if so, deallocate them
 
     if (associated(grid%lats))      deallocate(grid%lats)
@@ -110,7 +148,7 @@ contains
     if (present(lonb)) then
       grid%lon_bound=lonb
     else
-      call calc_bounds_lon(lons,grid%lon_bound)
+      call calc_bounds_lon(lons,grid%lon_bound,cor)
     endif
 
     if (present(latb)) then
@@ -184,9 +222,35 @@ contains
 
   end subroutine get_grid_dims
 
+  !-----------------------------------------------------------------------------
+
+  subroutine print_grid(grid)
+
+    type(global_grid),intent(in)  :: grid
+
+    print*,'Grid parameters:'
+    print*,'----------------'
+    print*
+    print*,'nx=',grid%nx
+    print*,'ny=',grid%ny
+    print*
+    print*,'longitudes:'
+    print*,grid%lons
+    print*
+    print*,'latitudes:'
+    print*,grid%lats
+    print*
+    print*,'longitude boundaries:'
+    print*,grid%lon_bound
+    print*
+    print*,'latitude boundaries:'
+    print*,grid%lat_bound
+
+  end subroutine print_grid
+  
 !-----------------------------------------------------------------------------
 
-  subroutine calc_bounds_lon(lons,lonb)
+  subroutine calc_bounds_lon(lons,lonb,correct)
   
     !*FD Calculates the longitudinal boundaries between
     !*FD global grid-boxes. Note that we assume that the boundaries lie 
@@ -195,8 +259,9 @@ contains
 
     implicit none
 
-    real(rk),dimension(:),intent(in)  :: lons !*FD locations of global grid-points (degrees)
-    real(rk),dimension(:),intent(out) :: lonb !*FD boundaries of grid-boxes (degrees)
+    real(rk),dimension(:),intent(in)  :: lons    !*FD locations of global grid-points (degrees)
+    real(rk),dimension(:),intent(out) :: lonb    !*FD boundaries of grid-boxes (degrees)
+    logical,              intent(in)  :: correct !*FD Set to correct for longitudinal grid boundary
 
     integer :: nxg,i
 
@@ -205,10 +270,10 @@ contains
     ! Longitudes
  
     do i=1,nxg-1
-      lonb(i+1)=mid_lon(lons(i),lons(i+1))
+      lonb(i+1)=mid_lon(lons(i),lons(i+1),correct)
     enddo
 
-    lonb(1)=mid_lon(lons(nxg),lons(1))
+    lonb(1)=mid_lon(lons(nxg),lons(1),correct)
     lonb(nxg+1)=lonb(1)
 
   end subroutine calc_bounds_lon
@@ -247,7 +312,7 @@ contains
 
 !-------------------------------------------------------------
 
-  real(rk) function mid_lon(a,b)
+  real(rk) function mid_lon(a,b,correct)
 
     use glimmer_log
 
@@ -255,6 +320,7 @@ contains
     !*FD \texttt{a} must be west of \texttt{b}.
 
     real(rk),intent(in) :: a,b
+    logical :: correct
 
     real(rk) :: aa,bb,out
 
@@ -269,16 +335,18 @@ contains
 
     out=aa+((bb-aa)/2.0)
 
-    do
-      if (out<=360.0) exit
-      out=out-360.0
-    end do
+    if (correct) then
+       do
+          if (out<=360.0) exit
+          out=out-360.0
+       end do
 
-    do
-      if (out>=0.0) exit
-      out=out+360.0
-    end do
-    
+       do
+          if (out>=0.0) exit
+          out=out+360.0
+       end do
+    end if
+
     mid_lon=out
 
   end function mid_lon
@@ -326,5 +394,171 @@ contains
     delta_lon=dl*pi/180.0
 
   end function delta_lon
+
+!-------------------------------------------------------------
+
+  pure logical function grid_greater_than(a,b)
+
+    type(global_grid),intent(in) :: a,b
+
+    if (a%nx*a%ny.gt.b%nx*b%ny) then
+       grid_greater_than=.true.
+    else
+       grid_greater_than=.false.
+    end if
+
+  end function grid_greater_than
+
+!-------------------------------------------------------------
+
+  pure logical function grid_less_than(a,b)
+
+    type(global_grid),intent(in) :: a,b
+
+    if (a%nx*a%ny.lt.b%nx*b%ny) then
+       grid_less_than=.true.
+    else
+       grid_less_than=.false.
+    end if
+
+  end function grid_less_than
+
+!-------------------------------------------------------------
+
+  elemental function grid_min(a,b)
+
+    type(global_grid),intent(in) :: a,b
+    type(global_grid) :: grid_min
+
+    if (a>b) then
+       grid_min=b
+    else
+       grid_min=a
+    endif
+
+  end function grid_min
+
+!-------------------------------------------------------------
+
+  pure subroutine grid_assign(a,b)
+
+    type(global_grid),intent(out) :: a
+    type(global_grid),intent(in)  :: b
+
+    ! Copy sizes
+
+    a%nx=b%nx
+    a%ny=b%ny
+    
+    ! deallocate arrays
+
+    if (associated(a%lats))      deallocate(a%lats)
+    if (associated(a%lons))      deallocate(a%lons)
+    if (associated(a%lat_bound)) deallocate(a%lat_bound)
+    if (associated(a%lon_bound)) deallocate(a%lon_bound)
+    if (associated(a%box_areas)) deallocate(a%box_areas)
+
+    ! reallocate arrays
+
+    allocate(a%lats(size(b%lats)))
+    allocate(a%lons(size(b%lons)))
+    allocate(a%lat_bound(size(b%lat_bound)))
+    allocate(a%lon_bound(size(b%lon_bound)))
+    allocate(a%box_areas(size(b%box_areas,1),size(b%box_areas,2)))
+
+    ! Copy contents
+
+    a%lats=b%lats
+    a%lons=b%lons
+    a%lat_bound=b%lat_bound
+    a%lon_bound=b%lon_bound
+    a%box_areas=b%box_areas
+
+  end subroutine grid_assign
+
+!-------------------------------------------------------------
+
+  elemental logical function grid_equiv(a,b)
+
+    type(global_grid),intent(in)  :: a,b
+
+    if (.not.check_associated(a).or. &
+         .not.check_associated(b)) then
+       grid_equiv=.false.
+       return
+    end if
+
+    if (a%nx.ne.b%nx.or.a%ny.ne.b%ny) then
+       grid_equiv=.false.
+       return
+    end if
+
+    if (any(a%lats.ne.b%lats).or. &
+         any(a%lons.ne.b%lons).or. &
+         any(a%lat_bound.ne.b%lat_bound).or. &
+         any(a%lon_bound.ne.b%lon_bound).or. &
+         any(a%box_areas.ne.b%box_areas)) then
+       grid_equiv=.false.
+       return
+    end if
+
+    grid_equiv=.true.
+   
+  end function grid_equiv
+
+!-------------------------------------------------------------
+  
+  elemental logical function grid_nequiv(a,b)
+
+    type(global_grid),intent(in)  :: a,b
+
+    grid_nequiv=.not.grid_equiv(a,b)
+
+  end function grid_nequiv
+
+!-------------------------------------------------------------
+
+  pure logical function check_associated(a)
+
+    type(global_grid),intent(in)  :: a
+
+    if (associated(a%lats).and. &
+         associated(a%lons).and. &
+         associated(a%lat_bound).and. &
+         associated(a%lon_bound).and. &
+         associated(a%box_areas)) then
+       check_associated=.true.
+    else
+       check_associated=.false.
+    end if
+
+  end function check_associated
+
+!-------------------------------------------------------------
+
+  subroutine grid_alloc_3d(array,grid,d3)
+
+    real(rk),dimension(:,:,:),pointer :: array
+    type(global_grid),intent(in)  :: grid
+    integer,intent(in) :: d3
+
+    if (associated(array)) deallocate(array)
+
+    allocate(array(grid%nx,grid%ny,d3))
+
+  end subroutine grid_alloc_3d
+
+!--------------------------------------------------------------
+
+  subroutine grid_alloc_2d(array,grid)
+
+    real(rk),dimension(:,:),pointer :: array
+    type(global_grid),intent(in)  :: grid
+
+    if (associated(array)) deallocate(array)
+
+    allocate(array(grid%nx,grid%ny))
+
+  end subroutine grid_alloc_2d
 
 end module glint_global_grid

@@ -1,4 +1,46 @@
 
+! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+! +                                                           +
+! +  glint_global_interp.f90 - part of the GLIMMER ice model  + 
+! +                                                           +
+! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+! 
+! Copyright (C) 2004 GLIMMER contributors - see COPYRIGHT file 
+! for list of contributors.
+!
+! This program is free software; you can redistribute it and/or 
+! modify it under the terms of the GNU General Public License as 
+! published by the Free Software Foundation; either version 2 of 
+! the License, or (at your option) any later version.
+!
+! This program is distributed in the hope that it will be useful, 
+! but WITHOUT ANY WARRANTY; without even the implied warranty of 
+! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+! GNU General Public License for more details.
+!
+! You should have received a copy of the GNU General Public License 
+! along with this program; if not, write to the Free Software 
+! Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 
+! 02111-1307 USA
+!
+! GLIMMER is maintained by:
+!
+! Ian Rutt
+! School of Geographical Sciences
+! University of Bristol
+! University Road
+! Bristol
+! BS8 1SS
+! UK
+!
+! email: <i.c.rutt@bristol.ac.uk> or <ian.rutt@physics.org>
+!
+! GLIMMER is hosted on NeSCForge:
+!
+! http://forge.nesc.ac.uk/projects/glimmer/
+!
+! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 module glint_global_interp
 
   use glint_global_grid
@@ -427,5 +469,48 @@ contains
     if (present(out_mask)) out_mask=masko
 
   end subroutine global_interp
+
+  subroutine interp_error(err,line)
+
+    use glimmer_log
+
+    integer :: err,line
+    character(50) :: message
+    integer :: e
+    
+    write(message,'(A,I6)')'Interpolation errors at line ',line
+    call write_log(message)
+    
+    e=err
+
+    call err_check(e,2048,'output longitude wraps but doesn''t repeat identically')
+    call err_check(e,1024,'input longitude wraps but doesn''t repeat identically')
+    call err_check(e,512, 'latitude of output is not monotonic')
+    call err_check(e,256, 'latitude of input is not monotonic')
+    call err_check(e,128, 'longitude of output is not monotonic increasing')
+    call err_check(e,64,  'longitude of input is not monotonic increasing')
+    call err_check(e,32,  'wrap-around on output longitude grid doesn''t repeat (+360)')
+    call err_check(e,16,  'wrap-around on input longitude grid doesn''t repeat (+360)')
+    call err_check(e,8,   'output latitude dimension <=0')
+    call err_check(e,4,   'input latitude dimension <=0')
+    call err_check(e,2,   'output dimension and/or length <=0')
+    call err_check(e,1,   'input longitude dimension and/or length <=0')
+    stop
+
+  end subroutine interp_error
+
+  subroutine err_check(e,en,out)
+
+    use glimmer_log
+
+    integer :: e,en
+    character(*) :: out
+
+    if (e>en) then
+       call write_log(out)
+       e=e-en
+    end if
+    
+  end subroutine err_check
 
 end module glint_global_interp

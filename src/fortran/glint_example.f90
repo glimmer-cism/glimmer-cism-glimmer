@@ -50,27 +50,17 @@ program glint_example
   use glint_main
   use glimmer_log
   use glint_global_interp
+  use glint_example_clim
   implicit none
 
   ! Program variables -------------------------------------------------------------------
 
-  type(glint_params) :: ice_sheet    ! This is the derived type variable that holds all 
-                                       ! domains of the ice model
-
-  character(fname_length) :: paramfile  ! The top-level configuration file
-
-  integer :: total_years ! Length of run in years
-
-  ! Pointer arrays to the global climate data -------------------------------------------
-
-  real(rk),dimension(:,:,:),pointer :: orog_clim     => null()  ! Orography
-  real(rk),dimension(:,:,:),pointer :: precip_clim   => null()  ! Precip
-  real(rk),dimension(:,:,:),pointer :: precip_clim_raw  => null()  ! Input precip
-  real(rk),dimension(:,:,:),pointer :: surftemp_clim => null()  ! Surface temperature
-
-  type(global_grid),pointer :: orog_grid   => null()
-  type(global_grid),pointer :: precip_grid => null()
-  type(global_grid),pointer :: temp_grid   => null()
+  type(glint_params)      :: ice_sheet   ! This is the derived type variable that holds all 
+                                         ! domains of the ice model
+  type(glex_climate)      :: climate     ! Climate parameters and fields
+  character(fname_length) :: paramfile   ! Name of the top-level configuration file
+  character(fname_length) :: climatefile ! Name of climate configuration file
+  integer                 :: total_years ! Length of run in years
 
   ! Arrays which hold the global fields used as input to GLIMMER ------------------------
 
@@ -96,16 +86,13 @@ program glint_example
 
   ! Arrays which hold information about the global grid ---------------------------------
 
-  real(rk),dimension(:),  pointer :: lats => null()     ! Latitudes of normal global gridpoints
-  real(rk),dimension(:),  pointer :: lons => null()     ! Longitudes of normal global gridpoints
-  real(rk),dimension(:),  allocatable :: lats_orog ! Latitudes of global orography gridpoints
-  real(rk),dimension(:),  allocatable :: lons_orog ! Longitudes of global oropraphy gridpoints
+  real(rk),dimension(:),  allocatable :: lats_orog      ! Latitudes of global orography gridpoints
+  real(rk),dimension(:),  allocatable :: lons_orog      ! Longitudes of global oropraphy gridpoints
 
   ! Scalars which hold information about the global grid --------------------------------
 
   integer :: nx,ny   ! Size of normal global grid
   integer :: nxo,nyo ! Size of global orography grid
-  integer :: nxp,nyp ! Precip grid
 
   ! Scalar model outputs ----------------------------------------------------------------
 
@@ -124,37 +111,20 @@ program glint_example
   ! Executable code starts here - Basic initialisation
   ! -------------------------------------------------------------------------------------
 
-  Print*,'Enter name of configuration file:'
+  Print*,'Enter name of climate configuration file:'
+  read*,climatefile
+
+  Print*,'Enter name of ice model configuration file:'
   read*,paramfile
 
-  ! Read in climate data
+  ! Initialise climate
 
-  call read_ncdf_3d('monthly_precip_mean_1974-2003.nc','prate',precip_clim_raw,precip_grid)
-  call read_ncdf_3d('surf_temp_6h_1974-2003.nc','air_temperature',surftemp_clim,temp_grid)
-  call read_ncdf_3d('global_orog.nc','hgt',orog_clim,orog_grid)
-
-  ! Fix up a few things
-
-  surftemp_clim=surftemp_clim-273.15       ! Convert temps to degreesC
+  call glex_clim_init(climate,climatefile)
 
   ! Set dimensions of global grids
 
-  call get_grid_dims(temp_grid,nx,ny)     ! Normal global grid
-  call get_grid_dims(precip_grid,nxp,nyp) ! Precip input grid
-
-  nxo=200 ; nyo=100 ! Example grid used for orographic output
-
-  ! Do precip interpolation
-
-  allocate(precip_clim(nx,ny,12))
-
-  do i=1,12
-     call global_interp(precip_grid,precip_clim_raw(:,:,i),temp_grid,precip_clim(:,:,i),error=ierr)
-     if (ierr>0) then
-        Print*,'Interpolation error ',ierr
-        stop
-     end if
-  end do
+  call get_grid_dims(climate%all_grid,nx,ny) ! Normal global grid
+  nxo=200 ; nyo=100                          ! Example grid used for orographic output
 
   ! start logging
   call open_log(unit=101)  
@@ -174,7 +144,7 @@ program glint_example
   merwind=0.0
   albedo=0.0
   orog_out=0.0
-  orog=real(orog_clim(:,:,1))                    ! Put orography where it belongs
+  orog=real(climate%orog_clim)                    ! Put orography where it belongs
 
   ! Set up global grids ----------------------------------------------------------------
 
@@ -196,8 +166,16 @@ program glint_example
 
   ! Initialise the ice model
 
-  call initialise_glint(ice_sheet,temp_grid%lats,temp_grid%lons,paramfile,orog=orog_out,ice_frac=ice_frac, &
-       albedo=albedo,orog_longs=lons_orog,orog_lats=lats_orog,daysinyear=365)
+  call initialise_glint(ice_sheet, &
+       climate%all_grid%lats, &
+       climate%all_grid%lons, &
+       paramfile, &
+       orog=orog_out, &
+       ice_frac=ice_frac, &
+       albedo=albedo, &
+       orog_longs=lons_orog, &
+       orog_lats=lats_orog, &
+       daysinyear=365)
 
   ! Get coverage maps for the ice model instances
 
@@ -213,8 +191,8 @@ program glint_example
 
   ! Do timesteps ---------------------------------------------------------------------------
 
-  do time=0,total_years*24*365+6,6
-     call example_climate(precip_clim,surftemp_clim,precip,temp,real(time,rk))
+  do time=0,total_years*climate%hours_in_year+6,6
+     call example_climate(climate,precip,temp,real(time,rk))
      call glint(ice_sheet,time,temp,precip,zonwind,merwind,orog, &
           orog_out=orog_out,   albedo=albedo,         output_flag=out, &
           ice_frac=ice_frac,   water_out=fw,          water_in=fw_in, &
@@ -228,256 +206,5 @@ program glint_example
 
 100 format(f9.5)
 101 format(e12.5)
-
-contains
-
-  subroutine read_ncdf_3d(filename,varname,array,grid)
-
-    use netcdf
-
-    character(*)                      :: filename,varname
-    real(rk),dimension(:,:,:),pointer :: array
-    type(global_grid),        pointer :: grid
-
-    real(rk),dimension(:),allocatable :: dim1,dim2,dim3
-    real(rk),dimension(:),allocatable :: lonbound,latbound
-
-    integer  :: ncerr     ! NetCDF error 
-    integer  :: ncid      ! NetCDF file id
-    integer  :: varid     ! NetCDF variable id
-    integer  :: ndims     ! Number of dimensions
-    integer  :: i,args
-    real(rk) :: offset=0.0,scale=1.0
-    integer,      dimension(3) :: dimids,dimlens
-    character(20),dimension(3) :: dimnames
-    real(dp),     dimension(:,:),allocatable :: lnb,ltb
-    logical :: lonb_present,latb_present
-
-    if (associated(array)) deallocate(array)
-    if (associated(grid))  deallocate(grid)
-
-    ! Open file ----------------------------------------
-
-    ncerr=nf90_open(filename,0,ncid)
-    call handle_err(ncerr,__LINE__)
-
-    ! Find out the id of variable and its dimensions ---
-
-    ncerr=nf90_inq_varid(ncid,varname,varid)
-    call handle_err(ncerr,__LINE__)
-    ncerr=nf90_inquire_variable(ncid, varid, ndims=ndims)
-    call handle_err(ncerr,__LINE__)
-
-    ! If not a 3d variable, flag and error and exit ----
-
-    if (ndims/=3) then
-       print*,'NetCDF: Requested variable only has ',ndims,' dimensions'
-       stop
-    end if
-
-    ! Get dimensions ids -------------------------------
-
-    ncerr=nf90_inquire_variable(ncid, varid, dimids=dimids)
-    call handle_err(ncerr,__LINE__)
-
-    ! Retrieve dimension names -------------------------
-
-    do i=1,3
-       ncerr=nf90_inquire_dimension(ncid, dimids(i), &
-            name=dimnames(i),len=dimlens(i))
-       call handle_err(ncerr,__LINE__)
-    end do
-
-    ! Allocate output and dimension arrays -------------
-
-    allocate(array(dimlens(1),dimlens(2),dimlens(3)))
-    allocate(dim1(dimlens(1)))
-    allocate(dim2(dimlens(2)))
-    allocate(dim3(dimlens(3)))
-    
-    ! Retrieve variable contents -----------------------
-
-    ncerr=nf90_get_var(ncid, varid, array)
-    call handle_err(ncerr,__LINE__)
-
-    ! Get scaling and offset, if present, and apply ----
-
-    ncerr=nf90_get_att(ncid, varid, 'add_offset', offset)
-    if (ncerr/=NF90_NOERR) then
-       offset=0.0
-       ncerr=NF90_NOERR
-    end if
-
-    ncerr=nf90_get_att(ncid, varid, 'scale_factor', scale)
-    if (ncerr/=NF90_NOERR) then
-       scale=1.0
-       ncerr=NF90_NOERR
-    end if
-
-    array=offset+(array*scale)
-
-    ! Get dimension variables --------------------------
-
-    ncerr=nf90_inq_varid(ncid,dimnames(1),varid)
-    call handle_err(ncerr,__LINE__)
-    ncerr=nf90_get_var(ncid, varid, dim1)
-    call handle_err(ncerr,__LINE__)
-
-    ncerr=nf90_inq_varid(ncid,dimnames(2),varid)
-    call handle_err(ncerr,__LINE__)
-    ncerr=nf90_get_var(ncid, varid, dim2)
-    call handle_err(ncerr,__LINE__)
-
-    ncerr=nf90_inq_varid(ncid,dimnames(3),varid)
-    call handle_err(ncerr,__LINE__)
-    ncerr=nf90_get_var(ncid, varid, dim3)
-    call handle_err(ncerr,__LINE__)
-
-    ! Get boundary arrays, if present ------------------
-
-    ncerr=nf90_inq_varid(ncid,'bounds_lon',varid)
-    if (ncerr/=NF90_NOERR) then
-       lonb_present=.false.
-       ncerr=NF90_NOERR
-    else
-       ncerr=nf90_inquire_variable(ncid, varid, dimids=dimids)
-       call handle_err(ncerr,__LINE__)
-       do i=1,2
-          ncerr=nf90_inquire_dimension(ncid, dimids(i), name=dimnames(i),len=dimlens(i))
-          call handle_err(ncerr,__LINE__)
-       end do
-       allocate(lnb(dimlens(1),dimlens(2)),lonbound(dimlens(2)+1))
-       ncerr=nf90_get_var(ncid, varid,lnb)
-       call handle_err(ncerr,__LINE__)
-       do i=1,dimlens(2)
-          lonbound(i)=lnb(1,i)
-          lonbound(i+1)=lnb(2,i)
-       end do
-       deallocate(lnb)
-       lonb_present=.true.
-    end if
-
-    ncerr=nf90_inq_varid(ncid,'bounds_lat',varid)
-    if (ncerr/=NF90_NOERR) then
-       latb_present=.false.
-       ncerr=NF90_NOERR
-    else
-       ncerr=nf90_inquire_variable(ncid, varid, dimids=dimids)
-       call handle_err(ncerr,__LINE__)
-       do i=1,2
-          ncerr=nf90_inquire_dimension(ncid, dimids(i), name=dimnames(i),len=dimlens(i))
-          call handle_err(ncerr,__LINE__)
-       end do
-       allocate(ltb(dimlens(1),dimlens(2)),latbound(dimlens(2)+1))
-       ncerr=nf90_get_var(ncid, varid,ltb)
-       call handle_err(ncerr,__LINE__)
-       do i=1,dimlens(2)
-          latbound(i)=ltb(1,i)
-          latbound(i+1)=ltb(2,i)
-       end do
-       deallocate(ltb)
-       latb_present=.true.
-    end if
-
-    ! Construct grid type ---------------------
-
-    allocate(grid)
-    args=0
-    if (lonb_present) args=args+1
-    if (latb_present) args=args+2
-
-    select case(args)
-    case(0)
-       call new_global_grid(grid,dim1,dim2)
-    case(1)
-       call new_global_grid(grid,dim1,dim2,lonb=lonbound)
-    case(2)
-       call new_global_grid(grid,dim1,dim2,latb=latbound)
-    case(3)
-       call new_global_grid(grid,dim1,dim2,lonb=lonbound,latb=latbound)
-    end select
-
-    ! Tidy up ---------------------------------
-
-    deallocate(dim1,dim2,dim3)
-    if (allocated(latbound)) deallocate(latbound)
-    if (allocated(lonbound)) deallocate(lonbound)
-
-  end subroutine read_ncdf_3d
-
-  subroutine handle_err(status,line)
-
-    use netcdf
-
-    integer, intent (in) :: status
-    integer, intent (in) :: line
-    
-    if(status /= nf90_noerr) then
-       print *, trim(nf90_strerror(status))
-       print *, 'Line:',line
-       stop "Stopped"
-    end if
-  end subroutine handle_err
-
-  subroutine example_climate(precip_clim,temp_clim,precip,temp,time)
-
-    real(rk),dimension(:,:,:),intent(in) :: precip_clim,temp_clim
-    real(rk),dimension(:,:),intent(out)  :: precip,temp
-    real(rk),intent(in) :: time
-
-    integer :: ntemp,nprecip
-    real(rk) :: tsp,tst
-    real(rk) :: hoursinyear=365.0*24.0
-    real(rk) :: pos
-    integer :: lower,upper
-
-    ntemp=size(temp_clim,3) ; nprecip=size(precip_clim,3)
-    tst=hoursinyear/ntemp ; tsp=hoursinyear/nprecip
-    
-    ! Temperature first
-    
-    lower=int(time/tst)
-    upper=lower+1
-    pos=mod(time,tst)/tst
-    call fixbounds(lower,1,ntemp)
-    call fixbounds(upper,1,ntemp)
-    temp=linear_interp(temp_clim(:,:,lower),temp_clim(:,:,upper),pos)
-
-    ! precip
-
-    lower=int(time/tsp)
-    upper=lower+1
-    pos=mod(time,tsp)/tsp
-    call fixbounds(lower,1,nprecip)
-    call fixbounds(upper,1,nprecip)
-    precip=linear_interp(precip_clim(:,:,lower),precip_clim(:,:,upper),pos)
-
-  end subroutine example_climate
-
-  function linear_interp(a,b,pos)
-
-    real(rk),dimension(:,:),intent(in) :: a,b
-    real(rk),dimension(size(a,1),size(a,2)) :: linear_interp
-    real(rk),               intent(in) :: pos
-
-    linear_interp=a*(1.0-pos)+b*pos
-
-  end function linear_interp
-
-  subroutine fixbounds(in,bottom,top)
-
-    integer :: in,top,bottom
-
-    do
-       if (in<=top) exit
-       in=in-(top-bottom+1)
-    end do
-
-    do
-       if (in>=bottom) exit
-       in=in+(top-bottom+1)
-    end do
-
-  end subroutine fixbounds
 
 end program glint_example
