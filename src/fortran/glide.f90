@@ -117,7 +117,7 @@ contains
     call glide_set_mask(model)
 
     ! and calculate lower and upper ice surface
-    call glide_calclsrf(model%geometry%thck, model%geometry%topg, model%geometry%lsrf)
+    call glide_calclsrf(model%geometry%thck, model%geometry%topg, model%climate%eus,model%geometry%lsrf)
     model%geometry%usrf = model%geometry%thck + model%geometry%lsrf
 
   end subroutine glide_initialise
@@ -279,7 +279,7 @@ contains
     ! ------------------------------------------------------------------------
     ! calculate upper and lower ice surface
     ! ------------------------------------------------------------------------
-    call glide_calclsrf(model%geometry%thck, model%geometry%topg, model%geometry%lsrf)
+    call glide_calclsrf(model%geometry%thck, model%geometry%topg, model%climate%eus, model%geometry%lsrf)
     model%geometry%usrf = max(0.d0,model%geometry%thck + model%geometry%lsrf)
 
   end subroutine glide_tstep

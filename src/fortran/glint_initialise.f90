@@ -261,7 +261,8 @@ contains
        
        ! Calculate the elevation of the lower ice surface
        
-       call glide_calclsrf(instance%model%geometry%thck,instance%model%geometry%topg,instance%model%geometry%lsrf)
+       call glide_calclsrf(instance%model%geometry%thck,instance%model%geometry%topg, &
+            instance%model%climate%eus,instance%model%geometry%lsrf)
        
        ! Calculate the elevation of the upper ice surface by adding thickness
        ! onto the lower surface elevation.
@@ -278,7 +279,8 @@ contains
        ! Calculate the lower and upper surfaces of the ice-sheet 
        ! -----------------------------------------------------------------
        
-       call glide_calclsrf(instance%model%geometry%thck,instance%model%geometry%topg,instance%model%geometry%lsrf)
+       call glide_calclsrf(instance%model%geometry%thck,instance%model%geometry%topg, &
+            instance%model%climate%eus,instance%model%geometry%lsrf)
        instance%model%geometry%usrf = instance%model%geometry%thck + instance%model%geometry%lsrf
        
     endif

@@ -60,8 +60,6 @@ contains
     integer up
     real(dp) :: estimate
 
-    allocate(model%tempwk%floater(model%general%ewn,model%general%nsn))
-    
     allocate(model%tempwk%initadvt(model%general%upn,model%general%ewn,model%general%nsn))
     allocate(model%tempwk%inittemp(model%general%upn,model%general%ewn,model%general%nsn))
     allocate(model%tempwk%dissip(model%general%upn,model%general%ewn,model%general%nsn))
@@ -163,7 +161,7 @@ contains
     use paramets,       only : thk0
     use glide_velo
     use glide_thck
-
+    use glide_mask
     implicit none
 
     !------------------------------------------------------------------------------------
@@ -208,10 +206,6 @@ contains
 
     case(1) ! Do full temperature solution ---------------------------------------------
 
-       ! Work out where the ice is floating, and assign to mask array -------------------
-
-       
-       model%tempwk%floater = abs(model%geometry%topg-model%geometry%lsrf) > floatlim
 
        ! Calculate time-derivatives of thickness and upper surface elevation ------------
 
@@ -322,7 +316,7 @@ contains
                         model%velocity%wvel(:,ew,ns), &
                         model%geometry%thck(ew,ns), &
                         model%climate%artm(ew,ns), &
-                        model%tempwk%floater(ew,ns))
+                        is_float(model%geometry%thkmask(ew,ns)))
 
                    prevtemp = model%temper%temp(:,ew,ns)
 
@@ -353,10 +347,11 @@ contains
 
        model%temper%niter = model%temper%niter + iter 
 
+       ! set temperature of thin or floating ice to the air temperature
        do ns = 1,model%general%nsn
           do ew = 1,model%general%ewn
-             if (model%geometry%thck(ew,ns) <= model%numerics%thklim) then
-                model%temper%temp(:,ew,ns) = dmin1(0.0d0,dble(model%climate%artm(ew,ns)))
+             if (is_float(model%geometry%thkmask(ew,ns)) .or. is_thin(model%geometry%thkmask(ew,ns))) then
+                model%temper%temp(:,ew,ns) = min(0.0d0,dble(model%climate%artm(ew,ns)))
              end if
           end do
        end do
@@ -383,7 +378,7 @@ contains
             model%velocity%ubas, &
             model%velocity%vbas, &
             model%temper%bmlt, &
-            model%tempwk%floater)
+            is_float(model%geometry%thkmask))
 
        ! Calculate basal water depth ------------------------------------------------
 
@@ -394,7 +389,7 @@ contains
             model%geometry%thck, &
             model%geometry%topg, &
             model%temper%temp(model%general%upn,:,:), &
-            model%tempwk%floater) 
+            is_float(model%geometry%thkmask))
 
     case(2) ! Do something else, unspecified ---------------------------------------
 

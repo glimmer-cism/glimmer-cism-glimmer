@@ -397,7 +397,6 @@ module glide_types
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   type glide_tempwk
-    logical, dimension(:,:), pointer  :: floater  => null() 
     real(dp),dimension(:,:,:),pointer :: inittemp => null()
     real(dp),dimension(:,:,:),pointer :: dissip   => null()
     real(dp),dimension(:,:,:),pointer :: initadvt => null()

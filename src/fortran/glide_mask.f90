@@ -75,13 +75,14 @@ contains
        do ew = 2,model%general%ewn-1
           
           if (model%geometry%thck(ew,ns) .eq. 0.) then                               ! no ice
-             if (model%geometry%topg(ew,ns) .lt. 0.) then                            ! below SL
+             if (model%geometry%topg(ew,ns) .lt. model%climate%eus) then             ! below SL
                 MASK(ew,ns) = glide_mask_ocean
              else                                                                    ! above SL
                 MASK(ew,ns) = glide_mask_land
              end if
-          else                                                                       ! ice
-             if (model%geometry%topg(ew,ns) < con * model%geometry%thck(ew,ns)) then ! floating ice
+          else
+             if (model%geometry%topg(ew,ns) - model%climate%eus &                    ! ice
+                  < con * model%geometry%thck(ew,ns)) then                           ! floating ice
                 MASK(ew,ns) = glide_mask_shelf
              else                                                                    ! grounded ice
                 MASK(ew,ns) = glide_mask_interior

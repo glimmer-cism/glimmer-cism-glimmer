@@ -244,7 +244,7 @@ contains
 
   end subroutine glide_maskthck
 
-  subroutine glide_calclsrf(thck,topg,lsrf)
+  subroutine glide_calclsrf(thck,topg,eus,lsrf)
 
     !*FD Calculates the elevation of the lower surface of the ice, 
     !*FD by considering whether it is floating or not.
@@ -256,11 +256,12 @@ contains
 
     real(dp), intent(in),  dimension(:,:) :: thck !*FD Ice thickness
     real(dp), intent(in),  dimension(:,:) :: topg !*FD Bedrock topography elevation
+    real, intent(in)                      :: eus  !*FD global sea level
     real(dp), intent(out), dimension(:,:) :: lsrf !*FD Lower ice surface elevation
 
     real(dp), parameter :: con = - rhoi / rhoo
 
-    where (topg < con * thck)
+    where (topg-eus < con * thck)
       lsrf = con * thck
     elsewhere
       lsrf = topg
@@ -310,13 +311,10 @@ contains
     real(dp), parameter :: con = - rhoi / rhoo
     !---------------------------------------------------------------------
 
-    !MAGI! this is quite a hack
-    ! eustatic sea level isn't really supported yet
-    eus = 0.
     select case (which)
         
     case(1) ! Set thickness to zero if ice is floating
-      where (thck < f * topg)
+      where (is_float(mask))
         thck = 0.0d0
       end where
 
@@ -330,8 +328,8 @@ contains
        do ns = 2,size(thck,2)-1
           do ew = 2,size(thck,1)-1
              if (is_calving(mask(ew,ns))) then
-                thck(ew,ns) =  0.
-                mask(ew,ns) = glide_mask_ocean
+                thck(ew,ns) =  0.8*thck(ew,ns)
+                !mask(ew,ns) = glide_mask_ocean
              end if
           end do
        end do

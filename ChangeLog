@@ -1,4 +1,10 @@
 2004-09-21 Magnus Hagdorn
+ * add eus to lower ice boundary calculations (glide_setup.f90, glide.f90, glint_initialise.f90, glint_timestep.f90)
+ * glide_mask.f90: eustatic sea level change is considered when calculating mask
+ * use glide_mask for finding ice shelf (glide_types.f90, glimmer_temp.f90)
+ * glimmer_velo.f90: minor rearrangements which might speed-up code
+
+2004-09-21 Magnus Hagdorn
  * glint_io.f90.in: fix scaling bug of netCDF variables
  * Makefile: added glide_mask.o to test_setup
 

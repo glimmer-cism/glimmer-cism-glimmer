@@ -811,10 +811,10 @@ contains
     vertintg = 0.0d0
 
     do up = upn-1, 1, -1
-      vertintg = vertintg + sum(in(up:up+1)) * velowk%dups(up)                   
+      vertintg = vertintg + (in(up)+in(up+1)) * velowk%dups(up)                   
     end do
 
-    vertintg = vertintg / 2.0d0
+    vertintg = 0.5d0*vertintg
 
   end function vertintg
 
