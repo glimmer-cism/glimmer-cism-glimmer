@@ -33,6 +33,8 @@ We recommend that GLIMMER and its components is installed in its own directory t
     \hline
     \texttt{GMTINC} & Directory where the GMT header file \texttt{gmt\_grd.h} can be found.\\
     \hline
+    \texttt{BLASLIB} & if you want to use your own BLAS library you can set this variable to point to the required libraries which should get linked. If this variable is not set a non--optimised BLAS is provided by the model is used.\\
+    \hline
   \end{tabular}
   \caption{Environment variables used by GLIMMER.}
   \label{ug.tab.env}
@@ -76,6 +78,23 @@ Model compilation and installation should be straight forward:
 make
 make install
 \end{verbatim}}
+
+You can enable profiling by setting the environment variable \texttt{FFLAGS} to contain \texttt{-DPROFILING}. By default times are integrated over 100 time steps. You can cheange this behaviour by setting the variable \texttt{PROFILE\_PERIOD}. The timing data is written to the file \texttt{glide.profile} which contains 5 columns of data (see Table \ref{ug.tab.profile_format}).
+\begin{table}[htbp]
+  \centering
+  \begin{tabular}{|l|l|}
+    \hline
+    Column 1 &total CPU time elapsed when data is written to file\\
+    Column 2 &accumulated time spent on this block of calculations\\
+    Column 3 &integer ID used to identify this block of calculations\\
+    Column 4 &model year\\
+    Column 5 &description of this block of calculations\\
+    \hline
+  \end{tabular}
+  \caption{File format of profile data file.}
+  \label{ug.tab.profile_format}
+\end{table}
+A python script using the PyGMT library to visualise the profile is provided.
 
 \subsection{GMT Visualisation Tools}
 The visualisation tools are based on GMT programs written in Python. In order to be able to use these it is necessary to have a few extra packages:

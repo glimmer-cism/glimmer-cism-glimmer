@@ -6,7 +6,10 @@ endif
 include $(ARC_FILE)
 #
 LIBS = libslap.a
-OBJECTS = blas.o dcgs.o dlaputil.o dmset.o dmvops.o mach.o xersla.o
+ifndef BLASLIB
+BLAS=blas.o
+endif
+OBJECTS = dcgs.o dlaputil.o dmset.o dmvops.o mach.o xersla.o $(BLAS)
 
 INCLUDE_FILES=
 

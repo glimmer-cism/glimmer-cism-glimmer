@@ -1,3 +1,6 @@
+2005-01-28 Magnus Hagdorn
+ * documented profiling and added python script to visualise profile
+
 2005-01-27 Magnus Hagdorn
  * fixed bug in isostasy code where lithosphere was updated every time step
    (isostasy.f90, isostasy_types.f90, glide.f90)

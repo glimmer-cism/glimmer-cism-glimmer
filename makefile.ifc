@@ -39,7 +39,7 @@ F77FLAGS=-fpp -w -std95 -I$(NETCDF_PREFIX)/include
 #
 # final stage loader flags
 #
-LD_FLAGS=-L$(NETCDF_PREFIX)/lib $(NETCDF_LIB)
+LD_FLAGS=$(BLASLIB) -L$(NETCDF_PREFIX)/lib $(NETCDF_LIB)
 #
 # locations of wishx and xqplot.tcl
 # they are in fact just empty files
