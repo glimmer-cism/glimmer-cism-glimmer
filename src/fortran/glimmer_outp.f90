@@ -51,7 +51,7 @@ contains
 
     !*FD Sets up forcing data from time-series file (e.g. GRIP data)
 
-    use glide_messages
+    use glimmer_log
 
     implicit none
 

@@ -49,7 +49,6 @@ program glimmer_example
 
   use glint_main
   use glimmer_log
-  use glide_messages
   implicit none
 
   ! Program variables -------------------------------------------------------------------
@@ -228,7 +227,7 @@ program glimmer_example
 
   ! Set the message level (6 is the default - all messages on)
 
-  call glide_set_msg_level(6)
+  call glimmer_set_msg_level(6)
 
   ! Initialise the ice model
 
@@ -241,7 +240,7 @@ program glimmer_example
   ! Get coverage maps for the ice model instances
 
   if (glint_coverage_map(ice_sheet,coverage,cov_orog).ne.0) then
-    call glide_msg(GM_FATAL,__FILE__,__LINE__,'Unable to get coverage maps')
+    call write_log('Unable to get coverage maps',GM_FATAL,__FILE__,__LINE__)
     stop
   endif
 
@@ -257,7 +256,7 @@ program glimmer_example
                  orog_out=orog_out,   albedo=albedo,         output_flag=out, &
                  ice_frac=ice_frac,   water_out=fw,          water_in=fw_in, &
                  total_water_in=twin, total_water_out=twout, ice_volume=ice_vol) 
-    call glide_stars    ! Print a row of stars (unless message level set lower than 6)
+    call write_log_div ! Print a row of stars
   enddo
 
   ! Finalise/tidy up everything ------------------------------------------------------------

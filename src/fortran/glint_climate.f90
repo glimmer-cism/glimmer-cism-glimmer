@@ -220,8 +220,8 @@ contains
           call glint_lapserate(artm,real(usrf*thk0,rk),real(instance%climate%ulapse_rate,rk))
 
        else
-          call error_log('ERROR: Error in arguments to CALCARTM - stopping')
-          stop
+          call write_log('ERROR: Error in arguments to CALCARTM - stopping', &
+              GM_FATAL,__FILE__,__LINE__)
        endif
 
        ! ----------------------------------------------------------
@@ -232,8 +232,8 @@ contains
     case default ! Flag an error otherwise
        ! -----------------------------------------------------
 
-       call error_log('ERROR: Unsupported value of whichartm')
-       stop
+       call write_log('ERROR: Unsupported value of whichartm', &
+           GM_FATAL,__FILE__,__LINE__)
 
     end select
   end subroutine calcartm

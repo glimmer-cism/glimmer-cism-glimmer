@@ -254,7 +254,7 @@ contains
     use glimmer_interp
     use glimmer_mbal
     use glimmer_routing
-    use glide_messages
+    use glimmer_log
     use paramets
 
     ! ------------------------------------------------------------------------  
@@ -1069,7 +1069,7 @@ contains
 
   subroutine glimmer_load_sigma(model,unit)
 
-    use glide_messages
+    use glimmer_log
 
     !*FD Loads a file containing
     !*FD sigma vertical coordinates.

@@ -276,7 +276,7 @@ contains
     use glimmer_global, only: sp
     use paramets, only: scyr, acc0
     use physcon, only: rhoi,rhow
-    use glide_messages
+    use glimmer_log
 
     implicit none
 
@@ -302,7 +302,7 @@ contains
     !  tmj -- the actual july temperature
     !--------------------------------------------------------------------
 
-    call write_log(GM_DIAGNOSTIC,'Calculating PDD table...')
+    call write_log('Calculating PDD table...',GM_DIAGNOSTIC)
 
     do tma = pddcalc%iy, pddcalc%iy+(pddcalc%ny-1)*pddcalc%dy, pddcalc%dy
 
@@ -327,7 +327,7 @@ contains
        end do
     end do
 
-    call write_log(GM_DIAGNOSTIC,'   ...done.')
+    call write_log('   ...done.',GM_DIAGNOSTIC)
 
   end subroutine pddtabgrn
 

@@ -252,7 +252,7 @@ contains
 
   subroutine indexx(array,index)
 
-    !  use glide_messages
+    use glimmer_log
 
     !*FD Performs an index sort of \texttt{array} and returns the result in
     !*FD \texttt{index}. The order of elements in \texttt{array} is unchanged.
@@ -268,7 +268,7 @@ contains
     integer :: i
 
     if (size(array).ne.size(index)) then
-       !    call glide_msg(GM_FATAL,__FILE__,__LINE__,'ERROR: INDEXX size mismatch.')
+      call write_log('ERROR: INDEXX size mismatch.',GM_FATAL,__FILE__,__LINE__)
     endif
 
     do i=1,size(index)

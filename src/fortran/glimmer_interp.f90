@@ -187,7 +187,7 @@ contains
     !*FD which precision output is required.
   
     use glimmer_utils
-    use glide_messages
+    use glimmer_log
 
     ! Argument declarations
 
@@ -212,7 +212,7 @@ contains
     ! check we have one output at least...
 
     if (.not.(present(localsp).or.present(localdp))) then
-      call glide_msg(GM_WARNING,__FILE__,__LINE__,'Interp_to_local has no output')
+      call write_log('Interp_to_local has no output',GM_WARNING,__FILE__,__LINE__)
     endif
 
     ! Main interpolation loop
@@ -255,7 +255,7 @@ contains
  
     use glint_proj
     use glimmer_utils
-    use glide_messages
+    use glimmer_log
     use glint_global_grid
 
     ! Argument declarations
@@ -279,14 +279,14 @@ contains
 
     if (.not.present(global_fn)) then 
        if ((grid%nx/=size(grid%lons)).or.(grid%ny/=size(grid%lats))) then
-          call glide_msg(GM_FATAL,__FILE__,__LINE__,'Size mismatch in interp_to_local')
+          call write_log('Size mismatch in interp_to_local',GM_FATAL,__FILE__,__LINE__)
        end if
     end if
 
     ! check we have one output at least...
 
     if (.not.(present(localsp).or.present(localdp))) then
-      call glide_msg(GM_WARNING,__FILE__,__LINE__,'mean_to_local has no output')
+      call write_log('mean_to_local has no output',GM_WARNING,__FILE__,__LINE__)
     endif
 
     ! Zero some things
@@ -724,7 +724,7 @@ contains
   subroutine new_upscale(ups,grid,proj,mask)
 
     use glint_global_grid
-    use glide_messages
+    use glimmer_log
 
     !*FD Compiles an index of which global grid box contains a given
     !*FD grid box on the projected grid, and sets derived type \texttt{ups}
@@ -764,7 +764,7 @@ contains
         do
           ups%gboxx(i,j)=ii
           if (ii>gnx) then
-            call glide_msg(GM_FATAL,__FILE__,__LINE__,'global index failure')
+            call write_log('global index failure',GM_FATAL,__FILE__,__LINE__)
           endif  
           if (lon_between(grid%lon_bound(ii),grid%lon_bound(ii+1),plon)) exit
           ii=ii+1
@@ -775,7 +775,7 @@ contains
         do
           ups%gboxy(i,j)=jj
           if (jj>gny) then
-            call glide_msg(GM_FATAL,__FILE__,__LINE__,'global index failure')
+            call write_log('global index failure',GM_FATAL,__FILE__,__LINE__)
           endif  
           if ((grid%lat_bound(jj)>=plat).and.(plat>grid%lat_bound(jj+1))) exit
           jj=jj+1
@@ -800,13 +800,13 @@ contains
 
   subroutine copy_upscale(in,out)
 
-    use glide_messages
+    use glimmer_log
 
     type(upscale),intent(in)  :: in
     type(upscale),intent(out) :: out
 
     if (.not.in%set) then
-      call glide_msg(GM_FATAL,__FILE__,__LINE__,'Attempt to copy un-initialised upscale type')
+      call write_log('Attempt to copy un-initialised upscale type',GM_FATAL,__FILE__,__LINE__)
     endif
 
     if (associated(out%gboxx)) deallocate(out%gboxx)

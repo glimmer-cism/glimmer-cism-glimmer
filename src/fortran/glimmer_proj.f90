@@ -213,7 +213,7 @@ contains
     !*FD non-integer values indicating a position between grid-points.
 
     use gmt
-    use glide_messages
+    use glimmer_log
 
     implicit none
 
@@ -239,7 +239,7 @@ contains
       call gmt_stereo2_sph (tlon,tlat,x,y,proj%gmt_params)
     case default
       write(errtxt,*)proj%p_type,' is not a valid projection type'
-      call glide_msg(GM_ERROR,__FILE__,__LINE__,trim(errtxt))
+      call write_log(trim(errtxt),GM_ERROR,__FILE__,__LINE__)
     end select
 
     x=(x/proj%dx)+proj%cpx
@@ -256,7 +256,7 @@ contains
     !*FD non-integer values indicating a position between grid-points.
 
     use gmt
-    use glide_messages
+    use glimmer_log
 
     implicit none
 
@@ -283,7 +283,7 @@ contains
       call gmt_istereo_sph (lon,lat,xx,yy,proj%gmt_params)
     case default
       write(errtxt,*)proj%p_type,' is not a valid projection type'
-      call glide_msg(GM_ERROR,__FILE__,__LINE__,trim(errtxt))
+      call write_log(trim(errtxt),GM_ERROR,__FILE__,__LINE__)
     end select
 
     lon=loncorrect(lon)
@@ -294,7 +294,7 @@ contains
 
   subroutine calc_lats(proj,array)
 
-    use glide_messages
+    use glimmer_log
 
     !*FD Calculates the latitude of all points in the
     !*FD projected domain. The output latitudes (\texttt{array})
@@ -310,7 +310,7 @@ contains
     nx=size(array,1) ; ny=size(array,2)
 
     if ((nx.ne.proj%nx).or.(ny.ne.proj%ny)) then
-      call glide_msg(GM_FATAL,__FILE__,__LINE__,'Array size wrong in calc_lats')
+      call write_log('Array size wrong in calc_lats',GM_FATAL,__FILE__,__LINE__)
     endif
 
     do i=1,nx

@@ -244,8 +244,7 @@ contains
     if (.not.associated(section)) then
        if (params%ninstances.gt.1) then
           write(message,*) 'Must specify ',params%ninstances,' instance config files'
-          call error_log(message)
-          stop
+          call write_log(message,GM_FATAL,__FILE__,__LINE__)
        end if
        call write_log(trim(paramfile))
        call glint_i_initialise(global_config,params%instances(1),params%radea,params%g_grid,params%tstep_main)
@@ -270,7 +269,7 @@ contains
           call GetSection(section%next,section,'GLINT instance')
           if (.not.associated(section)) then
              write(message,*) 'Must specify ',params%ninstances,' instance config files'
-             call error_log(message)
+             call write_log(message,GM_FATAL,__FILE__,__LINE__)
              stop
           end if
        end do
@@ -450,6 +449,14 @@ contains
         out_f%ice_frac=.true.
       else
         out_f%ice_frac=.false.
+      endif
+
+      if (present(water_in)) then
+        water_in = 0.0
+        allocate(win_temp(size(orog,1),size(orog,2)))
+        out_f%water_in=.true.
+      else
+        out_f%water_in=.false.
       endif
 
       if (present(water_out)) then
@@ -891,7 +898,7 @@ contains
     !*FD the same. Flags a fatal error if not, else assigns that
     !*FD value to the output
 
-    use glide_messages
+    use glimmer_log
     
     implicit none
 
@@ -909,8 +916,8 @@ contains
 
     do i=2,n
       if (timesteps(i)/=check_mbts) then
-        call glide_msg(GM_FATAL,__FILE__,__LINE__,&
-          'All mass-balance schemes must have the same timestep')
+        call write_log('All mass-balance schemes must have the same timestep', &
+        GM_FATAL,__FILE__,__LINE__)
       endif
     enddo
 
