@@ -1,3 +1,7 @@
+2004-08-16 Ian Rutt
+ * Tidied up unrecognised option handling in a few places
+ * Minor formatting changes
+
 2004-08-13 Ian Rutt
  * Updated documentation a little
  * Minor formatting changes

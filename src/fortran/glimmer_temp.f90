@@ -1057,209 +1057,213 @@ contains
     logical, dimension(:,:), intent(in) :: floater
 
     real(dp), dimension(2), parameter :: &
-      blim = (/ 0.00001 / thk0, 0.001 / thk0 /)
+         blim = (/ 0.00001 / thk0, 0.001 / thk0 /)
 
     real(dp), parameter :: smthf = 0.01d0 
     real(dp) :: estimate, dwphidew, dwphidns, dwphi, pmpt, bave
     real(dp), dimension(:,:), allocatable :: wphi, bwatu, bwatv, fluxew, fluxns, bint, smth
-  
+
     integer :: t_wat,ns,ew
 
     character(80) :: outtxt
 
-    select case (which)
+    select case (which)  ! This is the value of calcbwat
     case(0)
 
-      if (model%tempwk%first5) then
-        model%paramets%hydtim = tim0 / (model%paramets%hydtim * scyr)
-        estimate = 0.2d0 / model%paramets%hydtim
-        call find_dt_wat(model%numerics%dttem,estimate,model%tempwk%dt_wat,model%tempwk%nwat) 
+       if (model%tempwk%first5) then
+          model%paramets%hydtim = tim0 / (model%paramets%hydtim * scyr)
+          estimate = 0.2d0 / model%paramets%hydtim
+          call find_dt_wat(model%numerics%dttem,estimate,model%tempwk%dt_wat,model%tempwk%nwat) 
 
-        ! ** print *, model%numerics%dttem*tim0/scyr, model%tempwk%dt_wat*tim0/scyr, model%tempwk%nwat
+          ! ** print *, model%numerics%dttem*tim0/scyr, model%tempwk%dt_wat*tim0/scyr, model%tempwk%nwat
 
-        model%tempwk%c = (/ model%tempwk%dt_wat, 1.0d0 - 0.5d0 * model%tempwk%dt_wat * model%paramets%hydtim, &
+          model%tempwk%c = (/ model%tempwk%dt_wat, 1.0d0 - 0.5d0 * model%tempwk%dt_wat * model%paramets%hydtim, &
                1.0d0 + 0.5d0 * model%tempwk%dt_wat * model%paramets%hydtim, 0.0d0, 0.0d0, 0.0d0, 0.0d0, 0.0d0 /) 
-                
-        model%tempwk%first5 = .false.
-      end if
 
-      do t_wat = 1, model%tempwk%nwat
-        do ns = 2,model%general%nsn-1
+          model%tempwk%first5 = .false.
+       end if
+
+       do t_wat = 1, model%tempwk%nwat
+          do ns = 2,model%general%nsn-1
+             do ew = 2,model%general%ewn-1
+
+                if (model%numerics%thklim < thck(ew,ns) .and. .not. floater(ew,ns)) then
+                   bwat(ew,ns) = (model%tempwk%c(1) * bmlt(ew,ns) + model%tempwk%c(2) * bwat(ew,ns)) / &
+                        model%tempwk%c(3)
+                   if (blim(1) > bwat(ew,ns)) then
+                      bwat(ew,ns) = 0.0d0
+                   end if
+                else
+                   bwat(ew,ns) = 0.0d0
+                end if
+
+             end do
+          end do
+       end do
+
+       allocate(smth(model%general%ewn,model%general%nsn))
+
+       do ns = 2,model%general%nsn-1
           do ew = 2,model%general%ewn-1
 
-            if (model%numerics%thklim < thck(ew,ns) .and. .not. floater(ew,ns)) then
-              bwat(ew,ns) = (model%tempwk%c(1) * bmlt(ew,ns) + model%tempwk%c(2) * bwat(ew,ns)) / &
-                             model%tempwk%c(3)
-              if (blim(1) > bwat(ew,ns)) then
-                bwat(ew,ns) = 0.0d0
-              end if
-            else
-              bwat(ew,ns) = 0.0d0
-            end if
-      
+             if (blim(2) < bwat(ew,ns)) then
+                smth(ew,ns) = bwat(ew,ns) + smthf * &
+                     (bwat(ew-1,ns) + bwat(ew+1,ns) + bwat(ew,ns-1) + bwat(ew,ns+1) - 4.0d0 * bwat(ew,ns))
+             else 
+                smth(ew,ns) = bwat(ew,ns)
+             end if
+
           end do
-        end do
-      end do
-        
-      allocate(smth(model%general%ewn,model%general%nsn))
-    
-      do ns = 2,model%general%nsn-1
-        do ew = 2,model%general%ewn-1
+       end do
 
-          if (blim(2) < bwat(ew,ns)) then
-            smth(ew,ns) = bwat(ew,ns) + smthf * &
-              (bwat(ew-1,ns) + bwat(ew+1,ns) + bwat(ew,ns-1) + bwat(ew,ns+1) - 4.0d0 * bwat(ew,ns))
-          else 
-            smth(ew,ns) = bwat(ew,ns)
-          end if
-
-        end do
-      end do
-
-      bwat(2:model%general%ewn-1,2:model%general%nsn-1) = smth(2:model%general%ewn-1,2:model%general%nsn-1)
-      deallocate(smth)
+       bwat(2:model%general%ewn-1,2:model%general%nsn-1) = smth(2:model%general%ewn-1,2:model%general%nsn-1)
+       deallocate(smth)
 
     case(1)
-  
-      if (model%tempwk%first5) then
-    
-        model%tempwk%watvel = model%paramets%hydtim * tim0 / (scyr * len0)
-        estimate = (0.2d0 * model%tempwk%watvel) / min(model%numerics%dew,model%numerics%dns)
-        call find_dt_wat(model%numerics%dttem,estimate,model%tempwk%dt_wat,model%tempwk%nwat) 
 
-        write(outtxt,*) model%numerics%dttem*tim0/scyr, model%tempwk%dt_wat*tim0/scyr, model%tempwk%nwat
-        call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,trim(adjustl(outtxt)))
+       if (model%tempwk%first5) then
 
-        model%tempwk%c = (/ rhow * grav, rhoi * grav, 2.0d0 * model%numerics%dew, 2.0d0 * model%numerics%dns, &
+          model%tempwk%watvel = model%paramets%hydtim * tim0 / (scyr * len0)
+          estimate = (0.2d0 * model%tempwk%watvel) / min(model%numerics%dew,model%numerics%dns)
+          call find_dt_wat(model%numerics%dttem,estimate,model%tempwk%dt_wat,model%tempwk%nwat) 
+
+          write(outtxt,*) model%numerics%dttem*tim0/scyr, model%tempwk%dt_wat*tim0/scyr, model%tempwk%nwat
+          call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,trim(adjustl(outtxt)))
+
+          model%tempwk%c = (/ rhow * grav, rhoi * grav, 2.0d0 * model%numerics%dew, 2.0d0 * model%numerics%dns, &
                0.25d0 * model%tempwk%dt_wat / model%numerics%dew, 0.25d0 * model%tempwk%dt_wat / model%numerics%dns, &
                0.5d0 * model%tempwk%dt_wat / model%numerics%dew, 0.5d0 * model%tempwk%dt_wat / model%numerics%dns /)
 
-        model%tempwk%first5 = .false. 
+          model%tempwk%first5 = .false. 
 
-      end if
+       end if
 
-      ! ** add any melt_water
-        
-      bwat = max(0.0d0,bwat + model%numerics%dttem * bmlt)
+       ! ** add any melt_water
 
-      allocate(wphi(model%general%ewn,model%general%nsn))
-      allocate(bwatu(model%general%ewn,model%general%nsn))
-      allocate(bwatv(model%general%ewn,model%general%nsn)) 
-      allocate(fluxew(model%general%ewn,model%general%nsn))
-      allocate(fluxns(model%general%ewn,model%general%nsn))
-      allocate(bint(model%general%ewn-1,model%general%nsn-1)) 
-    
-      ! ** split time evolution into steps to avoid CFL problems
-    
-      do t_wat = 1,model%tempwk%nwat
+       bwat = max(0.0d0,bwat + model%numerics%dttem * bmlt)
 
-        ! ** find potential surface using paterson p112, eq 4
-        ! ** if no ice then set to sea level or land surface potential
-        ! ** if frozen then set high 
+       allocate(wphi(model%general%ewn,model%general%nsn))
+       allocate(bwatu(model%general%ewn,model%general%nsn))
+       allocate(bwatv(model%general%ewn,model%general%nsn)) 
+       allocate(fluxew(model%general%ewn,model%general%nsn))
+       allocate(fluxns(model%general%ewn,model%general%nsn))
+       allocate(bint(model%general%ewn-1,model%general%nsn-1)) 
 
-        do ns = 1,model%general%nsn
-          do ew = 1,model%general%ewn
-            if (model%numerics%thklim < thck(ew,ns) .and. .not. floater(ew,ns)) then
-              call calcpmptb(pmpt,thck(ew,ns))
-              if (btem(ew,ns) == pmpt) then
-                wphi(ew,ns) = model%tempwk%c(1) * (topg(ew,ns) + bwat(ew,ns)) + model%tempwk%c(2) * thck(ew,ns)
-              else
-                wphi(ew,ns) = model%tempwk%c(1) * (topg(ew,ns) + thck(ew,ns))
-              end if
-            else 
-              wphi(ew,ns) = max(model%tempwk%c(1) * topg(ew,ns),0.0d0)
-            end if
+       ! ** split time evolution into steps to avoid CFL problems
+
+       do t_wat = 1,model%tempwk%nwat
+
+          ! ** find potential surface using paterson p112, eq 4
+          ! ** if no ice then set to sea level or land surface potential
+          ! ** if frozen then set high 
+
+          do ns = 1,model%general%nsn
+             do ew = 1,model%general%ewn
+                if (model%numerics%thklim < thck(ew,ns) .and. .not. floater(ew,ns)) then
+                   call calcpmptb(pmpt,thck(ew,ns))
+                   if (btem(ew,ns) == pmpt) then
+                      wphi(ew,ns) = model%tempwk%c(1) * (topg(ew,ns) + bwat(ew,ns)) + model%tempwk%c(2) * thck(ew,ns)
+                   else
+                      wphi(ew,ns) = model%tempwk%c(1) * (topg(ew,ns) + thck(ew,ns))
+                   end if
+                else 
+                   wphi(ew,ns) = max(model%tempwk%c(1) * topg(ew,ns),0.0d0)
+                end if
+             end do
           end do
-        end do
-      
-        ! ** determine x,y components of water velocity assuming
-        ! ** contstant velocity magnitude and using potential
-        ! ** to determine direction
-    
-        do ns = 2,model%general%nsn-1
-          do ew = 2,model%general%ewn-1
-            if (thck(ew,ns) > model%numerics%thklim) then
-      
-              dwphidew = (wphi(ew+1,ns) - wphi(ew-1,ns)) / model%tempwk%c(3)       
-              dwphidns = (wphi(ew,ns+1) - wphi(ew,ns-1)) / model%tempwk%c(4)  
 
-              dwphi = - model%tempwk%watvel / sqrt(dwphidew**2 + dwphidns**2)
-  
-              bwatu(ew,ns) = dwphi * dwphidew  
-              bwatv(ew,ns) = dwphi * dwphidns  
+          ! ** determine x,y components of water velocity assuming
+          ! ** contstant velocity magnitude and using potential
+          ! ** to determine direction
 
-            else
-              bwatu(ew,ns) = 0.0d0
-              bwatv(ew,ns) = 0.0d0
-            end if
+          do ns = 2,model%general%nsn-1
+             do ew = 2,model%general%ewn-1
+                if (thck(ew,ns) > model%numerics%thklim) then
+
+                   dwphidew = (wphi(ew+1,ns) - wphi(ew-1,ns)) / model%tempwk%c(3)       
+                   dwphidns = (wphi(ew,ns+1) - wphi(ew,ns-1)) / model%tempwk%c(4)  
+
+                   dwphi = - model%tempwk%watvel / sqrt(dwphidew**2 + dwphidns**2)
+
+                   bwatu(ew,ns) = dwphi * dwphidew  
+                   bwatv(ew,ns) = dwphi * dwphidns  
+
+                else
+                   bwatu(ew,ns) = 0.0d0
+                   bwatv(ew,ns) = 0.0d0
+                end if
+             end do
           end do
-        end do
-     
-    ! ** use two-step law wendroff to solve dW/dt = -dF/dx - dF/dy
-    
-    ! ** 1. find fluxes F=uW
-    
-        fluxew = bwat * bwatu
-        fluxns = bwat * bwatv
 
-    ! ** 2. do 1st LW step on staggered grid for dt/2
-    
-        do ns = 1,model%general%nsn-1
-          do ew = 1,model%general%ewn-1
-      
-            bave = 0.25 * sum(bwat(ew:ew+1,ns:ns+1))
-      
-            if (bave > 0.0d0) then
-                     
-            bint(ew,ns) = bave - &
-              model%tempwk%c(5) * (sum(fluxew(ew+1,ns:ns+1)) - sum(fluxew(ew,ns:ns+1))) - &
-              model%tempwk%c(6) * (sum(fluxns(ew:ew+1,ns+1)) - sum(fluxns(ew:ew+1,ns)))
-        
-            else
-              bint(ew,ns) = 0.0d0
-            end if
+          ! ** use two-step law wendroff to solve dW/dt = -dF/dx - dF/dy
+
+          ! ** 1. find fluxes F=uW
+
+          fluxew = bwat * bwatu
+          fluxns = bwat * bwatv
+
+          ! ** 2. do 1st LW step on staggered grid for dt/2
+
+          do ns = 1,model%general%nsn-1
+             do ew = 1,model%general%ewn-1
+
+                bave = 0.25 * sum(bwat(ew:ew+1,ns:ns+1))
+
+                if (bave > 0.0d0) then
+
+                   bint(ew,ns) = bave - &
+                        model%tempwk%c(5) * (sum(fluxew(ew+1,ns:ns+1)) - sum(fluxew(ew,ns:ns+1))) - &
+                        model%tempwk%c(6) * (sum(fluxns(ew:ew+1,ns+1)) - sum(fluxns(ew:ew+1,ns)))
+
+                else
+                   bint(ew,ns) = 0.0d0
+                end if
+             end do
           end do
-        end do
 
-        ! ** 3. find fluxes F=uW on staggered grid griven new Ws
-    
-        fluxew(1:model%general%ewn-1,1:model%general%nsn-1) = bint * 0.25 * &
-          (bwatu(1:model%general%ewn-1,1:model%general%nsn-1) + &
-           bwatu(2:model%general%ewn,1:model%general%nsn-1) + &
-           bwatu(1:model%general%ewn-1,2:model%general%nsn) + &
-           bwatu(2:model%general%ewn,2:model%general%nsn))
-        fluxns(1:model%general%ewn-1,1:model%general%nsn-1) = bint * 0.25 * &
-          (bwatv(1:model%general%ewn-1,1:model%general%nsn-1) + &
-          bwatv(2:model%general%ewn,1:model%general%nsn-1) + &
-          bwatv(1:model%general%ewn-1,2:model%general%nsn) + &
-          bwatv(2:model%general%ewn,2:model%general%nsn))
-    
-        ! ** 4. finally do 2nd LW step to get back on to main grid
-            
-        do ns = 2,model%general%nsn-1
-          do ew = 2,model%general%ewn-1
-            if (bwat(ew,ns) > 0.0d0) then
-                     
-              bwat(ew,ns) = bwat(ew,ns) - &
-                model%tempwk%c(7) * (sum(fluxew(ew,ns-1:ns)) - sum(fluxew(ew-1,ns-1:ns))) - &
-                model%tempwk%c(8) * (sum(fluxns(ew-1:ew,ns)) - sum(fluxns(ew-1:ew,ns-1)))
-        
-            else
-              bwat(ew,ns) = 0.0d0
-            end if
+          ! ** 3. find fluxes F=uW on staggered grid griven new Ws
+
+          fluxew(1:model%general%ewn-1,1:model%general%nsn-1) = bint * 0.25 * &
+               (bwatu(1:model%general%ewn-1,1:model%general%nsn-1) + &
+               bwatu(2:model%general%ewn,1:model%general%nsn-1) + &
+               bwatu(1:model%general%ewn-1,2:model%general%nsn) + &
+               bwatu(2:model%general%ewn,2:model%general%nsn))
+          fluxns(1:model%general%ewn-1,1:model%general%nsn-1) = bint * 0.25 * &
+               (bwatv(1:model%general%ewn-1,1:model%general%nsn-1) + &
+               bwatv(2:model%general%ewn,1:model%general%nsn-1) + &
+               bwatv(1:model%general%ewn-1,2:model%general%nsn) + &
+               bwatv(2:model%general%ewn,2:model%general%nsn))
+
+          ! ** 4. finally do 2nd LW step to get back on to main grid
+
+          do ns = 2,model%general%nsn-1
+             do ew = 2,model%general%ewn-1
+                if (bwat(ew,ns) > 0.0d0) then
+
+                   bwat(ew,ns) = bwat(ew,ns) - &
+                        model%tempwk%c(7) * (sum(fluxew(ew,ns-1:ns)) - sum(fluxew(ew-1,ns-1:ns))) - &
+                        model%tempwk%c(8) * (sum(fluxns(ew-1:ew,ns)) - sum(fluxns(ew-1:ew,ns-1)))
+
+                else
+                   bwat(ew,ns) = 0.0d0
+                end if
+             end do
           end do
-        end do
-      end do
+       end do
 
-      where (blim(1) > bwat) 
-        bwat = 0.0d0
-      end where
-    
-      deallocate(bint,fluxew,fluxns,bwatu,bwatv,wphi)
-    
+       where (blim(1) > bwat) 
+          bwat = 0.0d0
+       end where
+
+       deallocate(bint,fluxew,fluxns,bwatu,bwatv,wphi)
+
+    case(2)
+
+       bwat = 0.0d0
+
     case default
 
-      bwat = 0.0d0
+       call glide_msg(GM_FATAL,__FILE__,__LINE__,'Unrecognised value of whichbwat')
 
     end select
 
@@ -1267,9 +1271,9 @@ contains
     ! call advectflow(bwat,phi,bmlt,model%geometry%mask)
 
   contains
-  
+
     subroutine find_dt_wat(dttem,estimate,dt_wat,nwat)
-  
+
       implicit none
 
       real(dp), intent(out) :: dt_wat
@@ -1280,7 +1284,7 @@ contains
       dt_wat = dttem / nwat
 
     end subroutine find_dt_wat
-   
+
   end subroutine calcbwat
 
 !-------------------------------------------------------------------

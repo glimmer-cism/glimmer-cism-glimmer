@@ -548,6 +548,7 @@ contains
 
     use glide_pdd
     use glimmer_types
+    use glide_messages
 
     implicit none
 
@@ -586,27 +587,29 @@ contains
     select case(which)
     case(0)
 
-      ewct = real(ewn+1) / 2.0
-      nsct = real(nsn+1) / 2.0
+       ewct = real(ewn+1) / 2.0
+       nsct = real(nsn+1) / 2.0
 
-      do ns = 1,nsn
-        do ew = 1,ewn
-          dist = grid * sqrt((real(ew) - ewct)**2 + (real(ns) - nsct)**2) 
-          acab(ew,ns) = amin1(params%nmsb(1), params%nmsb(2) * (params%nmsb(3) - dist))
-        end do
-      end do            
+       do ns = 1,nsn
+          do ew = 1,ewn
+             dist = grid * sqrt((real(ew) - ewct)**2 + (real(ns) - nsct)**2) 
+             acab(ew,ns) = amin1(params%nmsb(1), params%nmsb(2) * (params%nmsb(3) - dist))
+          end do
+       end do
 
     case(1)
-      call masbgrn(pddcalc,artm,arng,prcp,lati,ablt,acab) 
+       call masbgrn(pddcalc,artm,arng,prcp,lati,ablt,acab) 
     case(2) 
-      acab = prcp
+       acab = prcp
+    case default
+       call glide_msg(GM_FATAL,__FILE__,__LINE__,'Unrecognised value of whichacab')
     end select
 
     ! If the upper ice/land surface is at or below sea-level, set accumulation,
     ! ablation and mass-balance to zero. This is to prevent accumulation of ice below
     ! sea-level.
 
-	! ****** REMOVED THIS BECAUSE I'M NOT SURE IT'S THE RIGHT WAY TO TACKLE THE ISSUE ******
+    ! ****** REMOVED THIS BECAUSE I'M NOT SURE IT'S THE RIGHT WAY TO TACKLE THE ISSUE ******
     !where (usrf<=0.0)
     !  ablt=0.0
     !  acab=0.0

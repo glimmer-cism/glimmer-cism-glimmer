@@ -61,6 +61,7 @@ contains
 
     use glimmer_global, only : dp
     use physcon, only : rhoi, grav
+    use glide_messages
 
     implicit none
 
@@ -100,8 +101,8 @@ contains
     ! Allocate work array if this is the first call -------------------------------------
 
     if (velowk%first1) then
-      allocate(velowk%fslip(ewn,nsn))
-      velowk%first1 = .false.
+       allocate(velowk%fslip(ewn,nsn))
+       velowk%first1 = .false.
     end if
 
     !------------------------------------------------------------------------------------
@@ -110,64 +111,72 @@ contains
 
     select case(flag(1))
     case(0)  
-    
-      ! Linear function of gravitational driving stress ---------------------------------
 
-      call calcbtrc(velowk,params,flag(2),bwat,relx,btrc(1:ewn-1,1:nsn-1))
+       ! Linear function of gravitational driving stress ---------------------------------
 
-      where (numerics%thklim < geomderv%stagthck(1:ewn-1,1:nsn-1))
-        ubas(1:ewn-1,1:nsn-1) = btrc(1:ewn-1,1:nsn-1) * c * &
-                                geomderv%stagthck(1:ewn-1,1:nsn-1) * &
-                                geomderv%dusrfdew(1:ewn-1,1:nsn-1)
-        vbas(1:ewn-1,1:nsn-1) = btrc(1:ewn-1,1:nsn-1) * c * &
-                                geomderv%stagthck(1:ewn-1,1:nsn-1) * &
-                                geomderv%dusrfdns(1:ewn-1,1:nsn-1)
-      elsewhere
-        ubas(1:ewn-1,1:nsn-1) = 0.0d0
-        vbas(1:ewn-1,1:nsn-1) = 0.0d0
-      end where
+       call calcbtrc(velowk,params,flag(2),bwat,relx,btrc(1:ewn-1,1:nsn-1))
+
+       where (numerics%thklim < geomderv%stagthck(1:ewn-1,1:nsn-1))
+          ubas(1:ewn-1,1:nsn-1) = btrc(1:ewn-1,1:nsn-1) * c * &
+               geomderv%stagthck(1:ewn-1,1:nsn-1) * &
+               geomderv%dusrfdew(1:ewn-1,1:nsn-1)
+          vbas(1:ewn-1,1:nsn-1) = btrc(1:ewn-1,1:nsn-1) * c * &
+               geomderv%stagthck(1:ewn-1,1:nsn-1) * &
+               geomderv%dusrfdns(1:ewn-1,1:nsn-1)
+       elsewhere
+          ubas(1:ewn-1,1:nsn-1) = 0.0d0
+          vbas(1:ewn-1,1:nsn-1) = 0.0d0
+       end where
 
     case(1)
 
-      ! *tp* option to be used in picard iteration for thck
-      ! *tp* start by find constants which dont vary in iteration
+       ! *tp* option to be used in picard iteration for thck
+       ! *tp* start by find constants which dont vary in iteration
 
-      call calcbtrc(velowk,params,flag(2),bwat,relx,btrc(1:ewn-1,1:nsn-1))
+       call calcbtrc(velowk,params,flag(2),bwat,relx,btrc(1:ewn-1,1:nsn-1))
 
-      velowk%fslip(1:ewn-1,1:nsn-1) = c * btrc(1:ewn-1,1:nsn-1)
+       velowk%fslip(1:ewn-1,1:nsn-1) = c * btrc(1:ewn-1,1:nsn-1)
 
     case(2)
 
-      ! *tp* option to be used in picard iteration for thck
-      ! *tp* called once per non-linear iteration, set uvel to ub * H /(ds/dx) which is
-      ! *tp* a diffusivity for the slip term (note same in x and y)
+       ! *tp* option to be used in picard iteration for thck
+       ! *tp* called once per non-linear iteration, set uvel to ub * H /(ds/dx) which is
+       ! *tp* a diffusivity for the slip term (note same in x and y)
 
-      where (numerics%thklim < geomderv%stagthck(1:ewn-1,1:nsn-1))
-        ubas(1:ewn-1,1:nsn-1) = velowk%fslip(1:ewn-1,1:nsn-1) * geomderv%stagthck(1:ewn-1,1:nsn-1)**2  
-      elsewhere
-        ubas(1:ewn-1,1:nsn-1) = 0.0d0
-      end where
+       where (numerics%thklim < geomderv%stagthck(1:ewn-1,1:nsn-1))
+          ubas(1:ewn-1,1:nsn-1) = velowk%fslip(1:ewn-1,1:nsn-1) * geomderv%stagthck(1:ewn-1,1:nsn-1)**2  
+       elsewhere
+          ubas(1:ewn-1,1:nsn-1) = 0.0d0
+       end where
 
     case(3)
 
-      ! *tp* option to be used in picard iteration for thck
-      ! *tp* finally calc ub and vb from diffusivities
+       ! *tp* option to be used in picard iteration for thck
+       ! *tp* finally calc ub and vb from diffusivities
 
-      where (numerics%thklim < geomderv%stagthck(1:ewn-1,1:nsn-1))
-        vbas(1:ewn-1,1:nsn-1) = ubas(1:ewn-1,1:nsn-1) *  &
-                                geomderv%dusrfdns(1:ewn-1,1:nsn-1) / &
-                                geomderv%stagthck(1:ewn-1,1:nsn-1)
-        ubas(1:ewn-1,1:nsn-1) = ubas(1:ewn-1,1:nsn-1) *  &
-                                geomderv%dusrfdew(1:ewn-1,1:nsn-1) / &
-                                geomderv%stagthck(1:ewn-1,1:nsn-1)
-      elsewhere
-        ubas(1:ewn-1,1:nsn-1) = 0.0d0
-        vbas(1:ewn-1,1:nsn-1) = 0.0d0
-      end where
+       where (numerics%thklim < geomderv%stagthck(1:ewn-1,1:nsn-1))
+          vbas(1:ewn-1,1:nsn-1) = ubas(1:ewn-1,1:nsn-1) *  &
+               geomderv%dusrfdns(1:ewn-1,1:nsn-1) / &
+               geomderv%stagthck(1:ewn-1,1:nsn-1)
+          ubas(1:ewn-1,1:nsn-1) = ubas(1:ewn-1,1:nsn-1) *  &
+               geomderv%dusrfdew(1:ewn-1,1:nsn-1) / &
+               geomderv%stagthck(1:ewn-1,1:nsn-1)
+       elsewhere
+          ubas(1:ewn-1,1:nsn-1) = 0.0d0
+          vbas(1:ewn-1,1:nsn-1) = 0.0d0
+       end where
+
+    case(4)
+
+       ! Set to zero everywhere
+
+       ubas(1:ewn-1,1:nsn-1) = 0.0d0
+       vbas(1:ewn-1,1:nsn-1) = 0.0d0
 
     case default
-      ubas(1:ewn-1,1:nsn-1) = 0.0d0
-      vbas(1:ewn-1,1:nsn-1) = 0.0d0
+
+       call glide_msg(GM_FATAL,__FILE__,__LINE__,'Unrecognised value of whichslip')
+
     end select
 
   end subroutine slipvelo
