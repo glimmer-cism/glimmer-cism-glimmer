@@ -605,8 +605,8 @@ contains
 
     ewn=size(wgrd,2) ; nsn=size(wgrd,3)
 
-    do ns = 2,nsn
-      do ew = 2,ewn
+    do ns = 2,nsn-1
+      do ew = 2,ewn-1
         if (thck(ew,ns) > thklim) then
           wgrd(:,ew,ns) = geomderv%dusrfdtm(ew,ns) - sigma * geomderv%dthckdtm(ew,ns) + & 
                       (hsum4(uvel(:,ew-1:ew,ns-1:ns)) * &
@@ -873,7 +873,7 @@ contains
     ! Internal variables
     !------------------------------------------------------------------------------------
 
-    real(dp),dimension(:,:),allocatable :: wchk
+    real(dp) :: wchk
     real(dp) :: tempcoef
     integer  :: ns,ew,nsn,ewn
 
@@ -883,34 +883,26 @@ contains
 
     ! Allocate temporary work array -----------------------------------------------------
 
-    allocate(wchk(ewn,nsn))
 
     ! Loop over all grid-boxes ----------------------------------------------------------
 
-    do ns = 2,nsn
-      do ew = 2,ewn
+    do ns = 2,nsn-1
+      do ew = 2,ewn-1
          if (thck(ew,ns) > numerics%thklim .and. wvel(1,ew,ns).ne.0) then
 
-            ! Why are these results stored in wchk? The resulting array is not used
-            ! later on!
-
-            wchk(ew,ns) = geomderv%dusrfdtm(ew,ns) &
+            wchk = geomderv%dusrfdtm(ew,ns) &
                  - acab(ew,ns) &
                  + (sum(uvel(ew-1:ew,ns-1:ns)) * sum(geomderv%dusrfdew(ew-1:ew,ns-1:ns)) &
                  + sum(vvel(ew-1:ew,ns-1:ns)) * sum(geomderv%dusrfdns(ew-1:ew,ns-1:ns))) &
                  / 16.0d0
 
             
-            tempcoef = wchk(ew,ns) - wvel(1,ew,ns)
+            tempcoef = wchk - wvel(1,ew,ns)
 
             wvel(:,ew,ns) = wvel(:,ew,ns) + tempcoef * (1.0d0 - numerics%sigma) 
-         else
-            wchk(ew,ns) = 0.0d0
          end if
       end do
     end do
-
-    deallocate(wchk)
 
   end subroutine chckwvel
 

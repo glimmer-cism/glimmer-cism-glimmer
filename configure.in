@@ -83,4 +83,4 @@ esac],[AC_MSG_RESULT([no])])
 AC_CONFIG_FILES([Makefile src/Makefile src/python/Makefile src/fortran/Makefile src/fortran/SLAP_library/Makefile \
 		doc/Makefile doc/common/Makefile doc/dg/Makefile doc/dg/figures/Makefile \
 		doc/ug/Makefile doc/ug/figs/Makefile doc/num/Makefile doc/num/figs/Makefile doc/num/gnu/Makefile])
-AC_OUTPUT([glimmer-config src/fortran/glimmer_version.f90])
+AC_OUTPUT([glimmer-config src/fortran/glimmer_version.f90 doc/common/version.tex])

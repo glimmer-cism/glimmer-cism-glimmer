@@ -1,3 +1,7 @@
+2005-03-01 Magnus Hagdorn
+ * documentation gets version from configure
+ * glide_velo.f90: fixed bug with loop over grid and avoid unnecessary memory allocation
+
 2005-03-01 Ian Rutt
  * Removed redundant paramfiles.tex from doc/ug
  * Removed a couple of redundent components from glint
