@@ -1,3 +1,6 @@
+2004-06-01 Magnus Hagdorn
+ * new documentation structure
+
 2004-05-24 Magnus Hagdorn
  * added some standard name attributes (ncdf_file.f90.in, ncdf_vars.def)
 	
