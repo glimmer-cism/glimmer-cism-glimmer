@@ -347,6 +347,18 @@ contains
     model%paramets%isotim = model%paramets%isotim * scyr / tim0         
     model%numerics%mlimit = model%numerics%mlimit / thk0
 
+    ! Initialise the mass balance timestep, depending on the scheme used
+
+    select case(model%options%whichacab)
+    case(1)
+      model%numerics%tinc_mbal=1.0
+    case(2)
+      model%numerics%tinc_mbal=1.0
+    case(3)
+!      model%numerics%tinc_mbal=1.0/8640.0 ! 1 hour
+      model%numerics%tinc_mbal=1.0/12.0 ! monthly
+    end select
+
     ! Read output file configuration
     call ReadNCParams(model)
 
@@ -498,18 +510,18 @@ contains
        
        model%geometry%usrf = model%geometry%thck + model%geometry%lsrf
        
-       call timeevoltemp(model,0,real(global_orog,dp))     ! calculate initial temperature distribution
-	   newtemps = .true.                          ! we have new temperatures
-
-	   call calcflwa(model%numerics,        &              ! Calculate Glen's A
-                     model%velowk,          &
-                     model%paramets%fiddle, &
-                     model%temper%flwa,     &
-                     model%temper%temp,     &
-                     model%geometry%thck,   &
-                     model%options%whichflwa)
-
-       first=.false.
+       call calcartm(model,                       &
+                     model%options%whichartm,     &
+                     model%geometry%usrf,         &
+                     model%climate%lati,          &
+                     model%climate%artm,          &
+                     model%climate%arng,          &
+                     g_orog=real(global_orog,dp),          &
+                     g_artm=model%climate%g_artm, &
+                     g_arng=model%climate%g_arng)
+       call timeevoltemp(model,0,model%climate%artm)     ! calculate initial temperature distribution
+	     newtemps = .true.  ! we have new temperatures
+       first    = .false.
        deallocate(arng) 
        
     else    
@@ -865,6 +877,9 @@ contains
     allocate(model%climate%presprcp(ewn,nsn));        model%climate%presprcp = 0.0
     allocate(model%climate%presartm(ewn,nsn));        model%climate%presartm = 0.0
     allocate(model%climate%presusrf(ewn,nsn));        model%climate%presusrf = 0.0
+    allocate(model%climate%prcp_save(ewn,nsn));       model%climate%prcp_save = 0.0
+    allocate(model%climate%ablt_save(ewn,nsn));       model%climate%ablt_save = 0.0
+    allocate(model%climate%acab_save(ewn,nsn));       model%climate%acab_save = 0.0
 
     allocate(model%velocity%uvel(upn,ewn-1,nsn-1));   model%velocity%uvel = 0.0d0
     allocate(model%velocity%vvel(upn,ewn-1,nsn-1));   model%velocity%vvel = 0.0d0

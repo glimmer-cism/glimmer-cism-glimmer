@@ -77,6 +77,7 @@ module glimmer_main
 
     real(rk) :: radea      = 6.37e6 !*FD Radius of the earth (m)
     real(rk) :: tstep_main = 1.0    !*FD Main timestep (years)
+    real(rk) :: tstep_mbal = 1.0    !*FD Mass-balance timestep (years)
 
     ! Averaging parameters -------------------------------------
 
@@ -112,6 +113,12 @@ module glimmer_main
     integer                 :: file_unit = 20 !*FD File unit to use for all ouput operations
     integer                 :: logf_unit = 21 !*FD File unit for logging. Could be confusing
                                               !*FD as the same unit is used by all model instances...
+
+    ! Start flag -----------------------------------------------
+
+    logical :: first = .true. !*FD Set if this is the first call to glimmer - make sure we set up
+                              !*FD start times correctly.
+
   end type glimmer_params
 
   ! ------------------------------------------------------------
@@ -163,6 +170,8 @@ contains
     ! Internal variables
 
     character(fname_length),dimension(:),pointer :: fnamelist=>null()   ! The parameter filenames for each instance
+    real(rk),dimension(:),allocatable :: mbtsteps ! Temporary array of mass-balance timesteps. These
+                                                  ! are checked to make sure they are all the same
     integer :: i,args
     real(rk),dimension(:,:),allocatable :: orog_temp,if_temp,alb_temp
 
@@ -222,6 +231,7 @@ contains
     ! Allocate the array of instances
 
     allocate(params%instances(params%ninstances))
+    allocate(mbtsteps(params%ninstances))
 
     ! ---------------------------------------------------------------
     ! Read namelist file for each glimmer instance, and
@@ -242,7 +252,8 @@ contains
                                 params%instances(i), &
                                 params%radea,        &
                                 params%g_grid,       &
-                                params%tstep_main)
+                                params%tstep_main,   &
+                                mbtsteps(i))
 
       params%total_coverage = params%total_coverage &
                             + params%instances(i)%frac_coverage
@@ -253,6 +264,11 @@ contains
       where (params%total_cov_orog>0.0) params%cov_norm_orog=params%cov_norm_orog+1.0
 
     enddo
+
+    ! Check that all mass-balance time-steps are the same length and 
+    ! assign that value to the top-level variable
+    
+    params%tstep_mbal=check_mbts(mbtsteps)     
 
     ! Check we don't have coverage greater than one at any point.
 
@@ -296,6 +312,8 @@ contains
 
     if (present(output_flag)) output_flag=.true.
   
+    deallocate(mbtsteps)
+
   end subroutine initialise_glimmer
 
 !================================================================================
@@ -353,6 +371,14 @@ contains
     real(rk) :: twin_temp,twout_temp,icevol_temp
     type(output_flags) :: out_f
 
+    ! Set averaging start if necessary
+    if (params%first) then
+      params%av_start_time=time
+      params%first=.false.
+    endif
+
+    print*,'Glimmer...',time
+
     ! Reset output flag
 
     if (present(output_flag)) output_flag=.false.
@@ -381,9 +407,13 @@ contains
     ! for each model instance
     ! ---------------------------------------------------------
 
-    if (time-params%av_start_time.ge.params%tstep_main*years2hours) then
+    if (time-params%av_start_time.ge.nint(params%tstep_mbal*years2hours)) then
 
       ! Set output_flag
+
+      ! At present, outputs are done for each mass-balance timestep, since
+      ! that involved least change to the code. However, it might be good
+      ! to change the output to occur with user-specified frequency.
 
       if (present(output_flag)) output_flag=.true.
 
@@ -476,8 +506,6 @@ contains
                           params%logf_unit,             &
                           time*hours2years,             &
                           params%instances(i),          &
-                          params%g_grid%lats,           &
-                          params%g_grid%lons,           &
                           params%g_av_temp,             &
                           params%g_temp_range,          &
                           params%g_av_precip,           &
@@ -1077,5 +1105,38 @@ contains
     enddo
 
   end subroutine calc_bounds
+
+!========================================================
+
+  real(rk) function check_mbts(timesteps)
+
+    !*FD Checks to see that all mass-balance time-steps are
+    !*FD the same. Flags a fatal error if not, else assigns that
+    !*FD value to the output
+
+    use glide_messages
+    
+    implicit none
+
+    real(rk),dimension(:) :: timesteps !*FD Array of mass-balance timsteps
+
+    integer :: n,i
+
+    n=size(timesteps)
+    if (n==0) then
+      check_mbts=0.0
+      return
+    endif
+
+    check_mbts=timesteps(1)
+
+    do i=2,n
+      if (timesteps(i)/=check_mbts) then
+        call glide_msg(GM_FATAL,__FILE__,__LINE__,&
+          'All mass-balance schemes must have the same timestep')
+      endif
+    enddo
+
+  end function check_mbts
 
 end module glimmer_main

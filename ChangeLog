@@ -1,3 +1,7 @@
+2005-01-07 Ian Rutt
+ * Made substantial changes to structure to enable to begin process of allowing the 
+   Energy-balance mass-balance model to be used in Glimmer. Needs testing, though.
+
 2004-11-10 Ian Rutt
  * Changed scale_factor_at_projection_origin to scale_factor_at_proj_origin, to comply
    with f95 standard - identifiers must be 31 characters or less.

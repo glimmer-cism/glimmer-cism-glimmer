@@ -47,7 +47,7 @@ module glimmer_temp
 
 contains
 
-  subroutine timeevoltemp(model,which,global_orog)
+  subroutine timeevoltemp(model,which,artm)
 
     !*FD Calculates the ice temperature, according to one
     !*FD of several alternative methods.
@@ -66,8 +66,7 @@ contains
 
     type(glimmer_global_type),intent(inout) :: model       !*FD Ice model parameters.
     integer,                  intent(in)    :: which       !*FD Flag to choose method.
-    real(dp),dimension(:,:),  intent(in)    :: global_orog !*FD Global orography, interpolated 
-    !*FD onto the ice model grid.
+    real(sp),dimension(:,:),  intent(in)    :: artm        !*FD Surface air temperature.
 
     !------------------------------------------------------------------------------------
     ! Internal variables
@@ -78,7 +77,7 @@ contains
     real(dp) :: tempresid
 
     integer :: iter, again
-    integer :: ew,ns
+    integer :: ew,ns,ewn,nsn
 
     real(dp),parameter :: tempthres = 0.001d0, floatlim = 10.0d0 / thk0
     integer, parameter :: mxit = 100
@@ -91,26 +90,18 @@ contains
     ! ewbc/nsbc set the type of boundary condition aplied at the end of
     ! the domain. a value of 0 implies zero gradient.
     !------------------------------------------------------------------------------------
-    ! Calculate the ice thickness according to different methods
+    ! Calculate the ice temperature according to different methods
     !------------------------------------------------------------------------------------
+
+    ewn=size(artm,1) ; nsn=size(artm,2) 
 
     select case(which)
 
     case(0) ! Set column to surface air temperature -------------------------------------
 
-       call calcartm(model,                                &
-            model%options%whichartm,              &
-            model%geometry%usrf,                  &
-            model%climate%lati,                   &
-            model%climate%artm,                   &   !** OUTPUT
-            model%climate%arng,                   &   !** OUTPUT
-            g_orog=global_orog,                   &
-            g_artm=model%climate%g_artm,          &
-            g_arng=model%climate%g_arng)
-
-       do ns = 1,model%general%nsn
-          do ew = 1,model%general%ewn
-             model%temper%temp(:,ew,ns) = dmin1(0.0d0,dble(model%climate%artm(ew,ns)))
+       do ns = 1,nsn
+          do ew = 1,ewn
+             model%temper%temp(:,ew,ns) = dmin1(0.0d0,dble(artm(ew,ns)))
           end do
        end do
 
@@ -136,18 +127,6 @@ contains
             model%geometry%mask,     &
             model%numerics%time,     &
             2)
-
-       ! Calculate surface air temperatures ---------------------------------------------
-
-       call calcartm(model,                                &
-            model%options%whichartm,              &
-            model%geometry%usrf,                  &
-            model%climate%lati,                   &
-            model%climate%artm,                   &   !** OUTPUT
-            model%climate%arng,                   &   !** OUTPUT
-            g_orog=global_orog,                   &
-            g_artm=model%climate%g_artm,          &
-            g_arng=model%climate%g_arng)
 
        ! Calculate the vertical velocity of the grid ------------------------------------
 
@@ -251,7 +230,7 @@ contains
                         model%velocity%wgrd(:,ew,ns), &
                         model%velocity%wvel(:,ew,ns), &
                         model%geometry%thck(ew,ns), &
-                        model%climate%artm(ew,ns), &
+                        artm(ew,ns), &
                         floater(ew,ns))
 
                    prevtemp = model%temper%temp(:,ew,ns)
@@ -290,7 +269,7 @@ contains
        do ns = 1,model%general%nsn
           do ew = 1,model%general%ewn
              if (model%geometry%thck(ew,ns) <= model%numerics%thklim) then
-                model%temper%temp(:,ew,ns) = dmin1(0.0d0,dble(model%climate%artm(ew,ns)))
+                model%temper%temp(:,ew,ns) = dmin1(0.0d0,dble(artm(ew,ns)))
              end if
           end do
        end do
@@ -335,35 +314,20 @@ contains
             model%temper%temp(model%general%upn,:,:), &
             floater) 
 
-       ! Calculate Glenn's A --------------------------------------------------------
-
-       call calcflwa(model%numerics,        &
-            model%velowk,          &
-            model%paramets%fiddle, &
-            model%temper%flwa,     &
-            model%temper%temp,     &
-            model%geometry%thck,   &
-            model%options%whichflwa) 
-
        ! Deallocate arrays ----------------------------------------------------------
 
        deallocate(model%tempwk%dissip,floater)
 
-    case(2) ! Do something else, unspecified ---------------------------------------
+    case(2) ! Set column temp to be air temp at top, and melting point at bottom, ---
+            ! interpolating linearly between the two, except where this exceeds -----
+            ! pressure melting point - in this case the temp is set to equal the ----
+            ! pressure melting point ------------------------------------------------
 
-       call calcartm(model,                                       &
-            model%options%whichartm,model%geometry%usrf, &
-            model%climate%lati,                          &
-            model%climate%artm,                          &   !** OUTPUT
-            model%climate%arng,                          &   !** OUTPUT
-            g_orog=global_orog,                          &
-            g_artm=model%climate%g_artm,                 &
-            g_arng=model%climate%g_arng)
        model%temper%bwat = 0.0d0
 
        do ns = 1,model%general%nsn
           do ew = 1,model%general%ewn
-             model%temper%temp(:,ew,ns) = dmin1(0.0d0,dble(model%climate%artm(ew,ns))) * (1.0d0 - model%numerics%sigma)
+             model%temper%temp(:,ew,ns) = dmin1(0.0d0,dble(artm(ew,ns))) * (1.0d0 - model%numerics%sigma)
              call corrpmpt(model%temper%temp(:,ew,ns),model%geometry%thck(ew,ns),model%temper%bwat(ew,ns),&
                   model%numerics%sigma,model%general%upn)
           end do
@@ -374,6 +338,16 @@ contains
        call glide_msg(GM_FATAL,__FILE__,__LINE__,'Unrecognised value of whichtemp')
 
     end select
+
+    ! Calculate Glenn's A --------------------------------------------------------
+
+    call calcflwa(model%numerics,        &
+                  model%velowk,          &
+                  model%paramets%fiddle, &
+                  model%temper%flwa,     &
+                  model%temper%temp,     &
+                  model%geometry%thck,   &
+                  model%options%whichflwa) 
 
     ! Output some information ----------------------------------------------------
 
@@ -709,13 +683,22 @@ contains
 
     implicit none
 
-    type(glimmer_global_type) :: model
-    integer, intent(in) :: ew, ns, iter
-    real(dp), dimension(:), intent(in) :: temp, wgrd, wvel, iteradvt, diagadvt
-    real(dp), intent(in) :: thck
-    real(sp), intent(in) :: artm 
-    real(dp), dimension(:), intent(out) :: subd, diag, supd, rhsd
-    logical, intent(in) :: float
+    type(glimmer_global_type),intent(inout) :: model
+    integer,                  intent(in)    :: iter
+    integer,                  intent(in)    :: ew
+    integer,                  intent(in)    :: ns
+    real(dp), dimension(:),   intent(out)   :: subd
+    real(dp), dimension(:),   intent(out)   :: diag
+    real(dp), dimension(:),   intent(out)   :: supd
+    real(dp), dimension(:),   intent(out)   :: rhsd
+    real(dp), dimension(:),   intent(in)    :: iteradvt
+    real(dp), dimension(:),   intent(in)    :: diagadvt
+    real(dp), dimension(:),   intent(in)    :: temp 
+    real(dp), dimension(:),   intent(in)    :: wgrd
+    real(dp), dimension(:),   intent(in)    :: wvel
+    real(dp),                 intent(in)    :: thck
+    real(sp),                 intent(in)    :: artm 
+    logical,                  intent(in)    :: float
     integer :: up
 
     real(dp) :: fact(3), dupnp1

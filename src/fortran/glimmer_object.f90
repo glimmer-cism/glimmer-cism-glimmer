@@ -95,6 +95,12 @@ module glimmer_object
     
     !*FD Fractional coverage of each global gridbox by the projected grid (orography).
 
+    ! Accumulation information --------------------------------------------------
+
+    real(rk) :: accum_start = 0.0 ! Time when mass-balance accumulation started
+    logical  :: first_accum = .true.  ! First time accumulation (difference from first, since
+                                      ! that relates to first dynamics step)
+
   end type glimmer_instance
 
   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -117,7 +123,7 @@ module glimmer_object
 
 contains
 
-  subroutine glimmer_i_initialise(unit,nmlfile,instance,radea,grid,time_step,start_time)
+  subroutine glimmer_i_initialise(unit,nmlfile,instance,radea,grid,time_step,tstep_mbal,start_time)
 
     !*FD Initialise an ice model (glimmer) instance
 
@@ -136,11 +142,12 @@ contains
     real(rk),              intent(in)    :: radea       !*FD Radius of the earth (m).
     type(global_grid),     intent(in)    :: grid        !*FD Global grid to use
     real(rk),              intent(in)    :: time_step   !*FD Model time-step (years).
+    real(rk),              intent(out)   :: tstep_mbal  !*FD Mass-balance time-step (years).
     real(rk),optional,     intent(in)    :: start_time  !*FD Start time of model (years).
 
     ! Internal variables
 
-    instance%model%numerics%tinc=time_step             ! Initialise the model time step
+    instance%model%numerics%tinc=time_step            ! Initialise the model time step
 
     call  read_config_file(unit,nmlfile,instance%model,instance%proj) ! Read config file and initialise variables
     call new_proj(instance%proj,radea)                          ! Initialise the projection
@@ -172,6 +179,8 @@ contains
 
     call openall_out(instance%model)                            ! Initialise output files
     call writeall(instance%model)
+
+    tstep_mbal=instance%model%numerics%tinc_mbal      ! Initialise the mass-balance timestep
 
   end subroutine glimmer_i_initialise
 
@@ -225,7 +234,7 @@ contains
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine glimmer_i_tstep(unit,logunit,time,instance,lats,lons,g_temp,g_temp_range, &
+  subroutine glimmer_i_tstep(unit,logunit,time,instance,g_temp,g_temp_range, &
                           g_precip,g_zonwind,g_merwind,g_orog,g_orog_out,g_albedo,g_ice_frac,&
                           g_water_in,g_water_out,t_win,t_wout,ice_vol,out_f)
 
@@ -255,8 +264,6 @@ contains
     integer,                intent(in)   :: logunit      !*FD Unit for log file
     real(rk),               intent(in)   :: time         !*FD Current time in years
     type(glimmer_instance), intent(inout):: instance     !*FD Model instance
-    real(rk),dimension(:),  intent(in)   :: lats         !*FD Latitudes of global grid points (degrees north)
-    real(rk),dimension(:),  intent(in)   :: lons         !*FD Longitudes of global grid points (degrees east)
     real(rk),dimension(:,:),intent(in)   :: g_temp       !*FD Global mean surface temperature field ($^{\circ}$C)
     real(rk),dimension(:,:),intent(in)   :: g_temp_range !*FD Global surface temperature half-range field ($^{\circ}$C)
     real(rk),dimension(:,:),intent(in)   :: g_precip     !*FD Global precip field total (mm)
@@ -285,28 +292,24 @@ contains
     character(40) :: timetxt
     real(rk) :: start_volume,end_volume,flux_fudge
 
-    ! Calculate the initial ice volume (scaled) ------------------------------
-
-    start_volume=sum(instance%model%geometry%thck)
+    print*,'mass balance...',time
 
     ! Set scaling factor for water flux calculations -------------------------
 
     f1 = scyr * thk0 / tim0
-
-    ! Allocate temporary upscaling array -------------------------------------
-
-    allocate(upscale_temp(instance%model%general%ewn,instance%model%general%nsn))
-    allocate(accum_temp(instance%model%general%ewn,instance%model%general%nsn))
-    allocate(ablat_temp(instance%model%general%ewn,instance%model%general%nsn))
-    allocate(fudge_mask(instance%model%general%ewn,instance%model%general%nsn))
-
-    accum_temp=0.0 ; ablat_temp=0.0
 
     ! ------------------------------------------------------------------------  
     ! Update internal clock
     ! ------------------------------------------------------------------------  
 
     instance%model%numerics%time=time  
+
+    ! Set accumulation start if necessary ------------------------------------
+
+    if (instance%first_accum) then
+      instance%accum_start=nint(time-instance%model%numerics%tinc_mbal)
+      instance%first_accum=.false.
+    endif
 
     ! ------------------------------------------------------------------------  
     ! Downscale input fields, but only if required by options selected
@@ -367,32 +370,18 @@ contains
     call glimmer_remove_bath(instance%local_orog,1,1)
 
     ! ------------------------------------------------------------------------  
-    ! Calculate the surface temperature and half-range, if none are currently
-    ! available 
+    ! Calculate or process the surface temperature and half-range
     ! ------------------------------------------------------------------------  
-  
-    if (instance%first) then
-	  call timeevoltemp(instance%model,0,instance%global_orog)     ! calculate initial temperature distribution
-	  instance%newtemps = .true.                                   ! we have new temperatures
- 
-      call calcflwa(instance%model%numerics,        &              ! Calculate Glen's A
-                    instance%model%velowk,          &
-                    instance%model%paramets%fiddle, &
-                    instance%model%temper%flwa,     &
-                    instance%model%temper%temp,     &
-                    instance%model%geometry%thck,   &
-                    instance%model%options%whichflwa)
 
-      call calcartm(instance%model,                       &
-                    instance%model%options%whichartm,     &
-                    instance%model%geometry%usrf,         &
-                    instance%model%climate%lati,          &
-                    instance%model%climate%artm,          &
-                    instance%model%climate%arng,          &
-                    g_orog=instance%global_orog,          &
-                    g_artm=instance%model%climate%g_artm, &
-                    g_arng=instance%model%climate%g_arng)
-    endif
+    call calcartm(instance%model,                       &
+                  instance%model%options%whichartm,     &
+                  instance%model%geometry%usrf,         &
+                  instance%model%climate%lati,          &
+                  instance%model%climate%artm,          &
+                  instance%model%climate%arng,          &
+                  g_orog=instance%global_orog,          &
+                  g_artm=instance%model%climate%g_artm, &
+                  g_arng=instance%model%climate%g_arng)
 
     ! ------------------------------------------------------------------------  
     ! Calculate the precipitation field 
@@ -431,23 +420,79 @@ contains
 
     end select
 
+    ! ------------------------------------------------------------------------ 
+    ! Calculate ablation, and thus mass-balance
+    ! ------------------------------------------------------------------------ 
+
+    call calcacab(instance%model%numerics, &
+                  instance%model%paramets, &
+                  instance%model%pddcalc,  &
+                  instance%model%options%  whichacab, &
+                  instance%model%geometry% usrf,      &
+                  instance%model%climate%  artm,      &
+                  instance%model%climate%  arng,      &
+                  instance%model%climate%  prcp,      &
+                  instance%model%climate%  ablt,      &
+                  instance%model%climate%  lati,      &
+                  instance%model%climate%  acab,      &
+                  instance%model%geometry% thck)
+
+    ! Accumulate if necessary
+
+    instance%model%climate%prcp_save = instance%model%climate%prcp_save + instance%model%climate%prcp
+    instance%model%climate%ablt_save = instance%model%climate%ablt_save + instance%model%climate%ablt
+    instance%model%climate%acab_save = instance%model%climate%acab_save + instance%model%climate%acab
+
+    ! If it's not time for a timestep, return
+
+    if (time-instance%accum_start.lt.instance%model%numerics%tinc) return
+
+    print*,'dynamics...',time
+
+    ! ------------------------------------------------------------------------  
+    ! ICE TIMESTEP begins HERE
+    ! ------------------------------------------------------------------------  
+ 
+    ! Copy and zero accumulated totals ---------------------------------------
+
+    instance%model%climate%prcp = instance%model%climate%prcp_save
+    instance%model%climate%ablt = instance%model%climate%ablt_save
+    instance%model%climate%acab = instance%model%climate%acab_save
+
+    instance%model%climate%prcp_save = 0.0
+    instance%model%climate%ablt_save = 0.0
+    instance%model%climate%acab_save = 0.0
+
+    instance%accum_start=time
+
+    ! Calculate the initial ice volume (scaled) ------------------------------
+
+    start_volume=sum(instance%model%geometry%thck)
+
+    ! Allocate temporary upscaling array -------------------------------------
+
+    allocate(upscale_temp(instance%model%general%ewn,instance%model%general%nsn))
+    allocate(accum_temp(instance%model%general%ewn,instance%model%general%nsn))
+    allocate(ablat_temp(instance%model%general%ewn,instance%model%general%nsn))
+    allocate(fudge_mask(instance%model%general%ewn,instance%model%general%nsn))
+
+    accum_temp=0.0 ; ablat_temp=0.0
+
+    ! Do water budget accounting ---------------------------------------------
+
+    if (out_f%water_out.or.out_f%total_wout.or.out_f%water_in .or.out_f%total_win) then
+      accum_temp=instance%model%climate%prcp*instance%model%numerics%dt
+      ablat_temp=instance%model%climate%ablt*instance%model%numerics%dt
+    endif
+
     ! ------------------------------------------------------------------------  
     ! If first step, use as seed...
     ! ------------------------------------------------------------------------  
 
     if (instance%first) then
-      call calcacab(instance%model%numerics, &
-                    instance%model%paramets, &
-                    instance%model%pddcalc,  &
-                    instance%model%options%  whichacab, &
-                    instance%model%geometry% usrf,      &
-                    instance%model%climate%  artm,      &
-                    instance%model%climate%  arng,      &
-                    instance%model%climate%  prcp,      &
-                    instance%model%climate%  ablt,      &
-                    instance%model%climate%  lati,      &
-                    instance%model%climate%  acab,      &
-                    instance%model%geometry% thck)
+
+	    call timeevoltemp(instance%model,0,instance%model%climate%artm)
+	    instance%newtemps = .true.          ! we have new temperatures
       
       where (instance%local_orog>0.0)
         instance%model%geometry%thck = max(0.0d0, &
@@ -462,13 +507,6 @@ contains
       instance%model%geometry%usrf = instance%model%geometry%thck + &
                                      instance%model%geometry%lsrf
 
-      ! Do water budget accounting
-
-      if (out_f%water_out.or.out_f%total_wout.or.out_f%water_in .or.out_f%total_win) then
-        accum_temp=instance%model%climate%prcp*instance%model%numerics%dt
-        ablat_temp=instance%model%climate%ablt*instance%model%numerics%dt
-      endif
-
       ! Reset mass-balance variables to zero, as we've already used these
 
       instance%model%climate%prcp = 0.0
@@ -476,25 +514,6 @@ contains
       instance%model%climate%acab = 0.0
 
     end if
-
-    ! ------------------------------------------------------------------------ 
-    ! Calculate isostasy
-    ! ------------------------------------------------------------------------ 
-
-    call isosevol(instance%model%numerics,            & 
-                  instance%model%paramets,            &
-                  instance%model%isotwk,              &                                      
-                  instance%model%options%  whichisot, &
-                  instance%model%geometry% thck,      &
-                  instance%model%geometry% topg,      &
-                  instance%model%geometry% relx)
-
-    call calclsrf(instance%model%geometry%thck, &
-                  instance%model%geometry%topg, &
-                  instance%model%geometry%lsrf)
-
-    instance%model%geometry%usrf = instance%model%geometry%thck + &
-                                   instance%model%geometry%lsrf
 
     ! ------------------------------------------------------------------------ 
     ! Calculate various derivatives...
@@ -559,31 +578,8 @@ contains
     end if
 
     ! ------------------------------------------------------------------------ 
-    ! Calculate ablation, and thus mass-balance
+    ! Do thickness masking
     ! ------------------------------------------------------------------------ 
-
-    if (.not.instance%first) then
-      call calcacab(instance%model%numerics, &
-                    instance%model%paramets, &
-                    instance%model%pddcalc,  &
-                    instance%model%options%  whichacab, &
-                    instance%model%geometry% usrf,      &
-                    instance%model%climate%  artm,      &
-                    instance%model%climate%  arng,      &
-                    instance%model%climate%  prcp,      &
-                    instance%model%climate%  ablt,      &
-                    instance%model%climate%  lati,      &
-                    instance%model%climate%  acab,      &
-                    instance%model%geometry% thck)
-
-      ! Do water budget accounting
-
-      if (out_f%water_out.or.out_f%total_wout.or.out_f%water_in .or.out_f%total_win) then
-        accum_temp=instance%model%climate%prcp*instance%model%numerics%dt
-        ablat_temp=instance%model%climate%ablt*instance%model%numerics%dt
-      endif
-
-    end if
 
     call maskthck(instance%model%options%  whichthck, &
                   instance%model%geometry% thck,      &
@@ -601,14 +597,7 @@ contains
          mod(instance%model%numerics%time,instance%model%numerics%ntem) ) then
       call timeevoltemp(instance%model, &
                         instance%model%options%whichtemp, &
-                        instance%global_orog)
-      call calcflwa(instance%model%numerics,         & 
-                    instance%model%velowk,           &
-                    instance%model%paramets% fiddle, &
-                    instance%model%temper%   flwa,   &
-                    instance%model%temper%   temp,   &
-                    instance%model%geometry% thck,   &
-                    instance%model%options%  whichflwa) 
+                        instance%model%climate%artm)
       instance%newtemps = .true.
     end if
 
@@ -669,14 +658,24 @@ contains
                   instance%model%climate%  lati,      &
                   instance%model%numerics%mlimit,     &
                   ablat_temp)
+    ! ------------------------------------------------------------------------ 
+    ! Calculate isostasy
+    ! ------------------------------------------------------------------------ 
 
-    ! ------------------------------------------------------------------------ 
-    ! Calculate the lower surface elevation
-    ! ------------------------------------------------------------------------ 
+    call isosevol(instance%model%numerics,            & 
+                  instance%model%paramets,            &
+                  instance%model%isotwk,              &                                      
+                  instance%model%options%  whichisot, &
+                  instance%model%geometry% thck,      &
+                  instance%model%geometry% topg,      &
+                  instance%model%geometry% relx)
 
     call calclsrf(instance%model%geometry%thck, &
                   instance%model%geometry%topg, &
                   instance%model%geometry%lsrf)
+
+    instance%model%geometry%usrf = instance%model%geometry%thck + &
+                                   instance%model%geometry%lsrf
 
     ! ------------------------------------------------------------------------ 
     ! Do outputs if necessary
@@ -782,7 +781,7 @@ contains
 
     deallocate(upscale_temp,accum_temp,ablat_temp,fudge_mask)
     instance%first=.false.
-
+ 
   end subroutine glimmer_i_tstep
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
