@@ -43,6 +43,8 @@
 
 module glimmer_config
 
+  use glimmer_global
+
   !*FD Configuration file parser,
   !*FD written by Magnus Hagdorn, May 2004.
   !*FD Everything is a singly linked list
@@ -68,7 +70,8 @@ module glimmer_config
   end type ConfigSection
 
   interface GetValue
-     module procedure GetValueReal, GetValueInt, GetValueChar, GetValueRealArray, GetValueIntArray
+     module procedure GetValueReal, GetValueInt, GetValueChar, GetValueRealArray, GetValueIntArray, &
+          GetValueDouble, GetValueDoubleArray
   end interface
 
 contains
@@ -285,6 +288,41 @@ contains
 
   !--------------------------------------------------------------------------
 
+  subroutine GetValueDoubleArray(section,name,val,numval)
+    !*FD get real(dp) array value
+    implicit none
+    type(ConfigSection), pointer :: section
+    character(len=*),intent(in) :: name
+    real(dp), pointer, dimension(:) :: val
+    integer,intent(in), optional :: numval
+
+    ! local variables
+    character(len=valuelen) :: value
+    real, dimension(:),allocatable :: tempval
+    integer ios,i,numv
+
+    if (present(numval)) then
+       numv=numval
+    else
+       numv=100
+    end if
+    allocate(tempval(numv))
+    value=''
+    call GetValueChar(section,name,value)
+    if (value.eq.'') return
+    read(value,*,end=10) (tempval(i),i=1,numv)
+10  i=i-1
+    if (i.ge.1) then
+       if (associated(val)) then
+          deallocate(val)
+       end if
+       allocate(val(i))
+       val = tempval(1:i)
+    end if
+  end subroutine GetValueDoubleArray
+
+  !--------------------------------------------------------------------------
+
   subroutine GetValueIntArray(section,name,val,numval)
     !*FD get integer array value
     implicit none
@@ -341,6 +379,29 @@ contains
        val = temp
     end if
   end subroutine GetValueReal
+
+  !--------------------------------------------------------------------------
+
+  subroutine GetValueDouble(section,name,val)
+    !*FD get real(dp) value
+    implicit none
+    type(ConfigSection), pointer :: section
+    character(len=*),intent(in) :: name
+    real(dp) :: val
+
+    ! local variables
+    character(len=valuelen) :: value
+    real temp
+    integer ios
+
+    value=''
+    call GetValueChar(section,name,value)
+
+    read(value,*,iostat=ios) temp
+    if (ios==0) then
+       val = temp
+    end if
+  end subroutine GetValueDouble
 
   !--------------------------------------------------------------------------
 

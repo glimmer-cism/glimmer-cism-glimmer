@@ -1,3 +1,9 @@
+2004-08-23 Ian Rutt
+ * Finished replacing namelist input with Magi's config-type parameter
+   file format. Removed old namelist code.
+ * Added two new functions (for reading real(dp) variables and arrays) to
+   glimmer_config.f90.
+
 2004-08-19 Ian Rutt
  * Moved PDD and precip forcing parameters into the namelist, and slightly
    reorganized glimmer_paramets.f90 and glimmer_physcon.f90. Would like to

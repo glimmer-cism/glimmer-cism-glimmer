@@ -50,6 +50,9 @@ contains
 
   subroutine read_config_file(unit,filename,model,proj)
 
+    use physcon,  only: scyr
+    use paramets, only: acc0,thk0,tim0,len0
+    use glimmer_ncparams
     use glide_messages
     use glimmer_types
     use glimmer_project
@@ -67,8 +70,13 @@ contains
 
     type(ConfigSection), pointer :: config,section
     character(80) :: outtxt
+    real(sp),dimension(:),pointer :: airt_temp => null()
+    real(sp),dimension(:),pointer :: nmsb_temp => null()
+    real(dp),dimension(:),pointer :: bpar_temp => null()
 
     ! Lists of allowed section/value names
+    ! REMEMBER to UPDATE THESE if new variables are added,
+    ! or their names in the config flie are changed
 
     character(20),dimension(11) :: allowed_sections = (/ &
          'output',            &
@@ -83,6 +91,44 @@ contains
          'constants',         &
          'PDD scheme'/)
 
+    character(20),dimension(1)  :: output_values = (/'configuration file'/)
+    character(20),dimension(3)  :: domain_values = (/'east-west','north-south','vertical'/)
+    character(20),dimension(6)  :: projection_values = (/ &
+         'type',             &
+         'false easting',    &
+         'false northing',   &
+         'parallel',         &
+         'central meridian', &
+         'standard parallel' /)
+    character(20),dimension(1) :: sigma_values = (/'file'/)
+    character(20),dimension(13) :: options_values = (/ &
+         'whichtemp', &
+         'whichartm', &
+         'whichthck', &
+         'whichflwa', &
+         'whichisot', &
+         'whichslip', &
+         'whichbwat', &
+         'whichmarn', &
+         'whichbtrc', &
+         'whichacab', &
+         'whichevol', &
+         'whichwvel', &
+         'whichprecip' /)
+    character(20),dimension(3) :: timesteps_values = (/ &
+         'temperature','velocity','isostasy'/)
+    character(20),dimension(2) :: grid_values = (/ &
+         'east-west','north-south' /)
+    character(20),dimension(9) :: params_values = (/ &
+         'geot','fiddle','airt','nmsb','hydtim','isotim', &
+         'bpar','thklim','mlimit'/)
+    character(20),dimension(3) :: forcing_values = (/ &
+         'file','trun','pfac'/)
+    character(20),dimension(4) :: constants_values = (/ &
+         'albedo','lapse rate','precip rate','air temp'/)
+    character(20),dimension(3) :: pdd_values = (/ &
+         'wmax','ice pdd factor','snow pdd factor'/)
+
     ! Open and read the configuration structure
 
     call ConfigRead(filename,config)
@@ -94,292 +140,195 @@ contains
        call glide_msg(GM_FATAL,__FILE__,__LINE__,trim(outtxt))
     end if
      
-    ! *****THIS IS UNFINISHED*****
+    ! read Output section
 
-  end subroutine read_config_file
-
-  subroutine initial(unit,nmlfile,model,proj)
-
-    !*FD Reads in namelists for an individual ice model instance. This
-    !*FD subroutine also holds the defaults for all the parameters
-    !*FD that are read in from the namelist
-
-    use physcon,  only: scyr
-    use paramets, only: acc0,thk0,tim0,len0
-    use glimmer_types
-    use glimmer_project
-    use glimmer_ncparams
-    use glide_messages
-    implicit none
-
-    ! Subroutine arguments
-
-    integer,                  intent(in)    :: unit     !*FD Logical file unit to use for reading.
-    character(*),             intent(in)    :: nmlfile  !*FD Namelist filename to read.
-    type(glimmer_global_type),intent(inout) :: model    !*FD Model parameters to set.
-    type(projection),         intent(inout) :: proj     !*FD Projection parameters to set.
-
-    ! -------------------------------------------------------------------
-    ! Internal variables - these are needed, as namelists can't include
-    ! components of derived types, or pointers, or anything else useful...
-    ! -------------------------------------------------------------------
-
-    logical :: there  ! Flag used when checking file is present.
-
-    ! temporary variables...
-    ! ...for general
-
-    integer  :: ewn,nsn,upn
-
-    ! ...for the projection
-
-    integer  :: p_type
-    real(sp) :: cpx,cpy,latc,lonc,std_par
-
-    ! ...for the filenames
-
-    character(fname_length) :: sigfile,ncconf
-
-    ! ...for options
-
-    integer :: whichtemp, whichartm, whichthck, whichflwa, &
-               whichisot, whichslip, whichbwat, whichmarn, &
-               whichbtrc, whichacab, & 
-               whichevol, whichwvel, whichprecip
-
-    ! ...for numerics
-
-    real(sp) :: ntem, nvel, niso
-    real(dp) :: thklim, mlimit, dew, dns
-
-    ! ...for funits
-
-    character(fname_length) :: forcfile
-
-    ! ...for other parameters
-
-    real(dp) :: geot,fiddle,hydtim,isotim
-    real(sp),dimension(2) :: airt
-    real(sp),dimension(3) :: nmsb
-    real(dp),dimension(5) :: bpar
-
-    ! ...for constants
-
-    real(sp) :: lapse_rate,precip_rate,air_temp,albedo
-
-    ! ...for the forcing
-
-    real(sp) :: trun ! The total time for the run.
-    real(sp) :: pfac ! The temperature scaling factor for precip (with whichprecip=3)
-    
-    ! ...for the PDD calculation
-
-    real(sp) :: wmax
-    real(dp) :: pddfac_ice
-    real(dp) :: pddfac_snow
-
-    ! Error handling
-
-    character(40) :: errtxt
-
-    ! -------------------------------------------------------------------
-    ! namelist definitions
-    ! -------------------------------------------------------------------
-
-    namelist / sizs / ewn, nsn, upn
-    namelist / prj  / p_type, cpx, cpy, latc, lonc, std_par
-    namelist / opts / whichtemp, whichartm, whichthck, whichflwa, &
-                      whichisot, whichslip, whichbwat, whichmarn, &
-                      whichbtrc, whichacab, & 
-                      whichevol, whichwvel, whichprecip
-    namelist / nums / ntem, nvel, niso, thklim, mlimit, dew, dns 
-    namelist / pars / geot, fiddle, airt, nmsb, hydtim, isotim, bpar
-    namelist / dats / forcfile
-    namelist / cons / lapse_rate,precip_rate,air_temp,albedo
-    namelist / forc / trun, pfac
-    namelist / pdd  / wmax,pddfac_ice,pddfac_snow
-
-    ! -------------------------------------------------------------------
-    ! Copy default values of namelist parameters here
-    ! -------------------------------------------------------------------
-
-    ! For general:
-
-    ewn = model%general%ewn
-    nsn = model%general%nsn
-    upn = model%general%upn
-
-    ! For the projection:
-
-    p_type = proj%p_type
-    cpx    = proj%cpx
-    cpy    = proj%cpy
-    latc   = proj%latc
-    lonc   = proj%lonc
-    std_par= proj%std_par
-
-    ! For options:
-
-    whichtemp   = model%options%whichtemp
-    whichartm   = model%options%whichartm
-    whichthck   = model%options%whichthck
-    whichflwa   = model%options%whichflwa
-    whichisot   = model%options%whichisot
-    whichslip   = model%options%whichslip
-    whichbwat   = model%options%whichbwat
-    whichmarn   = model%options%whichmarn
-    whichbtrc   = model%options%whichbtrc
-    whichacab   = model%options%whichacab
-    whichevol   = model%options%whichevol
-    whichwvel   = model%options%whichwvel
-    whichprecip = model%options%whichprecip
-
-    ! For numerics:
-
-    ntem   = model%numerics%ntem
-    nvel   = model%numerics%nvel
-    niso   = model%numerics%niso
-    thklim = model%numerics%thklim
-    mlimit = model%numerics%mlimit
-    dew    = model%numerics%dew
-    dns    = model%numerics%dns
-
-    ! For funits
-
-    forcfile     = model%funits%forcfile
-
-    ! For other parameters
-
-    geot   = model%paramets%geot
-    fiddle = model%paramets%fiddle
-    hydtim = model%paramets%hydtim
-    isotim = model%paramets%isotim
-    airt   = model%paramets%airt
-    nmsb   = model%paramets%nmsb
-    bpar   = model%paramets%bpar
-
-    ! For constants
-
-    lapse_rate  = model%climate%ulapse_rate
-    precip_rate = model%climate%uprecip_rate
-    air_temp    = model%climate%usurftemp
-    albedo      = model%climate%ice_albedo
-
-    ! For the forcing
-
-    trun        = model%forcdata%trun
-    pfac        = model%climate%pfac
-
-    ! For PDD calculations
-
-    wmax        = model%pddcalc%wmax
-    pddfac_ice  = model%pddcalc%pddfac_ice
-    pddfac_snow = model%pddcalc%pddfac_snow
-
-    ! -------------------------------------------------------------------
-    ! Load the namelist, having first checked that it exists
-    ! -------------------------------------------------------------------
-
-    inquire (exist=there,file=nmlfile)         ! Check the namelist file exists
-  
-    if (there) then                            ! If it does exist, read it in
-      open(unit,file=nmlfile)
-      read(unit,100)ncconf
-      read(unit,nml=sizs)
-      read(unit,nml=prj)
-      read(unit,100)sigfile
-      read(unit,nml=opts)
-      read(unit,nml=nums)
-      read(unit,nml=pars)
-      read(unit,nml=dats)
-      read(unit,nml=cons)
-      read(unit,nml=forc)
-      read(unit,nml=pdd)
-      close(unit)
-    else
-      write(errtxt,*)'Error opening namelist file ',trim(nmlfile),' - it doesn''t exist!'
-      call glide_msg(GM_FATAL,__FILE__,__LINE__,trim(errtxt))
+    call GetSection(config,section,allowed_sections(1))
+    if (associated(section)) then
+       if (ValidateValueNames(section,output_values)/=0) then
+          write(outtxt,*)'Unexpected value names in configuration file: ',trim(filename)
+          call glide_msg(GM_FATAL,__FILE__,__LINE__,trim(outtxt))
+       end if
+       call GetValue(section,'configuration file',model%funits%ncfile)
     end if
 
-    ! -------------------------------------------------------------------
-    ! Copy data from temporary namelist variables to the model parameters
-    ! -------------------------------------------------------------------
+    ! read domain size section
 
-    ! copy projection data
+    call GetSection(config,section,allowed_sections(2))
+    if (associated(section)) then
+       if (ValidateValueNames(section,domain_values)/=0) then
+          write(outtxt,*)'Unexpected value names in configuration file: ',trim(filename)
+          call glide_msg(GM_FATAL,__FILE__,__LINE__,trim(outtxt))
+       end if
+       call GetValue(section,'east-west',  model%general%ewn)
+       call GetValue(section,'north-south',model%general%nsn)
+       call GetValue(section,'vertical',   model%general%upn)
+    end if
 
-    proj%p_type=p_type
-    proj%nx=ewn
-    proj%ny=nsn
-    proj%cpx=cpx
-    proj%cpy=cpy
-    proj%dx=dew
-    proj%dy=dns
-    proj%latc=latc
-    proj%lonc=lonc
-    proj%std_par=std_par
+    ! read projection section
 
-    ! copy to options type
+    call GetSection(config,section,allowed_sections(3))
+    if (associated(section)) then
+       if (ValidateValueNames(section,projection_values)/=0) then
+          write(outtxt,*)'Unexpected value names in configuration file: ',trim(filename)
+          call glide_msg(GM_FATAL,__FILE__,__LINE__,trim(outtxt))
+       end if
+       call GetValue(section,'type',             proj%p_type)
+       call GetValue(section,'false easting',    proj%cpx)
+       call GetValue(section,'false northing',   proj%cpy)
+       call GetValue(section,'parallel',         proj%latc)
+       call GetValue(section,'central meridian', proj%lonc)
+       call GetValue(section,'standard parallel',proj%std_par)
+     end if
 
-    model%options%whichtemp=whichtemp
-    model%options%whichartm=whichartm
-    model%options%whichthck=whichthck
-    model%options%whichflwa=whichflwa
-    model%options%whichisot=whichisot
-    model%options%whichslip=whichslip
-    model%options%whichbwat=whichbwat
-    model%options%whichmarn=whichmarn
-    model%options%whichbtrc=whichbtrc
-    model%options%whichacab=whichacab
-    model%options%whichevol=whichevol
-    model%options%whichwvel=whichwvel
-    model%options%whichprecip=whichprecip
+    ! read sigma coordinates section
 
-    ! copy general type
+    call GetSection(config,section,allowed_sections(4))
+    if (associated(section)) then
+       if (ValidateValueNames(section,sigma_values)/=0) then
+          write(outtxt,*)'Unexpected value names in configuration file: ',trim(filename)
+          call glide_msg(GM_FATAL,__FILE__,__LINE__,trim(outtxt))
+       end if
+       call GetValue(section,'file',model%funits%sigfile)
+    end if
 
-    model%general%nsn = nsn
-    model%general%ewn = ewn
-    model%general%upn = upn
+    ! read options section
 
-    ! copy numerics type
+    call GetSection(config,section,allowed_sections(5))
+    if (associated(section)) then
+       if (ValidateValueNames(section,options_values)/=0) then
+          write(outtxt,*)'Unexpected value names in configuration file: ',trim(filename)
+          call glide_msg(GM_FATAL,__FILE__,__LINE__,trim(outtxt))
+       end if
+       call GetValue(section,'whichtemp',model%options%whichtemp)
+       call GetValue(section,'whichartm',model%options%whichartm)
+       call GetValue(section,'whichthck',model%options%whichthck)
+       call GetValue(section,'whichflwa',model%options%whichflwa)
+       call GetValue(section,'whichisot',model%options%whichisot)
+       call GetValue(section,'whichslip',model%options%whichslip)
+       call GetValue(section,'whichbwat',model%options%whichbwat)
+       call GetValue(section,'whichmarn',model%options%whichmarn)
+       call GetValue(section,'whichbtrc',model%options%whichbtrc)
+       call GetValue(section,'whichacab',model%options%whichacab)
+       call GetValue(section,'whichevol',model%options%whichevol)
+       call GetValue(section,'whichwvel',model%options%whichwvel)
+       call GetValue(section,'whichprecip',model%options%whichprecip)
+    end if
 
-    model%numerics%ntem   = ntem
-    model%numerics%nvel   = nvel
-    model%numerics%niso   = niso
-    model%numerics%thklim = thklim
-    model%numerics%mlimit = mlimit
-    model%numerics%dew    = dew
-    model%numerics%dns    = dns
+    ! read timesteps section
 
-    ! copy funits type
+    call GetSection(config,section,allowed_sections(6))
+    if (associated(section)) then
+       if (ValidateValueNames(section,timesteps_values)/=0) then
+          write(outtxt,*)'Unexpected value names in configuration file: ',trim(filename)
+          call glide_msg(GM_FATAL,__FILE__,__LINE__,trim(outtxt))
+       end if
+       call GetValue(section,'temperature',model%numerics%ntem)
+       call GetValue(section,'velocity',   model%numerics%nvel)
+       call GetValue(section,'isostasy',   model%numerics%niso)
+    end if
 
-    model%funits%forcfile = forcfile
+    ! read grid-lengths section
 
-    ! filenames
+    call GetSection(config,section,allowed_sections(7))
+    if (associated(section)) then
+       if (ValidateValueNames(section,grid_values)/=0) then
+          write(outtxt,*)'Unexpected value names in configuration file: ',trim(filename)
+          call glide_msg(GM_FATAL,__FILE__,__LINE__,trim(outtxt))
+       end if
+       call GetValue(section,'east-west',  model%numerics%dew)
+       call GetValue(section,'north-south',model%numerics%dns)
+    end if
 
-    sigfile=adjustl(sigfile)
+    ! read parameters section
 
-    model%funits%sigfile     = sigfile
-    model%funits%ncfile = adjustl(ncconf)
+    call GetSection(config,section,allowed_sections(8))
+    if (associated(section)) then
+       if (ValidateValueNames(section,params_values)/=0) then
+          write(outtxt,*)'Unexpected value names in configuration file: ',trim(filename)
+          call glide_msg(GM_FATAL,__FILE__,__LINE__,trim(outtxt))
+       end if
+       call GetValue(section,'geot',  model%paramets%geot)
+       call GetValue(section,'fiddle',model%paramets%fiddle)
+       call GetValue(section,'airt',  airt_temp)
+       call GetValue(section,'nmsb',  nmsb_temp)
+       call GetValue(section,'hydtim',model%paramets%hydtim)
+       call GetValue(section,'isotim',model%paramets%isotim)
+       call GetValue(section,'bpar',  bpar_temp)
+       call GetValue(section,'thklim',model%numerics%thklim)
+       call GetValue(section,'mlimit',model%numerics%mlimit)
 
-    ! Constants
+       if (associated(airt_temp)) then
+          if (size(airt_temp).ne.size(model%paramets%airt)) then
+             call glide_msg(GM_FATAL,__FILE__,__LINE__,'Wrong number of elements in airt')
+          else
+             model%paramets%airt=airt_temp
+          end if
+       endif
 
-    model%climate%uprecip_rate = precip_rate
-    model%climate%usurftemp    = air_temp
-    model%climate%ice_albedo   = albedo
-    model%climate%ulapse_rate  = lapse_rate
+       if (associated(nmsb_temp)) then
+          if (size(nmsb_temp).ne.size(model%paramets%nmsb)) then
+             call glide_msg(GM_FATAL,__FILE__,__LINE__,'Wrong number of elements in nmsb')
+          else
+             model%paramets%nmsb=nmsb_temp
+          end if
+       end if
 
-    ! Forcing
+       if (associated(bpar_temp)) then
+          if (size(bpar_temp).ne.size(model%paramets%bpar)) then
+             call glide_msg(GM_FATAL,__FILE__,__LINE__,'Wrong number of elements in bpar')
+          else
+             model%paramets%bpar=bpar_temp
+          end if
+       end if
 
-    model%forcdata%trun = trun
-    model%climate%pfac  = pfac
+    end if
 
-    ! PDD
+    ! read forcing section
 
-    model%pddcalc%wmax        = wmax
-    model%pddcalc%pddfac_ice  = pddfac_ice
-    model%pddcalc%pddfac_snow = pddfac_snow
+    call GetSection(config,section,allowed_sections(9))
+    if (associated(section)) then
+       if (ValidateValueNames(section,forcing_values)/=0) then
+          write(outtxt,*)'Unexpected value names in configuration file: ',trim(filename)
+          call glide_msg(GM_FATAL,__FILE__,__LINE__,trim(outtxt))
+       end if
+       call GetValue(section,'file',model%funits%forcfile)
+       call GetValue(section,'trun',model%forcdata%trun)
+       call GetValue(section,'pfac',model%climate%pfac)
+    end if
 
-    ! back to original code
+    ! read constants section
+
+    call GetSection(config,section,allowed_sections(10))
+    if (associated(section)) then
+       if (ValidateValueNames(section,constants_values)/=0) then
+          write(outtxt,*)'Unexpected value names in configuration file: ',trim(filename)
+          call glide_msg(GM_FATAL,__FILE__,__LINE__,trim(outtxt))
+       end if
+       call GetValue(section,'albedo',     model%climate%ice_albedo)
+       call GetValue(section,'lapse rate', model%climate%ulapse_rate)
+       call GetValue(section,'precip rate',model%climate%uprecip_rate)
+       call GetValue(section,'air temp',   model%climate%usurftemp)
+    end if
+
+    ! read PDD scheme section
+
+    call GetSection(config,section,allowed_sections(11))
+    if (associated(section)) then
+       if (ValidateValueNames(section,pdd_values)/=0) then
+          write(outtxt,*)'Unexpected value names in configuration file: ',trim(filename)
+          call glide_msg(GM_FATAL,__FILE__,__LINE__,trim(outtxt))
+       end if
+       call GetValue(section,'wmax',model%pddcalc%wmax)
+       call GetValue(section,'ice pdd factor',model%pddcalc%pddfac_ice)
+       call GetValue(section,'snow pdd factor',model%pddcalc%pddfac_snow)
+    end if
+
+    ! Copy some parameters and derive others
+
+    proj%nx=model%general%ewn
+    proj%ny=model%general%nsn
+    proj%dx=model%numerics%dew
+    proj%dy=model%numerics%dns
 
     model%numerics%ntem = model%numerics%ntem * model%numerics%tinc
     model%numerics%nvel = model%numerics%nvel * model%numerics%tinc
@@ -392,28 +341,16 @@ contains
     model%numerics%dew = model%numerics%dew / len0
     model%numerics%dns = model%numerics%dns / len0
 
-    ! deal with parameters here (partly original code)
+    model%paramets%nmsb(1) = model%paramets%nmsb(1) / (acc0 * scyr) 
+    model%paramets%nmsb(2) = model%paramets%nmsb(2) / (acc0 * scyr)
 
-    model%paramets%geot   = geot
-    model%paramets%fiddle = fiddle
-    model%paramets%airt   = airt
-
-    model%paramets%nmsb(1) = nmsb(1) / (acc0 * scyr) 
-    model%paramets%nmsb(2) = nmsb(2) / (acc0 * scyr)
-  
-    model%paramets%hydtim = hydtim
-    model%paramets%isotim = isotim * scyr / tim0         
-
-    model%paramets%bpar   = bpar
-
+    model%paramets%isotim = model%paramets%isotim * scyr / tim0         
     model%numerics%mlimit = model%numerics%mlimit / thk0
 
     ! Read output file configuration
     call ReadNCParams(model)
-    
-100 format(A)
 
-  end subroutine initial
+  end subroutine read_config_file
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
