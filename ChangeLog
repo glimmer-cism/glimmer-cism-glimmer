@@ -1,3 +1,11 @@
+2004-12-16 Magnus Hagdorn
+ * combinded eis and EISMINT climate drivers in a new library: libclimate.a
+ * eis_forcing.f90: cosmetic change
+ * isostasy_setup.f90: radius of relative stiffness is calculated later, so output was random
+ * ncdf_template.f90.in: fixed minor bugs/cosmetic changes
+ * generate_ncvars.py: fixed problem when template file is in different directory
+ * fixed some problems with build system
+	
 2004-12-15 Magnus Hagdorn
  * found and fixed a bug in glimmer_thck.f90
 

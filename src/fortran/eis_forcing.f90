@@ -77,8 +77,6 @@ contains
     implicit none
     type(eis_climate_type) :: climate    !*FD structure holding EIS climate
     type(ConfigSection), pointer :: config  !*FD structure holding sections of configuration file   
-    ! local variables
-    type(ConfigSection), pointer :: section
  
     call eis_cony_config(config,climate%cony)
     call eis_ela_config(config,climate%ela)

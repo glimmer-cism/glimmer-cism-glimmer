@@ -25,7 +25,7 @@ F77_LD=f95
 # http://www.unidata.ucar.edu/packages/netcdf/index.html
 #
 NETCDF_LIB=-lnetcdf
-NETCDF_PREFIX=/home/mhagdorn/gnu-Linux
+NETCDF_PREFIX=$(GNU)
 #
 # Compilation flags for C compiler
 #
@@ -33,8 +33,8 @@ CCFLAGS= -DIFC -g -DLINUX
 # 
 # compilation flags for fortran compiler
 #
-F77FLAGS=-O0 -fpp -gline -C -I$(NETCDF_PREFIX)/lib/modules
-F77FLAGS=-fpp -I$(NETCDF_PREFIX)/lib/modules
+F77FLAGS=$(FFLAGS) -O0 -fpp -gline -C -I$(NETCDF_PREFIX)/include
+F77FLAGS=$(FFLAGS) -fpp -I$(NETCDF_PREFIX)/include
 # for SLAP
 GLIMMERFLAGS=-dusty
 #

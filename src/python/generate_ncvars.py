@@ -101,10 +101,10 @@ class PrintVars:
         """Initialise.
 
         filename: name of file to be processed."""
-        if filename != self.canhandle:
+        if os.path.basename(filename) != self.canhandle:
             raise NotImplementedError, 'Can only handle %s'%self.canhandle
 
-        self.infile = open(self.canhandle,'r')
+        self.infile = open(filename,'r')
         if outname==None:
             self.stream = open(self.canhandle[:-3],'w')
         else:
@@ -416,8 +416,9 @@ if __name__ == '__main__':
             print module
     else:
         for f in sys.argv[2:]:
-            if f in HandleFile:
-                handle = HandleFile[f](f)
+            base_f = os.path.basename(f)
+            if base_f in HandleFile:
+                handle = HandleFile[base_f](f)
                 handle.write(vars)
             else:
                 handle = PrintNCDF_IO(f)

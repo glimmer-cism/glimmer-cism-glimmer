@@ -128,7 +128,7 @@ contains
   subroutine NAME_io_write(outfile,data)
     use DATAMOD
     use glimmer_ncdf
-    use paramets, only : thk0
+    use paramets
     use glimmer_scales
     implicit none
     type(glimmer_nc_output), pointer :: outfile
@@ -138,7 +138,7 @@ contains
 
     ! local variables
     integer status, varid
-    integer up, spot
+    integer up
      
     ! write variables
     !GENVAR_WRITE!
@@ -175,7 +175,7 @@ contains
     use glimmer_log
     use glimmer_ncdf
     use DATAMOD
-    use paramets, only : thk0
+    use paramets
     use glimmer_scales
     implicit none
     type(glimmer_nc_input), pointer :: infile

@@ -8,19 +8,19 @@ include $(ARC_FILE)
 GLIMMERFLAGS=$(F77FLAGS) $(GLIMMERPRECOPT)
 #
 SUBDIRS = SLAP_library
-LIBS = libglimmer.a libglide.a libglint.a
+LIBS = libglimmer.a libglide.a libglint.a libclimate.a
 PROGS = glimmer_example simple_glide eis_glide
 #relaxed, bin2ncdf, input2ncdf are currently broken...
 TESTS = test_config test_setup test_ts
-DATA = eis_vars.def  glide_vars.def  glint_vars.def
+DATA = ncdf_template.f90.in eis_vars.def  glide_vars.def  glint_vars.def
 
 AUTOGEN = glide_io.f90 eis_io.f90 glint_io.f90
 
 SOURCES = *.f90
 
-EIS = eis_glide.o eis_forcing.o eis_ela.o eis_temp.o eis_slc.o eis_cony.o glimmer_searchcircle.o eis_io.o eis_types.o
+EIS = eis_forcing.o eis_ela.o eis_temp.o eis_slc.o eis_cony.o glimmer_searchcircle.o eis_io.o eis_types.o
 
-SIMPLE = simple_forcing.o simple_glide.o
+SIMPLE = simple_forcing.o
 
 ISOSTASY = isostasy.o isostasy_el.o isostasy_setup.o isostasy_types.o
 
@@ -51,11 +51,15 @@ libglint.a:	glint_climate.o glint_initialise.o glint_io.o glint_timestep.o glint
 		ar rcv $@ $^
 		if [ "$(RANLIB)" != "" ] ; then $(RANLIB) $@ ; fi
 
-eis_glide:	$(EIS) libglide.a libglimmer.a SLAP_library
-		$(F77) -o $@ $(EIS) libglide.a libglimmer.a SLAP_library/libslap.a $(LD_FLAGS)
+libclimate.a:	$(SIMPLE) $(EIS)
+		ar rcv $@ $^
+		if [ "$(RANLIB)" != "" ] ; then $(RANLIB) $@ ; fi
 
-simple_glide:	$(SIMPLE) libglide.a libglimmer.a SLAP_library
-		$(F77) -o $@ $(SIMPLE) libglide.a libglimmer.a SLAP_library/libslap.a $(LD_FLAGS)
+eis_glide:	$(EIS) eis_glide.o libglide.a libglimmer.a SLAP_library
+		$(F77) -o $@ $(EIS) eis_glide.o libglide.a libglimmer.a SLAP_library/libslap.a $(LD_FLAGS)
+
+simple_glide:	$(SIMPLE) simple_glide.o libglide.a libglimmer.a SLAP_library
+		$(F77) -o $@ $(SIMPLE) simple_glide.o libglide.a libglimmer.a SLAP_library/libslap.a $(LD_FLAGS)
 
 glimmer_example :  glimmer_example.o libglide.a libglimmer.a libglint.a SLAP_library
 	$(F77) $(GLIMMERFLAGS) -o $@ $< libglint.a libglide.a libglimmer.a SLAP_library/libslap.a $(LD_FLAGS)

@@ -92,8 +92,6 @@ contains
           call write_log('using elastic lithosphere approximation')
           write(message,*) ' flexural rigidity: ', isos%rbel%d
           call write_log(message)
-          write(message,*) ' radius of relative stiffness: ',isos%rbel%lr
-          call write_log(message)
           write(message,*) ' update period: ',isos%period
           call write_log(message)
        else
