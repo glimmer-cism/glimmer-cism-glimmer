@@ -1,3 +1,4 @@
+
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! +                                                           +
 ! +  ncdf.f90 - part of the GLIMMER ice model                 + 
@@ -40,6 +41,10 @@
 !
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+! N.B. This hard-wired file replaces the automatically-generated
+! NetCDF handling routines previously used, in order to remove the
+! dependency on Python 2.3
+
 module glimmer_ncdf
   !*FD Data structures and utility functions for netCDF I/O
   !*FD written by Magnus Hagdorn, 2004
@@ -47,10 +52,71 @@ module glimmer_ncdf
   use glimmer_global, only: fname_length
   use netcdf
 
-  integer, private, parameter :: num_vars = !GENVARS_NUMVARS!
+  integer, private, parameter :: num_vars = 66
   integer, private, parameter :: meta_len = 100
 
-  !GENVAR_TYPES!
+  integer, parameter :: NC_B_ABLT = 1 ! ablation
+  integer, parameter :: NC_B_ABLT_SPOT = 2 ! ablation
+  integer, parameter :: NC_B_ACAB = 3 ! accumulation, ablation rate
+  integer, parameter :: NC_B_ACAB_SPOT = 4 ! accumulation, ablation rate
+  integer, parameter :: NC_B_ARNG = 5 ! annual temperature range
+  integer, parameter :: NC_B_ARNG_SPOT = 6 ! annual temperature range
+  integer, parameter :: NC_B_ARTM = 7 ! annual mean air temperature
+  integer, parameter :: NC_B_ARTM_SPOT = 8 ! annual mean air temperature
+  integer, parameter :: NC_B_BMLT = 9 ! basal melt rate
+  integer, parameter :: NC_B_BMLT_SPOT = 10 ! basal melt rate
+  integer, parameter :: NC_B_BTEMP = 11 ! basal ice temperature
+  integer, parameter :: NC_B_BTEMP_SPOT = 12 ! basal ice temperature
+  integer, parameter :: NC_B_BTRC = 13 ! basal slip coefficient
+  integer, parameter :: NC_B_BTRC_SPOT = 14 ! basal slip coefficient
+  integer, parameter :: NC_B_BWAT = 15 ! basal water depth
+  integer, parameter :: NC_B_BWAT_SPOT = 16 ! basal water depth
+  integer, parameter :: NC_B_DIFFU = 17 ! apparent diffusivity
+  integer, parameter :: NC_B_DIFFU_SPOT = 18 ! apparent diffusivity
+  integer, parameter :: NC_B_DUSRFDTM = 19 ! rate of upper ice surface elevation change
+  integer, parameter :: NC_B_DUSRFDTM_SPOT = 20 ! rate of upper ice surface elevation change
+  integer, parameter :: NC_B_FLWA = 21 ! ??
+  integer, parameter :: NC_B_FLWA_SPOT = 22 ! ??
+  integer, parameter :: NC_B_LAT = 23 ! Latitude
+  integer, parameter :: NC_B_LAT_SPOT = 24 ! Latitude
+  integer, parameter :: NC_B_LON = 25 ! Longitude
+  integer, parameter :: NC_B_LON_SPOT = 26 ! Longitude
+  integer, parameter :: NC_B_LSURF = 27 ! ice lower surface elevation
+  integer, parameter :: NC_B_LSURF_SPOT = 28 ! ice lower surface elevation
+  integer, parameter :: NC_B_MASK = 29 ! upscaling and downscaling mask
+  integer, parameter :: NC_B_MASK_SPOT = 30 ! upscaling and downscaling mask
+  integer, parameter :: NC_B_PRCP = 31 ! precipitation
+  integer, parameter :: NC_B_PRCP_SPOT = 32 ! precipitation
+  integer, parameter :: NC_B_PRESPRCP = 33 ! present day precipitation
+  integer, parameter :: NC_B_PRESPRCP_SPOT = 34 ! present day precipitation
+  integer, parameter :: NC_B_PRESUSRF = 35 ! present day surface of the ice-sheet
+  integer, parameter :: NC_B_PRESUSRF_SPOT = 36 ! present day surface of the ice-sheet
+  integer, parameter :: NC_B_RELX = 37 ! relaxed bedrock topography
+  integer, parameter :: NC_B_RELX_SPOT = 38 ! relaxed bedrock topography
+  integer, parameter :: NC_B_TEMP = 39 ! ice temperature
+  integer, parameter :: NC_B_TEMP_SPOT = 40 ! ice temperature
+  integer, parameter :: NC_B_THK = 41 ! ice thickness
+  integer, parameter :: NC_B_THK_SPOT = 42 ! ice thickness
+  integer, parameter :: NC_B_TOPG = 43 ! bedrock topography
+  integer, parameter :: NC_B_TOPG_SPOT = 44 ! bedrock topography
+  integer, parameter :: NC_B_UBAS = 45 ! basal slip velocity in x direction
+  integer, parameter :: NC_B_UBAS_SPOT = 46 ! basal slip velocity in x direction
+  integer, parameter :: NC_B_UFLX = 47 ! flux in x direction
+  integer, parameter :: NC_B_UFLX_SPOT = 48 ! flux in x direction
+  integer, parameter :: NC_B_USURF = 49 ! ice upper surface elevation
+  integer, parameter :: NC_B_USURF_SPOT = 50 ! ice upper surface elevation
+  integer, parameter :: NC_B_UVEL = 51 ! ice velocity in x direction
+  integer, parameter :: NC_B_UVEL_SPOT = 52 ! ice velocity in x direction
+  integer, parameter :: NC_B_VBAS = 53 ! basal slip velocity in y direction
+  integer, parameter :: NC_B_VBAS_SPOT = 54 ! basal slip velocity in y direction
+  integer, parameter :: NC_B_VFLX = 55 ! flux in x direction
+  integer, parameter :: NC_B_VFLX_SPOT = 56 ! flux in x direction
+  integer, parameter :: NC_B_VVEL = 57 ! ice velocity in y direction
+  integer, parameter :: NC_B_VVEL_SPOT = 58 ! ice velocity in y direction
+  integer, parameter :: NC_B_WGRD = 59 ! ?? some velo ??
+  integer, parameter :: NC_B_WGRD_SPOT = 60 ! ?? some velo ??
+  integer, parameter :: NC_B_WVEL = 61 ! vertical ice velocity
+  integer, parameter :: NC_B_WVEL_SPOT = 62 ! vertical ice velocity
 
   type glimmer_nc_stat
      !*FD Data structure holding netCDF file description
@@ -281,7 +347,192 @@ contains
     integer, intent(in) :: unit
     !*FD file unit to be written to
 
-    !GENVARS!
+    if (nc%do_var(NC_B_ABLT)) then
+       write(unit,*) 'ablt'
+    end if
+    if (nc%do_var(NC_B_ABLT_SPOT)) then
+       write(unit,*) 'ablt_spot'
+    end if
+    if (nc%do_var(NC_B_ACAB)) then
+       write(unit,*) 'acab'
+    end if
+    if (nc%do_var(NC_B_ACAB_SPOT)) then
+       write(unit,*) 'acab_spot'
+    end if
+    if (nc%do_var(NC_B_ARNG)) then
+       write(unit,*) 'arng'
+    end if
+    if (nc%do_var(NC_B_ARNG_SPOT)) then
+       write(unit,*) 'arng_spot'
+    end if
+    if (nc%do_var(NC_B_ARTM)) then
+       write(unit,*) 'artm'
+    end if
+    if (nc%do_var(NC_B_ARTM_SPOT)) then
+       write(unit,*) 'artm_spot'
+    end if
+    if (nc%do_var(NC_B_BMLT)) then
+       write(unit,*) 'bmlt'
+    end if
+    if (nc%do_var(NC_B_BMLT_SPOT)) then
+       write(unit,*) 'bmlt_spot'
+    end if
+    if (nc%do_var(NC_B_BTEMP)) then
+       write(unit,*) 'btemp'
+    end if
+    if (nc%do_var(NC_B_BTEMP_SPOT)) then
+       write(unit,*) 'btemp_spot'
+    end if
+    if (nc%do_var(NC_B_BTRC)) then
+       write(unit,*) 'btrc'
+    end if
+    if (nc%do_var(NC_B_BTRC_SPOT)) then
+       write(unit,*) 'btrc_spot'
+    end if
+    if (nc%do_var(NC_B_BWAT)) then
+       write(unit,*) 'bwat'
+    end if
+    if (nc%do_var(NC_B_BWAT_SPOT)) then
+       write(unit,*) 'bwat_spot'
+    end if
+    if (nc%do_var(NC_B_DIFFU)) then
+       write(unit,*) 'diffu'
+    end if
+    if (nc%do_var(NC_B_DIFFU_SPOT)) then
+       write(unit,*) 'diffu_spot'
+    end if
+    if (nc%do_var(NC_B_DUSRFDTM)) then
+       write(unit,*) 'dusrfdtm'
+    end if
+    if (nc%do_var(NC_B_DUSRFDTM_SPOT)) then
+       write(unit,*) 'dusrfdtm_spot'
+    end if
+    if (nc%do_var(NC_B_FLWA)) then
+       write(unit,*) 'flwa'
+    end if
+    if (nc%do_var(NC_B_FLWA_SPOT)) then
+       write(unit,*) 'flwa_spot'
+    end if
+    if (nc%do_var(NC_B_LAT)) then
+       write(unit,*) 'lat'
+    end if
+    if (nc%do_var(NC_B_LAT_SPOT)) then
+       write(unit,*) 'lat_spot'
+    end if
+    if (nc%do_var(NC_B_LON)) then
+       write(unit,*) 'lon'
+    end if
+    if (nc%do_var(NC_B_LON_SPOT)) then
+       write(unit,*) 'lon_spot'
+    end if
+    if (nc%do_var(NC_B_LSURF)) then
+       write(unit,*) 'lsurf'
+    end if
+    if (nc%do_var(NC_B_LSURF_SPOT)) then
+       write(unit,*) 'lsurf_spot'
+    end if
+    if (nc%do_var(NC_B_MASK)) then
+       write(unit,*) 'mask'
+    end if
+    if (nc%do_var(NC_B_MASK_SPOT)) then
+       write(unit,*) 'mask_spot'
+    end if
+    if (nc%do_var(NC_B_PRCP)) then
+       write(unit,*) 'prcp'
+    end if
+    if (nc%do_var(NC_B_PRCP_SPOT)) then
+       write(unit,*) 'prcp_spot'
+    end if
+    if (nc%do_var(NC_B_PRESPRCP)) then
+       write(unit,*) 'presprcp'
+    end if
+    if (nc%do_var(NC_B_PRESPRCP_SPOT)) then
+       write(unit,*) 'presprcp_spot'
+    end if
+    if (nc%do_var(NC_B_PRESUSRF)) then
+       write(unit,*) 'presusrf'
+    end if
+    if (nc%do_var(NC_B_PRESUSRF_SPOT)) then
+       write(unit,*) 'presusrf_spot'
+    end if
+    if (nc%do_var(NC_B_RELX)) then
+       write(unit,*) 'relx'
+    end if
+    if (nc%do_var(NC_B_RELX_SPOT)) then
+       write(unit,*) 'relx_spot'
+    end if
+    if (nc%do_var(NC_B_TEMP)) then
+       write(unit,*) 'temp'
+    end if
+    if (nc%do_var(NC_B_TEMP_SPOT)) then
+       write(unit,*) 'temp_spot'
+    end if
+    if (nc%do_var(NC_B_THK)) then
+       write(unit,*) 'thk'
+    end if
+    if (nc%do_var(NC_B_THK_SPOT)) then
+       write(unit,*) 'thk_spot'
+    end if
+    if (nc%do_var(NC_B_TOPG)) then
+       write(unit,*) 'topg'
+    end if
+    if (nc%do_var(NC_B_TOPG_SPOT)) then
+       write(unit,*) 'topg_spot'
+    end if
+    if (nc%do_var(NC_B_UBAS)) then
+       write(unit,*) 'ubas'
+    end if
+    if (nc%do_var(NC_B_UBAS_SPOT)) then
+       write(unit,*) 'ubas_spot'
+    end if
+    if (nc%do_var(NC_B_UFLX)) then
+       write(unit,*) 'uflx'
+    end if
+    if (nc%do_var(NC_B_UFLX_SPOT)) then
+       write(unit,*) 'uflx_spot'
+    end if
+    if (nc%do_var(NC_B_USURF)) then
+       write(unit,*) 'usurf'
+    end if
+    if (nc%do_var(NC_B_USURF_SPOT)) then
+       write(unit,*) 'usurf_spot'
+    end if
+    if (nc%do_var(NC_B_UVEL)) then
+       write(unit,*) 'uvel'
+    end if
+    if (nc%do_var(NC_B_UVEL_SPOT)) then
+       write(unit,*) 'uvel_spot'
+    end if
+    if (nc%do_var(NC_B_VBAS)) then
+       write(unit,*) 'vbas'
+    end if
+    if (nc%do_var(NC_B_VBAS_SPOT)) then
+       write(unit,*) 'vbas_spot'
+    end if
+    if (nc%do_var(NC_B_VFLX)) then
+       write(unit,*) 'vflx'
+    end if
+    if (nc%do_var(NC_B_VFLX_SPOT)) then
+       write(unit,*) 'vflx_spot'
+    end if
+    if (nc%do_var(NC_B_VVEL)) then
+       write(unit,*) 'vvel'
+    end if
+    if (nc%do_var(NC_B_VVEL_SPOT)) then
+       write(unit,*) 'vvel_spot'
+    end if
+    if (nc%do_var(NC_B_WGRD)) then
+       write(unit,*) 'wgrd'
+    end if
+    if (nc%do_var(NC_B_WGRD_SPOT)) then
+       write(unit,*) 'wgrd_spot'
+    end if
+    if (nc%do_var(NC_B_WVEL)) then
+       write(unit,*) 'wvel'
+    end if
+    if (nc%do_var(NC_B_WVEL_SPOT)) then
+       write(unit,*) 'wvel_spot'
+    end if
     
   end subroutine check_vars
 

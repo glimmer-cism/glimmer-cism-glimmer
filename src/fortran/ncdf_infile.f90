@@ -1,3 +1,4 @@
+
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! +                                                           +
 ! +  ncdf_file.f90 - part of the GLIMMER ice model            + 
@@ -39,6 +40,10 @@
 ! http://forge.nesc.ac.uk/projects/glimmer/
 !
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+! N.B. This hard-wired file replaces the automatically-generated
+! NetCDF handling routines previously used, in order to remove the
+! dependency on Python 2.3
 
 #define NC infile%nc
 
@@ -186,7 +191,30 @@ contains
        status = nf90_inquire_variable(NC%id,i,name=varname)
        call nc_errorhandle(__FILE__,__LINE__,status)
        select case(varname)
-       !GENVARS!   
+       case('lat')
+          NC%do_var(NC_B_LAT) = .true.
+          NC%varids(NC_B_LAT) = i
+       case('lon')
+          NC%do_var(NC_B_LON) = .true.
+          NC%varids(NC_B_LON) = i
+       case('mask')
+          NC%do_var(NC_B_MASK) = .true.
+          NC%varids(NC_B_MASK) = i
+       case('presprcp')
+          NC%do_var(NC_B_PRESPRCP) = .true.
+          NC%varids(NC_B_PRESPRCP) = i
+       case('presusrf')
+          NC%do_var(NC_B_PRESUSRF) = .true.
+          NC%varids(NC_B_PRESUSRF) = i
+       case('relx')
+          NC%do_var(NC_B_RELX) = .true.
+          NC%varids(NC_B_RELX) = i
+       case('topg')
+          NC%do_var(NC_B_TOPG) = .true.
+          NC%varids(NC_B_TOPG) = i
+       case('usurf')
+          NC%do_var(NC_B_USURF) = .true.
+          NC%varids(NC_B_USURF) = i
        end select
     end do
 
@@ -240,7 +268,67 @@ contains
         '('//trim(adjustl(outtxt2))//') from file '//trim(NC%filename)//' at time '//trim(adjustl(outtxt3)))
     
     ! read variables
-    !GENVAR_READ!
+    if (NC%do_var(NC_B_LAT)) then
+      call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,'Loading lat')
+       status = nf90_get_var(NC%id, NC%varids(NC_B_LAT), &
+            model%climate%lati, (/1,1,infile%current_time/))
+       call nc_errorhandle(__FILE__,__LINE__,status)
+    end if
+
+    if (NC%do_var(NC_B_LON)) then
+      call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,'Loading lon')
+       status = nf90_get_var(NC%id, NC%varids(NC_B_LON), &
+            model%climate%loni, (/1,1,infile%current_time/))
+       call nc_errorhandle(__FILE__,__LINE__,status)
+    end if
+
+    if (NC%do_var(NC_B_MASK)) then
+      call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,'Loading mask')
+       status = nf90_get_var(NC%id, NC%varids(NC_B_MASK), &
+            model%climate%out_mask, (/1,1,infile%current_time/))
+       call nc_errorhandle(__FILE__,__LINE__,status)
+    end if
+
+    if (NC%do_var(NC_B_PRESPRCP)) then
+      call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,'Loading presprcp')
+       status = nf90_get_var(NC%id, NC%varids(NC_B_PRESPRCP), &
+            model%climate%presprcp, (/1,1,infile%current_time/))
+       call nc_errorhandle(__FILE__,__LINE__,status)
+       if (scale) model%climate%presprcp = model%climate%presprcp/(scyr * acc0)
+    end if
+
+    if (NC%do_var(NC_B_PRESUSRF)) then
+      call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,'Loading presusrf')
+       status = nf90_get_var(NC%id, NC%varids(NC_B_PRESUSRF), &
+            model%climate%presusrf, (/1,1,infile%current_time/))
+       call nc_errorhandle(__FILE__,__LINE__,status)
+       if (scale) model%climate%presusrf = model%climate%presusrf/(thk0)
+    end if
+
+    if (NC%do_var(NC_B_RELX)) then
+      call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,'Loading relx')
+       status = nf90_get_var(NC%id, NC%varids(NC_B_RELX), &
+            model%geometry%relx, (/1,1,infile%current_time/))
+       call nc_errorhandle(__FILE__,__LINE__,status)
+       if (scale) model%geometry%relx = model%geometry%relx/(thk0)
+    end if
+
+    if (NC%do_var(NC_B_TOPG)) then
+      call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,'Loading topg')
+       status = nf90_get_var(NC%id, NC%varids(NC_B_TOPG), &
+            model%geometry%topg, (/1,1,infile%current_time/))
+       call nc_errorhandle(__FILE__,__LINE__,status)
+       if (scale) model%geometry%topg = model%geometry%topg/(thk0)
+    end if
+
+    if (NC%do_var(NC_B_USURF)) then
+      call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,'Loading usurf')
+       status = nf90_get_var(NC%id, NC%varids(NC_B_USURF), &
+            model%geometry%usrf, (/1,1,infile%current_time/))
+       call nc_errorhandle(__FILE__,__LINE__,status)
+       if (scale) model%geometry%usrf = model%geometry%usrf/(thk0)
+    end if
+
     infile%current_time = infile%current_time + 1
   end subroutine glimmer_nc_read
 
