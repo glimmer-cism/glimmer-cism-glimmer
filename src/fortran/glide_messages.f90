@@ -44,14 +44,39 @@
 module glide_messages
 
   !*FD Module containing error/message handling code for GLIMMER.
-  !*FD Several types of message/error are defined.
+  !*FD Six levels of message/error are defined:
+  !*FD \begin{itemize}
+  !*FD \item Diagnostic messages
+  !*FD \item Timestep enumeration and related information
+  !*FD \item Information messages
+  !*FD \item Warning messages
+  !*FD \item Error messages
+  !*FD \item Fatal error messages
+  !*FD \end{itemize}
+  !*FD These are numbered 1--6, with increasing severity, and the level of
+  !*FD message output may be set to output all messages, only those above a particular 
+  !*FD severity, or none at all. It should be noted that even if all messages are
+  !*FD turned off, the model will still halt if it encounters a fatal
+  !*FD error!
+  !*FD 
+  !*FD The other point to note is that when calling the messaging routines,
+  !*FD the numerical identifier of a message level should be replaced by the
+  !*FD appropriate parameter:
+  !*FD \begin{itemize}
+  !*FD \item \texttt{GM\_DIAGNOSTIC}
+  !*FD \item \texttt{GM\_TIMESTEP}
+  !*FD \item \texttt{GM\_INFO}
+  !*FD \item \texttt{GM\_WARNING}
+  !*FD \item \texttt{GM\_ERROR}
+  !*FD \item \texttt{GM\_FATAL}
+  !*FD \end{itemize}
 
-  integer,parameter :: GM_DIAGNOSTIC = 1
-  integer,parameter :: GM_TIMESTEP   = 2
-  integer,parameter :: GM_INFO       = 3
-  integer,parameter :: GM_WARNING    = 4
-  integer,parameter :: GM_ERROR      = 5
-  integer,parameter :: GM_FATAL      = 6
+  integer,parameter :: GM_DIAGNOSTIC = 1 !*FD Numerical identifier for diagnostic messages.
+  integer,parameter :: GM_TIMESTEP   = 2 !*FD Numerical identifier for timestep messages.
+  integer,parameter :: GM_INFO       = 3 !*FD Numerical identifier for information messages.
+  integer,parameter :: GM_WARNING    = 4 !*FD Numerical identifier for warning messages.
+  integer,parameter :: GM_ERROR      = 5 !*FD Numerical identifier for (non-fatal) error messages.
+  integer,parameter :: GM_FATAL      = 6 !*FD Numerical identifier for fatal error messages.
 
   integer,parameter            :: GM_levels = 6
   logical,dimension(GM_levels) :: gm_show = .true.
@@ -60,10 +85,15 @@ contains
 
   subroutine glide_msg(type,file,line,text)
 
-    integer,intent(in)      :: type
-    character(*),intent(in) :: file
-    integer,intent(in)      :: line
-    character(*),intent(in) :: text
+    !*FD Generate a message, and output according to the value of \texttt{GM\_levels}.
+    !*FD N.B. it is expected that the \texttt{\_\_FILE\_\_} and \texttt{\_\_LINE\_\_}
+    !*FD preprocessor macros will be used when calling this subroutine.
+
+    integer,intent(in)      :: type !*FD Type of error to be generated (see list above).
+    character(*),intent(in) :: file !*FD Name of file containing code from which \texttt{glide\_msg}
+                                    !*FD was called.
+    integer,intent(in)      :: line !*FD Line number of call to \texttt{glide\_msg}.
+    character(*),intent(in) :: text !*FD The line of text to be output.
 
     character(6) :: linetxt
 
@@ -92,16 +122,24 @@ contains
 
   end subroutine glide_msg
 
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
   subroutine glide_stars
+
+    !*FD Outputs a row of stars, only if all messages are enabled.
 
       if (gm_show(GM_DIAGNOSTIC)) write(*,*)&
         '**********************************************************************'
 
   end subroutine glide_stars
 
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
   subroutine glide_set_msg_level(level)
 
-    integer, intent(in) :: level
+    !*FD Sets the output message level.
+
+    integer, intent(in) :: level !*FD The message level (6 is all messages; 0 is no messages). 
     integer :: i
 
     do i=1,GM_levels
