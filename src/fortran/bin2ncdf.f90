@@ -337,33 +337,33 @@ contains
        case(3)
           map3d = NC_B_VVEL
           return
-       case(4)
-          map3d = NC_B_EFVS
-          return
-       case(5)
-          map3d = NC_B_TAU
-          return
-       case(6)
-          map3d = NC_B_TAUXZ
-          return
-       case(7)
-          map3d = NC_B_TAUYY
-          return
-       case(8)
-          map3d = NC_B_TAUXY
-          return
-       case(9)
-          map3d = NC_B_TAUXX
-          return
-       case(10)
-          map3d = NC_B_TAUYY
-          return
-       case(11)
-          map3d = NC_B_GDSX
-          return
-       case(12)
-          map3d = NC_B_GDSY
-          return
+!!$       case(4)
+!!$          map3d = NC_B_EFVS
+!!$          return
+!!$       case(5)
+!!$          map3d = NC_B_TAU
+!!$          return
+!!$       case(6)
+!!$          map3d = NC_B_TAUXZ
+!!$          return
+!!$       case(7)
+!!$          map3d = NC_B_TAUYY
+!!$          return
+!!$       case(8)
+!!$          map3d = NC_B_TAUXY
+!!$          return
+!!$       case(9)
+!!$          map3d = NC_B_TAUXX
+!!$          return
+!!$       case(10)
+!!$          map3d = NC_B_TAUYY
+!!$          return
+!!$       case(11)
+!!$          map3d = NC_B_GDSX
+!!$          return
+!!$       case(12)
+!!$          map3d = NC_B_GDSY
+!!$          return
        end select
     else if (id==1) then
        select case(index)
@@ -557,6 +557,7 @@ program bin2ncdf
   use glimmer_ncdf
   use glimmer_ncfile
   use glimmer_types
+  use paramets, only : len0
   implicit none
 
   character(len=30) :: infile
@@ -597,8 +598,8 @@ program bin2ncdf
 
   ! creating netCDF file
   model%general%upn = numz
-  model%numerics%dew = 1
-  model%numerics%dns = 1
+  model%numerics%dew = (x1data(2)-x1data(1))/len0
+  model%numerics%dns = (y1data(2)-y1data(1))/len0
   allocate(model%numerics%sigma(model%general%upn))
   model%numerics%sigma = 1
   model%general%ewn = numx1

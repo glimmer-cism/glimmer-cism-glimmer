@@ -39,7 +39,7 @@ $(LIBNAME).a: $(OBJECTS) $(OTHER_FILES) $(INCLUDE_FILES)
 example :  $(LIBNAME).a glimmer_example.o
 	$(F77) $(GLIMMERFLAGS) -o glimmer_example glimmer_example.o -L. -lglimmer -lslap $(LD_FLAGS)
 
-bin2ncdf: bin2ncdf.o glimmer_global.o  ncdf.o ncdf_file.o glimmer_modu.o glimmer_physcon.o glimmer_paramets.o
+bin2ncdf: bin2ncdf.o glimmer_global.o  ncdf.o ncdf_file.o glimmer_modu.o glimmer_physcon.o glimmer_paramets.o  glimmer_CFproj.o
 	$(F77) -o $@ $^ $(LD_FLAGS) 
 
 input2ncdf:	input2ncdf.o glimmer_global.o  ncdf.o ncdf_file.o glimmer_modu.o

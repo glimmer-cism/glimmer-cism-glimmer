@@ -1,3 +1,8 @@
+2004-06-14 Magnus Hagdorn
+ * fixed problems in input CF file (g_land.input.nc)
+ * work out node spacing and removed unused tensor quantities (bin2ncdf.f90)
+ * fixed dependencies of bin2ncdf.f90 (Makefile)
+
 2004-06-13 Magnus Hagdorn
  * add mapping info (g_land.input.nc)
  * added files to doc which I had forgotton before (Makefile, varlist.tex.in)
