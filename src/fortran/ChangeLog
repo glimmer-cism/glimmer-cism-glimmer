@@ -1,3 +1,8 @@
+2004-11-29 Magnus Hagdorn
+ * glide_types.f90: added some factors for sliding heating
+ * glimmer_temp.f90: added basal heat flux due to sliding
+ * glimmer_thck.f90: fixed minor bug with pre-processor
+
 2004-11-21 Magnus Hagdorn
  * glide.f90: hooked up new linear and non-linear solvers
  * glide_types.f90: allocate elements for sparse matrix at 

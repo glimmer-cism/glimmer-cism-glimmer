@@ -417,6 +417,7 @@ module glide_types
     real(dp),dimension(4)             :: cons     = 0.0
     real(dp),dimension(4)             :: f        = 0.0
     real(dp),dimension(8)             :: c        = 0.0
+    real(dp),dimension(2)             :: slide_f
     real(dp) :: noflow      = -1
     real(dp) :: advconst(2) = 0.0
     real(dp) :: zbed        = 0.0

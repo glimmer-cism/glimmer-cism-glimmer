@@ -214,9 +214,9 @@ contains
 
           first_p = .false.
           residual = maxval(abs(model%thckwk%oldthck-model%thckwk%oldthck2))
-          #ifdef DEBUG
-          !write(*,*) '*Picard iter ',p,residual
-          #endif
+#ifdef DEBUG
+          write(*,*) '*Picard iter ',p,residual
+#endif
           if (residual.le.tol) then
              exit
           end if

@@ -159,6 +159,10 @@ contains
          tim0 * thk0**2 * vel0 * grav * rhoi / &
          (4.0d0 * thk0 * len0 * rhoi * lhci) /)
 
+    ! setting up some factors for sliding contrib to basal heat flux
+    model%tempwk%slide_f = (/ VERT_DIFF * grav * thk0 * model%numerics%dttem/ shci, & ! vert diffusion
+         VERT_ADV * rhoi*grav*acc0*thk0*thk0*model%numerics%dttem/coni /)             ! vert advection
+
     select case(model%options%whichbwat)
        case(0)
           model%paramets%hydtim = tim0 / (model%paramets%hydtim * scyr)
@@ -587,6 +591,8 @@ contains
 
     real(dp) :: fact(3), dupnp1
     real(dp), dimension(size(model%numerics%sigma)) :: weff
+    real(dp) :: slterm
+    integer ewp,nsp
 
     fact(1) = VERT_DIFF*model%tempwk%cons(1) / thck**2
     fact(2) = VERT_ADV*model%tempwk%cons(2) / thck
@@ -668,11 +674,27 @@ contains
 !*MH             - model%tempwk%initadvt(model%general%upn,ew,ns)  &
 !*MH             + model%tempwk%dissip(model%general%upn,ew,ns)
 
+          ! sliding contribution to basal heat flux
+          slterm = 0.
+          ! only include sliding contrib if temperature node is surrounded by sliding velo nodes
+          if (all(abs(model%velocity%ubas(ns-1:ns,ew-1:ew)).gt.0.000001) .or.  &
+               all(abs(model%velocity%vbas(ns-1:ns,ew-1:ew)).gt.0.000001)) then
+             do nsp = ns-1,ns
+                do ewp = ew-1,ew
+                   slterm = slterm + (&
+                        model%geomderv%dusrfdew(ewp,nsp) * model%velocity%ubas(ewp,nsp) + &
+                        model%geomderv%dusrfdns(ewp,nsp) * model%velocity%vbas(ewp,nsp))
+                end do
+             end do
+             slterm = 0.25*slterm
+          end if
           model%tempwk%inittemp(model%general%upn,ew,ns) = temp(model%general%upn) * &
                (2.0d0 - diag(model%general%upn)) &
                - temp(model%general%upn-1) * subd(model%general%upn) &
-               - 0.5*model%tempwk%cons(3) / (thck * model%tempwk%dupn) &
-               - model%tempwk%cons(4) * weff(model%general%upn) &
+               - 0.5*model%tempwk%cons(3) / (thck * model%tempwk%dupn) & ! geothermal heat flux (diff)
+               - 0.5*model%tempwk%slide_f(1)*slterm &                    ! sliding heat flux    (diff)
+               - model%tempwk%cons(4) * weff(model%general%upn) &        ! geothermal heat flux (adv)
+               - model%tempwk%slide_f(2)*thck*slterm &                   ! sliding heat flux    (adv)
                - model%tempwk%initadvt(model%general%upn,ew,ns)  &
                + model%tempwk%dissip(model%general%upn,ew,ns)
        end if
