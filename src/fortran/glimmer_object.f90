@@ -71,6 +71,8 @@ module glimmer_object
     real(dp), dimension(:,:),pointer :: local_orog    !*FD Local orography on local coordinates.
     real(rk) ,dimension(:,:),pointer :: frac_coverage !*FD Fractional coverage of each global gridbox by
                                                       !*FD the projected grid.
+    real(rk) ,dimension(:,:),pointer :: frac_cov_orog !*FD Fractional coverage of each global gridbox by
+                                                      !*FD the projected grid (orography).
     logical                          :: first         !*FD Is this the first timestep?
 
   end type glimmer_instance
@@ -127,30 +129,32 @@ contains
 
     call new_proj(instance%proj,radea)                          ! Initialise the projection
     call new_downscale(instance%downs,instance%proj,lons,lats)  ! Initialise the downscaling
-    call glimmer_i_allocate(instance,size(lons),size(lats))        ! Allocate arrays appropriately
-    call glimmer_load_sigma(instance%model,unit)                   ! Load the sigma file
+    call glimmer_i_allocate(instance,size(lons),size(lats))     ! Allocate arrays appropriately
+    call glimmer_load_sigma(instance%model,unit)                ! Load the sigma file
     call initout(instance%model,unit)                           ! Initialise output files
     call calc_lats(instance%proj,instance%model%climate%lati)   ! Initialise the local latitude array. 
                                                                 ! This may be redundant, though.
 
-    call new_upscale(instance%ups, &                     ! Index global boxes
+    call new_upscale(instance%ups, &                            ! Index global boxes
                      lons,lats,lonb, &
                      latb,instance%proj)
 
-    call copy_upscale(instance%ups,instance%ups_orog)    ! Set upscaling for orog output to same as for 
-                                                         ! other fields
-
-    call calc_coverage(instance%proj,instance%ups,&           ! Calculate coverage map
+    call calc_coverage(instance%proj,instance%ups,&             ! Calculate coverage map
                        dlon,latb, &
                        instance%proj%dx,instance%proj%dy, &
                        radea,instance%frac_coverage)
 
+    call copy_upscale(instance%ups,instance%ups_orog)    ! Set upscaling for orog output to same as for 
+                                                         ! other fields.
+    instance%frac_cov_orog=instance%frac_coverage        ! Set fractional coverage for orog to be same as
+                                                         ! for other fields.
+
     call testinisthk(instance%model,unit,instance%first)         ! Load in initial surfaces
 
-    call timeevoltemp(instance%model,0,instance%global_orog)    ! calculate initial temperature distribution
-    instance%newtemps = .true.                      ! we have new temperatures
+    call timeevoltemp(instance%model,0,instance%global_orog)     ! calculate initial temperature distribution
+    instance%newtemps = .true.                                   ! we have new temperatures
 
-    call calcflwa(instance%model%numerics,        &                 ! Calculate Glen's A
+    call calcflwa(instance%model%numerics,        &              ! Calculate Glen's A
                   instance%model%velowk,          &
                   instance%model%paramets%fiddle, &
                   instance%model%temper%flwa,     &
@@ -215,6 +219,7 @@ contains
     ! Fractional coverage map
 
     allocate(instance%frac_coverage(nxg,nyg)) ! allocate fractional coverage map
+    allocate(instance%frac_cov_orog(nxg,nyg)) ! allocate fractional coverage map (orog)
 
     ! Allocate the model arrays - use original ice model code
 

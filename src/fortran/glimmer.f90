@@ -61,8 +61,10 @@ module glimmer_main
 
     ! Global grid dimensions -----------------------------------
 
-    integer :: nxg = 0 !*FD Number of grid-points in $x$-direction, global input fields.
-    integer :: nyg = 0 !*FD Number of grid-points in $x$-direction, global input fields.
+    integer :: nxg  = 0 !*FD Number of grid-points in $x$-direction, global input fields.
+    integer :: nyg  = 0 !*FD Number of grid-points in $x$-direction, global input fields.
+    integer :: nxgo = 0 !*FD Number of grid-points in $x$-direction, global output orography.
+    integer :: nygo = 0 !*FD Number of grid-points in $x$-direction, global output orography.
                      
     ! Arrays holding global grid-box information ---------------
                                                      
@@ -74,6 +76,17 @@ module glimmer_main
                                                           !*FD data-points in global fields (degrees)
     real(rk),pointer,dimension(:) :: glon_bound => null() !*FD Longitudinal boundaries of 
                                                           !*FD data-points in global fields (degrees)
+
+    ! Arrays holding global output orography grid information ---------------
+                                                     
+    real(rk),pointer,dimension(:) :: glat_orog   => null() !*FD Latitudinal locations of 
+                                                           !*FD data-points in output orography (degrees)
+    real(rk),pointer,dimension(:) :: glon_orog   => null() !*FD Longitudinal locations of 
+                                                           !*FD data-points in output orography (degrees)
+    real(rk),pointer,dimension(:) :: glat_b_orog => null() !*FD Latitudinal boundaries of 
+                                                           !*FD data-points in output orography (degrees)
+    real(rk),pointer,dimension(:) :: glon_b_orog => null() !*FD Longitudinal boundaries of 
+                                                           !*FD data-points in output orography (degrees)
     ! Ice model instances --------------------------------------
 
     integer                                     :: ninstances = 1       !*FD Number of ice model instances
@@ -106,6 +119,10 @@ module glimmer_main
                                                                      !*FD all ice model instances.
     real(rk),pointer,dimension(:,:) :: cov_normalise   => null()     !*FD Normalisation values 
                                                                      !*FD for coverage calculation.
+    real(rk),pointer,dimension(:,:) :: total_cov_orog  => null()     !*FD Fractional coverage by 
+                                                                     !*FD all ice model instances (orog).
+    real(rk),pointer,dimension(:,:) :: cov_norm_orog   => null()     !*FD Normalisation values 
+                                                                     !*FD for coverage calculation (orog).
     logical                         :: coverage_calculated = .false. !*FD Have we calculated the
                                                                      !*FD coverage map yet?
     ! File information -----------------------------------------
@@ -166,6 +183,8 @@ contains
     params%paramfile = paramfile
     params%nxg       = size(longs)
     params%nyg       = size(lats)
+    params%nxgo      = params%nxg
+    params%nygo      = params%nyg
 
     ! Allocate arrays
 
@@ -185,6 +204,8 @@ contains
 
     params%glat=lats
     params%glon=longs
+    params%glat_orog=lats
+    params%glon_orog=longs
 
     ! ---------------------------------------------------------------
     ! Calculate box boundaries
@@ -192,6 +213,9 @@ contains
 
     call calc_bounds(params%glon,params%glat,params%glon_bound,params%glat_bound)
    
+    params%glat_b_orog=params%glat_bound
+    params%glon_b_orog=params%glon_bound
+
     ! ---------------------------------------------------------------
     ! Open the namelist file and read in the parameters for each run,
     ! allocating appropriately
@@ -224,6 +248,7 @@ contains
     ! ---------------------------------------------------------------
 
     params%total_coverage=0.0
+    params%total_cov_orog=0.0
 
     do i=1,params%ninstances
       call glimmer_i_initialise(params%file_unit,    &
@@ -235,17 +260,22 @@ contains
                                 params%glon_bound,   &
                                 params%glat_bound,   &
                                 params%tstep_main)
+
       params%total_coverage = params%total_coverage &
                             + params%instances(i)%frac_coverage
+      params%total_cov_orog = params%total_cov_orog &
+                            + params%instances(i)%frac_cov_orog
     enddo
 
     ! Normalisation array set to the sum of all coverage
 
     params%cov_normalise=params%total_coverage
+    params%cov_norm_orog=params%total_cov_orog
 
     ! Check we don't have coverage greater than one at any point.
 
     where (params%total_coverage>1.0) params%total_coverage=1.0
+    where (params%total_cov_orog>1.0) params%total_cov_orog=1.0
     params%coverage_calculated=.true.
 
   end subroutine initialise_glimmer
@@ -291,7 +321,8 @@ contains
     ! Internal variables
 
     integer :: i
-    real(rk),dimension(size(orog,1),size(orog,2)) :: orog_out_temp,albedo_temp,if_temp,fw_temp
+    real(rk),dimension(size(orog,1),size(orog,2)) :: albedo_temp,if_temp,fw_temp
+    real(rk),dimension(size(orog_out,1),size(orog_out,2)) :: orog_out_temp
     type(output_flags) :: out_f
 
     ! Reset output flag
@@ -393,12 +424,12 @@ contains
         ! Add this contribution to the output orography
   
         if (present(orog_out)) then
-           where (params%cov_normalise==0.0)
+           where (params%cov_norm_orog==0.0)
               orog_out=0.0
            elsewhere
               orog_out=orog_out+(orog_out_temp* &
-                   params%instances(i)%frac_coverage/ &
-                   params%cov_normalise)
+                   params%instances(i)%frac_cov_orog/ &
+                   params%cov_norm_orog)
            end where
         endif
 
@@ -476,7 +507,7 @@ contains
 
 !=====================================================
 
-  integer function glimmer_coverage_map(params,coverage)
+  integer function glimmer_coverage_map(params,coverage,cov_orog)
 
     !*FD Retrieve ice model fractional 
     !*FD coverage map. This function is provided so that glimmer may
@@ -492,7 +523,8 @@ contains
     
     type(glimmer_params),intent(in) :: params       !*FD ice model parameters
     real(rk),dimension(:,:),intent(out) :: coverage !*FD array to hold coverage map
-    
+    real(rk),dimension(:,:),intent(out) :: cov_orog !*FD Orography coverage
+
     if (.not.params%coverage_calculated) then
       glimmer_coverage_map=1
       return
@@ -506,6 +538,7 @@ contains
 
     glimmer_coverage_map=0
     coverage=params%total_coverage
+    cov_orog=params%total_cov_orog
 
   end function glimmer_coverage_map
 
@@ -673,6 +706,8 @@ contains
 
   end subroutine glimmer_read_restart
 
+!=============================================================================
+
   subroutine glimmer_set_orog_res(params,lons,lats,lonb,latb)
 
     !*FD Sets the output resolution of the upscaled orography, which needs
@@ -691,26 +726,69 @@ contains
     real(dp),dimension(:),optional,intent(in)    :: latb   !*FD Global grid-box boundaries in latitude (degrees)
 
     integer :: i
-    real(dp),dimension(size(lons)+1) :: lon_bound ! Temporary arrays
-    real(dp),dimension(size(lats)+1) :: lat_bound
-    
+ 
+    ! Setup sizes
+
+    params%nxgo=size(lons) ; params%nygo=size(lats)
+
+    ! Deallocate arrays if necessary
+
+    if (associated(params%glat_orog))   deallocate(params%glat_orog)
+    if (associated(params%glon_orog))   deallocate(params%glon_orog)
+    if (associated(params%glat_b_orog)) deallocate(params%glat_b_orog)
+    if (associated(params%glon_b_orog)) deallocate(params%glon_b_orog)
+
+    if (associated(params%total_cov_orog)) deallocate(params%total_cov_orog)
+    if (associated(params%cov_norm_orog))  deallocate(params%cov_norm_orog)
+
+    ! Allocate necessary arrays in top-level parameters type
+
+    allocate(params%glat_orog  (params%nygo))
+    allocate(params%glon_orog  (params%nxgo))
+    allocate(params%glat_b_orog(params%nygo+1))
+    allocate(params%glon_b_orog(params%nxgo+1))
+
+    allocate(params%total_cov_orog(params%nxgo,params%nygo))
+    allocate(params%cov_norm_orog (params%nxgo,params%nygo))
+   
     ! Calculate boundaries by 'halfway' method, if either boundary
     ! array is absent
 
     if (.not.present(lonb).or..not.present(latb)) then
-      call calc_bounds(lons,lats,lon_bound,lat_bound)
+      call calc_bounds(lons,lats,params%glon_b_orog,params%glat_b_orog)
     endif
 
     ! Now copy in any boundary array that is present
 
-    if (present(lonb)) lon_bound=lonb
-    if (present(latb)) lat_bound=latb
+    if (present(lonb)) params%glon_b_orog=lonb
+    if (present(latb)) params%glat_b_orog=latb
+
+    ! Index global boxes
+
+    params%total_cov_orog=0.0
 
     do i=1,params%ninstances
-      call new_upscale(params%instances(i)%ups, &    ! Index global boxes
-                       lons,lats,lon_bound, &
-                       lat_bound,params%instances(i)%proj)
+      call new_upscale(params%instances(i)%ups_orog, &
+                       lons,lats,params%glon_b_orog, &
+                       params%glat_b_orog,params%instances(i)%proj)
+      if (associated(params%instances(i)%frac_cov_orog)) &
+                             deallocate(params%instances(i)%frac_cov_orog)
+      allocate(params%instances(i)%frac_cov_orog(params%nxgo,params%nygo))
+      call calc_coverage(params%instances(i)%proj, &
+                         params%instances(i)%ups_orog,&             ! Calculate coverage map
+                         real(360.0/size(params%glon_orog),rk), &
+                         params%glat_b_orog, &
+                         params%instances(i)%proj%dx, &
+                         params%instances(i)%proj%dy, &
+                         params%radea, &
+                         params%instances(i)%frac_cov_orog)
+      params%total_cov_orog = params%total_cov_orog &
+                   + params%instances(i)%frac_cov_orog
+
     enddo
+
+    params%cov_norm_orog=params%total_cov_orog
+    where (params%total_cov_orog>1.0) params%total_cov_orog=1.0
 
   end subroutine glimmer_set_orog_res
 
@@ -730,6 +808,10 @@ contains
     allocate(params%glon        (params%nxg))
     allocate(params%glat_bound  (params%nyg+1))
     allocate(params%glon_bound  (params%nxg+1))
+    allocate(params%glat_orog   (params%nygo))
+    allocate(params%glon_orog   (params%nxgo))
+    allocate(params%glat_b_orog (params%nygo+1))
+    allocate(params%glon_b_orog (params%nxgo+1))
     allocate(params%g_av_precip (params%nxg,params%nyg))
     allocate(params%g_av_temp   (params%nxg,params%nyg))
     allocate(params%g_max_temp  (params%nxg,params%nyg))
@@ -739,6 +821,8 @@ contains
     allocate(params%g_av_merwind(params%nxg,params%nyg))
     allocate(params%total_coverage(params%nxg,params%nyg))
     allocate(params%cov_normalise(params%nxg,params%nyg))
+    allocate(params%total_cov_orog(params%nxgo,params%nygo))
+    allocate(params%cov_norm_orog(params%nxgo,params%nygo))
 
   end subroutine glimmer_allocate_arrays
 

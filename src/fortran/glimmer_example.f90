@@ -52,19 +52,22 @@ program glimmer_example
   implicit none
 
   type(glimmer_params) :: ice_sheet
-  integer :: nx,ny,i,j
+  integer :: nx,ny,i,j,nxo,nyo
   character(fname_length) :: paramfile='example.glp'
   real(rk) :: time
-  real(rk),dimension(:,:),allocatable :: temp,precip,zonwind,merwind,orog,coverage
+  real(rk),dimension(:,:),allocatable :: temp,precip,zonwind,merwind,orog,coverage,cov_orog
   real(rk),dimension(:,:),allocatable :: albedo, orog_out, ice_frac, fw
-  real(rk),dimension(:),allocatable :: lats,lons
+  real(rk),dimension(:),allocatable :: lats,lons,lats_orog,lons_orog
   logical :: out
   
   nx=64 ; ny=32
 
+  nxo=200 ; nyo=100
+
   allocate(temp(nx,ny),precip(nx,ny),zonwind(nx,ny))
   allocate(merwind(nx,ny),lats(ny),lons(nx),orog(nx,ny))
-  allocate(coverage(nx,ny),orog_out(nx,ny),albedo(nx,ny),ice_frac(nx,ny),fw(nx,ny))
+  allocate(coverage(nx,ny),orog_out(nxo,nyo),albedo(nx,ny),ice_frac(nx,ny),fw(nx,ny))
+  allocate(lats_orog(nyo),lons_orog(nxo),cov_orog(nxo,nyo))
 
   temp=0.0
   precip=0.0
@@ -75,6 +78,18 @@ program glimmer_example
   orog=0.0
   albedo=0.0
   orog_out=0.0
+
+! Calculate example orographic latitudes
+
+  do j=1,nyo
+    lats_orog(j)=-(180.0/nyo)*j+90.0+(90.0/nyo)
+  enddo
+
+! Calculate example orographic longitudes
+
+  do i=1,nxo
+    lons_orog(i)=(360.0/nxo)*i-(180.0/nxo)
+  enddo
 
 ! Load in latitudes
 
@@ -146,31 +161,29 @@ program glimmer_example
 
   time=24.0*360.0
 
+  ! Initialise the ice model
+
   call initialise_glimmer(ice_sheet,lats,lons,paramfile)
 
-!  call glimmer_read_restart(ice_sheet,25,'glimmer.restart')
+  ! Set alternative output grid for orography
 
-! Set all inputs to zero...
+  call glimmer_set_orog_res(ice_sheet,lons_orog,lats_orog)
 
-!  temp=0.0
-!  precip=0.0
-!  zonwind=0.0
-!  merwind=0.0
+  ! Get coverage maps for the ice model instances
 
-  if (glimmer_coverage_map(ice_sheet,coverage).ne.0) then
-    Print*,'unable to get coverage map'
+  if (glimmer_coverage_map(ice_sheet,coverage,cov_orog).ne.0) then
+    Print*,'unable to get coverage maps'
     stop
   endif
+
+  ! Do timesteps
 
   do time=0.0*24.0*360.0,10000.0*24.0*360.0,24.0*360.0
     call glimmer(ice_sheet,time,temp,precip,zonwind,merwind,orog, &
                  orog_out=orog_out,albedo=albedo,output_flag=out, &
                  ice_frac=ice_frac,fw_flux=fw) 
-    if(out) orog=coverage*orog_out+(1-coverage)*orog
   enddo
   call end_glimmer(ice_sheet)
-
-! call glimmer_write_restart(ice_sheet,20,'glimmer.restart')
 
 100 format(f9.5)
 101 format(e12.5)
