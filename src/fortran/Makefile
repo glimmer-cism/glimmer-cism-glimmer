@@ -49,7 +49,7 @@ libglide.a:	glide.o glide_setup.o glide_types.o glimmer_temp.o glimmer_thck.o gl
 		if [ "$(RANLIB)" != "" ] ; then $(RANLIB) $@ ; fi
 
 libglint.a:	glint_climate.o glint_initialise.o glint_io.o glint_timestep.o glint_type.o \
-		glimmer.o glimmer_proj.o glimmer_interp.o glimmer_global_grid.o glimmer_mbal.o
+		glimmer.o glimmer_proj.o glimmer_interp.o glimmer_global_grid.o glimmer_mbal.o glide_pdd.o
 		ar rcv $@ $^
 		if [ "$(RANLIB)" != "" ] ; then $(RANLIB) $@ ; fi
 
