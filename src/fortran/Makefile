@@ -8,6 +8,9 @@ include $(ARC_FILE)
 GLIMMERFLAGS=$(F77FLAGS) $(GLIMMERPRECOPT)
 #
 SUBDIRS = SLAP_library
+ifndef BLAS
+ BLAS = SLAP_library/blas.o
+endif
 LIBS = libglimmer.a libglide.a libglint.a
 PROGS = glimmer_example bin2ncdf input2ncdf simple_glide eis_glide
 #relaxed is currently broken...
@@ -50,13 +53,13 @@ libglint.a:	glint_climate.o glint_initialise.o glint_io.o glint_timestep.o glint
 		if [ "$(RANLIB)" != "" ] ; then $(RANLIB) $@ ; fi
 
 eis_glide:	$(EIS) libglide.a libglimmer.a SLAP_library
-		$(F77) -o $@ $(EIS) libglide.a libglimmer.a SLAP_library/libslap.a $(LD_FLAGS)
+		$(F77) -o $@ $(EIS) libglide.a libglimmer.a SLAP_library/libslap.a $(BLAS) $(LD_FLAGS)
 
 simple_glide:	$(SIMPLE) libglide.a libglimmer.a SLAP_library
-		$(F77) -o $@ $(SIMPLE) libglide.a libglimmer.a SLAP_library/libslap.a $(LD_FLAGS)
+		$(F77) -o $@ $(SIMPLE) libglide.a libglimmer.a SLAP_library/libslap.a $(BLAS) $(LD_FLAGS)
 
 glimmer_example :  glimmer_example.o libglide.a libglimmer.a libglint.a SLAP_library
-	$(F77) $(GLIMMERFLAGS) -o $@ $< libglint.a libglide.a libglimmer.a SLAP_library/libslap.a $(LD_FLAGS)
+	$(F77) $(GLIMMERFLAGS) -o $@ $< libglint.a libglide.a libglimmer.a SLAP_library/libslap.a $(BLAS) $(LD_FLAGS)
 
 bin2ncdf: bin2ncdf.o glimmer_global.o  ncdf.o ncdf_file.o glide_types.o glimmer_physcon.o glimmer_paramets.o  glimmer_CFproj.o glimmer_log.o 
 	$(F77) -o $@ $^ $(LD_FLAGS) 

@@ -6,11 +6,13 @@ endif
 include $(ARC_FILE)
 #
 LIBS = libslap.a
-OBJECTS = blas.o dcgs.o dlaputil.o dmset.o dmvops.o mach.o xersla.o
+OBJECTS = dcgs.o dlaputil.o dmset.o dmvops.o mach.o xersla.o
 
 INCLUDE_FILES=
 
 OTHER_FILES=$(ARC_FILE) makefile
+
+all:	blas.o libslap.a
 
 libslap.a: $(OBJECTS) $(OTHER_FILES) $(INCLUDE_FILES)
 	ar rcv $@ $(OBJECTS)

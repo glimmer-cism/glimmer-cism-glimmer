@@ -1,3 +1,10 @@
+2004-09-13 Magnus Hagdorn
+ * new make macro for external blas library, if not set use built-in blas (makefile.ifc, Makefile, SLAP_library/makefile)
+ * glide_types.f90: added some temporary grids for thickness calculation
+ * glimmer_temp.f90: changed hsum to hsum4 and removed one if clause
+ * glimmer_thck.f90: moved allocation of temporaries to glide_types.f90
+ * f90_dependencies.py: fixed bug where only last occurance of module definition was handled. this is somewhat fragile, should use regexp 
+	
 2004-09-06 Magnus Hagdorn
  * glide_types.f90: add temporary arrays for both U and T grids
  * netCDF output can start at later time (ncdf_file.f90.in, ncdf_params.f90.in)

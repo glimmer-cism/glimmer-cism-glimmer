@@ -50,7 +50,7 @@ contains
     !*FD initialise work data for ice thickness evolution
     implicit none
     type(glide_global_type) :: model
-    
+
     select case(model%options%whichevol)
     case(0)
        model%pcgdwk%fc = (/ model%numerics%alpha * model%numerics%dt / (2.0d0 * model%numerics%dew), &
@@ -62,6 +62,7 @@ contains
             1.0d0 / model%numerics%alpha, model%numerics%alpha * model%numerics%dt / &
             (2.0d0 * model%numerics%dns * model%numerics%dns), 0.0d0 /) 
     end select
+
   end subroutine init_thck
 
   subroutine timeevolthck(model,thckflag,usrf,thck,lsrf,acab,mask,uflx,vflx,dusrfdew,dusrfdns,totpts,logunit)
@@ -97,13 +98,6 @@ contains
 
       !* the number of grid points and the number of nonzero matrix elements (including bounary points)
       model%pcgdwk%pcgsize = (/ totpts, totpts * 5 /)
-
-      !* allocate sparse matrices of the appropriate size 
-      allocate (model%pcgdwk%pcgrow(model%pcgdwk%pcgsize(2)))
-      allocate (model%pcgdwk%pcgcol(model%pcgdwk%pcgsize(2)))
-      allocate (model%pcgdwk%pcgval(model%pcgdwk%pcgsize(2)))
-      allocate (model%pcgdwk%rhsd(model%pcgdwk%pcgsize(1)))
-      allocate (model%pcgdwk%answ(model%pcgdwk%pcgsize(1)))
 
       model%pcgdwk%ct = 1
 
@@ -170,9 +164,6 @@ contains
           real(thk0*thck(model%general%ewn/2+1,model%general%nsn/2+1))
 #endif
 
-      deallocate(model%pcgdwk%pcgrow,model%pcgdwk%pcgcol)
-      deallocate(model%pcgdwk%pcgval,model%pcgdwk%rhsd,model%pcgdwk%answ)
-
     end if
 
   contains
@@ -231,9 +222,6 @@ contains
     real(dp), intent(out) :: err
     integer,intent(in) :: lunit
 
-    real(dp), dimension(:), allocatable :: rwork
-    integer, dimension(:), allocatable :: iwork
-
     real(dp), parameter :: tol = 1.0d-12
 
     integer, parameter :: isym = 0, itol = 2, itmax = 101
@@ -246,8 +234,6 @@ contains
     end if
 
     mxnelt = 20 * model%pcgdwk%pcgsize(1)
-
-    allocate(rwork(mxnelt),iwork(mxnelt))
 
 !**     solve the problem using the SLAP package routines     
 !**     -------------------------------------------------
@@ -271,7 +257,7 @@ contains
 
     call dslucs(model%pcgdwk%pcgsize(1),model%pcgdwk%rhsd,model%pcgdwk%answ,model%pcgdwk%pcgsize(2), &
                 model%pcgdwk%pcgrow,model%pcgdwk%pcgcol,model%pcgdwk%pcgval, &
-                isym,itol,tol,itmax,iter,err,ierr,0,rwork,mxnelt,iwork,mxnelt)
+                isym,itol,tol,itmax,iter,err,ierr,0,model%pcgdwk%rwork,mxnelt,model%pcgdwk%iwork,mxnelt)
 
     if (ierr /= 0) then
       print *, 'pcg error ', ierr, itmax, iter
@@ -280,8 +266,6 @@ contains
       print *, model%pcgdwk%pcgval
       stop
     end if
-
-    deallocate(rwork,iwork)
 
   end subroutine slapsolv 
 
@@ -685,13 +669,6 @@ contains
       !* matrix elements (including bounary points)
       model%pcgdwk%pcgsize = (/ model%geometry%totpts, model%geometry%totpts * 5 /)
 
-      !* allocate sparse matrices of the appropriate size 
-      allocate (model%pcgdwk%pcgrow(model%pcgdwk%pcgsize(2)))
-      allocate (model%pcgdwk%pcgcol(model%pcgdwk%pcgsize(2)))
-      allocate (model%pcgdwk%pcgval(model%pcgdwk%pcgsize(2)))
-      allocate (model%pcgdwk%rhsd(model%pcgdwk%pcgsize(1)))
-      allocate (model%pcgdwk%answ(model%pcgdwk%pcgsize(1)))
-
       model%pcgdwk%ct = 1
 
       do ns = 1,model%general%nsn
@@ -822,7 +799,6 @@ contains
         real(thk0*model%geometry%thck(model%general%ewn/2+1,model%general%nsn/2+1)), &
         real(vel0*maxval(abs(model%velocity%ubas))), real(vel0*maxval(abs(model%velocity%vbas))) 
 #endif
-      deallocate(model%pcgdwk%pcgrow,model%pcgdwk%pcgcol,model%pcgdwk%pcgval,model%pcgdwk%rhsd,model%pcgdwk%answ)
 
     end if
 

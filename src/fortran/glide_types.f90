@@ -371,6 +371,8 @@ module glide_types
     real(dp),dimension(:),pointer :: answ    => null()
     integer, dimension(:),pointer :: pcgcol  => null()
     integer, dimension(:),pointer :: pcgrow  => null()
+    real(dp),dimension(:),pointer :: rwork   => null()
+    integer, dimension(:),pointer :: iwork   => null()
     integer, dimension(2)         :: pcgsize = 0
     real(dp),dimension(4)         :: fc      = 0.0
     real(dp),dimension(6)         :: fc2     = 0.0
@@ -535,13 +537,14 @@ contains
 
     type(glide_global_type),intent(inout) :: model
 
-    integer :: ewn,nsn,upn
+    integer :: ewn,nsn,upn,totpts
 
     ! for simplicity, copy these values...
 
     ewn=model%general%ewn
     nsn=model%general%nsn
     upn=model%general%upn
+    totpts = ewn*nsn
 
     ! Allocate appropriately
 
@@ -591,6 +594,15 @@ contains
     allocate(model%isotwk%load(ewn,nsn));             model%isotwk%load = 0.0d0 
     allocate(model%numerics%sigma(upn))
 
+    !* allocate sparse matrices of the appropriate size 
+    allocate (model%pcgdwk%pcgrow(5*totpts))
+    allocate (model%pcgdwk%pcgcol(5*totpts))
+    allocate (model%pcgdwk%pcgval(5*totpts))
+    allocate (model%pcgdwk%rhsd(totpts))
+    allocate (model%pcgdwk%answ(totpts))
+    allocate (model%pcgdwk%rwork(20*totpts))
+    allocate (model%pcgdwk%iwork(20*totpts))
+    
   end subroutine glide_allocarr
 
   subroutine glide_deallocarr(model)
@@ -642,6 +654,15 @@ contains
     deallocate(model%thckwk%basestate)
     deallocate(model%isotwk%load)
     deallocate(model%numerics%sigma)
+
+    deallocate (model%pcgdwk%pcgrow)
+    deallocate (model%pcgdwk%pcgcol)
+    deallocate (model%pcgdwk%pcgval)
+    deallocate (model%pcgdwk%rhsd)
+    deallocate (model%pcgdwk%answ)
+    deallocate (model%pcgdwk%rwork)
+    deallocate (model%pcgdwk%iwork)
+
   end subroutine glide_deallocarr
 end module glide_types
 

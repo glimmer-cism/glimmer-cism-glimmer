@@ -431,7 +431,7 @@ contains
   subroutine hadvpnt(tempwk,iteradvt,diagadvt,tempx,tempy,uvel,vvel)
 
     use glimmer_global, only : dp
-    use glimmer_utils, only: hsum
+    use glimmer_utils, only: hsum4
 
     implicit none
 
@@ -445,8 +445,8 @@ contains
     iteradvt = 0.0d0
     diagadvt = 0.0d0
 
-    u = tempwk%advconst(1) * hsum(uvel(:,:,:))
-    v = tempwk%advconst(2) * hsum(vvel(:,:,:))
+    u = tempwk%advconst(1) * hsum4(uvel(:,:,:))
+    v = tempwk%advconst(2) * hsum4(vvel(:,:,:))
 
     if (u(1) > 0.0d0) then
        iteradvt = u * (- 4.0d0*tempx(:,2) + tempx(:,1))
@@ -568,20 +568,24 @@ contains
 
     if (maxval(abs(weff)) > model%tempwk%wmax) then
        weff = 0.0d0
+       supd(2:model%general%upn-1) =  - fact(1) / model%tempwk%dups(2:model%general%upn-1,2)
+
+       subd(2:model%general%upn-1) =  - fact(1) / model%tempwk%dups(2:model%general%upn-1,1)
+
+    else
+       subd(2:model%general%upn-1) = fact(2) * weff(2:model%general%upn-1) / &
+            model%tempwk%dups(2:model%general%upn-1,3)
+
+       supd(2:model%general%upn-1) = - subd(2:model%general%upn-1) - fact(1) / &
+            model%tempwk%dups(2:model%general%upn-1,2)
+
+       subd(2:model%general%upn-1) = subd(2:model%general%upn-1) - fact(1) / &
+            model%tempwk%dups(2:model%general%upn-1,1)
+
     end if
-
-    subd(2:model%general%upn-1) = fact(2) * weff(2:model%general%upn-1) / &
-         model%tempwk%dups(2:model%general%upn-1,3)
-
-    supd(2:model%general%upn-1) = - subd(2:model%general%upn-1) - fact(1) / &
-         model%tempwk%dups(2:model%general%upn-1,2)
-
-    subd(2:model%general%upn-1) = subd(2:model%general%upn-1) - fact(1) / &
-         model%tempwk%dups(2:model%general%upn-1,1)
-
     diag(2:model%general%upn-1) = 1.0d0 - subd(2:model%general%upn-1) &
          - supd(2:model%general%upn-1) &
-         + diagadvt(2:model%general%upn-1)
+         + diagadvt(2:model%general%upn-1)       
 
     rhsd(1) = artm
     supd(1) = 0.0d0
@@ -619,6 +623,9 @@ contains
        ! *tp*                       + cons(4) * (wvel(model%general%upn) - wgrd(model%general%upn)) &
        ! *tp*                       - model%tempwk%initadvt(model%general%upn,ew,ns) + model%tempwk%dissip(model%general%upn,ew,ns)  
 
+       if (float) then
+          model%tempwk%inittemp(model%general%upn,ew,ns) = temp(model%general%upn) 
+       end if
     end if
 
     ! now do the basal boundary
@@ -629,11 +636,6 @@ contains
 
        diag(model%general%upn) = 1.0d0  
 
-       if (iter == 0) then
-
-          model%tempwk%inittemp(model%general%upn,ew,ns) = temp(model%general%upn) 
-
-       end if
     else 
 
        diag(model%general%upn) = 1.0d0 - subd(model%general%upn) + diagadvt(model%general%upn)

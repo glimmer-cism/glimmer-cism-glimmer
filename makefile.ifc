@@ -2,6 +2,10 @@ ifndef GLIMMER_PREFIX
 GLIMMER_PREFIX=../../
 endif
 
+# BLAS setup
+# using ATLS
+BLAS=-L/usr/local/ATLAS/lib/Linux_ATHLONSSE1 -llapack -lcblas -lf77blas -latlas
+
 #
 # Architecture specific defines for genie compilation - this version for
 # Linux 
