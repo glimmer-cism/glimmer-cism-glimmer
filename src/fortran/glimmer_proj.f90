@@ -137,7 +137,7 @@ contains
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine proj_allocate(proj,re_alloc)
+  subroutine proj_allocate(proj)
 
     !*FD Allocates the array pointers in the \texttt{projection} type.
     !*FD \texttt{re\_alloc} is necessary because it is not possible to 
@@ -146,17 +146,12 @@ contains
     implicit none
 
     type(projection),intent(inout) :: proj     !*FD The projection being initialised
-    logical,intent(in),optional    :: re_alloc !*FD Set if we need to deallocate the arrays first
 
     ! First, deallocate if necessary
 
-    if (present(re_alloc)) then
-      if (re_alloc) then
-        if (associated(proj%costheta))  deallocate(proj%costheta)
-        if (associated(proj%sintheta))  deallocate(proj%sintheta)
-        if (associated(proj%latitudes)) deallocate(proj%latitudes)
-      endif
-    endif
+    if (associated(proj%costheta))  deallocate(proj%costheta)
+    if (associated(proj%sintheta))  deallocate(proj%sintheta)
+    if (associated(proj%latitudes)) deallocate(proj%latitudes)
 
     allocate(proj%costheta(proj%nx,proj%ny),proj%sintheta(proj%nx,proj%ny))
     allocate(proj%latitudes(proj%nx,proj%ny))
