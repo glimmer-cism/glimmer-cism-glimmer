@@ -1,3 +1,9 @@
+2005-03-11 Magnus Hagdorn
+ * configure.in: bumped version to 0.5.0
+ * moved test_config.conf to tests
+ * removed data dir
+ * fix doc date to release date
+
 2005-03-11 Ian Rutt
  * Moved glint_example files to glint-example module
 
