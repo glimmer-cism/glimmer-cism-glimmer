@@ -23,40 +23,33 @@ load:          1
 hot:           1
 coordinates:   lon lat
 
-[arng]
+[glint_acab]
 dimensions:    time, y1, x1
-units:         degree_Celsius
-long_name:     annual temperature range
-data:          data%arng
+units:         meter/year
+long_name:     mass-balance
+data:          data%acab_save
 coordinates:   lon lat
 
-[prcp]
+[glint_artm]
+dimensions:    time, y1, x1
+units:         degreeC
+long_name:     air temperture
+data:          data%artm_save
+coordinates:   lon lat
+
+[glint_prcp]
 dimensions:    time, y1, x1
 units:         meter/year
 long_name:     precipitation
-data:          data%prcp
+data:          data%prcp_save
 standard_name: lwe_precipitation_rate
 coordinates:   lon lat
 
-[ablt]
+[glint_ablt]
 dimensions:    time, y1, x1
 units:         meter/year
 long_name:     ablation
-data:          data%ablt
-coordinates:   lon lat
-
-[xwind]
-dimensions:    time, y1, x1
-units:	       meter/second
-long_name:     westerly surface wind component
-data:	       data%xwind
-coordinates:   lon lat
-
-[ywind]
-dimensions:    time, y1, x1
-units:	       meter/second
-long_name:     southerly surface wind component
-data:	       data%ywind
+data:          data%ablt_save
 coordinates:   lon lat
 
 [global_orog]
@@ -66,3 +59,9 @@ long_name:     orographic elevation provided by global model
 data:	       data%global_orog
 coordinates:   lon lat
 
+[local_orog]
+dimensions:    time, y1, x1
+units:	       meter
+long_name:     orographic elevation provided by global model
+data:	       data%local_orog
+coordinates:   lon lat

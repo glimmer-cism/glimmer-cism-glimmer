@@ -254,6 +254,38 @@ contains
        ic%next => add_input
     end if
   end function add_input
+
+  recursive subroutine nc_print_output(output)
+
+    !*FD For debugging
+
+    type(glimmer_nc_output),pointer :: output
+
+    call nc_print_stat(output%nc)
+    print*,'freq:       ',output%freq
+    print*,'next_write: ',output%next_write
+    print*,'timecounter:',output%timecounter
+    ! call nc_print_meta(output%metadata)
+    if (associated(output%next)) call nc_print_output(output%next)
+    
+  end subroutine nc_print_output
+
+  subroutine nc_print_stat(stat)
+
+    type(glimmer_nc_stat) :: stat
+
+    print*,'define_mode:    ',stat%define_mode
+    print*,'just_processed: ',stat%just_processed
+    print*,'processsed_time:',stat%processsed_time
+    print*,'filename:       ',stat%filename
+    print*,'id:             ',stat%id
+    print*,'nlevel:         ',stat%nlevel
+    print*,'timedim:        ',stat%timedim
+    print*,'timevar:        ',stat%timevar
+    print*,'vars:           ',trim(stat%vars)
+
+  end subroutine nc_print_stat
+
 end module glimmer_ncdf
 
 module glimmer_scales

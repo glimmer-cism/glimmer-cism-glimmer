@@ -133,7 +133,6 @@ module glint_type
     real(sp) :: lapse_rate   =   8.0 !*FD Uniform lapse rate in deg C/km 
                                      !*FD (N.B. This should be \emph{positive} for 
                                      !*FD temperature falling with height!)
-    real(sp) :: tinc_mbal = 1.0      !*FD mass-balance scheme timestep in years (set internally)
 
     ! Counter for averaging temperature input --------------------------------------
 

@@ -446,11 +446,14 @@ contains
     real(rk) :: twin_temp,twout_temp,icevol_temp
     type(output_flags) :: out_f
 
-    ! Set averaging start if necessary
+    ! Set averaging start if necessary and return if this is not a mass-balance timestep
+    ! Still not sure if this is the correct solution, but should prevent averaging of one-
+    ! too-many steps at first
 
     if (params%first) then
        params%av_start_time=time
        params%first=.false.
+       return
     endif
 
     ! Reset output flag

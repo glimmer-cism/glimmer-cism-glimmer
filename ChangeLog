@@ -1,3 +1,14 @@
+2005-03-07 Ian Rutt
+ * Added a couple of output-to-screen subroutines to help with debugging
+   netcdf output
+ * Fixed (hopefully) a problem with averaging/accumulation in glint.f90
+ * Fixed problem with glint_example.f90 - orography input was being read
+   incorrectly.
+ * Added glide_nc_fillall call from glint_initialise
+ * Removed redundant mass-balance timestep value from glint_type
+ * Made glint_vars.def a bit more sensible
+ * Minor changes to glint_example config file
+	
 2005-03-07 Magnus Hagdorn
  * glimmer_ncio.f90: fixed bug #110
 

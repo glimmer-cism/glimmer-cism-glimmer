@@ -75,8 +75,10 @@ contains
     instance%ice_tstep=get_tinc(instance%model)*years2hours
 
     ! create glint variables
-
     call glint_io_createall(instance%model)
+
+    ! fill dimension variables
+    call glide_nc_fillall(instance%model)
 
     ! read glint configuration
 
@@ -88,6 +90,10 @@ contains
     call glint_mbal_init(instance%mbal_params,config,instance%whichacab)
     instance%mbal_tstep=instance%mbal_params%tstep
     mbts=instance%mbal_tstep
+
+    ! Check we've used all the config sections
+
+    call CheckSections(config)
 
     ! New projection and downscaling
 

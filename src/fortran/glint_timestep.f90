@@ -111,7 +111,7 @@ contains
     ! Set mass-balance accumulation start if necessary -----------------------
 
     if (instance%first_accum) then
-      instance%accum_start=nint(time-instance%tinc_mbal)
+      instance%accum_start=time-instance%mbal_tstep
       instance%first_accum=.false.
     endif
 
@@ -132,7 +132,7 @@ contains
     ! Adjust the surface temperatures using the lapse-rate, by reducing to
     ! sea-level and then back up to high-res orography
     ! ------------------------------------------------------------------------  
-   
+
     call glint_lapserate(instance%artm,real(instance%global_orog,rk),real(-instance%lapse_rate,rk))
     call glint_lapserate(instance%artm,real(instance%local_orog,rk), real(instance%lapse_rate,rk))
  
@@ -303,6 +303,10 @@ contains
       t_wout = sum(ablat_temp)*instance%proj%dx*instance%proj%dy
     endif
 
+    ! Write glint data to file -----------------------------------------------
+
+    call glint_io_writeall(instance,instance%model)
+
     ! Zero accumulations -----------------------------------------------------
  
     instance%prcp_save = 0.0
@@ -310,10 +314,6 @@ contains
     instance%acab_save = 0.0
     instance%artm_save = 0.0
     instance%av_count  = 0
-
-    ! Write glint data to file -----------------------------------------------
-
-    call glint_io_writeall(instance,instance%model)
 
     ! Tidy up ----------------------------------------------------------------
 

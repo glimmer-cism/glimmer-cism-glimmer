@@ -151,7 +151,7 @@ program glint_example
   merwind=0.0
   albedo=0.0
   orog_out=0.0
-  orog=orog_clim(:,:,1)                    ! Put orography where it belongs
+  orog=real(orog_clim(:,:,1))                    ! Put orography where it belongs
 
   ! Set up global grids ----------------------------------------------------------------
 
@@ -213,9 +213,10 @@ contains
     use netcdf
 
     character(*) :: filename,varname
-    real(rk),dimension(:,:,:),pointer :: array
-    real(rk),dimension(:),pointer,optional :: lons,lats
+    real(dp),dimension(:,:,:),pointer :: array
+    real(dp),dimension(:),pointer,optional :: lons,lats
     integer :: ncerr,ncid,i,varid
+    real(rk) :: offset=0.0,scale=1.0
     integer,dimension(3) :: dimids,dimlens
     character(20),dimension(3) :: dimnames
 
@@ -238,6 +239,20 @@ contains
     
     ncerr=nf90_get_var(ncid, varid, array)
     call handle_err(ncerr)
+
+    ncerr=nf90_get_att(ncid, varid, 'add_offset', offset)
+    if (ncerr/=NF90_NOERR) then
+       offset=0.0
+       ncerr=NF90_NOERR
+    end if
+
+    ncerr=nf90_get_att(ncid, varid, 'scale_factor', scale)
+    if (ncerr/=NF90_NOERR) then
+       scale=1.0
+       ncerr=NF90_NOERR
+    end if
+
+    array=offset+(array*scale)
 
     if (present(lons)) then
        if (associated(lons)) deallocate(lons)
