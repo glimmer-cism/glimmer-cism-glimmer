@@ -1,6 +1,6 @@
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! +                                                           +
-! +  glint_object.f90 - part of the GLIMMER ice model         + 
+! +  glint_type.f90 - part of the GLIMMER ice model           + 
 ! +                                                           +
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! 
@@ -40,17 +40,24 @@
 !
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-module glint_object
-
-  !*FD Holds the dervied type for the ice model
-  !*FD instances, and the necessary code for calling them.
-
+module glint_type
+  !*FD contains type definitions for GLINT
   use glimmer_global
-  use glimmer_project
-  use glimmer_interp
+  use glint_proj
+  use glint_interp
+  use glimmer_degd
   use glide_types
 
   implicit none
+
+  type glint_forcdata
+     !*FD Holds information relating to time-series forcing.
+     character(fname_length) :: forcfile = ''             !*FD Temperature forcing file
+     real(sp),dimension(:,:),pointer :: forcing => null() !*FD Forcing data(?)
+     integer  :: flines = 0
+     real(sp) :: trun   = 10000
+  end type glint_forcdata
+
 
   type glint_climate
      !*FD Derived type holding climate variables for GLINT
@@ -72,14 +79,21 @@ module glint_object
      !*FD \end{description}
 
      integer :: whichprecip = 0
-     
      !*FD Source of precipitation:
      !*FD \begin{description}
      !*FD \item[0] Uniform precipitation rate (set internally 
      !*FD at present) 
      !*FD \item[1] Use large-scale precipitation rate 
      !*FD \item[2] Use parameterization of \emph{Roe and Lindzen} 
-     !*FD \end{description}     
+     !*FD \end{description}         
+
+     integer :: whichacab = 2
+     !*FD Net accumulation: 
+     !*FD \begin{description}
+     !*FD \item[0] EISMINT moving margin 
+     !*FD \item[1] PDD mass-balance model [recommended] 
+     !*FD \item[2] Accumulation only 
+     !*FD \end{description}
 
      real(sp),dimension(:,:),pointer :: arng     => null() !*FD Annual air temperature range
      real(sp),dimension(:,:),pointer :: ablt     => null() !*FD Annual ablation.
@@ -98,6 +112,8 @@ module glint_object
      real(sp) :: ice_albedo   =   0.4 !*FD Ice albedo. (fraction)
      real(sp) :: ulapse_rate  =  -8.0 !*FD Uniform lapse rate in deg C/km 
                                       !*FD (N.B. This should be \emph{negative}!)
+     real(sp),dimension(2) :: airt = (/ -3.150, -1.0e-2 /)       ! K, K km^{-3}
+     real(sp),dimension(3) :: nmsb = (/ 0.5, 1.05e-5, 450.0e3 /) ! m yr^{-1}, yr^{-1}, m                
   end type glint_climate
 
   type glint_instance
@@ -108,7 +124,9 @@ module glint_object
      type(upscale)                    :: ups_orog           !*FD Upscaling parameters for orography (to cope
      !*FD with need to convert to spectral form).
      type(glide_global_type)          :: model              !*FD The instance and all its arrays.
+     type(glint_forcdata)             :: forcdata           !*FD temperature forcing
      type(glint_climate)              :: climate            !*FD climate data
+     type(glimmer_pddcalc)            :: pddcalc            !*FD positive degree-day data
      character(fname_length)          :: paramfile          !*FD The name of the configuration file.
      logical                          :: newtemps           !*FD Flag to say we have new temperatures.
      logical                          :: first     = .true. !*FD Is this the first timestep?
@@ -149,57 +167,7 @@ module glint_object
   end type output_flags
 
 contains
-
-  subroutine glint_i_initialise(config,instance,radea,grid,time_step,start_time)
-
-    !*FD Initialise an ice model (glide) instance
-    use glimmer_config
-    use glimmer_global_grid
-    implicit none
-
-    ! Arguments    
-    type(ConfigSection), pointer :: config              !*FD structure holding sections of configuration file   
-    type(glint_instance),  intent(inout) :: instance    !*FD The instance being initialised.
-    real(rk),              intent(in)    :: radea       !*FD Radius of the earth (m).
-    type(global_grid),     intent(in)    :: grid        !*FD Global grid to use
-    real(rk),              intent(in)    :: time_step   !*FD Model time-step (years).
-    real(rk),optional,     intent(in)    :: start_time  !*FD Start time of model (years).
-
-    ! initialise model
-    call glide_initialise(instance%model,config)
-    instance%model%numerics%tinc=time_step             ! Initialise the model time step
-    ! GLINT projection parameters
-    call proj_readconfig(instance%proj,config)    ! read glint configuration
-    call proj_printconfig(instance%proj)
-
-    
-    call new_proj(instance%proj,radea)                          ! Initialise the projection
-    call new_downscale(instance%downs,instance%proj,grid)       ! Initialise the downscaling
-    call glimmer_i_allocate(instance,grid%nx,grid%ny)           ! Allocate arrays appropriately
-    call new_upscale(instance%ups,grid,instance%proj, &
-         instance%climate%out_mask)           ! Initialise upscaling parameters
-    call calc_coverage(instance%proj, &                         ! Calculate coverage map
-         instance%ups,  &             
-         grid,          &
-         radea,         &
-         instance%climate%out_mask, &
-         instance%frac_coverage)
-    call copy_upscale(instance%ups,instance%ups_orog)    ! Set upscaling for orog output to same as for 
-                                                         ! other fields.
-    instance%frac_cov_orog=instance%frac_coverage        ! Set fractional coverage for orog to be same as
-                                                         ! for other fields.
-
-    if (present(start_time)) then
-       instance%model%numerics%time = start_time       ! Initialise the counter.
-    else                                              ! Despite being in the GLIMMER framework,
-       instance%model%numerics%time = 0.0              ! each instance has a copy of the counter
-    endif                                             ! for simplicity.
-
-
-  end subroutine glint_i_initialise
-
-
-  subroutine glint_i_allocate(instance,nxg,nyg)
+    subroutine glint_i_allocate(instance,nxg,nyg)
 
     !*FD Allocate top-level arrays in
     !*FD the model instance, and ice model arrays.
@@ -256,4 +224,4 @@ contains
     allocate(instance%climate%presusrf(ewn,nsn));        instance%climate%presusrf = 0.0    
 
   end subroutine glint_i_allocate
-end module glint_object
+end module glint_type

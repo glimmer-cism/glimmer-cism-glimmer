@@ -49,6 +49,8 @@ module glimmer_degd
   !*FD code was originally specific to Greenland, but is in fact applied
   !*FD regardless of which region the ice model is covering.
 
+  use glimmer_global, only : sp
+
   private pddtabgrn,qromb,qromb2,polint,trapzd
   private trapzd2,pdd1stint,pdd2ndint,findgrid
 

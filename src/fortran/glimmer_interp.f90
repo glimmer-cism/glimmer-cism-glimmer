@@ -40,13 +40,13 @@
 !
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-module glimmer_interp
+module glint_interp
 
   !*FD Downscaling and upscaling
   !*FD routines for use in GLIMMER.
 
   use glimmer_global
-  use glimmer_project
+  use glint_proj
 
   implicit none
 
@@ -93,7 +93,7 @@ contains
 
   subroutine new_downscale(downs,proj,grid)
 
-    use glimmer_global_grid
+    use glint_global_grid
 
     !*FD Initialises a downscale variable,
     !*FD according to given projected and global grids
@@ -252,7 +252,7 @@ contains
     !*FD compared with the local grid - it just averages the points contained 
     !*FD in each local grid-box.
  
-    use glimmer_project
+    use glint_proj
     use glimmer_utils
 
     ! Argument declarations
@@ -572,7 +572,7 @@ contains
     !*FD global grid box in which each local grid box sits.
 
     use glimmer_utils
-    use glimmer_global_grid
+    use glint_global_grid
 
     ! Arguments
 
@@ -726,7 +726,7 @@ contains
 
   subroutine new_upscale(ups,grid,proj,mask)
 
-    use glimmer_global_grid
+    use glint_global_grid
 
     !*FD Compiles an index of which global grid box contains a given
     !*FD grid box on the projected grid, and sets derived type \texttt{ups}
@@ -900,4 +900,4 @@ contains
 
   end subroutine calc_fractional
 
-end module glimmer_interp
+end module glint_interp

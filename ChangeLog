@@ -1,3 +1,15 @@
+2004-07-13 Magnus Hagdorn
+ * glimmer_degd.f90: load sp from glimmer_global
+ * renamed module glimmer_ to glint_ (glimmer_global_grid.f90, glimmer_interp.f90, 
+	glimmer_mbal.f90, glimmer_proj.f90)
+ * removed old glimmer modules (glimmer_modu.f90, glimmer_object.f90, glimmer_outp.f90, 
+	glimmer_setup.f90, glint_object.f90)
+ * glint_type.f90: derived type definition of GLINT instance
+ * glint_climate.f90: climate driver for GLINT 
+ * initialise/finalise GLINT: glint_initialise.f90
+ * glint_io.f90.in: added read/write_all functions
+ * moved where netCDF file I/O happens (ncdf_file.f90.in, ncdf_infile.f90.in)
+	
 2004-07-09 Magnus Hagdorn
  * glimmer_proj.f90: added configuration read/print routines
  * glimmer_degd.f90: moved derived type definition into module

@@ -1,4 +1,3 @@
-
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! +                                                           +
 ! +  glimmer_proj.f90 - part of the GLIMMER ice model         + 
@@ -41,7 +40,7 @@
 !
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-module glimmer_project
+module glint_proj
 
   !*FD Holds derived types and subroutines
   !*FD necessary for handling map projections and the associated
@@ -517,4 +516,4 @@ contains
 
   end subroutine proj_read_restart
 
-end module glimmer_project
+end module glint_proj

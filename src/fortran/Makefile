@@ -8,26 +8,14 @@ include $(ARC_FILE)
 GLIMMERFLAGS=$(F77FLAGS) $(GLIMMERPRECOPT)
 #
 SUBDIRS = SLAP_library
-LIBS = libglimmer.a libglide.a
+LIBS = libglimmer.a libglide.a libglint.a
 PROGS = glimmer_example bin2ncdf input2ncdf relaxed simple_glide eis_glide
 TESTS = test_config test_setup test_ts
 DATA = ncdf_vars.def
 
 AUTOGEN = ncdf.f90 ncdf_file.f90 ncdf_infile.f90 ncdf_params.f90 glint_io.f90
 
-OBJECTS = glimmer_degd.o glimmer_isot.o glimmer_setup.o \
-          glimmer_modu.o glimmer_outp.o glimmer_paramets.o glimmer_physcon.o glimmer_restart.o \
-          glimmer_temp.o glimmer_thck.o glimmer_velo.o glimmer.o glimmer_global.o \
-          glimmer_interp.o glimmer_mbal.o glimmer_object.o glimmer_proj.o \
-          glimmer_utils.o gmt.o glimmer_global_grid.o ncdf.o ncdf_file.o ncdf_params.o \
-          ncdf_infile.o glimmer_config.o glimmer_CFproj.o
-
-SOURCES = glimmer_degd.f90 glimmer_isot.f90 glimmer_setup.f90 \
-          glimmer_modu.f90 glimmer_outp.f90 glimmer_paramets.f90 glimmer_physcon.f90 \
-          glimmer_restart.f90 glimmer_temp.f90 glimmer_thck.f90 glimmer_velo.f90 \
-          glimmer.f90 glimmer_global.f90 glimmer_interp.f90 glimmer_mbal.f90 \
-          glimmer_object.f90 glimmer_proj.f90 glimmer_utils.f90 gmt.f90 \
-          glimmer_global_grid.f90 glimmer_config.f90 glimmer_CFproj.f90 $(AUTOGEN)
+SOURCES = *.f90
 
 EIS = eis_glide.o eis_forcing.o eis_ela.o eis_temp.o eis_slc.o
 
@@ -46,21 +34,25 @@ $(SUBDIRS):
 		$(MAKE) -C $@
 
 
-libglimmer.a: $(OBJECTS) $(INCLUDE_FILES)
-	ar rcv $@ $(OBJECTS)
-	if [ "$(RANLIB)" != "" ] ; then $(RANLIB) $@ ; fi
-
-libglide.a:	glide.o glide_setup.o glide_types.o glimmer_temp.o glimmer_isot.o glimmer_thck.o glimmer_velo.o\
-	glimmer_paramets.o glimmer_CFproj.o glimmer_config.o glimmer_global.o glimmer_physcon.o glimmer_utils.o glimmer_log.o glimmer_ts.o\
-	ncdf.o ncdf_params.o ncdf_file.o ncdf_infile.o 
+libglimmer.a: 	glimmer_CFproj.o glimmer_config.o glimmer_global.o glimmer_utils.o glimmer_log.o glimmer_ts.o\
+		ncdf.o ncdf_params.o ncdf_file.o ncdf_infile.o glimmer_paramets.o glimmer_physcon.o glimmer_degd.o
 		ar rcv $@ $^
 		if [ "$(RANLIB)" != "" ] ; then $(RANLIB) $@ ; fi
 
-eis_glide:	$(EIS) libglide.a SLAP_library
-		$(F77) -o $@ $(EIS) libglide.a SLAP_library/libslap.a $(LD_FLAGS)
+libglide.a:	glide.o glide_setup.o glide_types.o glimmer_temp.o glimmer_isot.o glimmer_thck.o glimmer_velo.o 
+		ar rcv $@ $^
+		if [ "$(RANLIB)" != "" ] ; then $(RANLIB) $@ ; fi
 
-simple_glide:	$(SIMPLE) libglide.a SLAP_library
-		$(F77) -o $@ $(SIMPLE) libglide.a SLAP_library/libslap.a $(LD_FLAGS)
+libglint.a:	glint_climate.o glint_initialise.o glint_io.o glint_timestep.o glint_type.o \
+		glimmer_proj.o glimmer_interp.o glimmer_global_grid.o glimmer_mbal.o
+		ar rcv $@ $^
+		if [ "$(RANLIB)" != "" ] ; then $(RANLIB) $@ ; fi
+
+eis_glide:	$(EIS) libglide.a libglimmer.a SLAP_library
+		$(F77) -o $@ $(EIS) libglide.a libglimmer.a SLAP_library/libslap.a $(LD_FLAGS)
+
+simple_glide:	$(SIMPLE) libglide.a libglimmer.a SLAP_library
+		$(F77) -o $@ $(SIMPLE) libglide.a libglimmer.a SLAP_library/libslap.a $(LD_FLAGS)
 
 glimmer_example :  glimmer_example.o SLAP_library libglimmer.a
 	$(F77) $(GLIMMERFLAGS) -o $@ $< libglimmer.a SLAP_library/libslap.a $(LD_FLAGS)
@@ -123,8 +115,7 @@ ncdf_file.f90:	ncdf_vars.def ncdf_file.f90.in
 ncdf_infile.f90:	ncdf_vars.def ncdf_infile.f90.in
 		python ../python/generate_ncvars.py $< $@.in	
 ncdf_params.f90:	ncdf_vars.def ncdf_params.f90.in
-		python ../python/generate_ncvars.py $< $@.in	
-
+		python ../python/generate_ncvars.py $< $@.in
 glint_io.f90:	ncdf_vars.def glint_io.f90.in
 		python ../python/generate_ncvars.py $< $@.in
 

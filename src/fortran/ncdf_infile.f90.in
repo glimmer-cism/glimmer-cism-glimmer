@@ -77,6 +77,9 @@ contains
     ic=>model%funits%in_first
     do while(associated(ic))
        call glimmer_nc_checkread(ic,model)
+       if (ic%nc%just_processed) then
+          call glimmer_nc_read(ic,model)
+       end if
        ic=>ic%next
     end do
   end subroutine readall
@@ -216,7 +219,6 @@ contains
                trim(NCI%filename), ' at time ', model%numerics%time
           call write_log(message)
           NCI%just_processed = .TRUE.
-          call glimmer_nc_read(infile,model)
        end if
     else
        if (NCI%just_processed) then
