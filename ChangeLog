@@ -1,3 +1,9 @@
+2004-09-03 Magnus Hagdorn
+ * glide_types.f90, ncdf_vars.def: new mask variable
+ * glide.f90: calculating mask
+ * glide_types.f90: fixed a bug where we didn't make sure that ice is present
+ * generate_ncvars.py: variables can now have different types
+	
 2004-09-01 Magnus Hagdorn
  * glide_mask.f90: added module describing model cell content, it's not hooked up yet
 

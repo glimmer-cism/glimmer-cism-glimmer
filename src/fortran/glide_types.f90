@@ -215,6 +215,9 @@ module glide_types
     !*FD the non-zero points are numbered in sequence from the bottom left to the 
     !*FD top right, going along the rows.
 
+    integer, dimension(:,:),pointer :: thkmask => null()
+    !*FD see glide_mask.f90 for possible values
+
     integer :: totpts = 0
     !*FD The total number of points with non-zero thickness
 
@@ -376,6 +379,7 @@ module glide_types
   type glide_thckwk
     real(dp),dimension(:,:),  pointer :: oldthck   => null()
     real(dp),dimension(:,:),  pointer :: basestate => null()
+    real(dp),dimension(:,:),pointer :: float => null()
     real(dp),dimension(:,:,:),pointer :: olds      => null()
     integer  :: nwhich  = 2
     real(sp) :: oldtime = 0.0
@@ -571,6 +575,7 @@ contains
     allocate(model%geometry%topg(ewn,nsn));           model%geometry%topg = 0.0d0
     allocate(model%geometry%relx(ewn,nsn));           model%geometry%relx = 0.0d0
     allocate(model%geometry%mask(ewn,nsn));           model%geometry%mask = 0
+    allocate(model%geometry%thkmask(ewn,nsn));        model%geometry%thkmask = 0
 
     allocate(model%thckwk%olds(ewn,nsn,model%thckwk%nwhich))
                                                       model%thckwk%olds = 0.0d0
@@ -621,6 +626,7 @@ contains
     deallocate(model%geometry%topg)
     deallocate(model%geometry%relx)
     deallocate(model%geometry%mask)
+    deallocate(model%geometry%thkmask)
 
     deallocate(model%thckwk%olds)
     deallocate(model%thckwk%oldthck)

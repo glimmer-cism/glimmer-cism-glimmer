@@ -148,7 +148,7 @@ contains
     implicit none
     integer, intent(in) :: mask
 
-    is_thin = iand(mask,glide_mask_thin_ice) .gt. 0
+    is_thin = (iand(mask,glide_mask_thin_ice) .gt. 0 .and. mask.gt.0)
   end function is_thin
 
   logical elemental function is_float(mask)
@@ -156,7 +156,7 @@ contains
     implicit none
     integer, intent(in) :: mask
 
-    is_float = iand(mask,glide_mask_shelf) .gt. 0
+    is_float = (iand(mask,glide_mask_shelf) .gt. 0 .and. mask.gt.0)
   end function is_float
 
   logical elemental function is_ground(mask)
@@ -164,7 +164,7 @@ contains
     implicit none
     integer, intent(in) :: mask
 
-    is_ground = iand(mask,glide_mask_interior) .gt. 0
+    is_ground = (iand(mask,glide_mask_interior) .gt. 0 .and. mask.gt.0)
   end function is_ground
 
   logical elemental function is_calving(mask)
@@ -172,6 +172,6 @@ contains
     implicit none
     integer, intent(in) :: mask
 
-    is_calving = iand(mask,glide_mask_shelf_front) .gt. 0
+    is_calving = (iand(mask,glide_mask_shelf_front) .gt. 0 .and. mask.gt.0)
   end function is_calving
 end module glide_mask

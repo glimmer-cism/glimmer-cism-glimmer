@@ -176,6 +176,13 @@ factor:        thk0
 standard_name: land_ice_thickness
 hot:           1
 
+[thkmask]
+dimensions:    time, y1, x1
+long_name:     mask
+units:         1
+data:          model%geometry%thkmask
+type:          int
+
 [usurf]
 dimensions:    time, y1, x1
 units:         meter

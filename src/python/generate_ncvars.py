@@ -22,7 +22,7 @@
 
 import ConfigParser, sys, time, string,re, os.path
 
-NOATTRIB = ['name','dimensions','data','factor','load','f90file','hot']
+NOATTRIB = ['name','dimensions','data','factor','load','f90file','hot','type']
 VAR1D = ['eus']
 hotvars = []
 
@@ -68,6 +68,8 @@ class Variables(dict):
                 if vardef['hot'].lower() in ['1','true','t']:
                     hotvars.append(v)
                     vardef['load'] = '1'
+            if 'type' not in vardef:
+                vardef['type'] = 'float'
             self.__setitem__(v,vardef)
             self.__add_spot(vardef)
 
@@ -435,11 +437,12 @@ class PrintNCDF_FILE(PrintNCDF_BASEIO):
                 self.stream.write("    if (NCO%do_spot) then\n")
             id = 'NCO%%%svar'%var['name']
         self.stream.write("%s    call write_log('Creating variable %s')\n"%(spaces*' ',var['name']))
-        self.stream.write("%s    status = nf90_def_var(NCO%%id,'%s',NF90_FLOAT,(/%s/),%s)\n"%(spaces*' ',
-                                                                                             var['name'],
-                                                                                             dimstring,
-                                                                                             id
-                                                                                             ))
+        self.stream.write("%s    status = nf90_def_var(NCO%%id,'%s',NF90_%s,(/%s/),%s)\n"%(spaces*' ',
+                                                                                           var['name'],
+                                                                                           var['type'].upper(),
+                                                                                           dimstring,
+                                                                                           id
+                                                                                           ))
         self.stream.write("%s    call nc_errorhandle(__FILE__,__LINE__,status)\n"%(spaces*' '))
         for attrib in var:
             if attrib not in NOATTRIB:

@@ -60,6 +60,7 @@ contains
     use glide_temp
     use glimmer_log
     use glimmer_config
+    use glide_mask
     use glimmer_scales
     implicit none
     type(glide_global_type) :: model        !*FD model instance
@@ -110,6 +111,8 @@ contains
        ! initialise Glen's flow parameter A using an isothermal temperature distribution
        call timeevoltemp(model,0)
     end if
+    ! calculate mask
+    call glide_set_mask(model)
     ! and calculate lower and upper ice surface
     call glide_calclsrf(model%geometry%thck, model%geometry%topg, model%geometry%lsrf)
     model%geometry%usrf = model%geometry%thck + model%geometry%lsrf
@@ -124,7 +127,8 @@ contains
     use glide_velo
     use glide_setup
     use glide_temp
-    implicit none
+    use glide_mask
+   implicit none
     type(glide_global_type) :: model        !*FD model instance
     real(rk),  intent(in)   :: time         !*FD Current time in years
 
@@ -267,10 +271,14 @@ contains
     ! ------------------------------------------------------------------------ 
     ! Calculate the lower surface elevation
     ! ------------------------------------------------------------------------ 
-
     call glide_calclsrf(model%geometry%thck, &
          model%geometry%topg, &
          model%geometry%lsrf)
+
+    ! ------------------------------------------------------------------------
+    ! get new mask
+    ! ------------------------------------------------------------------------
+    ! call glide_set_mask(model)
 
   end subroutine glide_tstep
 
