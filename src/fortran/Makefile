@@ -19,14 +19,15 @@ OBJECTS = glimmer_degd.o glimmer_isot.o glimmer_setup.o \
           glimmer_temp.o glimmer_thck.o glimmer_velo.o glimmer.o glimmer_global.o \
           glimmer_interp.o glimmer_mbal.o glimmer_object.o glimmer_proj.o \
           glimmer_utils.o gmt.o glimmer_global_grid.o ncdf.o ncdf_file.o ncdf_params.o \
-          ncdf_infile.o glimmer_config.o glimmer_CFproj.o
+          ncdf_infile.o glimmer_config.o glimmer_CFproj.o glide_messages.o
 
 SOURCES = glimmer_degd.f90 glimmer_isot.f90 glimmer_setup.f90 \
           glimmer_modu.f90 glimmer_outp.f90 glimmer_paramets.f90 glimmer_physcon.f90 \
           glimmer_restart.f90 glimmer_temp.f90 glimmer_thck.f90 glimmer_velo.f90 \
           glimmer.f90 glimmer_global.f90 glimmer_interp.f90 glimmer_mbal.f90 \
           glimmer_object.f90 glimmer_proj.f90 glimmer_utils.f90 gmt.f90 \
-          glimmer_global_grid.f90 glimmer_config.f90 glimmer_CFproj.f90 $(AUTOGEN)
+          glimmer_global_grid.f90 glimmer_config.f90 glimmer_CFproj.f90 \
+          glide_messages.f90 $(AUTOGEN)
 
 INCLUDE_FILES=
 
@@ -49,16 +50,14 @@ libglimmer.a: $(OBJECTS) $(OTHER_FILES) $(INCLUDE_FILES)
 glimmer_example :  glimmer_example.o SLAP_library libglimmer.a
 	$(F77) $(GLIMMERFLAGS) -o $@ $< libglimmer.a SLAP_library/libslap.a $(LD_FLAGS)
 
-bin2ncdf: bin2ncdf.o glimmer_global.o  ncdf.o ncdf_file.o glimmer_modu.o glimmer_physcon.o glimmer_paramets.o  glimmer_CFproj.o
+bin2ncdf: bin2ncdf.o glimmer_global.o  ncdf.o ncdf_file.o glimmer_modu.o glimmer_physcon.o glimmer_paramets.o glimmer_CFproj.o glide_messages.o
 	$(F77) -o $@ $^ $(LD_FLAGS) 
 
-input2ncdf:	input2ncdf.o glimmer_global.o  ncdf.o ncdf_file.o glimmer_modu.o glimmer_paramets.o  glimmer_CFproj.o
+input2ncdf:	input2ncdf.o glimmer_global.o  ncdf.o ncdf_file.o glimmer_modu.o glimmer_paramets.o  glimmer_CFproj.o glide_messages.o
 	$(F77) -o $@ $^ $(LD_FLAGS)
 
-relaxed: relaxed.o glimmer_global.o ncdf.o ncdf_file.o ncdf_infile.o glimmer_modu.o glimmer_setup.o glimmer_physcon.o glimmer_paramets.o \
-         glimmer_proj.o gmt.o glimmer_interp.o glimmer_utils.o glimmer_config.o ncdf_params.o glimmer_outp.o glimmer_temp.o \
-         glimmer_mbal.o glimmer_thck.o glimmer_velo.o glimmer_CFproj.o libslap.a glimmer_degd.o glimmer_CFproj.o
-	$(F77) -o $@ $^ $(LD_FLAGS) libslap.a
+relaxed: relaxed.o  SLAP_library libglimmer.a
+	$(F77) -o $@ $< libglimmer.a SLAP_library/libslap.a $(LD_FLAGS) 
 
 test_config:	test_config.o glimmer_config.o
 	$(F77) -o $@ $^ $(LD_FLAGS)

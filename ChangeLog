@@ -1,3 +1,7 @@
+2004-06-30 Ian Rutt
+ * Fixed Linux build system after my changes yesterday (the problems of
+ doing development under Windows...)
+
 2004-06-29 Ian Rutt
  * Began standardisation of GLIMMER's use of standard output, using new module
  called glide_messages. NetCDF usage of this not completed yet.
