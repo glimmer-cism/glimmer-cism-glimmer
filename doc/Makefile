@@ -2,7 +2,7 @@ ifndef GLIMMER_PREFIX
 GLIMMER_PREFIX=..
 endif
 
-SUBDIRS = ug
+#SUBDIRS = ug
 
 all:	subdirs glimmer.pdf glimmer.ps
 
