@@ -1,4 +1,3 @@
-
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! +                                                           +
 ! +  glimmer_velo.f90 - part of the GLIMMER ice model         + 
@@ -41,13 +40,13 @@
 !
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-module glimmer_velo
+module glide_velo
 
   !*FD Contains routines which handle various aspects of velocity in the model,
   !*FD not only the bulk ice velocity, but also basal sliding, and vertical grid velocities,
   !*FD etc.
 
-  use glimmer_types
+  use glide_types
 
   private vertintg, patebudd, calcbtrc
 
@@ -68,10 +67,10 @@ contains
     ! Subroutine arguments
     !------------------------------------------------------------------------------------
 
-    type(glimmer_numerics), intent(in)    :: numerics !*FD Ice model numerics parameters
-    type(glimmer_velowk),   intent(inout) :: velowk   !*FD Velocity work arrays.
-    type(glimmer_paramets), intent(in)    :: params   !*FD Ice model parameters.
-    type(glimmer_geomderv), intent(in)    :: geomderv !*FD Horizontal and temporal derivatives of 
+    type(glide_numerics), intent(in)    :: numerics !*FD Ice model numerics parameters
+    type(glide_velowk),   intent(inout) :: velowk   !*FD Velocity work arrays.
+    type(glide_paramets), intent(in)    :: params   !*FD Ice model parameters.
+    type(glide_geomderv), intent(in)    :: geomderv !*FD Horizontal and temporal derivatives of 
                                                       !*FD ice model thickness and upper surface
                                                       !*FD elevation.
     integer, dimension(2),  intent(in)    :: flag     !*FD \texttt{flag(1)} sets the calculation
@@ -190,7 +189,7 @@ contains
     ! Subroutine arguments
     !------------------------------------------------------------------------------------
 
-    type(glimmer_velowk),     intent(inout) :: velowk
+    type(glide_velowk),     intent(inout) :: velowk
     real(dp),dimension(:),    intent(in)    :: sigma
     integer,                  intent(in)    :: flag
     real(dp),dimension(:,:),  intent(in)    :: stagthck
@@ -400,7 +399,7 @@ contains
                                                        !*FD is on the staggered grid
     real(dp),dimension(:,:,:),intent(in)  :: vvel      !*FD The $y$-velocity field (scaled). Velocity
                                                        !*FD is on the staggered grid
-    type(glimmer_geomderv),   intent(in)  :: geomderv  !*FD Derived type holding temporal
+    type(glide_geomderv),   intent(in)  :: geomderv  !*FD Derived type holding temporal
                                                        !*FD and horizontal derivatives of
                                                        !*FD ice-sheet thickness and upper
                                                        !*FD surface elevation
@@ -466,13 +465,13 @@ contains
                                                           !*FD staggered grid (scaled)
     real(dp),dimension(:,:),   intent(in)    :: thck      !*FD The ice thickness, divided
                                                           !*FD by \texttt{thk0}
-    type(glimmer_geomderv),    intent(in)    :: geomderv  !*FD Derived type holding the
+    type(glide_geomderv),    intent(in)    :: geomderv  !*FD Derived type holding the
                                                           !*FD horizontal and temporal derivatives
                                                           !*FD of the thickness and upper surface
                                                           !*FD elevation.
-    type(glimmer_numerics),    intent(in)    :: numerics  !*FD Derived type holding numerical
+    type(glide_numerics),    intent(in)    :: numerics  !*FD Derived type holding numerical
                                                           !*FD parameters, including sigma values.
-    type(glimmer_velowk),      intent(inout) :: velowk    !*FD Derived type holding working arrays
+    type(glide_velowk),      intent(inout) :: velowk    !*FD Derived type holding working arrays
                                                           !*FD used by the subroutine
     real(dp),dimension(:,:),   intent(in)    :: wgrd      !*FD The grid vertical velocity at
                                                           !*FD the lowest model level.
@@ -603,9 +602,9 @@ contains
     ! Subroutine arguments
     !------------------------------------------------------------------------------------
 
-    type(glimmer_numerics),     intent(in)    :: numerics  !*FD Derived type containing
+    type(glide_numerics),     intent(in)    :: numerics  !*FD Derived type containing
                                                            !*FD model numerics parameters
-    type(glimmer_velowk),       intent(inout) :: velowk    !*FD Derived type containing
+    type(glide_velowk),       intent(inout) :: velowk    !*FD Derived type containing
                                                            !*FD work arrays for this module
     real(dp),                   intent(in)    :: fiddle    !*FD Tuning parameter for the
                                                            !*FD Paterson-Budd relationship
@@ -705,8 +704,8 @@ contains
     ! Subroutine arguments
     !------------------------------------------------------------------------------------
 
-    type(glimmer_numerics),   intent(in)    :: numerics !*FD Numerical parameters of model
-    type(glimmer_geomderv),   intent(in)    :: geomderv !*FD Temporal and horizontal derivatives
+    type(glide_numerics),   intent(in)    :: numerics !*FD Numerical parameters of model
+    type(glide_geomderv),   intent(in)    :: geomderv !*FD Temporal and horizontal derivatives
                                                         !*FD of thickness and upper ice surface
                                                         !*FD elevation.
     real(dp),dimension(:,:),  intent(in)    :: uvel     !*FD $x$ velocity field at top model
@@ -778,7 +777,7 @@ contains
     ! Subroutine arguments
     !------------------------------------------------------------------------------------
 
-    type(glimmer_velowk), intent(inout) :: velowk !*FD Work arrays and things for this module
+    type(glide_velowk), intent(inout) :: velowk !*FD Work arrays and things for this module
     real(dp),dimension(:),intent(in)    :: sigma  !*FD The model's sigma values
     real(dp),dimension(:),intent(in)    :: in     !*FD Input array of vertical velocities (size = upn)
     real(dp) :: vertintg
@@ -897,8 +896,8 @@ contains
     ! Subroutine arguments
     !------------------------------------------------------------------------------------
 
-    type(glimmer_velowk),   intent(inout) :: velowk   !*FD Work arrays for this module.
-    type(glimmer_paramets), intent(in)    :: params   !*FD Model parameters.
+    type(glide_velowk),   intent(inout) :: velowk   !*FD Work arrays for this module.
+    type(glide_paramets), intent(in)    :: params   !*FD Model parameters.
     integer,                intent(in)    :: flag     !*FD Flag to select method of
                                                       !*FD calculation. $\mathtt{flag}=0$ means
                                                       !*FD use full calculation, otherwise set $B=0$.
@@ -967,4 +966,4 @@ contains
 
   end subroutine calcbtrc
 
-end module glimmer_velo
+end module glide_velo

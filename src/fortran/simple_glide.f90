@@ -43,16 +43,16 @@
 program simple_glide
   !*FD This is a simple GLIDE test driver. It can be used to run
   !*FD the EISMINT test cases
-
+  use glimmer_global, only:rk
   use glide
   use simple_forcing
-  use glimmer_ncfile
   implicit none
 
   type(glide_global_type) :: model        ! model instance
   type(simple_climate) :: climate         ! climate
   character(len=50) :: fname   ! name of paramter file
-  
+  real(kind=rk) time
+
   write(*,*) 'Enter name of GLIDE configuration file to be read'
   read(*,*) fname
   
@@ -62,10 +62,13 @@ program simple_glide
   call simple_massbalance(climate,model)
   call simple_surftemp(climate,model)
 
-  ! and write first time slice
-  call writeall(model)
-
-
+  time = 0.
+  do while(time.le.50000.)
+     call glide_tstep(model,time)
+     call simple_surftemp(climate,model)     
+     ! override masking stuff for now
+     time = time + model%numerics%tinc
+  end do
 
   ! finalise GLIDE
   call glide_finalise(model)

@@ -249,6 +249,8 @@ module glide_types
      !*FD Holds fields used to drive the model
      real(sp),dimension(:,:),pointer :: acab     => null() !*FD Annual mass balance.
      real(sp),dimension(:,:),pointer :: artm     => null() !*FD Annual mean air temperature
+     real(sp),dimension(:,:),pointer :: lati     => null() !*FD Latitudes of model grid points
+     real(sp),dimension(:,:),pointer :: loni     => null() !*FD Longitudes of model grid points
   end type glide_climate
 
   type glide_temper
@@ -468,6 +470,8 @@ contains
     !*FD \begin{itemize}
     !*FD \item \texttt{acab(ewn,nsn))}
     !*FD \item \texttt{artm(ewn,nsn))}
+    !*FD \item \texttt{lati(ewn,nsn))}
+    !*FD \item \texttt{loni(ewn,nsn))}
     !*FD \end{itemize}
 
     !*FD In \texttt{model\%geomderv}:
@@ -538,6 +542,8 @@ contains
 
     allocate(model%climate%acab(ewn,nsn));            model%climate%acab = 0.0
     allocate(model%climate%artm(ewn,nsn));            model%climate%artm = 0.0
+    allocate(model%climate%lati(ewn,nsn));            model%climate%lati = 0.0
+    allocate(model%climate%loni(ewn,nsn));            model%climate%loni = 0.0
 
     allocate(model%geomderv%dthckdew(ewn,nsn));       model%geomderv%dthckdew = 0.0d0 
     allocate(model%geomderv%dusrfdew(ewn,nsn));       model%geomderv%dusrfdew = 0.0d0
@@ -584,6 +590,8 @@ contains
 
     deallocate(model%climate%acab)
     deallocate(model%climate%artm)
+    deallocate(model%climate%lati)
+    deallocate(model%climate%loni)
 
     deallocate(model%geomderv%dthckdew)
     deallocate(model%geomderv%dusrfdew)

@@ -54,10 +54,11 @@ contains
     use glimmer_ncparams
     use glimmer_ncfile
     use glimmer_ncinfile
+    use glide_temp
     implicit none
     type(glide_global_type) :: model        !*FD model instance
     character(len=*), intent(in) :: fname   !*FD name of paramter file
-
+   
     ! read configuration file
     call glide_readconfig(model,fname)
     call glide_printconfig(6,model)
@@ -78,8 +79,175 @@ contains
 
     ! open all output files
     call openall_out(model)
+
+    ! initialise Glen's flow parameter A using an isothermal temperature distribution
+    call timeevoltemp(model,0)
+    ! and calculate lower and upper ice surface
+    call glide_calclsrf(model%geometry%thck, model%geometry%topg, model%geometry%lsrf)
+    model%geometry%usrf = model%geometry%thck + model%geometry%lsrf
   end subroutine glide_initialise
   
+  subroutine glide_tstep(model,time)
+    !*FD Performs time-step of an ice model instance.
+    use glimmer_global, only : rk
+    use glimmer_ncfile
+    use glide_isot
+    use glide_thck
+    use glide_velo
+    use glide_setup
+    use glide_temp
+    implicit none
+    type(glide_global_type) :: model        !*FD model instance
+    real(rk),  intent(in)   :: time         !*FD Current time in years
+
+    ! local variables
+    logical :: newtemps
+
+    ! Update internal clock
+    model%numerics%time=time  
+    ! and possibly write to file
+    call writeall(model)
+    newtemps = .false.
+    ! ------------------------------------------------------------------------ 
+    ! Calculate isostasy
+    ! ------------------------------------------------------------------------ 
+    call isosevol(model%numerics,   & 
+         model%paramets,            &
+         model%isotwk,              &                                      
+         model%options%  whichisot, &
+         model%geometry% thck,      &
+         model%geometry% topg,      &
+         model%geometry% relx)
+
+    ! ------------------------------------------------------------------------ 
+    ! Calculate various derivatives...
+    ! ------------------------------------------------------------------------     
+    call stagvarb(model%geometry% thck, &
+         model%geomderv% stagthck,&
+         model%general%  ewn, &
+         model%general%  nsn)
+
+    call geomders(model%numerics, &
+         model%geometry% usrf, &
+         model%geometry% thck, & ! model%geomderv% stagthck, &
+         model%geomderv% dusrfdew, &
+         model%geomderv% dusrfdns)
+
+    call geomders(model%numerics, &
+         model%geometry% thck, &
+         model%geometry% thck, & ! model%geomderv% stagthck, &
+         model%geomderv% dthckdew, &
+         model%geomderv% dthckdns)
+
+    ! ------------------------------------------------------------------------ 
+    ! Do velocity calculation if necessary
+    ! ------------------------------------------------------------------------ 
+    if (model%numerics%tinc > mod(model%numerics%time,model%numerics%nvel) .or. &
+         model%numerics%time == model%numerics%tinc ) then
+
+       call slipvelo(model%numerics, &
+            model%velowk,   &
+            model%paramets, &
+            model%geomderv, &
+            (/model%options%whichslip,model%options%whichbtrc/), &
+            model%temper%   bwat,     &
+            model%velocity% btrc,     &
+            model%geometry% relx,     &
+            model%velocity% ubas,     &
+            model%velocity% vbas)
+
+       call zerovelo(model%velowk,             &
+            model%numerics%sigma,     &
+            0,                                 &
+            model%geomderv% stagthck, &
+            model%geomderv% dusrfdew, &
+            model%geomderv% dusrfdns, &
+            model%temper%   flwa,     &
+            model%velocity% ubas,     &
+            model%velocity% vbas,     &
+            model%velocity% uvel,     &
+            model%velocity% vvel,     &
+            model%velocity% uflx,     &
+            model%velocity% vflx,     &
+            model%velocity% diffu)
+    end if
+
+    call glide_maskthck(0, &                                    !magi a hack, someone explain what whichthck=5 does
+                  model%geometry% thck,      &
+                  model%climate%  acab,      &
+                  model%geometry% dom,       &
+                  model%geometry% mask,      &
+                  model%geometry% totpts,    &
+                  model%geometry% empty)
+
+    ! ------------------------------------------------------------------------ 
+    ! Calculate temperature evolution and Glenn's A, if necessary
+    ! ------------------------------------------------------------------------ 
+    if ( model%numerics%tinc >  mod(model%numerics%time,model%numerics%ntem) .and. time.gt.0) then
+       call timeevoltemp(model, model%options%whichtemp)
+       newtemps = .true.
+    end if
+
+    ! ------------------------------------------------------------------------ 
+    ! Calculate flow evolution by various different methods
+    ! ------------------------------------------------------------------------ 
+    select case(model%options%whichevol)
+    case(0) ! Use precalculated uflx, vflx -----------------------------------
+
+       call timeevolthck(model, &
+            0, &                                        !magi a hack, someone explain what whichthck=5 does
+            model%geometry% usrf,      &
+            model%geometry% thck,      &
+            model%geometry% lsrf,      &
+            model%climate%  acab,      &
+            model%geometry% mask,      &
+            model%velocity% uflx,      &
+            model%velocity% vflx,      &
+            model%geomderv% dusrfdew,  &
+            model%geomderv% dusrfdns,  &
+            model%geometry% totpts,    &
+            6)
+
+    case(1) ! Use explicit leap frog method with uflx,vflx -------------------
+
+       call stagleapthck(model, &
+            model%velocity% uflx, &
+            model%velocity% vflx, &
+            model%geometry% thck, &
+            model%geometry% usrf, &
+            model%geometry% lsrf, &
+            model%climate%  acab)
+
+    case(2) ! Use non-linear calculation that incorporates velocity calc -----
+
+       call nonlevolthck(model, 0, newtemps, 6) !magi a hack, someone explain what whichthck=5 does
+
+    end select
+
+    ! ------------------------------------------------------------------------ 
+    ! Remove ice which is either floating, or is present below prescribed
+    ! depth, depending on value of whichmarn
+    ! ------------------------------------------------------------------------ 
+
+    call glide_marinlim(model%options%  whichmarn, &
+         0, &                                        !magi a hack, someone explain what whichthck=6 does
+         model%geometry% thck,      &
+         model%geometry% usrf,      &
+         model%geometry% relx,      &
+         model%geometry% topg,      &
+         model%climate%  lati,      &
+         model%numerics%mlimit)
+
+    ! ------------------------------------------------------------------------ 
+    ! Calculate the lower surface elevation
+    ! ------------------------------------------------------------------------ 
+
+    call glide_calclsrf(model%geometry%thck, &
+         model%geometry%topg, &
+         model%geometry%lsrf)
+
+  end subroutine glide_tstep
+
   subroutine glide_finalise(model)
     !*FD finalise GLIDE model instance
     use glimmer_ncfile

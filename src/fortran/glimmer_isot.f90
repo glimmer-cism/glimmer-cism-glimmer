@@ -1,4 +1,3 @@
-
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! +                                                           +
 ! +  glimmer_isot.f90 - part of the GLIMMER ice model         + 
@@ -41,13 +40,13 @@
 !
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-module glimmer_isot
+module glide_isot
 
   !*FD This module contains subroutines to calculate the isostatic
   !*FD depression/rebound due to the weight of ice and/or water on the
   !*FD Earth's crust.
 
-  use glimmer_types
+  use glide_types
 
   private flextopg
 
@@ -71,9 +70,9 @@ contains
     ! Subroutine arguments
     !------------------------------------------------------------------------------------
  
-    type(glimmer_numerics),   intent(in)    :: numerics !*FD Numerical parameters
-    type(glimmer_paramets),   intent(in)    :: paramets !*FD Other model parameters
-    type(glimmer_isotwk),     intent(inout) :: isotwk   !*FD Isostasy fields and parameters
+    type(glide_numerics),   intent(in)    :: numerics !*FD Numerical parameters
+    type(glide_paramets),   intent(in)    :: paramets !*FD Other model parameters
+    type(glide_isotwk),     intent(inout) :: isotwk   !*FD Isostasy fields and parameters
     real(dp), dimension(:,:), intent(inout) :: thck     !*FD Ice thickness field (scaled by $1/\mathtt{thck0}$).
     real(dp), dimension(:,:), intent(inout) :: evol     !*FD The current elevation of the 
                                                         !*FD topography/bathymetry (scaled by $1/\mathtt{thck0}$).
@@ -143,8 +142,8 @@ contains
     ! Subroutine arguments
     !-----------------------------------------------------------
 
-    type(glimmer_isotwk),     intent(inout) :: isotwk    !*FD Isostasy work arrays
-    type(glimmer_numerics),   intent(in)    :: numerics  !*FD Model numerics parameters
+    type(glide_isotwk),     intent(inout) :: isotwk    !*FD Isostasy work arrays
+    type(glide_numerics),   intent(in)    :: numerics  !*FD Model numerics parameters
     real(dp), dimension(:,:), intent(out)   :: flex      !*FD The load due to ice and
                                                          !*FD water (?)
     real(dp), dimension(:,:), intent(in)    :: thck      !*FD Current ice thickness (scaled)
@@ -282,4 +281,4 @@ contains
          
   end subroutine flextopg
 
-end module glimmer_isot
+end module glide_isot

@@ -1,3 +1,17 @@
+2004-06-24 Magnus Hagdorn
+ * glimmer_CFproj.f90: renamed scale_factor_at_projection_origin to scale_at_orig in order to
+   avoid problems with the SUN compiler
+ * glimmer_isot.f90: renamed glimmer_ to glide_ 
+ * glimmer_temp.f90: renamed glimmer_ to glide_,  sorted indentation, removed surface temp calculations, 
+   moved flow law factor calculations around
+ * glimmer_thck.f90: renamed glimmer_ to glide_, removed mass balance calculation
+ * glimmer_velo.f90: renamed glimmer_ to glide_
+ * ncdf_vars.def: re-enabled lat/lon
+ * simple_glide.f90: add time loop
+ * glide_types.f90: add lat/lon
+ * glide_setup.f90: add masking function from glimmer_setup, fix option checking bug
+ * glide.f90: add time step
+
 2004-06-23 Magnus Hagdorn
  * make mapping variable optional (glimmer_CFproj.f90, generate_ncvars.py, ncdf_file.f90.in, ncdf_file.f90.in)
  * rename glimmer -> glide (ncdf_file.f90.in, ncdf_infile.f90.in, ncdf_params.f90.in)

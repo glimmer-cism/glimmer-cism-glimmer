@@ -46,7 +46,8 @@ module glide_setup
   !*FD from the top-level glimmer subroutines.
 
   private
-  public :: glide_readconfig, glide_printconfig, glide_scale_params, glide_calclsrf, glide_marinlim, glide_load_sigma
+  public :: glide_readconfig, glide_printconfig, glide_scale_params, &
+       glide_calclsrf, glide_marinlim, glide_load_sigma, glide_maskthck
 
 contains
 
@@ -129,6 +130,123 @@ contains
   end subroutine glide_scale_params
 
 !-------------------------------------------------------------------------
+
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  subroutine glide_maskthck(whichthck,crita,critb,dom,pointno,totpts,empty)
+    
+    !*FD Calculates the contents of the mask array.
+
+    use glimmer_global, only : dp, sp 
+
+    implicit none
+
+    !-------------------------------------------------------------------------
+    ! Subroutine arguments
+    !-------------------------------------------------------------------------
+
+    integer,                intent(in)  :: whichthck  !*FD Option determining
+                                                      !*FD which method to use.
+    real(dp),dimension(:,:),intent(in)  :: crita      !*FD Ice thickness
+    real(sp),dimension(:,:),intent(in)  :: critb      !*FD Mass balance
+    integer, dimension(:),  intent(out) :: dom        
+    integer, dimension(:,:),intent(out) :: pointno    !*FD Output mask
+    integer,                intent(out) :: totpts     !*FD Total number of points
+    logical,                intent(out) :: empty      !*FD Set if no mask points set.
+
+    !-------------------------------------------------------------------------
+    ! Internal variables
+    !-------------------------------------------------------------------------
+
+    integer,dimension(size(crita,2),2) :: band
+    logical,dimension(size(crita,2))   :: full
+    integer :: covtot 
+    integer :: ew,ns,ewn,nsn
+
+    !-------------------------------------------------------------------------
+
+    ewn=size(crita,1) ; nsn=size(crita,2)
+
+    pointno = 0
+    covtot  = 0 
+
+    !-------------------------------------------------------------------------
+
+    do ns = 1,nsn
+
+      full(ns) = .false.
+
+      do ew = 1,ewn
+        if ( thckcrit(crita(max(1,ew-1):min(ewn,ew+1),max(1,ns-1):min(nsn,ns+1)),critb(ew,ns)) ) then
+
+          covtot = covtot + 1
+          pointno(ew,ns) = covtot 
+
+          if ( .not. full(ns) ) then
+            band(ns,1) = ew
+            full(ns)   = .true.
+          else
+            band(ns,2) = ew
+          end if
+               
+        end if
+      end do
+    end do
+  
+    totpts = covtot
+                                             
+    dom(1:2) = (/ewn,1/); empty = .true.
+
+    do ns = 1,nsn
+           
+      if (full(ns)) then
+
+        if (empty) then
+          empty  = .false.
+          dom(3) = ns
+        end if
+        dom(4) = ns
+        dom(1) = min0(dom(1),band(ns,1))
+        dom(2) = max0(dom(2),band(ns,2))
+      end if
+    end do
+
+  contains
+
+    logical function thckcrit(ca,cb)
+
+      implicit none
+
+      real(dp),dimension(:,:),intent(in) :: ca 
+      real(sp),               intent(in) :: cb
+
+      select case (whichthck)
+      case(5)
+
+        ! whichthck=5 is not a 'known case'
+
+        if ( ca(2,2) > 0.0d0 .or. cb > 0.0) then
+          thckcrit = .true.
+        else
+          thckcrit = .false.
+        end if
+
+      case default
+
+        ! If the thickness in the region under consideration
+        ! or the mass balance is positive, thckcrit is .true.
+
+        if ( any((ca(:,:) > 0.0d0)) .or. cb > 0.0 ) then
+          thckcrit = .true.
+        else
+          thckcrit = .false.
+        end if
+
+      end select
+
+    end function thckcrit
+
+  end subroutine glide_maskthck
 
   subroutine glide_calclsrf(thck,topg,lsrf)
 
@@ -399,52 +517,52 @@ contains
     write(unit,*) 'GLIDE options'
     write(unit,*) '-------------'
     write(*,*) 'I/O parameter file      : ',trim(model%funits%ncfile)
-    if (model%options%whichtemp.lt.0 .or. model%options%whichtemp.gt.size(temperature)) then
+    if (model%options%whichtemp.lt.0 .or. model%options%whichtemp.ge.size(temperature)) then
        write(*,*) 'Error, temperature out of range'
        stop
     end if
     write(unit,*) 'temperature calculation : ',model%options%whichtemp,temperature(model%options%whichtemp)
-    if (model%options%whichflwa.lt.0 .or. model%options%whichflwa.gt.size(flow_law)) then
+    if (model%options%whichflwa.lt.0 .or. model%options%whichflwa.ge.size(flow_law)) then
        write(*,*) 'Error, flow_law out of range'
        stop
     end if
     write(unit,*) 'flow law                : ',model%options%whichflwa,flow_law(model%options%whichflwa)
-    if (model%options%whichisot.lt.0 .or. model%options%whichisot.gt.size(isostasy)) then
+    if (model%options%whichisot.lt.0 .or. model%options%whichisot.ge.size(isostasy)) then
        write(*,*) 'Error, isostasy out of range'
        stop
     end if
     write(unit,*) 'isostasy                : ',model%options%whichisot,isostasy(model%options%whichisot)
-    if (model%options%whichslip.lt.0 .or. model%options%whichslip.gt.size(sliding)) then
+    if (model%options%whichslip.lt.0 .or. model%options%whichslip.ge.size(sliding)) then
        write(*,*) 'Error, sliding_law out of range'
        stop
     end if
     write(unit,*) 'sliding_law             : ',model%options%whichslip, sliding(model%options%whichslip)
-    if (model%options%whichbwat.lt.0 .or. model%options%whichbwat.gt.size(basal_water)) then
+    if (model%options%whichbwat.lt.0 .or. model%options%whichbwat.ge.size(basal_water)) then
        write(*,*) 'Error, basal_water out of range'
        stop
     end if
     write(unit,*) 'basal_water             : ',model%options%whichbwat,basal_water(model%options%whichbwat)
-    if (model%options%whichmarn.lt.0 .or. model%options%whichmarn.gt.size(marine_margin)) then
+    if (model%options%whichmarn.lt.0 .or. model%options%whichmarn.ge.size(marine_margin)) then
        write(*,*) 'Error, marine_margin out of range'
        stop
     end if
     write(unit,*) 'marine_margin           : ', model%options%whichmarn, marine_margin(model%options%whichmarn)
-    if (model%options%whichbtrc.lt.0 .or. model%options%whichbtrc.gt.size(slip_coeff)) then
+    if (model%options%whichbtrc.lt.0 .or. model%options%whichbtrc.ge.size(slip_coeff)) then
        write(*,*) 'Error, slip_coeff out of range'
        stop
     end if
     write(unit,*) 'slip_coeff              : ', model%options%whichbtrc, slip_coeff(model%options%whichbtrc)
-    if (model%options%whichstrs.lt.0 .or. model%options%whichstrs.gt.size(stress)) then
+    if (model%options%whichstrs.lt.0 .or. model%options%whichstrs.ge.size(stress)) then
        write(*,*) 'Error, stress_calc out of range'
        stop
     end if
     write(unit,*) 'stress_calc             : ', model%options%whichstrs, stress(model%options%whichstrs)
-    if (model%options%whichevol.lt.0 .or. model%options%whichevol.gt.size(evolution)) then
+    if (model%options%whichevol.lt.0 .or. model%options%whichevol.ge.size(evolution)) then
        write(*,*) 'Error, evolution out of range'
        stop
     end if
     write(unit,*) 'evolution               : ', model%options%whichevol, evolution(model%options%whichevol)
-    if (model%options%whichwvel.lt.0 .or. model%options%whichwvel.gt.size(vertical_integration)) then
+    if (model%options%whichwvel.lt.0 .or. model%options%whichwvel.ge.size(vertical_integration)) then
        write(*,*) 'Error, vertical_integration out of range'
        stop
     end if

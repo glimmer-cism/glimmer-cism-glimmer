@@ -55,21 +55,21 @@ dimensions:    level
 units:         1
 long_name:     sigma layers
 
-#[lat]
-#dimensions:    time, y1, x1
-#units:         degreeN
-#long_name:     Latitude
-#data:          model%climate%lati
-#load:          1
-#standard_name: latitude
+[lat]
+dimensions:    time, y1, x1
+units:         degreeN
+long_name:     Latitude
+data:          model%climate%lati
+load:          1
+standard_name: latitude
 
-#[lon]
-#dimensions:    time, y1, x1
-#units:         degreeE
-#long_name:     Longitude
-#data:          model%climate%loni
-#load:          1
-#standard_name: longitude
+[lon]
+dimensions:    time, y1, x1
+units:         degreeE
+long_name:     Longitude
+data:          model%climate%loni
+load:          1
+standard_name: longitude
 
 #[mask]
 #dimensions:    time, y1, x1

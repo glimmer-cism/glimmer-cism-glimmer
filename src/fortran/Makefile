@@ -46,14 +46,14 @@ libglimmer.a: $(OBJECTS) $(INCLUDE_FILES)
 	ar rcv $@ $(OBJECTS)
 	if [ "$(RANLIB)" != "" ] ; then $(RANLIB) $@ ; fi
 
-libglide.a:	glide.o glide_setup.o glide_types.o glimmer_config.o \
-	glimmer_paramets.o glimmer_CFproj.o\
+libglide.a:	glide.o glide_setup.o glide_types.o glimmer_temp.o glimmer_isot.o glimmer_thck.o glimmer_velo.o\
+	glimmer_paramets.o glimmer_CFproj.o glimmer_config.o glimmer_global.o glimmer_physcon.o glimmer_utils.o \
 	ncdf.o ncdf_params.o ncdf_file.o ncdf_infile.o 
 		ar rcv $@ $^
 		if [ "$(RANLIB)" != "" ] ; then $(RANLIB) $@ ; fi
 
-simple_glide:	simple_forcing.o simple_glide.o libglide.a 
-		$(F77) -o $@ $^ $(LD_FLAGS)
+simple_glide:	simple_forcing.o simple_glide.o libglide.a SLAP_library
+		$(F77) -o $@ simple_forcing.o simple_glide.o libglide.a SLAP_library/libslap.a $(LD_FLAGS)
 
 glimmer_example :  glimmer_example.o SLAP_library libglimmer.a
 	$(F77) $(GLIMMERFLAGS) -o $@ $< libglimmer.a SLAP_library/libslap.a $(LD_FLAGS)

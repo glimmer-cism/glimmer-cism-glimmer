@@ -1,4 +1,3 @@
-
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! +                                                           +
 ! +  glimmer_thck.f90 - part of the GLIMMER ice model         + 
@@ -41,9 +40,9 @@
 !
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-module glimmer_thck
+module glide_thck
 
-  use glimmer_types
+  use glide_types
 
 contains
 
@@ -54,7 +53,7 @@ contains
 
     implicit none
 
-    type(glimmer_global_type) :: model
+    type(glide_global_type) :: model
     real(dp), intent(in), dimension(:,:) :: uflx, vflx, dusrfdew, dusrfdns
     real(sp), intent(in), dimension(:,:) :: acab 
     integer, intent(in), dimension(:,:) :: mask
@@ -213,7 +212,7 @@ contains
 
     implicit none
 
-    type(glimmer_global_type) :: model
+    type(glide_global_type) :: model
     logical, intent(in) :: first
     integer, intent(out) :: iter
     real(dp), intent(out) :: err
@@ -282,7 +281,7 @@ contains
 
     implicit none
 
-    type(glimmer_pcgdwk) :: pcgdwk
+    type(glide_pcgdwk) :: pcgdwk
     integer, intent(in) :: row, col
     real(dp), intent(in) :: value
 
@@ -303,7 +302,7 @@ contains
 
     implicit none 
 
-    type(glimmer_numerics) :: numerics
+    type(glide_numerics) :: numerics
     real(dp), intent(out), dimension(:,:) :: opvrew, opvrns
     real(dp), intent(in), dimension(:,:) :: ipvr, stagthck
 
@@ -334,7 +333,7 @@ contains
 
     implicit none 
 
-    type(glimmer_global_type) :: model
+    type(glide_global_type) :: model
     real(dp), intent(out), dimension(:,:) :: opvrew, opvrns
     real(dp), intent(in), dimension(:,:) :: ipvr, stagthck
 
@@ -501,7 +500,7 @@ contains
 
     implicit none 
 
-    type(glimmer_thckwk) :: thckwk
+    type(glide_thckwk) :: thckwk
     real(dp), intent(out), dimension(:,:) :: opvr 
     real(dp), intent(in), dimension(:,:) :: ipvr
     real(sp), intent(in) :: time 
@@ -521,84 +520,6 @@ contains
     end if
 
   end subroutine timeders
-
-!---------------------------------------------------------------------------------
-
-  subroutine calcacab(numerics,params,pddcalc,which,usrf,artm,arng,prcp,ablt,lati,acab)
-
-    use glimmer_global, only : dp, sp 
-    use paramets, only : len0
-
-    use glimmer_degd
-    use glimmer_types
-
-    implicit none
-
-    !-----------------------------------------------------------------------------
-    ! Subroutine arguments
-    !-----------------------------------------------------------------------------
-
-    type(glimmer_numerics), intent(in)    :: numerics
-    type(glimmer_paramets), intent(in)    :: params
-    type(glimmer_pddcalc),  intent(inout) :: pddcalc
-    integer,                intent(in)    :: which
-    real(dp),dimension(:,:),intent(in)    :: usrf
-    real(sp),dimension(:,:),intent(in)    :: artm
-    real(sp),dimension(:,:),intent(in)    :: arng
-    real(sp),dimension(:,:),intent(inout) :: prcp
-    real(sp),dimension(:,:),intent(out)   :: ablt
-    real(sp),dimension(:,:),intent(in)    :: lati
-    real(sp),dimension(:,:),intent(out)   :: acab
-
-    !-----------------------------------------------------------------------------
-    ! Internal variables
-    !-----------------------------------------------------------------------------
-
-    real(sp) :: grid
-    real(sp) :: dist, ewct, nsct
-    integer  :: ns,ew,ewn,nsn
-
-    !-----------------------------------------------------------------------------
-
-    ewn=size(prcp,1) ; nsn=size(prcp,2)
-
-    !-----------------------------------------------------------------------------
-
-    grid = numerics%dew * len0
-
-    select case(which)
-    case(0)
-
-      ewct = real(ewn+1) / 2.0
-      nsct = real(nsn+1) / 2.0
-
-      do ns = 1,nsn
-        do ew = 1,ewn
-          dist = grid * sqrt((real(ew) - ewct)**2 + (real(ns) - nsct)**2) 
-          acab(ew,ns) = amin1(params%nmsb(1), params%nmsb(2) * (params%nmsb(3) - dist))
-        end do
-      end do            
-
-    case(1)
-      call masbgrn(pddcalc,artm,arng,prcp,lati,ablt,acab) 
-    case(2) 
-      acab = prcp
-    end select
-
-    ! If the upper ice/land surface is at or below sea-level, set accumulation,
-    ! ablation and mass-balance to zero. This is to prevent accumulation of ice below
-    ! sea-level.
-
-	! ****** REMOVED THIS BECAUSE I'M NOT SURE IT'S THE RIGHT WAY TO TACKLE THE ISSUE ******
-    !where (usrf<=0.0)
-    !  ablt=0.0
-    !  acab=0.0
-    !  prcp=0.0
-    !end where
-
-  end subroutine calcacab
-
-!---------------------------------------------------------------------------------
 
   subroutine filterthck(thck,ewn,nsn)
 
@@ -648,12 +569,11 @@ contains
     use glimmer_global, only : dp
     use paramets, only : thk0, vel0
 
-    use glimmer_velo
-    use glimmer_types
+    use glide_velo
 
     implicit none
 
-    type(glimmer_global_type) :: model
+    type(glide_global_type) :: model
     integer, intent(in) :: thckflag
     logical, intent(in) :: newtemps
     integer,intent(in) :: logunit
@@ -937,7 +857,7 @@ contains
 
     implicit none
  
-    type(glimmer_global_type) :: model
+    type(glide_global_type) :: model
     real(dp), intent(in), dimension(:,:) :: uflx, vflx, lsrf 
     real(sp), intent(in), dimension(:,:) :: acab
     real(dp), intent(inout), dimension(:,:) :: thck
@@ -1016,5 +936,5 @@ contains
 
   end subroutine stagleapthck
 
-end module glimmer_thck
+end module glide_thck
 
