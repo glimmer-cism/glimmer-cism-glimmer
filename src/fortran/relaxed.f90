@@ -126,7 +126,7 @@ program relaxed
 
   ! Calculate thickness
 
-  where (model%climate%out_mask .eq. 0.0)
+  where (model%climate%out_mask .eq. 1.0)
      model%geometry%thck = max(0.,real(model%climate%presusrf - model%geometry%topg))
   elsewhere
      model%geometry%thck = 0.0
@@ -137,13 +137,13 @@ program relaxed
   if (flex) then
 
      ! calculate present-day load (ice plus ocean)
-     call flextopg(1,depr,model%geometry%thck,model%geometry%topg,rhoo,rhoi,rhom)
+     call flextopg(0,depr,model%geometry%thck,model%geometry%topg,rhoo,rhoi,rhom,model%numerics%dew,model%numerics%dns)
 
      ! rebound the bedrock
      model%geometry%relx = model%geometry%topg - depr
 
      ! calculate load from ocean
-     call flextopg(1,depr,model%geometry%thck,model%geometry%relx,rhoo,rhoi,rhom)
+     call flextopg(1,depr,model%geometry%thck,model%geometry%relx,rhoo,rhoi,rhom,model%numerics%dew,model%numerics%dns)
 
      ! depress bedrock using this load
      model%geometry%relx = model%geometry%relx + depr
@@ -161,6 +161,7 @@ program relaxed
      end where
 
   end if
+
 
   ! Copy some data to the output structure
 
@@ -211,7 +212,7 @@ program relaxed
 
 contains
 
-  subroutine flextopg(flag,flex,thck,topg,rhoi,rhoo,rhom)
+  subroutine flextopg(flag,flex,thck,topg,rhoo,rhoi,rhom,dew,dns)
 
     implicit none
 
@@ -221,14 +222,15 @@ contains
     real(dp), dimension(:,:), intent(out) :: flex
     real(dp), dimension(:,:), intent(in)  :: thck
     real(dp), dimension(:,:), intent(in)  :: topg
-    real(dp),                 intent(in)  :: rhoi
     real(dp),                 intent(in)  :: rhoo
+    real(dp),                 intent(in)  :: rhoi
     real(dp),                 intent(in)  :: rhom
+    real(dp),                 intent(in)  :: dew
+    real(dp),                 intent(in)  :: dns
 
     integer :: ew, ns,nsn,ewn
 
     real(dp), save :: thklim = 100.0d0   
-    real(dp), save :: dew = 20.0d3, dns = 20.0d3
 
     real(dp), parameter :: grav = 9.81 
     real(dp), parameter :: pi = 3.1416
@@ -323,58 +325,59 @@ contains
 
     ! ** now loop through all of the points on the model grid
 
-    do ns = 1,nsn; do ew = 1,ewn
+    do ns = 1,nsn
+       do ew = 1,ewn
 
-       ! ** for each point find the load it is imposing which
-       ! ** depends on whether there it is ice covered or ocean
-       ! ** covered
+          ! ** for each point find the load it is imposing which
+          ! ** depends on whether there it is ice covered or ocean
+          ! ** covered
 
-       ! flag == 0 
-       ! calculate present-day load from ice and ocean water
-       ! flag == 1
-       ! calculate past load from ocean alone
+          ! flag == 0 
+          ! calculate present-day load from ice and ocean water
+          ! flag == 1
+          ! calculate past load from ocean alone
 
-       if (flag == 0) then
+          if (flag == 0) then
 
-          load = rhoi * thck(ew,ns) 
+             load = rhoi * thck(ew,ns) 
 
-       else 
+          else 
 
-          if (thck(ew,ns) > 0.0d0 .and. topg(ew,ns) < 0.0d0) then
-             load = - rhoo * topg(ew,ns) 
-          else
-             load = 0.0d0
-	  end if
+             if (thck(ew,ns) > 0.0d0 .and. topg(ew,ns) < 0.0d0) then
+                load = - rhoo * topg(ew,ns) 
+             else
+                load = 0.0d0
+             end if
+             
+          end if
 
-       end if
+          ! ** now apply the calculated deflection field using the 
+          ! ** ice/ocean load at that point and the function of
+          ! ** how it will affect its neighbours
 
-       ! ** now apply the calculated deflection field using the 
-       ! ** ice/ocean load at that point and the function of
-       ! ** how it will affect its neighbours
+          ! ** the effect is linear so that we can sum the deflection
+          ! ** from all imposed loads
+          
+          ! ** only do this if there is a load to impose and 
+          ! ** be careful not to extend past grid domain
 
-       ! ** the effect is linear so that we can sum the deflection
-       ! ** from all imposed loads
+          do nsflx = max(1,ns-nflx+1), min(nsn,ns+nflx-1)
+             do ewflx = max(1,ew-nflx+1), min(ewn,ew+nflx-1)
 
-       ! ** only do this if there is a load to impose and 
-       ! ** be careful not to extend past grid domain
+                ! ** find the correct function value to use
+                ! ** the array dflct is one quadrant of the a square
+                ! ** centered at the point imposing the load
 
-       do nsflx = max(1,ns-nflx+1), min(nsn,ns+nflx-1)
-          do ewflx = max(1,ew-nflx+1), min(ewn,ew+nflx-1)
+                nspt = abs(ns - nsflx) + 1
+                ewpt = abs(ew - ewflx) + 1
 
-             ! ** find the correct function value to use
-             ! ** the array dflct is one quadrant of the a square
-             ! ** centered at the point imposing the load
+                flex(ewflx,nsflx) = load * dflct(ewpt,nspt) + flex(ewflx,nsflx)
 
-             nspt = abs(ns - nsflx) + 1; ewpt = abs(ew - ewflx) + 1
-
-             flex(ewflx,nsflx) = load * dflct(ewpt,nspt) + flex(ewflx,nsflx)
-
+             end do
           end do
-       end do
 
-    end do; end do
-
-    return
+        end do
+    end do
 
   end subroutine flextopg
 
