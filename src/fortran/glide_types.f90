@@ -552,8 +552,8 @@ contains
     allocate(model%velocity%vflx(ewn-1,nsn-1));       model%velocity%vflx = 0.0d0
     allocate(model%velocity%diffu(ewn,nsn));          model%velocity%diffu = 0.0d0
     allocate(model%velocity%btrc(ewn,nsn));           model%velocity%btrc = 0.0d0
-    allocate(model%velocity%ubas(ewn,nsn));           model%velocity%ubas = 0.0d0
-    allocate(model%velocity%vbas(ewn,nsn));           model%velocity%vbas = 0.0d0
+    allocate(model%velocity%ubas(ewn-1,nsn-1));       model%velocity%ubas = 0.0d0
+    allocate(model%velocity%vbas(ewn-1,nsn-1));       model%velocity%vbas = 0.0d0
 
     allocate(model%climate%acab(ewn,nsn));            model%climate%acab = 0.0
     allocate(model%climate%artm(ewn,nsn));            model%climate%artm = 0.0
@@ -586,7 +586,7 @@ contains
     
     ! allocate memory for sparse matrix
     allocate (model%pcgdwk%pcgrow(ewn*nsn*5))
-    allocate (model%pcgdwk%pcgcol(ewn*nsn*5))
+    allocate (model%pcgdwk%pcgcol(ewn*nsn*5+2))
     allocate (model%pcgdwk%pcgval(ewn*nsn*5))
     allocate (model%pcgdwk%rhsd(ewn*nsn))
     allocate (model%pcgdwk%answ(ewn*nsn))

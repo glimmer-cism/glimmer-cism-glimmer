@@ -1,3 +1,6 @@
+2005-02-22 Magnus Hagdorn
+ * glide_types.f90: fixed two bugs where arrays had the wrong size
+
 2005-02-21 Ian Rutt
  * Removed redundant argument from calcacab call in GLINT
  * Fixed lapse-rate adjustment problem in GLINT
