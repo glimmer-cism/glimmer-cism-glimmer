@@ -1,3 +1,8 @@
+2005-02-28 Magnus Hagdorn
+ * updated documentation
+ * glimmer_config.f90: fixed a bug, grr too many programming languages swimming in my head
+ * beautified INSTALL
+
 2005-02-29 Ian Rutt
  * Changed documentation to match renamed I/O sections
  * Added relevant output sections to gint_vars.def

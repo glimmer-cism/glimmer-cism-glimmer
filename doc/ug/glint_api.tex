@@ -1,4 +1,5 @@
 %
+\section{GLINT}
 This appendix details the subroutine calls provided by GLINT, and their
 arguments. Note that where a type is given as \texttt{real(rk)}, this
 indicates that the kind of the real type is specified by the value of
@@ -9,7 +10,7 @@ other documentation for details).
 % INITIALISE_GLINT                            %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-\section{Subroutine \texttt{initialise\_glint}}
+\subsection{Subroutine \texttt{initialise\_glint}}
 %
 \paragraph{Purpose} To initialise the ice model, and load in all relevant parameter files.
 %
@@ -81,8 +82,7 @@ other documentation for details).
 % GLINT                                       %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-\newpage
-\section{Subroutine \texttt{glint}}
+\subsection{Subroutine \texttt{glint}}
 %
 \paragraph{Purpose}
 %
@@ -210,8 +210,7 @@ extended at some point to include a model of ice albedo.
 % END_GLINT                                   %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-\newpage
-\section{Subroutine \texttt{end\_glint}}
+\subsection{Subroutine \texttt{end\_glint}}
 %
 \paragraph{Purpose} To perform general tidying-up operations, close files, etc.
 %
@@ -238,7 +237,7 @@ extended at some point to include a model of ice albedo.
     \hline}
       \tablelasttail{\hline}
         \begin{supertabular}{lllp{5.5cm}}
-	  \texttt{params} & \texttt{type(glint\_params)} & \texttt{intent(inout)} & Ice model paramters \\
+          \texttt{params} & \texttt{type(glint\_params)} & \texttt{intent(inout)} & Ice model paramters \\
 \end{supertabular}
 \end{center}
 %
@@ -246,7 +245,7 @@ extended at some point to include a model of ice albedo.
 % GLINT_COVERAGE_MAP                          %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-\section{Function \texttt{glint\_coverage\_map}}
+\subsection{Function \texttt{glint\_coverage\_map}}
 %
 \paragraph{Purpose} To obtain a map of fractional coverage of global
 grid-boxes by the ice model instances. The function returns a value
@@ -275,7 +274,7 @@ indicating success, or giving error information.
     \hline}
       \tablelasttail{\hline}
         \begin{supertabular}{lllp{5.5cm}}
-	\texttt{params} & \texttt{type(glint\_params)} & \texttt{intent(in)} & Ice model parameters \\
+        \texttt{params} & \texttt{type(glint\_params)} & \texttt{intent(in)} & Ice model parameters \\
 \texttt{coverage(:,:)} & \texttt{real(rk)} & \texttt{intent(out)} & Coverage
 map (all fields except orography) \\
 \texttt{cov\_orog(:,:)} & \texttt{real(rk)} & \texttt{intent(out)} & Coverage
@@ -303,7 +302,7 @@ first \\
 % GLINT_SET_OROG_RES                          %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-\section{Subroutine \texttt{glint\_set\_orog\_res}}
+\subsection{Subroutine \texttt{glint\_set\_orog\_res}}
 %
 \paragraph{Purpose}
 %
@@ -333,9 +332,9 @@ orography to spectral space before use.
     \hline}
       \tablelasttail{\hline}
           \begin{supertabular}{lllp{5.5cm}}
-	      \multicolumn{4}{|l|}{{\bf Mandatory}}\\
-	      \hline  
-	      \texttt{params} & \texttt{type(glint\_params)} &
+              \multicolumn{4}{|l|}{{\bf Mandatory}}\\
+              \hline  
+              \texttt{params} & \texttt{type(glint\_params)} &
      \texttt{intent(inout)} & Ice model parameters \\
      \texttt{lons(:)} & \texttt{real(rk)} & \texttt{intent(in)} & Longitudinal
      locations of grid-points.\\ 

@@ -1,5 +1,9 @@
 \section{GLIDE}
-GLIDE is the actual ice sheet model. GLIDE comprises three procedures which initialise the model, perform a single time step and finalise the model. GLIDE configuration and API are described in the following subsections.
+GLIDE is the actual ice sheet model. GLIDE comprises three procedures which initialise the model, perform a single time step and finalise the model. The GLIDE configuration file is described in Section \ref{ug.sec.config}. The GLIDE API is described in Appendix \ref{ug.sec.glide_api}. The simple example driver explains how to write a simple climate driver for GLIDE. Download the example from the GLIMMER website or from CVS:
+\begin{verbatim}
+cvs -d:pserver:anonymous@forge.nesc.ac.uk:/cvsroot/glimmer login
+cvs -z3 -d:pserver:anonymous@forge.nesc.ac.uk:/cvsroot/glimmer co glimmer-example
+\end{verbatim}
 
 \subsection{Configuration}\label{ug.sec.config}
 The format of the configuration files is similar to Windows \texttt{.ini} files and contains sections. Each section contains key, values pairs.
@@ -212,41 +216,3 @@ netCDF I/O can be configured in the main configuration file or in a separate fil
   \end{supertabular}
 \end{center}
 
-\subsection{GLIDE API}
-This Section describes a very basic application using GLIDE. See \texttt{simple\_glide.f90} for a very basic ice sheet driver using the API described below.
-\subsubsection{Reading Configuration}
-The main configuration file, described in \ref{ug.sec.config}, is stored in a derived type defined in \texttt{glimmer\_config.f90}:
-\begin{verbatim}
-type(ConfigSection), pointer :: config
-\end{verbatim}
-The configuration file is read using
-\begin{verbatim}
-call ConfigRead(fname,config)
-\end{verbatim}
-where \texttt{fname} is the name of the configuration file and \texttt{config} the previously defined pointer to the derived type holding the configuration.
-
-\subsubsection{Initialisation}
-All data related to the ice sheet model is stored in a derived type defined:
-\begin{verbatim}
-type(glide_global_type) :: model
-\end{verbatim}
-This means multiple ice sheet instances can be run by a single program. It is not clear if GLIDE is thread--safe, however, we plan to investigate this and see if multiple GLIDE instances can be run in parallel using OpenMP or MPI.
-
-Memory is allocated and data initialised by the initialisation procedure:
-\begin{verbatim}
-call glide_initialise(model,config)
-\end{verbatim}
-where \texttt{model} is the derived type holding the ice sheet model instance and \texttt{config} is a pointer to the configuration.
-
-\subsubsection{Time Step}
-The model is stepped forward in time with 
-\begin{verbatim}
-call glide_tstep(model,time)
-\end{verbatim}
-where \texttt{model} is the derived type holding the ice sheet model instance and \texttt{time} the current model time. It is up to the user to provide the surface mass balance and surface temperature by setting the variables \texttt{model\%climate\%acab(:,:)} (mass balance) and \texttt{model\%climate\%artm(:,:)}.
-
-\subsubsection{Finalisation}
-Once the model has finished running, data are deallocated and open files closed with a call to
-\begin{verbatim}
-call glide_finalise(model)
-\end{verbatim}

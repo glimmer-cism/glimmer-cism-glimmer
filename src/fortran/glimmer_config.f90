@@ -188,7 +188,7 @@ contains
 
     cf=>config
     do while(associated(cf))
-       if (.not.cf.used) then
+       if (.not.cf%used) then
           call write_log('Unused section: '//trim(cf%name),GM_WARNING)
        end if
        cf=>cf%next

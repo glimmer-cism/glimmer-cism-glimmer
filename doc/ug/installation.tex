@@ -5,41 +5,45 @@ GLIMMER is a relatively complex system of libraries and programs which build on 
 GLIMMER is distributed as source code, a sane built environment is therefore required to compile the system. On UNIX systems \href{http://www.gnu.org/software/make/}{GNU make} is suggested since the Makefiles may rely on some GNU make specific features. There are two ways of getting the source code:
 \begin{enumerate}
 \item download a released version from the GLIMMER website, or
-\item download the latest developer's version of GLIMMER and friends from \href{http://forge.nesc.ac.uk/}{NeSCForge} using \href{http://www.gnu.org/software/cvs/}{CVS}.
+\item download the latest developers' version of GLIMMER and friends from \href{http://forge.nesc.ac.uk/}{NeSCForge} using \href{http://www.gnu.org/software/cvs/}{CVS}.
 \end{enumerate}
-If you want to build GLIMMER from CVS then you need GNU autoconf and automake to generate the built system and \href{http://www.python.org}{python} which is used for analysing dependencies and f95 code generation. Furthermore, the Python scripts rely on language features which were only introduced with version 2.3.
+If you want to build GLIMMER from CVS then you need GNU autoconf and automake to generate the built system and \href{http://www.python.org}{python} which is used for analysing dependencies and f95 code generation. Furthermore, the Python scripts rely on language features which were only introduced with python version 2.3.
 
 GLIMMER is mostly written in FORTRAN95, a good f95 compiler is, therefore, required. GLIMMER is known to work with the NAGware f95, Intel ifort compilers. GLIMMER does not compile with the SUN WS 7.0 f95 compiler due to a compiler bug. The current SUN f95 compiler might work but has not been tested yet.
 
 In addition to f90 and python you will also need {\LaTeX} if you want to build the documentation.
 
-Furthermore, GLIMMER depends on these packages:
-\begin{itemize}
-\item \href{http://www.unidata.ucar.edu/packages/netcdf/index.html}{{\bf netCDF}}: You will most likely need to compile and install the netCDF library yourslef since the packages usually do not contain the f90 bindings which are used by GLIMMER.
-\item \href{http://www.remotesensing.org/proj}{{\bf PROJ.4}}: The cartographic projections library which is used to handle projections.
-\item \href{http://gmt.soest.hawaii.edu/}{{\bf GMT}}: The Generic Mapping Tools are used for visualisation.
-\end{itemize}
+Glimmer uses the \href{http://www.unidata.ucar.edu/packages/netcdf/index.html}{netCDF} library for data I/O. You will most likely need to compile and install the netCDF library yourslef since the binary packages usually do not contain the f90 bindings which are used by GLIMMER.
+
+
+\subsection{The GLIMMER Directory Structure}
+The following commands describe the setup if you use the \texttt{bash} shell. The setup works similarly for other shells. We suggest that you install glimmer and friends in its own prefix, e.g. \texttt{/home/user/glimmer}. Assign the shell variable \texttt{\$GLIMMER\_PREFIX} to this directory, i.e. \texttt{export GLIMMER\_PREFIX=/home/user/glimmer}. This directory will contain the following sub--directories:
+\begin{center}
+ \begin{tabular}{lp{9.5cm}}
+   \texttt{\$GLIMMER\_PREFIX/bin} & executables are installed in this directory. Set your path to include this directory, i.e. \texttt{export PATH=\$PATH:\$GLIMMER\_PREFIX/bin}.  \\
+   \texttt{\$GLIMMER\_PREFIX/include} & include and f95 module files will be installed in this directory. If you want to compile your own climate drivers set the compiler search path to include this directory. \\
+   \texttt{\$GLIMMER\_PREFIX/lib} & the libraries get installed here. Set your linker to look in this directory for the GLIMMER libraries if you want to compile your own climate drivers. \\
+   \texttt{\$GLIMMER\_PREFIX/share} & data files get installed here.\\
+   \texttt{\$GLIMMER\_PREFIX/src} & this is the only directory you need to create yourself. Unpack the GLIMMER sources here.
+ \end{tabular}
+\end{center}
+
+
 
 \subsection{Installing a Released Version of GLIMMER}\label{ug.sec.tarball}
-We recommend that GLIMMER and its components is installed in its own directory tree, e.g. \texttt{GLIMMER}, and sources in a subdirectory, e.g. \texttt{GLIMMER/src}. 
-
-Once you have downloaded the tar-balls from the GLIMMER website you need to unpack them using
-\begin{verbatim}
-tar -xvzf libfproj4-VERS.tar.gz
-\end{verbatim}
-and
+Download the GLIMMER tar--ball from the GLIMMER site and unpack it in the \texttt{\$GLIMMER\_PREFIX/src} directory using
 \begin{verbatim}
 tar -xvzf glimmer-VERS.tar.gz
 \end{verbatim}
 where \texttt{VERS} is the package version.
 
-The packages are then compiled using the usual GNU sequence of commands:
+The package is then compiled using the usual GNU sequence of commands:
 \begin{verbatim}
-./configure [options]
+./configure --prefix=$GLIMMER_PREFIX [other_options]
 make
 make install
 \end{verbatim}
-The options and relevant environment variables are described in Table \ref{ug.tab.env}.
+The options and relevant environment variables are described in Table \ref{ug.tab.env}. 
 \begin{table}[htbp]
   \centering
   \begin{tabular}{|l|p{10cm}|}
@@ -65,10 +69,9 @@ The options and relevant environment variables are described in Table \ref{ug.ta
 \end{table}
 
 \subsection{Installing from CVS}
-Revisions of GLIMMER are managed using CVS. You can download the latest development version of GLIMMER and proj4 using the following sequence of cvs commands:
+Revisions of GLIMMER are managed using CVS. You can download the latest development version of GLIMMER using the following sequence of cvs commands:
 \begin{verbatim}
 cvs -d:pserver:anonymous@forge.nesc.ac.uk:/cvsroot/glimmer login
-cvs -z3 -d:pserver:anonymous@forge.nesc.ac.uk:/cvsroot/glimmer co proj4
 cvs -z3 -d:pserver:anonymous@forge.nesc.ac.uk:/cvsroot/glimmer co glimmer
 \end{verbatim}
 
@@ -76,11 +79,11 @@ The cvs version does not include some automatically generated files. In order to
 \begin{verbatim}
 ./bootstrap
 \end{verbatim}
-in the \texttt{proj4} and \texttt{glimmer} source directories. The packages are then configured and built as described in Section \ref{ug.sec.tarball}.
+in the \texttt{\$GLIMMER\_PREFIX/src} directory. The package is then configured and built as described in Section \ref{ug.sec.tarball}.
 
 
 \subsection{Profiling}\label{ug.sec.profile}
-You can enable profiling by setting the environment variable \texttt{FFLAGS} to contain \texttt{-DPROFILING}. By default times are integrated over 100 time steps. You can cheange this behaviour by setting the variable \texttt{PROFILE\_PERIOD}. The timing data is written to the file \texttt{glide.profile} which contains 5 columns of data (see Table \ref{ug.tab.profile_format}).
+If you run the \texttt{configure} script with the option \texttt{--enable-profile} you enable profiling of the model. By default times are integrated over 100 time steps. You can cheange this behaviour by setting the variable \texttt{PROFILE\_PERIOD}. The timing data is written to the file \texttt{glide.profile} which contains 5 columns of data (see Table \ref{ug.tab.profile_format}).
 \begin{table}[htbp]
   \centering
   \begin{tabular}{|l|l|}
@@ -96,34 +99,3 @@ You can enable profiling by setting the environment variable \texttt{FFLAGS} to 
   \label{ug.tab.profile_format}
 \end{table}
 A python script using the PyGMT library to visualise the profile is provided.
-
-\subsection{GMT Visualisation Tools}
-The visualisation tools are based on GMT programs written in Python. In order to be able to use these it is necessary to have a few extra packages:
-\begin{itemize}
-\item \href{http://www.pfdubois.com/numpy/}{{\bf Numerical Python}}: Numerical Python extends python to be able to work on gridded data.
-\item \href{http://starship.python.net/~hinsen/ScientificPython/}{{\bf Scientific Python}}: Scientific Python provides access to netCDF files. Make sure you enable the netCDF specific modules.
-\end{itemize}
-
-The visualisation tools are based on \texttt{PyGMT} which you can get from NeSCForge
-{\small
-\begin{verbatim}
-cvs -d:pserver:anonymous@forge.nesc.ac.uk:/cvsroot/pygmt login
-cvs -z3 -d:pserver:anonymous@forge.nesc.ac.uk:/cvsroot/pygmt co PyGMT
-\end{verbatim}}
-\texttt{PyGMT} is installed using
-{\small
-\begin{verbatim}
-python setup.py install --home=$GLIMMER_PREFIX
-\end{verbatim}}
-
-The visualisation tools are part of the GLIMMER CVS repository. You can get them using
-{\small
-\begin{verbatim}
-cvs -d:pserver:anonymous@forge.nesc.ac.uk:/cvsroot/glimmer login
-cvs -z3 -d:pserver:anonymous@forge.nesc.ac.uk:/cvsroot/glimmer co PyCF
-\end{verbatim}}
-and install them
-{\small
-\begin{verbatim}
-python setup.py install --home=$GLIMMER_PREFIX
-\end{verbatim}}
