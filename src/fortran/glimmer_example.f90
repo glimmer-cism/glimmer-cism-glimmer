@@ -58,6 +58,8 @@ program glimmer_example
 
   character(fname_length) :: paramfile='example.glp'  ! The top-level configuration file
 
+  integer :: total_years ! Length of run in years
+
   ! Arrays which hold the global fields used as input to GLIMMER ------------------------
 
   real(rk),dimension(:,:),allocatable :: temp      ! Temperature     (degC)
@@ -239,9 +241,14 @@ program glimmer_example
     stop
   endif
 
+  ! Get run length -------------------------------------------------------------------------
+
+  Print*,'* Enter length of run in years:'
+  Read*,total_years
+
   ! Do timesteps ---------------------------------------------------------------------------
 
-  do time=0.0*24.0*360.0,50000.0*24.0*360.0,24.0*360.0   ! In this case, we do 50000 years
+  do time=0.0*24.0*360.0,total_years*24.0*360.0,24.0*360.0   ! In this case, we do 50000 years
     call glimmer(ice_sheet,time,temp,precip,zonwind,merwind,orog, &
                  orog_out=orog_out,   albedo=albedo,         output_flag=out, &
                  ice_frac=ice_frac,   water_out=fw,          water_in=fw_in, &
