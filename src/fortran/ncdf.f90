@@ -118,107 +118,93 @@ module glimmer_ncdf
   integer, parameter :: NC_B_WVEL = 61 ! vertical ice velocity
   integer, parameter :: NC_B_WVEL_SPOT = 62 ! vertical ice velocity
 
+  !=================================================================
+
   type glimmer_nc_stat
+
      !*FD Data structure holding netCDF file description
 
-     character(len=fname_length) :: filename = " "
-     !*FD name of netCDF file
-     logical, dimension(num_vars) :: do_var
-     !*FD array specifying which variables should be written to netCDF file
-     logical :: do_spot = .false.
-     !*FD write spot data
-     integer id
-     !*FD id of netCDF file
+     character(len=fname_length)  :: filename = " " !*FD name of netCDF file
+     logical, dimension(num_vars) :: do_var         !*FD array specifying which 
+                                                    !*FD variables should be written 
+                                                    !*FD to netCDF file
 
-     integer x0dim
-     !*FD id of x0 dimension
-     integer y0dim
-     !*FD id of y0 dimension
-     integer x1dim
-     !*FD id of x1 dimension
-     integer y1dim
-     !*FD id of y1 dimension
-     integer leveldim
-     !*FD id of sigma level dimension
-     integer timedim
-     !*FD id of time dimension
-     integer spotdim
-     !*FD id of spot index dimensions
-     integer x0var, x0_spotvar
-     !*FD id of x0 variable
-     integer y0var, y0_spotvar
-     !*FD id of y0 variable
-     integer x1var, x1_spotvar
-     !*FD id of x1 variable
-     integer y1var, y1_spotvar
-     !*FD id of y1 variable
-     integer levelvar
-     !*FD id of sigma level variable
-     integer timevar
-     !*FD id of time variable 
-     integer, dimension(num_vars) :: varids
-     !*FD array holding variable ids
+     logical :: do_spot = .false.     !*FD write spot data
+     integer :: id                    !*FD id of netCDF file
+     integer :: x0dim                 !*FD id of x0 dimension
+     integer :: y0dim                 !*FD id of y0 dimension
+     integer :: x1dim                 !*FD id of x1 dimension
+     integer :: y1dim                 !*FD id of y1 dimension
+     integer :: leveldim              !*FD id of sigma level dimension
+     integer :: timedim               !*FD id of time dimension
+     integer :: spotdim               !*FD id of spot index dimensions
+     integer :: x0var, x0_spotvar     !*FD id of x0 variable
+     integer :: y0var, y0_spotvar     !*FD id of y0 variable
+     integer :: x1var, x1_spotvar     !*FD id of x1 variable
+     integer :: y1var, y1_spotvar     !*FD id of y1 variable
+     integer :: levelvar              !*FD id of sigma level variable
+     integer :: timevar               !*FD id of time variable 
+
+     integer, dimension(num_vars) :: varids     !*FD array holding variable ids
+
   end type glimmer_nc_stat
 
+  !=================================================================
+
   type glimmer_nc_meta
+
      !*FD Data structure holding netCDF meta data, see CF user guide
      
-     character(len=meta_len) :: title = ''
-     !*FD title of netCDF file
-     character(len=meta_len) :: institution = ''
-     !*FD where the data was produced
-     character(len=meta_len) :: references = ''
-     !*FD list of references
-     character(len=meta_len) :: source = ''
-     !*FD this string will hold the GLIMMER version
-     character(len=meta_len) :: history = ''
-     !*FD netCDF file history string
-     character(len=meta_len) :: comment = ''
-     !*FD some comments
+     character(len=meta_len) :: title = ''        !*FD title of netCDF file
+     character(len=meta_len) :: institution = ''  !*FD where the data was produced
+     character(len=meta_len) :: references = ''   !*FD list of references
+     character(len=meta_len) :: source = ''       !*FD this string will hold the GLIMMER version
+     character(len=meta_len) :: history = ''      !*FD netCDF file history string
+     character(len=meta_len) :: comment = ''      !*FD some comments
+
   end type glimmer_nc_meta
 
+  !=================================================================
+
   type glimmer_nc_output
+
      !*FD element of linked list describing netCDF output file
 
-     type(glimmer_nc_stat) :: nc
-     !*FD structure containg file info
-     integer :: freq=1000
-     !*FD frequency at which data is written to file
-     integer :: next_write=0
-     !*FD next time step at which data is dumped
-     integer :: timecounter=1
-     !*FD time counter
-     integer, pointer, dimension(:) :: spotx=>NULL()
-     !*FD array containg spot x-index
-     integer, pointer, dimension(:) :: spoty=>NULL()
-     !*FD array containg spot y-index
-     
-     type(glimmer_nc_meta) :: metadata
-     !*FD structure holding metadata
+     type(glimmer_nc_stat) :: nc     !*FD structure containg file info
+     integer :: freq=1000            !*FD frequency at which data is written to file
+     integer :: next_write=0         !*FD next time step at which data is dumped
+     integer :: timecounter=1        !*FD time counter
 
-     type(glimmer_nc_output), pointer :: next=>NULL()
-     !*FD next element in list
-     type(glimmer_nc_output), pointer :: previous=>NULL()
-     !*FD previous element in list
+     integer, pointer, dimension(:) :: spotx=>NULL() !*FD array containg spot x-index
+     integer, pointer, dimension(:) :: spoty=>NULL() !*FD array containg spot y-index
+     
+     type(glimmer_nc_meta) :: metadata     !*FD structure holding metadata
+
+     type(glimmer_nc_output), pointer :: next=>NULL()     !*FD next element in list
+     type(glimmer_nc_output), pointer :: previous=>NULL() !*FD previous element in list
+
   end type glimmer_nc_output
 
+  !=================================================================
+
   type glimmer_nc_input
+
      !*FD element of linked list describing netCDF input file
 
-     type(glimmer_nc_stat) :: nc
-     !*FD structure containg file info
-     integer, pointer, dimension(:) :: times => NULL()     
-     !*FD pointer to array holding times
-     integer                        :: nt, current_time=1
-     !*FDnumber of elements in times and current time index
-     integer                        :: get_time_slice = 1     
-     !*FD -1 if all times should be loaded, > 0 to load particular slice and then close file
+     type(glimmer_nc_stat)          :: nc                 !*FD structure containg file info
+     integer, pointer, dimension(:) :: times => NULL()    !*FD pointer to array holding times
+     integer                        :: nt, current_time=1 !*FD number of elements in times and 
+                                                          !*FD current time index
+     integer                        :: get_time_slice = 1 !*FD -1 if all times should be loaded,
+                                                          !*FD > 0 to load particular slice and 
+                                                          !*FDthen close file
 
-     type(glimmer_nc_input), pointer :: next=>NULL()
-     !*FD next element in list
-     type(glimmer_nc_input), pointer :: previous=>NULL()
-     !*FD previous element in list
+     type(glimmer_nc_input), pointer :: next=>NULL()     !*FD next element in list
+     type(glimmer_nc_input), pointer :: previous=>NULL() !*FD previous element in list
+
   end type glimmer_nc_input
+
+  !=================================================================
 
   interface delete
      module procedure delete_output, delete_input
@@ -229,13 +215,18 @@ module glimmer_ncdf
   end interface
 
 contains
+
   function delete_output(oc, cf)
+
     !*FD remove element from linked list
-	use glide_messages
+	
+    use glide_messages
     implicit none
+
     type(glimmer_nc_output), pointer :: delete_output
     type(glimmer_nc_output), pointer :: oc
     logical, intent(in), optional :: cf
+
     ! local variables
     logical closefile
     integer status
@@ -263,7 +254,9 @@ contains
        deallocate(oc)
     end if
   end function delete_output
-  
+
+  !=================================================================
+
   function delete_input(ic,cf)
     !*FD remove element from linked list
 	use glide_messages
@@ -301,6 +294,8 @@ contains
     end if
   end function delete_input
 
+  !=================================================================
+
   function add_output(oc)
     !*FD add new element to linked list
     implicit none
@@ -319,6 +314,8 @@ contains
        oc%next => add_output
     end if
   end function add_output
+
+  !=================================================================
 
   function add_input(ic)
     !*FD add new element to linked list
@@ -339,13 +336,16 @@ contains
     end if
   end function add_input
 
+  !=================================================================
+
   subroutine check_vars(nc,unit)
+
     !*FD print netCDF variables handled by nc to unit
+
     implicit none
-    type(glimmer_nc_stat) :: nc
-    !*FD netCDF file descriptor
-    integer, intent(in) :: unit
-    !*FD file unit to be written to
+
+    type(glimmer_nc_stat) :: nc    !*FD netCDF file descriptor
+    integer, intent(in) :: unit    !*FD file unit to be written to
 
     if (nc%do_var(NC_B_ABLT)) then
        write(unit,*) 'ablt'
@@ -538,7 +538,10 @@ contains
 
 end module glimmer_ncdf
 
+!=================================================================
+
 module glimmer_scales
+
   !*FD this module holds scales for various fields
 
   use glimmer_global, only : dp
@@ -547,8 +550,11 @@ module glimmer_scales
   real(dp) :: scale3d_f1, scale3d_f2, scale3d_f3, scale3d_f4, scale3d_f5, scale3d_f6, scale3d_f7, scale3d_f8
 
 contains
+
   subroutine glimmer_init_scales
+
     !*FD calculate scale factors (can't have non-integer powers)
+
     use physcon, only : scyr, gn
     use paramets, only : thk0, tim0, vel0, vis0, len0, tau0
     implicit none
@@ -570,22 +576,25 @@ contains
     scale3d_f6 = scale3d_f4**(1.0/gn)
     scale3d_f7 = scyr * thk0/tim0
     scale3d_f8 = vis0*scyr
+
   end subroutine glimmer_init_scales
+
 end module glimmer_scales
 
 subroutine nc_errorhandle(file,line,status)
+
   !*FD handle netCDF error
+
   use netcdf
   implicit none
-  character(len=*), intent(in) :: file
-  !*FD name of f90 file error occured in
-  integer, intent(in) :: line
-  !*FD line number error occured at
-  integer, intent(in) :: status
-  !*FD netCDF return value
+
+  character(len=*), intent(in) :: file  !*FD name of f90 file error occured in
+  integer, intent(in) :: line           !*FD line number error occured at
+  integer, intent(in) :: status         !*FD netCDF return value
   
   if (status.ne.NF90_NOERR) then
      write(*,*) 'NETCDF Error (',file,line,'): ', nf90_strerror(status)
      stop
   end if
+
 end subroutine nc_errorhandle

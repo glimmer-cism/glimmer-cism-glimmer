@@ -46,8 +46,10 @@
 ! dependency on Python 2.3
 
 module glimmer_ncparams
+
   !*FD read netCDF I/O related configuration files
   !*FD written by Magnus Hagdorn, May 2004
+
   use glimmer_ncdf, only: glimmer_nc_meta
     
   private
@@ -56,11 +58,15 @@ module glimmer_ncparams
   type(glimmer_nc_meta),save :: default_metadata
 
 contains
+
   subroutine ReadNCParams(model)
+
     !*FD read netCDF I/O related configuration file
+
     use glimmer_types
     use glimmer_config
     implicit none
+
     type(glimmer_global_type) :: model
     
     ! local variables
@@ -105,10 +111,12 @@ contains
   !==================================================================================
 
   subroutine handle_metadata(section,metadata, default)
+
     use glimmer_ncdf
     use glimmer_config
     use glimmer_global, only: glimmer_version
     implicit none
+
     type(ConfigSection), pointer :: section
     type(glimmer_nc_meta) ::metadata
     logical :: default
@@ -138,13 +146,18 @@ contains
        metadata%source = trim(default_metadata%source)
        metadata%history = trim(default_metadata%history)
     end if
+
   end subroutine handle_metadata
 
+  !=================================================================
+
   function handle_output(section, output)
+
     use glimmer_ncdf
     use glimmer_config
     use glide_messages
     implicit none
+
     type(ConfigSection), pointer :: section
     type(glimmer_nc_output), pointer :: output
     type(glimmer_nc_output), pointer :: handle_output
@@ -436,12 +449,16 @@ contains
     end if
 
   end function handle_output
+
+  !=================================================================
   
   function handle_input(section, input)
+
     use glimmer_ncdf
     use glimmer_config
     use glide_messages
     implicit none
+
     type(ConfigSection), pointer :: section
     type(glimmer_nc_input), pointer :: input
     type(glimmer_nc_input), pointer :: handle_input
@@ -457,5 +474,7 @@ contains
     if (handle_input%nc%filename(1:1).eq.' ') then
        call glide_msg(GM_FATAL,__FILE__,__LINE__,'Error, no file name specified [netCDF input]')
     end if
+
   end function handle_input
+
 end module glimmer_ncparams

@@ -45,18 +45,21 @@
 ! NetCDF handling routines previously used, in order to remove the
 ! dependency on Python 2.3
 
-#define NC infile%nc
-
 module glimmer_ncinfile
+
   !*FD routines for GLIMMER netCDF file input
   !*FD written by Magnus Hagdorn, 2004
 
 contains
+
   subroutine openall_in(model)
+
     !*FD open all netCDF files for input
+
     use glimmer_types
     use glimmer_ncdf
     implicit none
+
     type(glimmer_global_type) :: model
     
     ! local variables
@@ -69,11 +72,16 @@ contains
     end do
   end subroutine openall_in
 
+  !=================================================================
+
   subroutine readall(model)
+
     !*FD read from netCDF file
+
     use glimmer_types
     use glimmer_ncdf
     implicit none
+
     type(glimmer_global_type) :: model
 
     ! local variables
@@ -88,11 +96,16 @@ contains
     end do
   end subroutine readall
 
+  !=================================================================
+
   subroutine closeall_in(model)
+
     !*FD close all netCDF files for input
+
     use glimmer_types
     use glimmer_ncdf
     implicit none
+
     type(glimmer_global_type) :: model
     
     ! local variables
@@ -105,129 +118,137 @@ contains
     model%funits%in_first=>NULL()
   end subroutine closeall_in
 
+  !=================================================================
+
   subroutine glimmer_nc_openfile(infile,model)
+
     !*FD open an existing netCDF file
+
     use glimmer_ncdf
     use glimmer_types
     use glimmer_cfproj
-	use glide_messages
+    use glide_messages
     implicit none
-    type(glimmer_nc_input), pointer :: infile
-    !*FD structure containg input netCDF descriptor
-    type(glimmer_global_type) :: model
-    !*FD the model instance
+
+    type(glimmer_nc_input), pointer :: infile    !*FD structure containg input netCDF descriptor
+    type(glimmer_global_type) :: model    !*FD the model instance
 
     ! local variables
     character(len=50) varname
     integer nvars
     integer i, dimsize
     integer status
-	character(80) :: errtxt    
+    character(80) :: errtxt    
     
     ! open netCDF file
-    status = nf90_open(NC%filename,NF90_NOWRITE,NC%id)
+    status = nf90_open(infile%nc%filename,NF90_NOWRITE,infile%nc%id)
     call nc_errorhandle(__FILE__,__LINE__,status)
-	call glide_stars
-    call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,'opening file '//trim(NC%filename)//' for input')
+	  call glide_stars
+    call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,'opening file '//trim(infile%nc%filename)//' for input')
 
     ! getting projections
-    model%projection = CFproj_GetProj(NC%id)
+    model%projection = CFproj_GetProj(infile%nc%id)
 
     ! reading dimensions
     ! getting ids
-    status = nf90_inq_dimid(NC%id, 'x0', NC%x0dim)
+    status = nf90_inq_dimid(infile%nc%id, 'x0', infile%nc%x0dim)
     call nc_errorhandle(__FILE__,__LINE__,status)
-    status = nf90_inq_dimid(NC%id, 'y0', NC%y0dim)
+    status = nf90_inq_dimid(infile%nc%id, 'y0', infile%nc%y0dim)
     call nc_errorhandle(__FILE__,__LINE__,status)
-    status = nf90_inq_dimid(NC%id, 'x1', NC%x1dim)
+    status = nf90_inq_dimid(infile%nc%id, 'x1', infile%nc%x1dim)
     call nc_errorhandle(__FILE__,__LINE__,status)
-    status = nf90_inq_dimid(NC%id, 'y1', NC%y1dim)
+    status = nf90_inq_dimid(infile%nc%id, 'y1', infile%nc%y1dim)
     call nc_errorhandle(__FILE__,__LINE__,status)
-    status = nf90_inq_dimid(NC%id, 'level', NC%leveldim)
+    status = nf90_inq_dimid(infile%nc%id, 'level', infile%nc%leveldim)
     call nc_errorhandle(__FILE__,__LINE__,status)
-    status = nf90_inq_dimid(NC%id, 'time', NC%timedim)
+    status = nf90_inq_dimid(infile%nc%id, 'time', infile%nc%timedim)
     call nc_errorhandle(__FILE__,__LINE__,status)
 
     ! getting lengths of x, y and level dimensions
     ! bail out if they do not match
-    status = nf90_inquire_dimension(NC%id,NC%x0dim,len=dimsize)
+    status = nf90_inquire_dimension(infile%nc%id,infile%nc%x0dim,len=dimsize)
     call nc_errorhandle(__FILE__,__LINE__,status)
     if (dimsize.ne.model%general%ewn-1) then
 	   write(errtxt,*)dimsize,model%general%ewn-1
-       call glide_msg(GM_FATAL,__FILE__,__LINE__,'reading file '//trim(NC%filename)//&
+       call glide_msg(GM_FATAL,__FILE__,__LINE__,'reading file '//trim(infile%nc%filename)//&
 	     ' size x0dim does not match: '//trim(errtxt))
     end if
-    status = nf90_inquire_dimension(NC%id,NC%y0dim,len=dimsize)
+    status = nf90_inquire_dimension(infile%nc%id,infile%nc%y0dim,len=dimsize)
     call nc_errorhandle(__FILE__,__LINE__,status)
     if (dimsize.ne.model%general%nsn-1) then
        write(errtxt,*)dimsize,model%general%nsn-1
-       call glide_msg(GM_FATAL,__FILE__,__LINE__,'reading file '//trim(NC%filename)//&
+       call glide_msg(GM_FATAL,__FILE__,__LINE__,'reading file '//trim(infile%nc%filename)//&
          ' size y0dim does not match: '//trim(errtxt))
     end if
-    status = nf90_inquire_dimension(NC%id,NC%x1dim,len=dimsize)
+    status = nf90_inquire_dimension(infile%nc%id,infile%nc%x1dim,len=dimsize)
     call nc_errorhandle(__FILE__,__LINE__,status)
     if (dimsize.ne.model%general%ewn) then
        write(errtxt,*)dimsize,model%general%ewn
-       call glide_msg(GM_FATAL,__FILE__,__LINE__,'reading file '//trim(NC%filename)//&
+       call glide_msg(GM_FATAL,__FILE__,__LINE__,'reading file '//trim(infile%nc%filename)//&
          ' size x1dim does not match: '//trim(errtxt))
     end if
-    status = nf90_inquire_dimension(NC%id,NC%y1dim,len=dimsize)
+    status = nf90_inquire_dimension(infile%nc%id,infile%nc%y1dim,len=dimsize)
     call nc_errorhandle(__FILE__,__LINE__,status)
     if (dimsize.ne.model%general%nsn) then
        write(errtxt,*)dimsize,model%general%nsn
-       call glide_msg(GM_FATAL,__FILE__,__LINE__,'reading file '//trim(NC%filename)//&
+       call glide_msg(GM_FATAL,__FILE__,__LINE__,'reading file '//trim(infile%nc%filename)//&
          ' size y1dim does not match: '//trim(errtxt))
     end if  
 
     ! getting variables
-    status = nf90_inquire(NC%id,nvariables=nvars)
+    status = nf90_inquire(infile%nc%id,nvariables=nvars)
     call nc_errorhandle(__FILE__,__LINE__,status)
 
     ! get id of time variable
-    status = nf90_inq_varid(NC%id,'time',NC%timevar)
+    status = nf90_inq_varid(infile%nc%id,'time',infile%nc%timevar)
     call nc_errorhandle(__FILE__,__LINE__,status)
 
     do i=1,nvars
-       status = nf90_inquire_variable(NC%id,i,name=varname)
+       status = nf90_inquire_variable(infile%nc%id,i,name=varname)
        call nc_errorhandle(__FILE__,__LINE__,status)
        select case(varname)
        case('lat')
-          NC%do_var(NC_B_LAT) = .true.
-          NC%varids(NC_B_LAT) = i
+          infile%nc%do_var(NC_B_LAT) = .true.
+          infile%nc%varids(NC_B_LAT) = i
        case('lon')
-          NC%do_var(NC_B_LON) = .true.
-          NC%varids(NC_B_LON) = i
+          infile%nc%do_var(NC_B_LON) = .true.
+          infile%nc%varids(NC_B_LON) = i
        case('mask')
-          NC%do_var(NC_B_MASK) = .true.
-          NC%varids(NC_B_MASK) = i
+          infile%nc%do_var(NC_B_MASK) = .true.
+          infile%nc%varids(NC_B_MASK) = i
        case('presprcp')
-          NC%do_var(NC_B_PRESPRCP) = .true.
-          NC%varids(NC_B_PRESPRCP) = i
+          infile%nc%do_var(NC_B_PRESPRCP) = .true.
+          infile%nc%varids(NC_B_PRESPRCP) = i
        case('presusrf')
-          NC%do_var(NC_B_PRESUSRF) = .true.
-          NC%varids(NC_B_PRESUSRF) = i
+          infile%nc%do_var(NC_B_PRESUSRF) = .true.
+          infile%nc%varids(NC_B_PRESUSRF) = i
        case('relx')
-          NC%do_var(NC_B_RELX) = .true.
-          NC%varids(NC_B_RELX) = i
+          infile%nc%do_var(NC_B_RELX) = .true.
+          infile%nc%varids(NC_B_RELX) = i
        case('topg')
-          NC%do_var(NC_B_TOPG) = .true.
-          NC%varids(NC_B_TOPG) = i
+          infile%nc%do_var(NC_B_TOPG) = .true.
+          infile%nc%varids(NC_B_TOPG) = i
        case('usurf')
-          NC%do_var(NC_B_USURF) = .true.
-          NC%varids(NC_B_USURF) = i
+          infile%nc%do_var(NC_B_USURF) = .true.
+          infile%nc%varids(NC_B_USURF) = i
        end select
     end do
 
     ! getting length of time dimension and allocating memory for array containing times
-    status = nf90_inquire_dimension(NC%id,NC%timedim,len=dimsize)
+    status = nf90_inquire_dimension(infile%nc%id,infile%nc%timedim,len=dimsize)
     call nc_errorhandle(__FILE__,__LINE__,status)
     allocate(infile%times(dimsize))
     infile%nt=dimsize
-    status = nf90_get_var(NC%id,NC%timevar,infile%times)
+    status = nf90_get_var(infile%nc%id,infile%nc%timevar,infile%times)
+
   end subroutine glimmer_nc_openfile
 
+  !=================================================================
+
   subroutine glimmer_nc_read(infile,model,scale_vars)
+
     !*FD read variables from a netCDF file
+
     use glimmer_ncdf
     use glimmer_types
     use glide_messages
@@ -236,12 +257,11 @@ contains
     use paramets, only : thk0, acc0
     use glimmer_scales
     implicit none
-    type(glimmer_nc_input), pointer :: infile
-    !*FD structure containg output netCDF descriptor
-    type(glimmer_global_type) :: model
-    !*FD the model instance
-    logical,optional :: scale_vars
-    !*FD Specifies whether fields should be scaled by factors when read in.
+
+    type(glimmer_nc_input), pointer :: infile    !*FD structure containg output netCDF descriptor
+    type(glimmer_global_type) :: model    !*FD the model instance
+    logical,optional :: scale_vars    !*FD Specifies whether fields should be 
+                                      !*FD scaled by factors when read in.
 
     ! local variables
     integer status
@@ -260,76 +280,77 @@ contains
     ewnv = model%general%ewn - 1
     nsnv = model%general%nsn - 1
 
-	call glide_stars
+    call glide_stars
     write(outtxt1,*)infile%current_time
     write(outtxt2,*)infile%times(infile%current_time)
     write(outtxt3,*)model%numerics%time
     call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,'Reading time slice '//trim(adjustl(outtxt1))//&
-        '('//trim(adjustl(outtxt2))//') from file '//trim(NC%filename)//' at time '//trim(adjustl(outtxt3)))
+        '('//trim(adjustl(outtxt2))//') from file '//trim(infile%nc%filename)//' at time '//trim(adjustl(outtxt3)))
     
     ! read variables
-    if (NC%do_var(NC_B_LAT)) then
+    if (infile%nc%do_var(NC_B_LAT)) then
       call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,'Loading lat')
-       status = nf90_get_var(NC%id, NC%varids(NC_B_LAT), &
+       status = nf90_get_var(infile%nc%id, infile%nc%varids(NC_B_LAT), &
             model%climate%lati, (/1,1,infile%current_time/))
        call nc_errorhandle(__FILE__,__LINE__,status)
     end if
 
-    if (NC%do_var(NC_B_LON)) then
+    if (infile%nc%do_var(NC_B_LON)) then
       call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,'Loading lon')
-       status = nf90_get_var(NC%id, NC%varids(NC_B_LON), &
+       status = nf90_get_var(infile%nc%id, infile%nc%varids(NC_B_LON), &
             model%climate%loni, (/1,1,infile%current_time/))
        call nc_errorhandle(__FILE__,__LINE__,status)
     end if
 
-    if (NC%do_var(NC_B_MASK)) then
+    if (infile%nc%do_var(NC_B_MASK)) then
       call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,'Loading mask')
-       status = nf90_get_var(NC%id, NC%varids(NC_B_MASK), &
+       status = nf90_get_var(infile%nc%id, infile%nc%varids(NC_B_MASK), &
             model%climate%out_mask, (/1,1,infile%current_time/))
        call nc_errorhandle(__FILE__,__LINE__,status)
     end if
 
-    if (NC%do_var(NC_B_PRESPRCP)) then
+    if (infile%nc%do_var(NC_B_PRESPRCP)) then
       call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,'Loading presprcp')
-       status = nf90_get_var(NC%id, NC%varids(NC_B_PRESPRCP), &
+       status = nf90_get_var(infile%nc%id, infile%nc%varids(NC_B_PRESPRCP), &
             model%climate%presprcp, (/1,1,infile%current_time/))
        call nc_errorhandle(__FILE__,__LINE__,status)
        if (scale) model%climate%presprcp = model%climate%presprcp/(scyr * acc0)
     end if
 
-    if (NC%do_var(NC_B_PRESUSRF)) then
+    if (infile%nc%do_var(NC_B_PRESUSRF)) then
       call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,'Loading presusrf')
-       status = nf90_get_var(NC%id, NC%varids(NC_B_PRESUSRF), &
+       status = nf90_get_var(infile%nc%id, infile%nc%varids(NC_B_PRESUSRF), &
             model%climate%presusrf, (/1,1,infile%current_time/))
        call nc_errorhandle(__FILE__,__LINE__,status)
        if (scale) model%climate%presusrf = model%climate%presusrf/(thk0)
     end if
 
-    if (NC%do_var(NC_B_RELX)) then
+    if (infile%nc%do_var(NC_B_RELX)) then
       call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,'Loading relx')
-       status = nf90_get_var(NC%id, NC%varids(NC_B_RELX), &
+       status = nf90_get_var(infile%nc%id, infile%nc%varids(NC_B_RELX), &
             model%geometry%relx, (/1,1,infile%current_time/))
        call nc_errorhandle(__FILE__,__LINE__,status)
        if (scale) model%geometry%relx = model%geometry%relx/(thk0)
     end if
 
-    if (NC%do_var(NC_B_TOPG)) then
+    if (infile%nc%do_var(NC_B_TOPG)) then
       call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,'Loading topg')
-       status = nf90_get_var(NC%id, NC%varids(NC_B_TOPG), &
+       status = nf90_get_var(infile%nc%id, infile%nc%varids(NC_B_TOPG), &
             model%geometry%topg, (/1,1,infile%current_time/))
        call nc_errorhandle(__FILE__,__LINE__,status)
        if (scale) model%geometry%topg = model%geometry%topg/(thk0)
     end if
 
-    if (NC%do_var(NC_B_USURF)) then
+    if (infile%nc%do_var(NC_B_USURF)) then
       call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,'Loading usurf')
-       status = nf90_get_var(NC%id, NC%varids(NC_B_USURF), &
+       status = nf90_get_var(infile%nc%id, infile%nc%varids(NC_B_USURF), &
             model%geometry%usrf, (/1,1,infile%current_time/))
        call nc_errorhandle(__FILE__,__LINE__,status)
        if (scale) model%geometry%usrf = model%geometry%usrf/(thk0)
     end if
 
     infile%current_time = infile%current_time + 1
+
   end subroutine glimmer_nc_read
 
 end module glimmer_ncinfile
