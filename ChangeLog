@@ -1,0 +1,7 @@
+2004-04-19 Magnus Hagdorn
+ * added ChangeLog
+ * added NAG f95 makros
+ * new build system (using Python script to work out module dependencies)
+ * reduced number of time slices in example code to 10000yrs
+ * made kind rk=dp (rather than 8)
+ * (glimmer_outp.f90) integer array index

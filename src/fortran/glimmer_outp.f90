@@ -57,7 +57,7 @@ contains
     type(glimmer_global_type) :: model
     integer,intent(in) :: unit
     logical :: there
-    real(sp) :: ew,ns
+    integer :: ew,ns
     integer,dimension(n2d) :: which2d
     integer,dimension(n3d) :: which3d
 
@@ -294,7 +294,7 @@ contains
     real(sp), allocatable, dimension(:,:,:) :: z 
     real(dp) :: f1, f2, f3, f4, f5, f6
     integer  :: ewnv, nsnv
-    real(sp) :: ns,ew,up
+    integer :: ns,ew,up
 
     ! These calculations don't really need to be done
     ! every time, but are done so for safety.

@@ -162,7 +162,7 @@ program glimmer_example
     stop
   endif
 
-  do time=0.0*24.0*360.0,50000.0*24.0*360.0,24.0*360.0
+  do time=0.0*24.0*360.0,10000.0*24.0*360.0,24.0*360.0
     call glimmer(ice_sheet,time,temp,precip,zonwind,merwind,orog, &
                  orog_out=orog_out,albedo=albedo,output_flag=out, &
                  ice_frac=ice_frac,fw_flux=fw) 

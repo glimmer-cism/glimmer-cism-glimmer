@@ -22,7 +22,7 @@ CCFLAGS= -DIFC -g -DLINUX
 # 
 # compilation flags for fortran compiler
 #
-F77FLAGS=-fpp -w
+F77FLAGS=-fpp -w 
 #F77FLAGSR8=-r8
 #
 # final stage loader flags
@@ -70,4 +70,9 @@ NETCDF=-lnetcdf_ifc
 	$(CC) -c $(CCFLAGS) $*.c
 
 .f.o:
-	$(F77) -c $(F77FLAGS) $*.f
+	$(F77) -c $(F77FLAGS) $< -o $@
+
+.f90.o:
+	$(F77) -c $(F77FLAGS) $< -o $@
+
+.SUFFIXES:	.f .f90 .o

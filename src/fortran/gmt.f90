@@ -71,37 +71,39 @@ module gmt
 !*FD NB: Longitude and latitude coordinates are in degrees, relative to the global origin,
 !*FD     while x and y are relative to the centre of the projection
 
+  use glimmer_global
+
   implicit none
 
   type gmt_pinf
-    real(8) :: cosp               !*FD cos ($\phi_p$)
-    real(8) :: sinp               !*FD sin ($\phi_p$)
-    real(8) :: pole               !*FD +90 or -90, depending on hemisphere
-    real(8) :: central_meridian   !*FD central meridian of projection
-    real(8) :: EQ_RAD             !*FD radius of earth
-    real(8) :: i_EQ_RAD           !*FD 1/radius of earth
-    real(8) :: Dx                 !*FD fudge factor for scaling the projection 
-    real(8) :: Dy                 !*FD ditto
-    real(8) :: iDx                !*FD inverse of Dx
-    real(8) :: iDy                !*FD inverse of Dy
-    real(8) :: s_c                !*FD Not sure what this does\ldots
-    real(8) :: s_ic               !*FD Not sure what this does, but it's the inverse of {\tt s\_ic}\ldots
+    real(dp) :: cosp               !*FD cos ($\phi_p$)
+    real(dp) :: sinp               !*FD sin ($\phi_p$)
+    real(dp) :: pole               !*FD +90 or -90, depending on hemisphere
+    real(dp) :: central_meridian   !*FD central meridian of projection
+    real(dp) :: EQ_RAD             !*FD radius of earth
+    real(dp) :: i_EQ_RAD           !*FD 1/radius of earth
+    real(dp) :: Dx                 !*FD fudge factor for scaling the projection 
+    real(dp) :: Dy                 !*FD ditto
+    real(dp) :: iDx                !*FD inverse of Dx
+    real(dp) :: iDy                !*FD inverse of Dy
+    real(dp) :: s_c                !*FD Not sure what this does\ldots
+    real(dp) :: s_ic               !*FD Not sure what this does, but it's the inverse of {\tt s\_ic}\ldots
     logical :: n_polar            !*FD not needed - indicates if projection pole is north pole
     logical :: s_polar            !*FD not needed - indicates if projection pole is south pole
     logical :: north_pole         !*FD true if projection in northern hemisphere, false otherwise
     logical :: polar              !*FD Is this a polar projection?
   end type gmt_pinf
 
-  real(8),parameter :: pi=3.141592654          ! public
-  real(8),parameter :: M_PI_4=pi/4
-  real(8),parameter :: M_PI_2=pi/2
-  real(8),parameter :: D2R=pi/180.0            ! public
-  real(8),parameter :: R2D=180.0/pi            ! public
-  real(8),parameter :: DBL_MAX=huge(pi)        
-  real(8),parameter :: GMT_CONV_LIMIT=1.0e-8
+  real(dp),parameter :: pi=3.141592654          ! public
+  real(dp),parameter :: M_PI_4=pi/4
+  real(dp),parameter :: M_PI_2=pi/2
+  real(dp),parameter :: D2R=pi/180.0            ! public
+  real(dp),parameter :: R2D=180.0/pi            ! public
+  real(dp),parameter :: DBL_MAX=huge(pi)        
+  real(dp),parameter :: GMT_CONV_LIMIT=1.0e-8
   logical,parameter :: GMT_convert_latitudes=.false.
-  real(8),parameter :: GMT_map_scale_factor = 1.0
-  real(8),parameter :: SMALL=1.0e-4
+  real(dp),parameter :: GMT_map_scale_factor = 1.0
+  real(dp),parameter :: SMALL=1.0e-4
 
   private sincos,hypot
   private DBL_MAX,GMT_CONV_LIMIT,GMT_convert_latitudes,M_PI_4
@@ -121,9 +123,9 @@ contains
                                   !*FD \item Spherical stereographic (oblique)
                                   !*FD \item Spherical stereographic (equatorial)
                                   !*FD \end{enumerate}
-    real(8),intent(in) :: latc    !*FD Centre of projection (Latitude)
-    real(8),intent(in) :: lonc    !*FD Centre of projection (Longitude)
-    real(8),intent(in) :: radea   !*FD Radius of the Earth (m)
+    real(dp),intent(in) :: latc    !*FD Centre of projection (Latitude)
+    real(dp),intent(in) :: lonc    !*FD Centre of projection (Longitude)
+    real(dp),intent(in) :: radea   !*FD Radius of the Earth (m)
     type(gmt_pinf),intent(inout) :: project_info !*FD GMT parameters to be initialised
 
     call gmt_type_init(project_info)
@@ -179,7 +181,7 @@ contains
 
     implicit none
 
-    real(8),intent(in) :: latc,lonc
+    real(dp),intent(in) :: latc,lonc
     type(gmt_pinf),intent(inout) :: project_info
 
     project_info%cosp=cos(latc*D2R)           ! cos (phi_p)
@@ -205,10 +207,10 @@ contains
 
     implicit none
 
-    real(8),intent(in)  :: lon,lat
+    real(dp),intent(in)  :: lon,lat
     type(gmt_pinf),intent(in) :: project_info
-    real(8),intent(out) :: x,y
-    real(8) :: k,tmp,sin_lat,cos_lat,sin_lon,cos_lon,c,dlon,dlat
+    real(dp),intent(out) :: x,y
+    real(dp) :: k,tmp,sin_lat,cos_lat,sin_lon,cos_lon,c,dlon,dlat
 
     dlon = lon-project_info%central_meridian
 
@@ -251,10 +253,10 @@ contains
 
     implicit none
 
-    real(8),intent(in) :: x,y
+    real(dp),intent(in) :: x,y
     type(gmt_pinf),intent(in) :: project_info
-    real(8),intent(out) :: lon,lat
-    real(8) :: rho,c,sin_c,cos_c,xx,yy
+    real(dp),intent(out) :: lon,lat
+    real(dp) :: rho,c,sin_c,cos_c,xx,yy
   
     xx=x ; yy=y
 
@@ -290,8 +292,8 @@ contains
 
   subroutine gmt_map_init_stereo(latg,rlong,project_info)
 
-    real(8) :: latg      ! Centre of map projection
-    real(8) :: rlong     ! Centre of map projection
+    real(dp) :: latg      ! Centre of map projection
+    real(dp) :: rlong     ! Centre of map projection
     type(gmt_pinf),intent(inout) :: project_info    
 
     call gmt_set_polar (latg,project_info)
@@ -313,7 +315,7 @@ contains
 
     implicit none
 
-    real(8),intent(in) :: plat
+    real(dp),intent(in) :: plat
     type(gmt_pinf),intent(inout) :: project_info
 
     if (abs (abs (plat) - 90.0) < GMT_CONV_LIMIT) then
@@ -333,16 +335,16 @@ contains
 
     implicit none 
 
-    real(8),intent(in) :: rlong0,plat
+    real(dp),intent(in) :: rlong0,plat
     type(gmt_pinf),intent(inout) :: project_info
-    real(8) :: clat
+    real(dp) :: clat
 
     clat = plat
 
     project_info%central_meridian = rlong0
     project_info%pole = plat          ! This is always geodetic
-    project_info%sinp = sind (clat)   ! These may be conformal
-    project_info%cosp = cosd (clat)
+    project_info%sinp = sin (clat)   ! These may be conformal
+    project_info%cosp = cos (clat)
     project_info%north_pole = (plat > 0.0)
     project_info%s_c = 2.0 * project_info%EQ_RAD * GMT_map_scale_factor
     project_info%s_ic = 1.0 / project_info%s_c
@@ -357,11 +359,11 @@ contains
 
     implicit none
 
-    real(8),intent(in) :: lon,lat
-    real(8),intent(out) :: x,y
+    real(dp),intent(in) :: lon,lat
+    real(dp),intent(out) :: x,y
     type(gmt_pinf),intent(in) :: project_info
 
-    real(8) :: rho, slon, clon,dlon,dlat
+    real(dp) :: rho, slon, clon,dlon,dlat
       
     dlon = lon-project_info%central_meridian
     dlat = lat
@@ -399,12 +401,12 @@ contains
 
     implicit none
 
-    real(8),intent(out) :: lon,lat
-    real(8),intent(in)  :: x,y
+    real(dp),intent(out) :: lon,lat
+    real(dp),intent(in)  :: x,y
     type(gmt_pinf),intent(in) :: project_info
 
-    real(8) :: c
-    real(8) :: xx,yy
+    real(dp) :: c
+    real(dp) :: xx,yy
 
     xx=x ; yy=y
     
@@ -434,11 +436,11 @@ contains
   
     implicit none
 
-    real(8),intent(in) :: lon,lat
-    real(8),intent(out) :: x,y
+    real(dp),intent(in) :: lon,lat
+    real(dp),intent(out) :: x,y
     type(gmt_pinf),intent(in) :: project_info
 
-    real(8) :: dlon,sin_dlon,cos_dlon,s,c,cc,A,dlat
+    real(dp) :: dlon,sin_dlon,cos_dlon,s,c,cc,A,dlat
 
     dlon = D2R * (lon - project_info%central_meridian)
     dlat = lat*D2R
@@ -457,11 +459,11 @@ contains
 
     implicit none
 
-    real(8),intent(out) :: lon,lat
-    real(8),intent(in)  :: x,y
+    real(dp),intent(out) :: lon,lat
+    real(dp),intent(in)  :: x,y
     type(gmt_pinf),intent(in) :: project_info
 
-    real(8) :: rho,c,sin_c,cos_c
+    real(dp) :: rho,c,sin_c,cos_c
 
     if (x == 0.0 .and. y == 0.0) then
       lon = project_info%central_meridian
@@ -486,11 +488,11 @@ contains
 
     implicit none
 
-    real(8),intent(in) :: lon,lat
-    real(8),intent(out) :: x,y
+    real(dp),intent(in) :: lon,lat
+    real(dp),intent(out) :: x,y
     type(gmt_pinf),intent(in) :: project_info
 
-    real(8) :: dlon,dlat,s,c,clon,slon,A
+    real(dp) :: dlon,dlat,s,c,clon,slon,A
     
     dlon = lon - project_info%central_meridian
     if (abs (dlon - 180.0) < GMT_CONV_LIMIT) then
@@ -516,8 +518,8 @@ contains
 
     implicit none
 
-    real(8),intent(in) :: a
-    real(8),intent(out) :: s,c
+    real(dp),intent(in) :: a
+    real(dp),intent(out) :: s,c
 
       s = sin (a)
       c = cos (a)
@@ -526,13 +528,13 @@ contains
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  real(8) function hypot(x,y)
+  real(dp) function hypot(x,y)
 
   ! This is an implementation of a standard C library function
 
     implicit none
 
-    real(8),intent(in) :: x,y
+    real(dp),intent(in) :: x,y
 
     hypot=sqrt(x*x+y*y)
 
@@ -540,13 +542,13 @@ contains
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  real(8) function d_atan2(x,y)
+  real(dp) function d_atan2(x,y)
 
   ! Macro-implemented function from GMT
 
     implicit none
 
-    real(8),intent(in) :: x,y
+    real(dp),intent(in) :: x,y
 
     if (x==0.0 .and. y==0.0) then
       d_atan2=0.0
@@ -558,13 +560,13 @@ contains
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  real(8) function d_asin(x)
+  real(dp) function d_asin(x)
 
   ! Macro-implemented function from GMT
 
     implicit none
 
-    real(8),intent(in) :: x
+    real(dp),intent(in) :: x
 
     if (abs(x) >= 1.0) then
       d_asin=sign(M_PI_2,x)
