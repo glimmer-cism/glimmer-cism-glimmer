@@ -180,7 +180,7 @@ netCDF I/O can be configured in the main configuration file or in a separate fil
   \begin{supertabular}{|l|p{11cm}|}
 %%%% defaults
     \hline
-    \multicolumn{2}{|l|}{\texttt{[default]}}\\
+    \multicolumn{2}{|l|}{\texttt{[CF default]}}\\
     \hline
     \multicolumn{2}{|p{0.98\textwidth}|}{This section contains metadata describing the experiment. Any of these parameters can be modified in the \texttt{[output]} section. The model automatically attaches a time stamp and the model version to the netCDF output file.}\\
     \hline
@@ -191,7 +191,7 @@ netCDF I/O can be configured in the main configuration file or in a separate fil
     \hline
 %%%% 
     \hline
-    \multicolumn{2}{|l|}{\texttt{[input]}}\\
+    \multicolumn{2}{|l|}{\texttt{[CF input]}}\\
     \hline
     \multicolumn{2}{|p{0.98\textwidth}|}{Any number of input files can be specified. They are processed in the order they occur in the configuration file, potentially overriding previously loaded variables.}\\
     \hline
@@ -200,7 +200,7 @@ netCDF I/O can be configured in the main configuration file or in a separate fil
     \hline
 %%%% 
     \hline
-    \multicolumn{2}{|l|}{\texttt{[output]}}\\
+    \multicolumn{2}{|l|}{\texttt{[CF output]}}\\
     \hline
     \multicolumn{2}{|p{0.98\textwidth}|}{This section of the netCDF parameter file controls how often selected  variables are written to file.}\\
     \hline
