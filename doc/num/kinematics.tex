@@ -82,7 +82,35 @@ and lower boundary condition
   w(1)=\frac{\pd h}{\pd t}+\vec u(1)\cdot\vec\nabla h+m.
 \end{equation}
 
-\subsection{Semi--Implicit Scheme for the Ice Thickness Equation}
+\subsection{Calculating the Horizontal Velocity and the Diffusivity}
+Horizontal velocity and diffusivity calculations are split up into two parts:
+\begin{subequations}
+  \begin{align}
+    \vec u(\sigma)&=c\vec\nabla s+\vec u(1)\\
+    D &=H\int_0^1cd\sigma\\
+    \vec q&=D\vec\nabla s+H\vec u(1)\\
+    \intertext{with}
+    c(\sigma)&=-2(\rho g)^nH^{n+1}|\vec\nabla s|^{n-1}\int_1^\sigma A\sigma^nd\sigma
+  \end{align}
+\end{subequations}
+
+Quantities $\vec u$ and $D$ are found on the velocity grid. Integrating from the ice base ($k=N-1$), the discretised quantities become
+\begin{subequations}
+  \begin{equation}
+    \tilde{c}_{r,s,N}=0
+  \end{equation}
+  \begin{multline}
+    \tilde{c}_{r,s,k}=-2(\rho g)^nH_{r,s}^{n+1}\left(({\tilde{s}^x_{r,s}})^2+({\tilde{s}^y_{r,s}})^2\right)^{\frac{n-1}{2}}\\
+    \sum_{\kappa=N-1}^k\frac{A_{r,s,\kappa}+A_{r,s,\kappa+1}}2 \left(\frac{\sigma_{\kappa+1}+\sigma_\kappa}2\right)^n(\sigma_{\kappa+1}-\sigma_\kappa)
+  \end{multline}
+  \begin{equation}
+    \tilde{D}_{r,s}=H_{r,s}\sum_{k=0}^{N-1}\frac{\tilde{c}_{r,s,k}+\tilde{c}_{r,s,k+1}}2(\sigma_{k+1}-\sigma_k)
+  \end{equation}
+\end{subequations}
+Expressions for $\vec{u}_{i,j,k}$ and $\vec{q}_{i,j}$ are straight forward.
+
+\subsection{Solving the Ice Thickness Evolution Equation}
+\subsubsection{Linearised Semi--Implicit Scheme}
 Equation \eqref{kin.eq.ice_thickness} can be rewritten as a diffusion equation, with non--linear diffusion coefficient $D$:
 \begin{equation}
   \label{kin.eq.ice_evo}
@@ -99,49 +127,58 @@ This non--linear partial differential equation can be linearised by using the di
 \end{align}  
 \end{subequations}
 
-The semi--implicit temporal discretisation of \eqref{kin.eq.ice_evo} is then:
-\begin{equation}
-\label{kin.eq.ice_evo_disc1}
-  \frac{H^{t+1}_{i,j}-H^t_{i,j}}{\Delta t}=\frac{q^{x,t+1}_{i+\frac12,j}-q^{x,t+1}_{i-\frac12,j}}{\Delta x}+\frac{q^{y,t+1}_{i,j+\frac12}-q^{y,t+1}_{i,j-\frac12}}{\Delta y} + a_{i,j}
-\end{equation}
-The superscripts $^t$ and $^{t+1}$ indicate at what time the ice thickness $H$ is evaluated. Collecting all $H^{t+1}$ terms of \eqref{kin.eq.ice_evo_disc1} on the LHS and moving all other terms to the RHS we can rewrite \eqref{kin.eq.ice_evo_disc1} as
+Using the Crank--Nicolson scheme, the semi--implicit temporal discretisation of \eqref{kin.eq.ice_evo} is then:
 \begin{multline}
-  -\alpha^1_{i,j}H^{t+1}_{i-1,j} - \alpha^2_{i,j}H^{t+1}_{i+1,j} - \alpha^3_{i,j}H^{t+1}_{i,j-1} - \alpha^4_{i,j}H^{t+1}_{i,j+1}+ (1-\alpha^5_{i,j})H^{t+1}_{i,j} = \\
-  (\alpha^1_{i,j}h_{i-1,j} + \alpha^2_{i,j}h_{i+1,j} + \alpha^3_{i,j}h_{i,j-1} + \alpha^4_{i,j}h_{i,j+1}+ \alpha^5_{i,j}h_{i,j}) + a_{i,j}\Delta t
+\label{kin.eq.ice_evo_disc1}
+  \frac{H^{t+1}_{i,j}-H^t_{i,j}}{\Delta t}=\frac{q^{x,t+1}_{i+\frac12,j}-q^{x,t+1}_{i-\frac12,j}}{2\Delta x}+\frac{q^{y,t+1}_{i,j+\frac12}-q^{y,t+1}_{i,j-\frac12}}{2\Delta y} \\
+  +\frac{q^{x,t}_{i+\frac12,j}-q^{x,t}_{i-\frac12,j}}{2\Delta x}+\frac{q^{y,t}_{i,j+\frac12}-q^{y,t}_{i,j-\frac12}}{2\Delta y}+ a_{i,j}
+\end{multline}
+The superscripts $^t$ and $^{t+1}$ indicate at what time the ice thickness $H$ is evaluated. Collecting all $H^{t+1}$ terms of \eqref{kin.eq.ice_evo_disc1} on the LHS and moving all other terms to the RHS we can rewrite \eqref{kin.eq.ice_evo_disc1} as
+\begin{equation}
+  \label{kin.eq.evo_matrix}
+  -\alpha_{i,j}H^{t+1}_{i-1,j} - \beta_{i,j}H^{t+1}_{i+1,j} - \gamma_{i,j}H^{t+1}_{i,j-1} - \delta_{i,j}H^{t+1}_{i,j+1}+ (1-\epsilon_{i,j})H^{t+1}_{i,j} = \zeta_{i,j}
+\end{equation}
+with the RHS,
+\begin{multline}
+  \zeta_{i,j} = \alpha_{i,j}H^{t}_{i-1,j} + \beta_{i,j}H^{t}_{i+1,j} + \gamma_{i,j}H^{t}_{i,j-1} + \delta_{i,j}H^{t}_{i,j+1} + (1+\epsilon_{i,j})H^{t}_{i,j} \\
+  + 2(\alpha_{i,j}h_{i-1,j} + \beta_{i,j}h_{i+1,j} + \gamma_{i,j}h_{i,j-1} + \delta_{i,j}h_{i,j+1}+ \epsilon_{i,j}h_{i,j}) + a_{i,j}\Delta t
 \end{multline}
 with the elements of the sparse matrix
 \begin{subequations}
   \begin{align}
-    \alpha^1_{i,j} &=\frac{\tilde{D}_{r-1,s}+\tilde{D}_{r-1,s-1}}{2\Delta x^2}\Delta t\\
-    \alpha^2_{i,j} &=\frac{\tilde{D}_{r,s}+\tilde{D}_{r,s-1}}{2\Delta x^2}\Delta t\\
-    \alpha^3_{i,j} &=\frac{\tilde{D}_{r,s-1}+\tilde{D}_{r-1,s-1}}{2\Delta y^2}\Delta t\\
-    \alpha^4_{i,j} &=\frac{\tilde{D}_{r,s}+\tilde{D}_{r-1,s}}{2\Delta y^2}\Delta t\\
-    \alpha^5_{i,j} &=-(\alpha^1_{i,j}+\alpha^2_{i,j}+\alpha^3_{i,j}+\alpha^4_{i,j})
+    \alpha_{i,j} &=\frac{\tilde{D}_{r-1,s}+\tilde{D}_{r-1,s-1}}{4\Delta x^2}\Delta t\\
+    \beta_{i,j} &=\frac{\tilde{D}_{r,s}+\tilde{D}_{r,s-1}}{4\Delta x^2}\Delta t\\
+    \gamma_{i,j} &=\frac{\tilde{D}_{r,s-1}+\tilde{D}_{r-1,s-1}}{4\Delta y^2}\Delta t\\
+    \delta_{i,j} &=\frac{\tilde{D}_{r,s}+\tilde{D}_{r-1,s}}{4\Delta y^2}\Delta t\\
+    \epsilon_{i,j} &=-(\alpha_{i,j}+\beta_{i,j}+\gamma_{i,j}+\delta_{i,j})
   \end{align}
 \end{subequations}
 
 This matrix equation is solved using an iterative matrix solver for non-symmetric sparse matrices. The solver used here is the bi--conjugate gradient method with incomplete LU decomposition preconditioning provided by the SLAP package.
 
-\subsubsection{Calculating the Horizontal Velocity and the Diffusivity}
-Horizontal velocity and diffusivity calculations are split up into two parts:
+\subsubsection{Non--Linear Scheme}
+The non--linearity of Equation \eqref{kin.eq.ice_evo} arises from the dependance of $D$ on $s$. A non--linear scheme for \eqref{kin.eq.ice_evo} can be formulated using Picard iteration, which consists of two iterations: an outer, non--linear and an inner, linear equation. The scheme is started off with the diffusivity from the previous time step, i.e.
 \begin{subequations}
-  \begin{align}
-    \vec u(\sigma)&=c\vec\nabla s+\vec u(1)\\
-    D &=H\int_0^1cd\sigma\\
-    \vec q&=D\vec\nabla s+H\vec u(1)\\
-    \intertext{with}
-    c(\sigma)&=-2(\rho g)^nH^{n+1}|\vec\nabla s|^{n-1}\int_1^\sigma A\sigma^nd\sigma
-  \end{align}
+  \begin{equation}
+    D^{(0),t+1}=D^{t}
+  \end{equation}
+and Equation \eqref{kin.eq.evo_matrix} becomes
+\begin{multline}
+  \label{kin.eq.evo_matrix_nonlin}
+  -\alpha^{(\xi),t+1}_{i,j}H^{t+1}_{i-1,j} - \beta^{(\xi),t+1}_{i,j}H^{(\xi+1),t+1}_{i+1,j} - \gamma^{(\xi),t+1}_{i,j}H^{(\xi+1),t+1}_{i,j-1} \\
+  - \delta^{(\xi),t+1}_{i,j}H^{(\xi+1),t+1}_{i,j+1}+ (1-\epsilon^{(\xi),t+1}_{i,j})H^{(\xi+1),t+1}_{i,j} = \zeta^{(0),t}_{i,j}
+\end{multline}
 \end{subequations}
+Equation \eqref{kin.eq.evo_matrix_nonlin} is iterated over $\xi$ until the maximum ice thickness residual is smaller than some threshold:
+\begin{equation}
+  \max\left(\left|H^{(\xi+1),t+1}-H^{(\xi),t+1}\right|\right)<H_{\text{res}}
+\end{equation}
 
-Quantities $\vec u$ and $D$ are found on the velocity grid. Integrating from the ice base ($k=N-1$), the discretised quantities become
-\begin{subequations}
-  \begin{align}
-    \tilde{c}_{r,s,N}&=0\\
-    \tilde{c}_{r,s,k}&=-2(\rho g)^nH_{r,s}^{n+1}\left(({\tilde{s}^x_{r,s}})^2+({\tilde{s}^y_{r,s}})^2\right)^{\frac{n-1}{2}}\sum_{\kappa=N-1}^k\frac{A_{r,s,\kappa}+A_{r,s,\kappa+1}}2 \left(\frac{\sigma_{\kappa+1}+\sigma_\kappa}2\right)^n(\sigma_{\kappa+1}-\sigma_\kappa)\\
-    \tilde{D}_{r,s}&=H_{r,s}\sum_{k=0}^{N-1}\frac{\tilde{c}_{r,s,k}+\tilde{c}_{r,s,k+1}}2(\sigma_{k+1}-\sigma_k)
-  \end{align}      
-\end{subequations}
-Expressions for $\vec{u}_{i,j,k}$ and $\vec{q}_{i,j}$ are straight forward.
+\begin{figure}[htbp]
+  \centering
+  \epsfig{file=\dir/figs/thick_evo.eps,width=0.5\textwidth}
+  \caption{Flow diagram showing how the linearised solver (on the left) and the non--linear solver work. The inner, linear iteration is contained within the box labeled ``calculate new ice distribution''.}
+  \label{kin.fig.solvers}
+\end{figure}
 
 \input{\dir/vert_velo.tex}
