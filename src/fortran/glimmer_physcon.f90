@@ -59,6 +59,7 @@ module physcon
 
   real(dp),parameter :: rhoi = 910.0             !*FD The density of ice (kg m$^{-3}$)
   real(dp),parameter :: rhom = 3300.0d0          !*FD The density of magma(?) (kg m$^{-3}$)
+
   real(dp),parameter :: rhoo = 1028.0d0          !*FD The density of the ocean (kg m$^{-3}$)
   real(dp),parameter :: rhow = 1000.0d0          !*FD The density of fresh water (kg m$^{-3}$)
   real(dp),parameter :: f = - rhoo / rhoi

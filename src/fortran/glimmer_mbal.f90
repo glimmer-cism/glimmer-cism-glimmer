@@ -1,4 +1,3 @@
-
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! +                                                           +
 ! +  glimmer_mbal.f90 - part of the GLIMMER ice model         + 
@@ -41,7 +40,7 @@
 !
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-module glimmer_mbal
+module glint_mbal
 
   !*FD Routines for calculating the mass-balance
   !*FD of the ice-sheet, including precip down-scaling.
@@ -53,13 +52,13 @@ module glimmer_mbal
 
   private satvap,calc_w0,error_func
 
-  interface glimmer_lapserate
-    module procedure glimmer_lapserate_dp, glimmer_lapserate_sp
+  interface glint_lapserate
+    module procedure glint_lapserate_dp, glint_lapserate_sp
   end interface
 
 contains
 
-  subroutine glimmer_lapserate_dp(temp,topo,lr)
+  subroutine glint_lapserate_dp(temp,topo,lr)
 
     !*FD Corrects the temperature field
     !*FD for height, using a constant lapse rate.
@@ -78,11 +77,11 @@ contains
 
     temp=temp-(lr*topo/1000.0)                     ! The lapse rate calculation.
 
-  end subroutine glimmer_lapserate_dp
+  end subroutine glint_lapserate_dp
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine glimmer_lapserate_sp(temp,topo,lr)
+  subroutine glint_lapserate_sp(temp,topo,lr)
 
     !*FD Corrects the temperature field
     !*FD for height, using a constant lapse rate.
@@ -101,11 +100,11 @@ contains
 
     temp=temp-(lr*topo/1000.0)                     ! The lapse rate calculation.
 
-  end subroutine glimmer_lapserate_sp
+  end subroutine glint_lapserate_sp
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine glimmer_precip(precip,xwind,ywind,temp,topo,dx,dy,fixed_a)
+  subroutine glint_precip(precip,xwind,ywind,temp,topo,dx,dy,fixed_a)
 
     !*FD Calculates the precipitation field over 
     !*FD the ice sheet using the parameterization given in 
@@ -193,7 +192,7 @@ contains
 
     precip=precip/pc   ! convert back to mm/a 
 
-  end subroutine glimmer_precip
+  end subroutine glint_precip
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! Private subroutines and functions follow
@@ -351,4 +350,4 @@ contains
 
   end function error_func
 
-end module glimmer_mbal
+end module glint_mbal

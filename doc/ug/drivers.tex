@@ -1,0 +1,174 @@
+\section{Example Climate Drivers}
+GLIMMER comes with three climate drivers of varying complexity:
+\begin{enumerate}
+ \item \texttt{simple\_glide}: an EISMINT type driver
+ \item \texttt{eis\_glide}: Edinburh Ice Sheet driver.
+ \item \texttt{libglint}: interface to GENIE
+\end{enumerate}
+These drivers are described in some detail here.
+
+\subsection{EISMINT Driver}
+\subsubsection{Configuration}
+\begin{center}
+  \tablefirsthead{%
+    \hline
+  }
+  \tablehead{%
+    \hline
+    \multicolumn{2}{|p{0.98\textwidth}|}{\emph{\small continued from previous page}}\\
+    \hline
+  }
+  \tabletail{%
+    \hline
+    \multicolumn{2}{|r|}{\emph{\small continued on next page}}\\
+    \hline}
+  \tablelasttail{\hline}
+  \begin{supertabular}{|l|p{11cm}|}
+%%%% EISMINT-1 fixed margin
+    \hline
+    \multicolumn{2}{|l|}{\texttt{[EISMINT-1 fixed margin]}}\\
+    \hline
+    \multicolumn{2}{|p{0.98\textwidth}|}{EISMINT 1 fixed margin scenario.}\\
+    \hline
+    \texttt{temperature} & (real(2)) Temperature forcing $$T_{\mbox{surface}}=t_1+t_2d$$ where $$d=\max\{|x-x_{\mbox{summit}}|,|y-y_{\mbox{summit}}|\}$$\\
+    \texttt{massbalance} & (real) Mass balance forcing \\
+    \texttt{period} & (real) period of time--dependent forcing (switched off when set to 0) $$\Delta T=10\sin\frac{2\pi t}{T}$$ and $$\Delta M=0.2sin\frac{2\pi t}{T}$$\\
+    \hline
+%%%% EISMINT-1 moving margin
+    \hline
+    \multicolumn{2}{|l|}{\texttt{[EISMINT-1 moving margin]}}\\
+    \hline
+    \multicolumn{2}{|p{0.98\textwidth}|}{EISMINT 1 moving margin scenario.}\\
+    \hline
+    \texttt{temperature} & (real(2)) Temperature forcing $$T_{\mbox{surface}}=t_1-t_2H$$ where $H$ is the ice thickness\\
+    \texttt{massbalance} & (real(3)) Mass balance forcing $$M=\min\{m_1,m_2(m_3-d)\}$$ where $$d=\sqrt{(x-x_{\mbox{summit}})^2+(y-y_{\mbox{summit}})^2}$$\\
+    \texttt{period} & (real) period of time--dependent forcing (switched off when set to 0) $$\Delta T=10\sin\frac{2\pi t}{T}$$ and $$M=\min\left\{m_1,m_2\left(m_3+100sin\frac{2\pi t}{T}-d\right)\right\}$$\\
+    \hline
+  \end{supertabular}
+\end{center}
+
+
+\subsection{EIS Driver}
+\subsubsection{Configuration}
+\begin{center}
+  \tablefirsthead{%
+    \hline
+  }
+  \tablehead{%
+    \hline
+    \multicolumn{2}{|p{0.98\textwidth}|}{\emph{\small continued from previous page}}\\
+    \hline
+  }
+  \tabletail{%
+    \hline
+    \multicolumn{2}{|r|}{\emph{\small continued on next page}}\\
+    \hline}
+  \tablelasttail{\hline}
+  \begin{supertabular}{|l|p{11cm}|}
+%%%% 
+    \hline
+    \multicolumn{2}{|l|}{\texttt{[EIS ELA]}}\\
+    \hline
+    \multicolumn{2}{|p{0.98\textwidth}|}{Mass balance parameterisation of the EIS driver. The Equilibrium Line Altitude is parameterised with $$z_{\text{ELA}} = a + b\lambda + c\lambda^2 + \Delta z_{\text{ELA}},$$ where $\lambda$ is the latitude in degrees north. The mass balance is then defined by $$M(z^\ast)=\left\{
+    \begin{array}{ll}
+      2M_{\text{max}}\left(\frac{z^\ast}{z_{\text{max}}}\right)-M_{\text{max}}\left(\frac{z^\ast}{z_{\text{max}}}\right)^2&\mbox{for}\quad z^\ast\le z_{\text{max}}\\
+      M_{\text{max}}&\mbox{for}\quad z^\ast>z_{\text{max}}
+    \end{array}
+    \right.,
+$$ where $z^\ast$ is the vertical distance above the ELA. }\\
+    \hline
+    \texttt{ela\_file} & name of file containing ELA variation with time, $\Delta z_{\text{ELA}}$\\
+    \texttt{ela\_a} & ELA factor $a$\\
+    \texttt{ela\_b} & ELA factor $b$\\
+    \texttt{ela\_c} & ELA factor $c$\\
+    \texttt{zmax} & The elevation at which the maximum mass balance is reached, $z_{\text{max}}$\\
+    \texttt{bmax} & The maximum mass balance, $M_{\text{max}}$\\
+    \hline
+%%%% 
+    \hline
+    \multicolumn{2}{|l|}{\texttt{[EIS Temperature]}}\\
+    \hline
+    \multicolumn{2}{|p{0.98\textwidth}|}{Temperature is also assumed to depend on latitude and the atmospheric lapse rate. It is thus described by a polynomial:$$T(t)=\sum_{i=0}^N a_i(t)\lambda^i+bz.$$}\\
+    \hline
+    \texttt{temp\_file} & name of file containing temperature forcing time series.\\
+    \texttt{order} & order of polynomial, $N$.\\
+    \texttt{lapse\_rate} & lapse rate, $b$.\\
+    \hline
+%%%% 
+    \hline
+    \multicolumn{2}{|l|}{\texttt{[EIS SLC]}}\\
+    \hline
+    \multicolumn{2}{|p{0.98\textwidth}|}{Global sea--level forcing}\\
+    \hline
+    \texttt{slc\_file} & name of file containing sea--level change time series.\\
+    \hline
+  \end{supertabular}
+\end{center}
+
+\newpage
+\subsection{GLINT Driver}
+\subsubsection{Configuration}
+\begin{center}
+  \tablefirsthead{%
+    \hline
+  }
+  \tablehead{%
+    \hline
+    \multicolumn{2}{|p{0.98\textwidth}|}{\emph{\small continued from previous page}}\\
+    \hline
+  }
+  \tabletail{%
+    \hline
+    \multicolumn{2}{|r|}{\emph{\small continued on next page}}\\
+    \hline}
+  \tablelasttail{\hline}
+  \begin{supertabular}{|l|p{11cm}|}
+%%%% 
+    \hline
+    \multicolumn{2}{|l|}{\texttt{[GLINT projection]}}\\
+    \hline
+    \multicolumn{2}{|p{0.98\textwidth}|}{Projection info}\\
+    \hline
+    \texttt{projection} & (integer) type of projection: 1 --- Lambert Equal Area, 2 --- Spherical polar, 3 --- Spherical stereographic (oblique), 4 --- Spherical stereographic (equatorial)\\
+    \texttt{lonc} & Longitide of projection centre (degrees east)\\
+    \texttt{latc} & Latitude of projection centre (degrees)\\
+    \texttt{cpx} & Local $x$-coordinate of projection centre (grid-points)\\
+    \texttt{cpy} & Local $y$-coordinate of projection centre (grid-points)\\
+    \texttt{std parallel} & \\
+    \hline
+%%%% 
+    \hline
+    \multicolumn{2}{|l|}{\texttt{[GLINT climate]}}\\
+    \hline
+    \multicolumn{2}{|p{0.98\textwidth}|}{GLINT climate parameterisation}\\
+    \hline
+    \texttt{temperature\_file} & \\
+    \texttt{artm\_mode} & {\raggedright
+      Method of calculation of surface air temperature:\\
+      \begin{tabular}{lp{10cm}}
+        0 & Linear function of surface elevation\\
+        1 & Cubic function of distance from domain centre\\
+        2 & Linear function of distance from domain centre\\
+        3 & Greenland conditions (function of surface elevation and latitude) including forcing\\
+        4 & Antarctic conditions (sea-level air temperature -- function of position)\\
+        5 & Uniform temperature, zero range (temperature set in \texttt{cons} namelist) \\
+        6 & Uniform temperature, corrected for height, zero range.\\
+        7 & Use large-scale temperature and range.\\
+      \end{tabular}}\\
+    \texttt{precip\_mode} & {\raggedright
+      Net accumulation: \\
+      \begin{tabular}{lp{10cm}}
+        0 & EISMINT moving margin \\
+        1 & PDD mass-balance model [recommended] \\
+        2 & Accumulation only\\
+      \end{tabular}}\\
+    \texttt{acab\_mode} & {\raggedright
+      Source of precipitation:\\
+      \begin{tabular}{lp{7cm}}
+        0 & Uniform precipitation rate (set internally at present)\\
+        1 & Use large-scale precipitation rate\\
+        2 & Use parameterization of \emph{Roe and Lindzen}\\
+      \end{tabular}}\\
+    \hline
+  \end{supertabular}
+\end{center}

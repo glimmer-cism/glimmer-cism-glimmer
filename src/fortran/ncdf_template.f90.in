@@ -1,0 +1,216 @@
+! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+! +                                                           +
+! +  ncdf_template.f90 - part of the GLIMMER ice model        + 
+! +                                                           +
+! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+! 
+! Copyright (C) 2004 GLIMMER contributors - see COPYRIGHT file 
+! for list of contributors.
+!
+! This program is free software; you can redistribute it and/or 
+! modify it under the terms of the GNU General Public License as 
+! published by the Free Software Foundation; either version 2 of 
+! the License, or (at your option) any later version.
+!
+! This program is distributed in the hope that it will be useful, 
+! but WITHOUT ANY WARRANTY; without even the implied warranty of 
+! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+! GNU General Public License for more details.
+!
+! You should have received a copy of the GNU General Public License 
+! along with this program; if not, write to the Free Software 
+! Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 
+! 02111-1307 USA
+!
+! GLIMMER is maintained by:
+!
+! Ian Rutt
+! School of Geographical Sciences
+! University of Bristol
+! University Road
+! Bristol
+! BS8 1SS
+! UK
+!
+! email: <i.c.rutt@bristol.ac.uk> or <ian.rutt@physics.org>
+!
+! GLIMMER is hosted on NeSCForge:
+!
+! http://forge.nesc.ac.uk/projects/glimmer/
+!
+! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+#define NCO outfile%nc
+#define NCI infile%nc
+
+module NAME_io
+  !*FD template for creating subsystem specific I/O routines
+  !*FD written by Magnus Hagdorn, 2004
+
+  !GENVAR_HOT!
+
+contains
+
+  !*****************************************************************************
+  ! netCDF output
+  !*****************************************************************************
+  subroutine NAME_io_createall(model)
+    !*FD open all netCDF files for output
+    use glide_types
+    use glimmer_ncdf
+    use glimmer_ncio
+    implicit none
+    type(glide_global_type) :: model
+    
+    ! local variables
+    type(glimmer_nc_output), pointer :: oc
+
+    oc=>model%funits%out_first
+    do while(associated(oc))
+       call NAME_io_create(oc,model)
+       oc=>oc%next
+    end do
+  end subroutine NAME_io_createall
+
+  subroutine NAME_io_writeall(data,model,atend)
+    !*FD if necessary write to netCDF files
+    use DATAMOD
+    use glide_types
+    use glimmer_ncdf
+    use glimmer_ncio
+    implicit none
+    type(DATATYPE) :: data
+    type(glide_global_type) :: model
+    logical, optional :: atend
+
+    ! local variables
+    type(glimmer_nc_output), pointer :: oc
+    logical :: forcewrite=.false.
+
+    if (present(atend)) then
+       forcewrite = atend
+    end if
+
+    oc=>model%funits%out_first
+    do while(associated(oc))
+       call glimmer_nc_checkwrite(oc,model,forcewrite)
+       if (oc%nc%just_processed) then
+          ! write standard variables
+          call NAME_io_write(oc,data)
+       end if
+       oc=>oc%next
+    end do
+  end subroutine NAME_io_writeall
+  
+  subroutine NAME_io_create(outfile,model)
+    use glide_types
+    use glimmer_ncdf
+    use glimmer_CFproj
+    use glimmer_log
+    implicit none
+    type(glimmer_nc_output), pointer :: outfile
+    type(glide_global_type) :: model
+
+    integer status,varid,pos
+
+    !GENVAR_DIMS!
+
+    NCO%vars = ' '//trim(NCO%vars)//' '
+    ! expanding hotstart variables
+    pos = index(NCO%vars,' hot ') 
+    if (pos.ne.0) then
+       NCO%vars = NCO%vars(:pos)//hotvars//NCO%vars(pos+4:)
+    end if
+
+    !GENVAR_VARDEF!
+  end subroutine NAME_io_create
+
+  subroutine NAME_io_write(outfile,data)
+    use DATAMOD
+    use glimmer_ncdf
+    use paramets
+    use glimmer_scales
+    implicit none
+    type(glimmer_nc_output), pointer :: outfile
+    !*FD structure containg output netCDF descriptor
+    type(DATATYPE) :: data
+    !*FD the model instance
+
+    ! local variables
+    integer status, varid
+    integer up
+     
+    ! write variables
+    !GENVAR_WRITE!
+  end subroutine NAME_io_write
+
+  !*****************************************************************************
+  ! netCDF input
+  !*****************************************************************************  
+  subroutine NAME_io_readall(data,model)
+    !*FD read from netCDF file
+    use DATAMOD
+    use glide_types
+    use glimmer_ncio
+    use glimmer_ncdf
+    implicit none
+    type(DATATYPE) :: data
+    type(glide_global_type) :: model
+
+    ! local variables
+    type(glimmer_nc_input), pointer :: ic    
+
+    ic=>model%funits%in_first
+    do while(associated(ic))
+       call glimmer_nc_checkread(ic,model)
+       if (ic%nc%just_processed) then
+          call NAME_io_read(ic,data)
+       end if
+       ic=>ic%next
+    end do
+  end subroutine NAME_io_readall
+
+  subroutine NAME_io_read(infile,data,scale_vars)
+    !*FD read variables from a netCDF file
+    use glimmer_log
+    use glimmer_ncdf
+    use DATAMOD
+    use paramets
+    use glimmer_scales
+    implicit none
+    type(glimmer_nc_input), pointer :: infile
+    !*FD structure containg output netCDF descriptor
+    type(DATATYPE) :: data
+    !*FD the model instance
+    logical,optional :: scale_vars
+    !*FD Specifies whether fields should be scaled by factors when read in.
+
+    ! local variables
+    integer status,varid
+    integer up
+    logical :: scale=.true.
+
+    ! Deal with optional argument
+    if (present(scale_vars)) scale=scale_vars
+   
+    ! read variables
+    !GENVAR_READ!
+  end subroutine NAME_io_read
+
+  subroutine NAME_io_checkdim(infile,model)
+    !*FD check if dimension sizes in file match dims of model
+    use glimmer_log
+    use glimmer_ncdf
+    use glide_types
+    implicit none
+    type(glimmer_nc_input), pointer :: infile
+    !*FD structure containg output netCDF descriptor
+    type(glide_global_type) :: model
+
+    integer status,dimid,dimsize
+    character(len=100) message
+
+    ! check dimensions
+    !GENVAR_CHECKDIM!
+  end subroutine NAME_io_checkdim
+end module NAME_io

@@ -1,5 +1,3 @@
-\label{ug.sec.varlist}
-The following list shows all the variable names used by GLIMMER. Only variables marked with $^\ast$ are loaded by the input routines. Append \texttt{\_spot} to the variable name to get single location version of the variable.
 \begin{center}
     \tablefirsthead{%
     \hline

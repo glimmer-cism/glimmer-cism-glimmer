@@ -47,8 +47,9 @@ program input2ncdf
   !*FD written by Magnus Hagdorn, May 2004
   use glimmer_ncdf
   use glimmer_ncfile
-  use glimmer_types
   use glimmer_CFproj
+  use glide_types
+
   use paramets, only : len0
   implicit none
 
@@ -65,7 +66,7 @@ program input2ncdf
   real :: false_easting
   real :: false_northing  
   type(glimmer_nc_output), pointer :: outfile
-  type(glimmer_global_type) :: model
+  type(glide_global_type) :: model
 
   integer nx,ny
   real time,delta

@@ -1,12 +1,11 @@
-
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-! +                                                           +
-! +  glimmer_config.f90 - part of the GLIMMER ice model       + 
-! +                                                           +
-! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-! 
-! Copyright (C) 2004 GLIMMER contributors - see COPYRIGHT file 
-! for list of contributors.
+!
+! This code is taken from the Generic Mapping Tools and was 
+! converted into Fortran 90 by Ian Rutt.
+!
+! Original code (in C) Copyright (c) 1991-2003 by P. Wessel and W. H. F. Smith
+!
+! Partial translation into Fortran 90 (c) 2004 Ian C. Rutt
 !
 ! This program is free software; you can redistribute it and/or 
 ! modify it under the terms of the GNU General Public License as 
@@ -40,63 +39,64 @@
 ! http://forge.nesc.ac.uk/projects/glimmer/
 !
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!
+! The Generic Mapping Tools are maintained by Paul Wessel and 
+! Walter H. F. Smith. The GMT homepage is:
+!
+! http://gmt.soest.hawaii.edu/
+!
+! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 module glimmer_config
+  !*FD configuration file parser
+  !*FD written by Magnus Hagdorn, May 2004
+  !*FD everything is a singly linked list
 
-  use glimmer_global
+  use glimmer_global, only : dp
+  private :: handle_section, handle_value, InsertSection, InsertValue, dp
 
-  !*FD Configuration file parser,
-  !*FD written by Magnus Hagdorn, May 2004.
-  !*FD Everything is a singly linked list
-
-  private :: handle_section, handle_value, InsertSection, InsertValue
-
-  integer, parameter :: namelen=20
+  integer, parameter :: namelen=50
   integer, parameter :: valuelen=200
   integer, parameter :: linelen=250
 
   type ConfigValue
-     !*FD `Value' element of configuration linked list
-     character(len=namelen) :: name              !*FD Name of value element
-     character(len=valuelen) :: value            !*FD Value of this element
-     type(ConfigValue), pointer :: next=>NULL()  !*FD Pointer to next element
+     character(len=namelen) :: name
+     character(len=valuelen) :: value
+     type(ConfigValue), pointer :: next=>NULL()
   end type ConfigValue
 
   type ConfigSection
-     !*FD `Section' element of configuration linked list
-     character(len=namelen) :: name               !*FD Name of this section
-     type(ConfigValue), pointer :: values=>NULL() !*FD Pointer to list of values
-     type(ConfigSection), pointer :: next=>NULL() !*FD Pointer to next section
+     character(len=namelen) :: name
+     type(ConfigValue), pointer :: values=>NULL()
+     type(ConfigSection), pointer :: next=>NULL()
   end type ConfigSection
 
   interface GetValue
-     module procedure GetValueReal, GetValueInt, GetValueChar, GetValueRealArray, GetValueIntArray, &
-          GetValueDouble, GetValueDoubleArray, GetValueCharArray
+     module procedure GetValueDouble, GetValueReal, GetValueInt, GetValueChar, &
+          GetValueDoubleArray, GetValueRealArray, GetValueIntArray, GetValueCharArray
   end interface
 
 contains
-
   subroutine ConfigRead(fname,config)
-
-    !*FD Read a configuration file.
-
-    use glide_messages
+    !*FD read configuration file
+    use glimmer_log
     implicit none
-
-    character(len=*), intent(in) :: fname    !*FD name of configuration file
-    type(ConfigSection), pointer :: config   !*FD pointer to first section
+    character(len=*), intent(in) :: fname
+    !*FD name of configuration file
+    type(ConfigSection), pointer :: config
 
     ! local variables
     type(ConfigSection), pointer :: this_section
     type(ConfigValue), pointer ::  this_value
-    character(40) :: errtxt
     logical there
     integer unit,ios,linenr
     character(len=linelen) :: line
+    character(len=100) :: message
 
     inquire (exist=there,file=fname)
     if (.not.there) then
-       call glide_msg(GM_FATAL,__FILE__,__LINE__,'Cannot open configuration file '//trim(fname))
+       call error_log('Cannot open configuration file '//trim(fname))
+       stop
     end if
     
     unit=99
@@ -124,9 +124,10 @@ contains
           else
              ! handle value
              if (.not.associated(this_section)) then
-                write(errtxt,*)linenr
-                call glide_msg(GM_FATAL,__FILE__,__LINE__,'Error, no section defined yet. '// &
-                  trim(adjustl(fname))//errtxt)
+                call write_log('Error, no section defined yet')
+                write(message,*) trim(adjustl(fname)), linenr
+                call error_log(message)
+                stop
              end if
              call handle_value(linenr,line,this_value)
              if (.not.associated(this_section%values)) then
@@ -140,107 +141,32 @@ contains
     return
   end subroutine ConfigRead
 
-  !--------------------------------------------------------------------------
-
   subroutine PrintConfig(config)
-
-    !*FD Prints the contents of a configuration linked-list to the screen.
-
-    use glide_messages
     implicit none
-
-    type(ConfigSection), pointer :: config !*FD Pointer to list to be printed.
+    type(ConfigSection), pointer :: config
 
     type(ConfigSection), pointer :: sec
-    type(ConfigValue),   pointer :: val
+    type(ConfigValue), pointer ::  val
     
     sec=>config
     do while(associated(sec))
-       call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,trim(sec%name))
+       write(*,*) sec%name
        val=>sec%values
        do while(associated(val))
-          call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,'  '//trim(val%name)//' == '//trim(val%value))
+          write(*,*) '  ',trim(val%name),' == ', trim(val%value)
           val=>val%next
        end do
-       call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,'')
+       write(*,*)
        sec=>sec%next
     end do
   end subroutine PrintConfig
 
-  !--------------------------------------------------------------------------
-
-  integer function ValidateSections(config,section_list)
-
-    !*FD Checks to see that all the sections in a config file are also
-    !*FD present in a supplied list. Prints a message returns 1 if not.
-    !*FDRV 0: No errors, 1: unexpected section name found.
-
-    use glide_messages
-    implicit none
-
-    type(ConfigSection), pointer :: config    !*FD Pointer to list to be checked
-    character(*),dimension(:) :: section_list !*FD List of allowed section names
-
-    type(ConfigSection), pointer :: sec ! Keeps track of where we are
-    character(80) :: outtxt
-
-    ValidateSections=0
-    sec=>config
-    do 
-       if (.not.any(sec%name==section_list)) then
-          write(outtxt,*)'Unrecognised section name: ',trim(sec%name)
-          call glide_msg(GM_ERROR,__FILE__,__LINE__,trim(outtxt))
-          ValidateSections=1
-       end if
-       sec=>sec%next
-       if (.not.associated(sec)) exit
-    end do
-
-  end function ValidateSections
-
-  !--------------------------------------------------------------------------
-
-  integer function ValidateValueNames(config,section_list)
-
-    !*FD Checks to see that all the sections in a config file are also
-    !*FD present in a supplied list. Prints a message returns 1 if not.
-    !*FDRV 0: No errors, 1: unexpected section name found.
-
-    use glide_messages
-    implicit none
-
-    type(ConfigSection), pointer :: config    !*FD Pointer to list to be checked
-    character(*),dimension(:) :: section_list !*FD List of allowed section names
-
-    type(ConfigValue), pointer :: val ! Keeps track of where we are
-    character(80) :: outtxt
-
-    ValidateValueNames=0
-    val=>config%values
-    do 
-       if (.not.any(val%name==section_list)) then
-          write(outtxt,*)'Unrecognised value name: ',trim(val%name)
-          call glide_msg(GM_ERROR,__FILE__,__LINE__,trim(outtxt))
-          ValidateValueNames=1
-       end if
-       val=>val%next
-       if (.not.associated(val)) exit
-    end do
-
-  end function ValidateValueNames
-
-  !--------------------------------------------------------------------------
-
   subroutine GetSection(config,found,name)
-
-    !*FD Find and return section with name. The found section is
-    !*FD returned in \texttt{found}.
-
+    !*FD Find and return section with name
     implicit none
-
-    type(ConfigSection), pointer :: config !*FD The start of the linked list
-    type(ConfigSection), pointer :: found  !*FD The found section
-    character(len=*),intent(in) :: name    !*FD The name of the required section
+    type(ConfigSection), pointer :: config
+    type(ConfigSection), pointer :: found
+    character(len=*),intent(in) :: name
 
     found=>config
     do while(associated(found))
@@ -251,7 +177,38 @@ contains
     end do
   end subroutine GetSection
 
-  !--------------------------------------------------------------------------
+  subroutine GetValueDoubleArray(section,name,val,numval)
+    !*FD get real array value
+    implicit none
+    type(ConfigSection), pointer :: section
+    character(len=*),intent(in) :: name
+    real(kind=dp), pointer, dimension(:) :: val
+    integer,intent(in), optional :: numval
+
+    ! local variables
+    character(len=valuelen) :: value
+    real(kind=dp), dimension(:),allocatable :: tempval
+    integer ios,i,numv
+
+    if (present(numval)) then
+       numv=numval
+    else
+       numv=100
+    end if
+    allocate(tempval(numv))
+    value=''
+    call GetValueChar(section,name,value)
+    if (value.eq.'') return
+    read(value,*,end=10) (tempval(i),i=1,numv)
+10  i=i-1
+    if (i.ge.1) then
+       if (associated(val)) then
+          deallocate(val)
+       end if
+       allocate(val(i))
+       val = tempval(1:i)
+    end if
+  end subroutine GetValueDoubleArray
 
   subroutine GetValueRealArray(section,name,val,numval)
     !*FD get real array value
@@ -285,43 +242,6 @@ contains
        val = tempval(1:i)
     end if
   end subroutine GetValueRealArray
-
-  !--------------------------------------------------------------------------
-
-  subroutine GetValueDoubleArray(section,name,val,numval)
-    !*FD get real(dp) array value
-    implicit none
-    type(ConfigSection), pointer :: section
-    character(len=*),intent(in) :: name
-    real(dp), pointer, dimension(:) :: val
-    integer,intent(in), optional :: numval
-
-    ! local variables
-    character(len=valuelen) :: value
-    real, dimension(:),allocatable :: tempval
-    integer ios,i,numv
-
-    if (present(numval)) then
-       numv=numval
-    else
-       numv=100
-    end if
-    allocate(tempval(numv))
-    value=''
-    call GetValueChar(section,name,value)
-    if (value.eq.'') return
-    read(value,*,end=10) (tempval(i),i=1,numv)
-10  i=i-1
-    if (i.ge.1) then
-       if (associated(val)) then
-          deallocate(val)
-       end if
-       allocate(val(i))
-       val = tempval(1:i)
-    end if
-  end subroutine GetValueDoubleArray
-
-  !--------------------------------------------------------------------------
 
   subroutine GetValueIntArray(section,name,val,numval)
     !*FD get integer array value
@@ -357,8 +277,6 @@ contains
     end if
   end subroutine GetValueIntArray
 
-  !--------------------------------------------------------------------------
-
   subroutine GetValueCharArray(section,name,val,numval)
     !*FD get character array value
     implicit none
@@ -393,8 +311,6 @@ contains
     end if
   end subroutine GetValueCharArray
 
-  !--------------------------------------------------------------------------
-
   subroutine GetValueReal(section,name,val)
     !*FD get real value
     implicit none
@@ -416,14 +332,12 @@ contains
     end if
   end subroutine GetValueReal
 
-  !--------------------------------------------------------------------------
-
   subroutine GetValueDouble(section,name,val)
-    !*FD get real(dp) value
+    !*FD get double value
     implicit none
     type(ConfigSection), pointer :: section
     character(len=*),intent(in) :: name
-    real(dp) :: val
+    real(kind=dp) :: val
 
     ! local variables
     character(len=valuelen) :: value
@@ -438,8 +352,6 @@ contains
        val = temp
     end if
   end subroutine GetValueDouble
-
-  !--------------------------------------------------------------------------
 
   subroutine GetValueInt(section,name,val)
     !*FD get integer value
@@ -461,8 +373,6 @@ contains
        val = temp
     end if
   end subroutine GetValueInt
-
-  !--------------------------------------------------------------------------
 
   subroutine GetValueChar(section,name,val)
     !*FD get character value
@@ -488,7 +398,7 @@ contains
   !==================================================================================
 
   subroutine handle_section(linenr,line,section)
-    use glide_messages
+    use glimmer_log
     implicit none
     integer, intent(in) :: linenr
     character(len=*) :: line
@@ -496,7 +406,7 @@ contains
 
     ! local variables
     integer i
-    character(40) :: errtxt
+    character(len=100) :: message
 
     do i=1,linelen
        if (line(i:i).eq.']') then
@@ -504,15 +414,16 @@ contains
        end if
     end do
     if (line(i:i).ne.']') then
-       write(errtxt,*)linenr
-       call glide_msg(GM_FATAL,__FILE__,__LINE__,'Cannot find end of section'//trim(errtxt))
+       write(message,*) 'Cannot find end of section ',linenr
+       call error_log(message)
+       stop
     end if
 
     call InsertSection(trim(adjustl(line(2:i-1))),section)
   end subroutine handle_section
   
   subroutine handle_value(linenr,line,value)
-    use glide_messages
+    use glimmer_log
     implicit none
     integer, intent(in) :: linenr
     character(len=*) :: line
@@ -520,16 +431,16 @@ contains
 
     ! local variables
     integer i
-    character(40) :: errtxt
-
+    character(len=100) :: message
     do i=1,linelen
        if (line(i:i).eq.'=' .or. line(i:i).eq.':') then
           exit
        end if
     end do
     if (.not.(line(i:i).eq.'=' .or. line(i:i).eq.':')) then
-       write(errtxt,*)linenr
-       call glide_msg(GM_FATAL,__FILE__,__LINE__,'Cannot find = or : '//trim(errtxt))
+       write(message,*) 'Cannot find = or : ',linenr
+       call error_log(message)
+       stop
     end if
 
     call InsertValue(trim(adjustl(line(:i-1))), trim(adjustl(line(i+1:))),value)

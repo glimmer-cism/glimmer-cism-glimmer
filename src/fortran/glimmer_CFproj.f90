@@ -49,8 +49,10 @@ module glimmer_CFproj
   !*FD library in anyway, it simply handles NetCDF data and projection
   !*FD parameters in an appropriate format.
 
+  use glide_messages
+
   private
-  public  CFproj_projection,CFproj_proj4,CFproj_GetProj,CFproj_PutProj,CFproj_define
+  public  CFproj_projection,CFproj_proj4,CFproj_GetProj,CFproj_PutProj,CFproj_define, CFproj_allocated
   public  CFP_LAEA,CFP_AEA,CFP_LCC,CFP_STERE
 
   integer, parameter :: proj4len=100
@@ -68,11 +70,11 @@ module glimmer_CFproj
      !*FD \texttt{NULL}.
 
      private 
+     logical                    :: found = .false.
      type(CFproj_laea),  pointer :: laea  => NULL() !*FD Pointer to Lambert azimuthal equal area type
      type(CFproj_aea),   pointer :: aea   => NULL() !*FD Pointer to Albers equal area conic type
      type(CFproj_lcc),   pointer :: lcc   => NULL() !*FD Pointer to Lambert conic conformal type
      type(CFproj_stere), pointer :: stere => NULL() !*FD Pointer to Stereographic type
-
   end type CFproj_projection
 
   !-------------------------------------------------------------
@@ -125,6 +127,14 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! public functions
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  function CFproj_allocated(projection)
+    !*FD return true if structure contains a known projection
+    implicit none
+    type(CFproj_projection) :: projection
+    logical CFproj_allocated
+
+    CFproj_allocated = projection%found
+  end function CFproj_allocated
 
   function CFproj_GetProj(ncid)
 
@@ -133,7 +143,7 @@ contains
     !*FDRV Derived type instance containing projection parameters
 
     use netcdf
-    use glide_messages
+    use glimmer_log
 
     implicit none
 
@@ -170,6 +180,7 @@ contains
     end do
 
     if (found_map) then
+       CFproj_GetProj%found = .true.
        if (index(mapname,'lambert_azimuthal_equal_area').ne.0) then
           CFproj_GetProj%laea => CFproj_get_laea(ncid,varid)
           return
@@ -183,10 +194,12 @@ contains
        else if (index(mapname,'stereographic').ne.0) then
           CFproj_GetProj%stere => CFproj_get_stere(ncid,varid)
        else
-          call glide_msg(GM_WARNING,__FILE__,__LINE__,'Do not know about this projection: '//trim(mapname))
+          CFproj_GetProj%found = .false.
+          write(*,*) 'Warning, do not know about this projection: ',trim(mapname)
        end if
     else
-       call glide_msg(GM_WARNING,__FILE__,__LINE__,'No map projection found')
+        CFproj_GetProj%found = .false.
+       call write_log('Warning, no map projection found')
     end if
   end function CFproj_GetProj
 
@@ -198,9 +211,16 @@ contains
     !*FDRV Pointer to array of projection parameter strings
 
     use glide_messages
+    use glimmer_log
+
     implicit none
     character(len=proj4len), dimension(:), pointer :: CFproj_proj4
     type(CFproj_projection) :: projection !*FD Projection of interest
+
+    if (.not.CFproj_allocated(projection)) then
+       call write_log('Warning, no projection found!')
+       return
+    end if
 
     if (associated(projection%laea)) then
        CFproj_proj4 => CFproj_proj4_laea(projection%laea)
@@ -216,6 +236,7 @@ contains
        return
     else
        call glide_msg(GM_WARNING,__FILE__,__LINE__,'No projection found!')
+       call write_log('Warning, no known projection found!')
     end if
   end function CFproj_proj4
 
@@ -227,12 +248,18 @@ contains
 
     use netcdf
     use glide_messages
+    use glimmer_log
 
     implicit none
 
     type(CFproj_projection) :: projection   !*FD Projection to be written.
     integer, intent(in) :: ncid             !*FD Handle of netCDF file.
     integer, intent(in) :: mapid            !*FD Handle of map projection in netCDF file.
+
+    if (.not.CFproj_allocated(projection)) then
+       call write_log('Warning, no projection found!')
+       return
+    end if
 
     if (associated(projection%laea)) then
        call CFproj_put_laea(ncid,mapid,projection%laea)
@@ -248,6 +275,8 @@ contains
        return
     else
        call glide_msg(GM_FATAL,__FILE__,__LINE__,'Could not find any projection')
+       call write_log('Warning, could not find any projection')
+
     end if
   end subroutine CFproj_PutProj
 
@@ -367,6 +396,7 @@ contains
   function CFproj_get_stere_polar(ncid,mapid)
     use netcdf
     use glide_messages
+    use glimmer_log
     implicit none
     type(CFproj_stere), pointer :: CFproj_get_stere_polar
     integer, intent(in) :: ncid
@@ -395,6 +425,8 @@ contains
     if (CFproj_get_stere_polar%standard_parallel.ne.0 .and. CFproj_get_stere_polar%scale_factor_at_proj_origin.ne.0.) then
        call glide_msg(GM_FATAL,__FILE__,__LINE__,'(stereographic projection), can only handle either'// &
           ' standard_parallel or scale_factor_at_proj_origin')
+       call error_log('Error (stereographic projection), can only handle either standard_parallel or scale_at_orig')
+       stop
     end if
   end function CFproj_get_stere_polar
 

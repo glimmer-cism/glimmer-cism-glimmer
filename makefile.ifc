@@ -21,20 +21,33 @@ F77=ifort
 
 NETCDF_LIB=-lnetcdf
 NETCDF_PREFIX=/usr/local/netcdf-3.5.1
-
-# compilation flags for fortran compiler ---------------------------------
-
-F77FLAGS=-fpp -g -w -std95 -I$(NETCDF_PREFIX)/include
-
-# for SLAP ---------------------------------------------------------------
-
-GLIMMERFLAGS=
-
-# final stage loader flags -----------------------------------------------
-
-LD_FLAGS=-L$(NETCDF_PREFIX)/lib $(NETCDF_LIB)
-
-# ranlib command, leave blank for no ranlib ------------------------------
+#
+# Compilation flags for C compiler
+#
+CCFLAGS= -DIFC -g -DLINUX
+# 
+# compilation flags for fortran compiler
+#
+F77FLAGS=-fpp -w -std95 -I$(NETCDF_PREFIX)/include
+#F77FLAGS=-fpp -w -g -C -std95 -traceback -I$(NETCDF_PREFIX)/include
+#F77FLAGSR8=-r8
+#
+# final stage loader flags
+#
+LD_FLAGS=$(BLASLIB) -L$(NETCDF_PREFIX)/lib $(NETCDF_LIB)
+#
+# locations of wishx and xqplot.tcl
+# they are in fact just empty files
+# they are on cvs in the genie-main/inputdata directory.
+# replace /home/ggdjl/genie/ with your genie code directory.
+LOCFLAGS=-DWISHX=\"/home/ggdjl/genie/genie-main/inputdata/wishx\" -DXQPLOTTCL=\"/home/ggdjl/genie/genie-main/inputdata/xqplot.tcl\" -DXFONT=\"/home/ggdjl/genie/genie-main/inputdata/fonts\"
+#
+# How to get ordered list of objects to put in a library
+#
+ORDER_OBJECTS=*.o
+#
+# ranlib command, leave blank for no ranlib
+#
 
 RANLIB=ranlib
 

@@ -1,4 +1,4 @@
-SUBDIRS = src/fortran doc
+SUBDIRS = src/fortran src/python doc
 
 subdirs:	$(SUBDIRS)
 
