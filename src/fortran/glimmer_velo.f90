@@ -768,7 +768,7 @@ contains
   function vertintg(velowk,sigma,in)
 
     !*FD Performs a depth integral using the trapezium rule.
-    !*FDRV The value of in integrated over depth.
+    !*RV The value of in integrated over depth.
 
     use glimmer_global, only : dp 
 

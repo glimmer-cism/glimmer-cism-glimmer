@@ -341,7 +341,11 @@ contains
 
   subroutine print_corners(proj)
 
-    type(projection),intent(in) :: proj
+    !*FD A diagnostic routine that prints the corners of the 
+    !*FD supplied projection in latitude-longitude coordinates 
+    !*FD to standard out. Useful for error finding.
+
+    type(projection),intent(in) :: proj !*FD Projection for printing.
 
     real(rk) :: clat,clon
 
@@ -364,7 +368,7 @@ contains
   real(rk) function loncorrect(lon)
 
     !*FD Normalises a value of longitude to the range 0 to 360 degrees.
-    !*FDRV The normalised value of longitude.
+    !*RV The normalised value of longitude.
 
     real(rk),intent(in) :: lon !*FD The longitude under consideration (degrees east)
 

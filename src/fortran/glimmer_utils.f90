@@ -64,7 +64,7 @@ contains
     !*FD Returns the value of a 1D array
     !*FD location,checking first for the boundaries.
     !*FD Note that this function is aliased as {\tt array\_bcs}.
-    !*FDRV The value of the location in question.
+    !*RV The value of the location in question.
 
     ! Arguments
 
@@ -100,7 +100,7 @@ contains
 
     !*FD As {\tt array\_bcs1d}, but adapted
     !*FD for dealing with polar boundary conditions.
-    !*FDRV The value of the location in question.
+    !*RV The value of the location in question.
 
     ! Arguments
 
@@ -138,7 +138,7 @@ contains
     !*FD Returns the value of an array 
     !*FD location, checking first for the boundaries. 
     !*FD Over-the-pole boundary conditions are implemented here.
-    !*FDRV The value of the location specified.
+    !*RV The value of the location specified.
 
     ! Arguments
 
@@ -242,9 +242,9 @@ contains
     !*FD Calculates the sum of a given three-dimensional field at each
     !*FD level. The vertical coordinate of the input is the first index of
     !*FD the array.
-    !*FDRV A one-dimensional array of the same size as the first dimension of
-    !*FDRV \texttt{inp} is returned, containing the sum of \texttt{inp} for 
-    !*FDRV each level.
+    !*RV A one-dimensional array of the same size as the first dimension of
+    !*RV \texttt{inp} is returned, containing the sum of \texttt{inp} for 
+    !*RV each level.
 
     implicit none
 
@@ -264,13 +264,13 @@ contains
     !*FD Calculates the sum of a given two-dimensional field along one axis.
     !*FD Within GLIMMER, this function calculates the mean vertical profile
     !*FD in a 2D vertical slice. 
-    !*FD A one-dimensional array of the same size as the first dimension of
-    !*FDRV \texttt{inp} is returned, containing the sum of \texttt{inp} for 
-    !*FDRV each row.
+    !*RV A one-dimensional array of the same size as the first dimension of
+    !*RV \texttt{inp} is returned, containing the sum of \texttt{inp} for 
+    !*RV each row.
 
     implicit none
 
-    real(dp),dimension(:,:), intent(in) :: inp
+    real(dp),dimension(:,:), intent(in) :: inp !*FD Input array
     real(dp),dimension(size(inp,dim=1)) :: lsum
     
     lsum = sum(inp(:,:),dim=2)
@@ -290,8 +290,17 @@ contains
 
   subroutine indexx(array,index)
 
-    real(sp),dimension(:) :: array
-    integer,dimension(:) :: index
+    !*FD Performs an index sort of \texttt{array} and returns the result in
+    !*FD \texttt{index}. The order of elements in \texttt{array} is unchanged.
+    !*FD
+    !*FD This is a GPL-licenced replacement for the Numerical Recipes routine indexx. 
+    !*FD It is not derived from any NR code, but are based on a quicksort routine by
+    !*FD Michael Lamont (http://linux.wku.edu/~lamonml/kb.html), originally written
+    !*FD in C, and issued under the GNU General Public License. The conversion to 
+    !*FD Fortran 90, and modification to do an index sort was done by Ian Rutt.
+
+    real(sp),dimension(:) :: array !*FD Array to be indexed.
+    integer, dimension(:) :: index !*FD Index of elements of \texttt{array}.
     integer :: i
 
     if (size(array).ne.size(index)) then
@@ -309,11 +318,21 @@ contains
 
   recursive subroutine q_sort_index(numbers,index,left,right)
 
+    !*FD This is the recursive subroutine actually used by \texttt{indexx}. 
+    !*FD
+    !*FD This is a GPL-licenced replacement for the Numerical Recipes routine indexx. 
+    !*FD It is not derived from any NR code, but are based on a quicksort routine by
+    !*FD Michael Lamont (http://linux.wku.edu/~lamonml/kb.html), originally written
+    !*FD in C, and issued under the GNU General Public License. The conversion to 
+    !*FD Fortran 90, and modification to do an index sort was done by Ian Rutt.
+
     implicit none
 
-    real(sp),dimension(:) :: numbers
-    integer, dimension(:) :: index
-    integer :: left, right,ll,rr
+    real(sp),dimension(:) :: numbers !*FD Numbers being sorted
+    integer, dimension(:) :: index   !*FD Returned index
+    integer :: left, right           !*FD Limit of sort region
+
+    integer :: ll,rr
     integer :: pv_int,l_hold, r_hold,pivpos
     real(sp) :: pivot
 

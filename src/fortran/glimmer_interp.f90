@@ -453,7 +453,7 @@ contains
     !*FD  \[f_{\mathtt{x},\mathtt{y}}=(1-t)(1-u)f_{1,1}+t(1-u)f_{2,1}+tuf_{2,2}+(1-t)uf_{1,2}\]
     !*FD with
     !*FD \[t=\frac{\mathtt{x}}{\mathtt{dx}}\] \[u=\frac{\mathtt{y}}{\mathtt{dy}}.\]
-    !*FDRV The value of \texttt{f} at \texttt{x,y}
+    !*RV The value of \texttt{f} at \texttt{x,y}
 
     ! Argument declarations
 

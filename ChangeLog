@@ -1,3 +1,8 @@
+2004-04-27 Ian Rutt
+ * Added doc comments to gmt.f90
+ * Updated return value documentation throughout to !*RV
+ * Other minor documentation and formatting changes
+
 2004-04-26 Ian Rutt
  * Merged port_to_nag branch into HEAD
  * Extended interpolation routines (glimmer_interp.f90) to include 

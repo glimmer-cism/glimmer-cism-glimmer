@@ -538,7 +538,7 @@ contains
     !*FD \[
     !*FD \mathtt{findgrid}=\frac{\mathtt{rin}-\mathtt{init}}{\mathtt{step}+1}
     !*FD \] 
-    !*FDRV The relevant array index.
+    !*RV The relevant array index.
 
     use glimmer_global, only : sp
     

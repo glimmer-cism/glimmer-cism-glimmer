@@ -206,7 +206,7 @@ contains
     !*FD Note that by default the units of temperature are degC,
     !*FD unless the kelvin flag is present and set, in which
     !*FD case they are Kelvin.
-    !*FDRV Saturated vapour pressure in Pascals.
+    !*RV Saturated vapour pressure in Pascals.
 
     implicit none
 
@@ -259,8 +259,8 @@ contains
     !*FD       except at the corners, where uncentred differences are employed.
     !*FD \end{itemize}
 
-    !*FDRV An array of the same size as \texttt{u} is 
-    !*FDRV returned. The units are m/s.
+    !*RV An array of the same size as \texttt{u} is 
+    !*RV returned. The units are m/s.
 
     implicit none
 
@@ -333,7 +333,7 @@ contains
     !*FD (from Abramowitz and Stegun 1965)
     !*FD However, this doesn't seem to be right for $\mathtt{y}<0$, but ok for $\mathtt{y}\geq 0$.
     !*FD Since the input is always $>0$, this isn't a problem here.
-    !*FDRV The value of the error function at \texttt{y}.
+    !*RV The value of the error function at \texttt{y}.
 
     implicit none
 

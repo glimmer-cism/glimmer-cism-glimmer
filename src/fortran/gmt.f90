@@ -53,9 +53,9 @@ module gmt
 !*FD This code is taken from the Generic Mapping Tools and was 
 !*FD converted into Fortran 90 by Ian Rutt.
 !*FD 
-!*FD Original code (in C) Copyright (c) 1991-2003 by P. Wessel and W. H. F. Smith
-!*FD
-!*FD Partial translation into Fortran 90 (c) 2004 Ian C. Rutt
+!*FD Original code (in C) Copyright (c) 1991-2003 by P. Wessel and W. H. F. Smith.
+!*FD 
+!*FD Partial translation into Fortran 90 (c) 2004 Ian C. Rutt.
 !*FD 
 !*FD To use this library:
 !*FD \begin{itemize}
@@ -63,47 +63,48 @@ module gmt
 !*FD \item Declare an instance of gmt\_pinf for each instance of the projection you
 !*FD    want to use;
 !*FD \item initialise the projection by calling \texttt{gmt\_set(latc,lonc,radea,project\_info)}
-!*FD    with the centre of the projection (latc,lonc) in degrees, the radius of the earth
-!*FD    (radea), in metres (though often it's convenient to set this to 1.0), and the
-!*FD    instance of gmt\_pinf.
+!*FD    with the centre of the projection (\texttt{latc},\texttt{lonc}) in degrees, the radius of the earth
+!*FD    (\texttt{radea}), in metres (though often it's convenient to set this to 1.0), and the
+!*FD    instance of \texttt{gmt\_pinf}.
 !*FD \end{itemize}
-!*FD
+!*FD 
 !*FD NB: Longitude and latitude coordinates are in degrees, relative to the global origin,
-!*FD     while x and y are relative to the centre of the projection
+!*FD     while x and y are relative to the centre of the projection, and given in metres (or whatever
+!*FD     units are used for the radius of the Earth).
 
   use glimmer_global
 
   implicit none
 
   type gmt_pinf
-    real(dp) :: cosp               !*FD cos ($\phi_p$)
-    real(dp) :: sinp               !*FD sin ($\phi_p$)
-    real(dp) :: pole               !*FD +90 or -90, depending on hemisphere
-    real(dp) :: central_meridian   !*FD central meridian of projection
-    real(dp) :: EQ_RAD             !*FD radius of earth
-    real(dp) :: i_EQ_RAD           !*FD 1/radius of earth
-    real(dp) :: Dx                 !*FD fudge factor for scaling the projection 
-    real(dp) :: Dy                 !*FD ditto
-    real(dp) :: iDx                !*FD inverse of Dx
-    real(dp) :: iDy                !*FD inverse of Dy
-    real(dp) :: s_c                !*FD Not sure what this does\ldots
-    real(dp) :: s_ic               !*FD Not sure what this does, but it's the inverse of {\tt s\_ic}\ldots
-    logical :: n_polar            !*FD not needed - indicates if projection pole is north pole
-    logical :: s_polar            !*FD not needed - indicates if projection pole is south pole
-    logical :: north_pole         !*FD true if projection in northern hemisphere, false otherwise
-    logical :: polar              !*FD Is this a polar projection?
+    real(dp) :: cosp             = 0.0     !*FD cos ($\phi_p$)
+    real(dp) :: sinp             = 0.0     !*FD sin ($\phi_p$)
+    real(dp) :: pole             = 0.0     !*FD +90 or -90, depending on hemisphere
+    real(dp) :: central_meridian = 0.0     !*FD Central meridian of projection
+    real(dp) :: EQ_RAD           = 0.0     !*FD The radius of earth
+    real(dp) :: i_EQ_RAD         = 0.0     !*FD 1/radius of earth.
+    real(dp) :: Dx               = 0.0     !*FD A fudge factor for scaling the projection.
+    real(dp) :: Dy               = 0.0     !*FD A fudge factor for scaling the projection.
+    real(dp) :: iDx              = 0.0     !*FD Inverse of Dx.
+    real(dp) :: iDy              = 0.0     !*FD Inverse of Dy.
+    real(dp) :: s_c              = 0.0     !*FD Not sure what this does\ldots.
+    real(dp) :: s_ic             = 0.0     !*FD Not sure what this does, but it's the inverse of {\tt s\_ic}\ldots.
+    logical  :: n_polar          = .false. !*FD not needed - indicates if projection pole is north pole.
+    logical  :: s_polar          = .false. !*FD not needed - indicates if projection pole is south pole.
+    logical  :: north_pole       = .false. !*FD true if projection in northern hemisphere, false otherwise.
+    logical  :: polar            = .false. !*FD Is this a polar projection?
   end type gmt_pinf
 
-  real(dp),parameter :: pi=3.141592654          ! public
-  real(dp),parameter :: M_PI_4=pi/4
-  real(dp),parameter :: M_PI_2=pi/2
-  real(dp),parameter :: D2R=pi/180.0            ! public
-  real(dp),parameter :: R2D=180.0/pi            ! public
-  real(dp),parameter :: DBL_MAX=huge(pi)        
-  real(dp),parameter :: GMT_CONV_LIMIT=1.0e-8
-  logical,parameter :: GMT_convert_latitudes=.false.
-  real(dp),parameter :: GMT_map_scale_factor = 1.0
-  real(dp),parameter :: SMALL=1.0e-4
+  real(dp),parameter :: pi=3.141592654          !*FD The value of $\pi$.
+  real(dp),parameter :: M_PI_4=pi/4             !*FD The value of $\pi/4$.
+  real(dp),parameter :: M_PI_2=pi/2             !*FD The value of $\pi/2$.
+  real(dp),parameter :: D2R=pi/180.0            !*FD Degrees-to-radians conversion factor.
+  real(dp),parameter :: R2D=180.0/pi            !*FD Radians-to-degrees conversion factor.
+  real(dp),parameter :: DBL_MAX=huge(pi)        !*FD Ceiling value for double-precision real kind.
+  real(dp),parameter :: GMT_CONV_LIMIT=1.0e-8   !*FD Convergence limit (a small number).
+  logical, parameter :: GMT_convert_latitudes=.false. !*FD An unused constant, left over from C-to-f90 conversion.
+  real(dp),parameter :: GMT_map_scale_factor = 1.0    !*FD An unused constant, left over from C-to-f90 conversion.
+  real(dp),parameter :: SMALL=1.0e-4                  !*FD A small number.
 
   private sincos,hypot
   private DBL_MAX,GMT_CONV_LIMIT,GMT_convert_latitudes,M_PI_4
@@ -123,9 +124,9 @@ contains
                                   !*FD \item Spherical stereographic (oblique)
                                   !*FD \item Spherical stereographic (equatorial)
                                   !*FD \end{enumerate}
-    real(dp),intent(in) :: latc    !*FD Centre of projection (Latitude)
-    real(dp),intent(in) :: lonc    !*FD Centre of projection (Longitude)
-    real(dp),intent(in) :: radea   !*FD Radius of the Earth (m)
+    real(dp),intent(in) :: latc   !*FD Centre of projection (Latitude)
+    real(dp),intent(in) :: lonc   !*FD Centre of projection (Longitude)
+    real(dp),intent(in) :: radea  !*FD Radius of the Earth (m)
     type(gmt_pinf),intent(inout) :: project_info !*FD GMT parameters to be initialised
 
     call gmt_type_init(project_info)
@@ -148,7 +149,8 @@ contains
   subroutine gmt_type_init(project_info)
 
     !*FD Initialise the GMT projection parameters to their
-    !*FD default values.
+    !*FD default values. This subroutine is redundant now we have
+    !*FD moved to f95, which allows derived type initialisation.
 
     type(gmt_pinf),intent(out) :: project_info !*FD GMT parameters to be initialised
 
@@ -179,10 +181,17 @@ contains
 
   subroutine gmt_lambeq_set(latc,lonc,project_info)
 
+    !*FD Initialise a Lambert equal-area projection.
+
     implicit none
 
-    real(dp),intent(in) :: latc,lonc
-    type(gmt_pinf),intent(inout) :: project_info
+    ! Subroutine arguments ------------------------------------------------------
+
+    real(dp),      intent(in)    :: latc          !*FD Location of projection centre, latitude (degrees).
+    real(dp),      intent(in)    :: lonc          !*FD Location of projection centre, longitude (degrees).
+    type(gmt_pinf),intent(inout) :: project_info  !*FD GMT parameters to be initialised.
+
+    !----------------------------------------------------------------------------
 
     project_info%cosp=cos(latc*D2R)           ! cos (phi_p)
     project_info%sinp=sin(latc*D2R)           ! sin (phi_p)
@@ -199,18 +208,28 @@ contains
 
   end subroutine gmt_lambeq_set
 
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine gmt_lambeq(lon,lat,x,y,project_info)
 
-    !  Convert lon/lat to Spherical Lambert Azimuthal Equal-Area x/y
+    !*FD Converts lat-lon coordinates to x-y coordinates, using a
+    !*FD Spherical Lambert Azimuthal Equal-Area projection.
 
     implicit none
 
-    real(dp),intent(in)  :: lon,lat
-    type(gmt_pinf),intent(in) :: project_info
-    real(dp),intent(out) :: x,y
+    ! Subroutine arguments ------------------------------------------------------
+
+    real(dp),      intent(in)  :: lon !*FD Longitude (degrees).
+    real(dp),      intent(in)  :: lat !*FD Latitude (degrees).
+    type(gmt_pinf),intent(in)  :: project_info !*FD GMT parameters to be used.
+    real(dp),      intent(out) :: x   !*FD $x$ location (m).
+    real(dp),      intent(out) :: y   !*FD $y$ location (m).
+
+    ! Internal variables --------------------------------------------------------
+
     real(dp) :: k,tmp,sin_lat,cos_lat,sin_lon,cos_lon,c,dlon,dlat
+
+    !----------------------------------------------------------------------------
 
     dlon = lon-project_info%central_meridian
 
@@ -245,17 +264,25 @@ contains
 
   end subroutine gmt_lambeq
 
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine gmt_ilambeq(lon,lat,x,y,project_info)
 
-    ! Convert Lambert Azimuthal Equal-Area x/yto lon/lat
+    !*FD Convert x-y coordinates to lat-lon coordinates, using
+    !*FD a Lambert Azimuthal Equal-Area projection.
 
     implicit none
 
-    real(dp),intent(in) :: x,y
-    type(gmt_pinf),intent(in) :: project_info
-    real(dp),intent(out) :: lon,lat
+    ! Subroutine arguments ------------------------------------------------------
+
+    real(dp),      intent(in)  :: x    !*FD $x$-location (m).
+    real(dp),      intent(in)  :: y    !*FD $y$-location (m).
+    type(gmt_pinf),intent(in)  :: project_info !*FD GMT parameters to be used.
+    real(dp),      intent(out) :: lon  !*FD Longitude (degrees).
+    real(dp),      intent(out) :: lat  !*FD Latitude (degrees).
+
+    ! ---------------------------------------------------------------------------
+
     real(dp) :: rho,c,sin_c,cos_c,xx,yy
   
     xx=x ; yy=y
@@ -292,9 +319,15 @@ contains
 
   subroutine gmt_map_init_stereo(latg,rlong,project_info)
 
-    real(dp) :: latg      ! Centre of map projection
-    real(dp) :: rlong     ! Centre of map projection
-    type(gmt_pinf),intent(inout) :: project_info    
+    !*FD Initialises a polar stereographic projection.
+
+    ! Subroutine arguments ------------------------------------------------------
+
+    real(dp) :: latg      !*FD Centre of map projection, latitude (degrees).
+    real(dp) :: rlong     !*FD Centre of map projection, longitude (degrees).
+    type(gmt_pinf),intent(inout) :: project_info !*FD GMT parameters to be set.
+
+    ! ---------------------------------------------------------------------------
 
     call gmt_set_polar (latg,project_info)
 
@@ -311,12 +344,16 @@ contains
 
   subroutine gmt_set_polar (plat,project_info)
 
-    ! Determines if the projection pole is N or S pole 
+    !*FD Determines if the projection pole is N or S pole.
 
     implicit none
 
-    real(dp),intent(in) :: plat
-    type(gmt_pinf),intent(inout) :: project_info
+    ! Subroutine arguments ------------------------------------------------------
+
+    real(dp),      intent(in)    :: plat         !*FD Latitude of projection centre (degrees). 
+    type(gmt_pinf),intent(inout) :: project_info !*FD GMT parameters to be set.
+
+    ! ---------------------------------------------------------------------------
 
     if (abs (abs (plat) - 90.0) < GMT_CONV_LIMIT) then
       project_info%polar = .true.
@@ -331,13 +368,21 @@ contains
 
   subroutine gmt_vstereo (rlong0,plat,project_info)
 
-    ! Set up a Stereographic transformation 
+    !*FD Set up a Stereographic transformation.
 
     implicit none 
 
-    real(dp),intent(in) :: rlong0,plat
-    type(gmt_pinf),intent(inout) :: project_info
+    ! Subroutine arguments ------------------------------------------------------
+
+    real(dp),      intent(in)    :: rlong0       !*FD Centre of the projection, longitude (degrees).
+    real(dp),      intent(in)    :: plat         !*FD Centre of the projection, latitude (degrees).
+    type(gmt_pinf),intent(inout) :: project_info !*FD GMT parameters to be set.
+
+    ! Internal variables --------------------------------------------------------
+
     real(dp) :: clat
+
+    ! ---------------------------------------------------------------------------
 
     clat = plat
 
@@ -355,16 +400,25 @@ contains
 
   subroutine gmt_plrs_sph(lon,lat,x,y,project_info)
 
-  ! Convert lon/lat to x/y using Spherical polar projection
+  !*FD Convert lon-lat coordinates to x-y coordinates using a 
+  !*FD spherical polar projection.
 
     implicit none
 
-    real(dp),intent(in) :: lon,lat
-    real(dp),intent(out) :: x,y
-    type(gmt_pinf),intent(in) :: project_info
+    ! Subroutine arguments ------------------------------------------------------
+
+    real(dp),      intent(in)  :: lon          !*FD Longitude (degrees).
+    real(dp),      intent(in)  :: lat          !*FD Latitude (degrees).
+    real(dp),      intent(out) :: x            !*FD $x$-location (m).
+    real(dp),      intent(out) :: y            !*FD $y$-location (m).
+    type(gmt_pinf),intent(in)  :: project_info !*FD GMT parameters to be used.
+
+    ! Internal variables --------------------------------------------------------
 
     real(dp) :: rho, slon, clon,dlon,dlat
       
+    ! ---------------------------------------------------------------------------
+
     dlon = lon-project_info%central_meridian
     dlat = lat
 
@@ -397,16 +451,25 @@ contains
 
   subroutine gmt_iplrs_sph (lon,lat,x,y,project_info)
 
-    ! Convert Spherical polar x/y to lon/lat
+    !*FD Convert x-y coordinates to lat-lon coordinates using
+    !*FD a spherical polar projection.
 
     implicit none
 
-    real(dp),intent(out) :: lon,lat
-    real(dp),intent(in)  :: x,y
-    type(gmt_pinf),intent(in) :: project_info
+    ! Subroutine arguments ------------------------------------------------------
+
+    real(dp),intent(out) :: lon !*FD Longitude (degrees).
+    real(dp),intent(out) :: lat !*FD Latitude (degrees).
+    real(dp),intent(in)  :: x   !*FD $x$-location (m).
+    real(dp),intent(in)  :: y   !*FD $y$-location (m).
+    type(gmt_pinf),intent(in) :: project_info !*FD GMT parameters to use.
+
+    ! Internal variables --------------------------------------------------------
 
     real(dp) :: c
     real(dp) :: xx,yy
+
+    ! ---------------------------------------------------------------------------
 
     xx=x ; yy=y
     
@@ -432,15 +495,24 @@ contains
 
   subroutine gmt_stereo1_sph (lon,lat,x,y,project_info)
 
-    ! Convert lon/lat to x/y using Spherical stereographic projection, oblique view
+    !*FD Convert lon-lat coordinates to x-y coordinates using 
+    !*FD a spherical stereographic projection, oblique view.
   
     implicit none
 
-    real(dp),intent(in) :: lon,lat
-    real(dp),intent(out) :: x,y
-    type(gmt_pinf),intent(in) :: project_info
+    ! Subroutine arguments ------------------------------------------------------
+
+    real(dp),      intent(in)  :: lon !*FD Longitude (degrees).
+    real(dp),      intent(in)  :: lat !*FD Latitude (degrees).
+    real(dp),      intent(out) :: x   !*FD $x$-location (m).
+    real(dp),      intent(out) :: y   !*FD $y$-location (m).
+    type(gmt_pinf),intent(in)  :: project_info !*FD GMT parameters to use.
+
+    ! Internal variables --------------------------------------------------------
 
     real(dp) :: dlon,sin_dlon,cos_dlon,s,c,cc,A,dlat
+
+    ! ---------------------------------------------------------------------------
 
     dlon = D2R * (lon - project_info%central_meridian)
     dlat = lat*D2R
@@ -457,13 +529,24 @@ contains
 
   subroutine gmt_istereo_sph (lon,lat,x,y,project_info)
 
+    !*FD Convert x-y coordinates to lat-lon coordinates using 
+    !*FD a spherical stereographic projection.
+
     implicit none
 
-    real(dp),intent(out) :: lon,lat
-    real(dp),intent(in)  :: x,y
-    type(gmt_pinf),intent(in) :: project_info
+    ! Subroutine arguments ------------------------------------------------------
+ 
+    real(dp),      intent(out) :: lon !*FD Longitude (degrees).
+    real(dp),      intent(out) :: lat !*FD Latitude (degrees).
+    real(dp),      intent(in)  :: x   !*FD $x$-location (m).
+    real(dp),      intent(in)  :: y   !*FD $y$-location (m).
+    type(gmt_pinf),intent(in)  :: project_info !*FD GMT parameters to use.
+
+    ! Internal variables --------------------------------------------------------
 
     real(dp) :: rho,c,sin_c,cos_c
+
+    ! ---------------------------------------------------------------------------
 
     if (x == 0.0 .and. y == 0.0) then
       lon = project_info%central_meridian
@@ -483,16 +566,24 @@ contains
 
   subroutine gmt_stereo2_sph (lon,lat,x,y,project_info)
 
-    ! Spherical equatorial view
-    ! Convert lon/lat to x/y using stereographic projection, equatorial view 
+    !*FD Convert lon-lat coordinates to x-y coordinates using a stereographic 
+    !*FD projection, equatorial view.
 
     implicit none
 
-    real(dp),intent(in) :: lon,lat
-    real(dp),intent(out) :: x,y
-    type(gmt_pinf),intent(in) :: project_info
+    ! Subroutine arguments ------------------------------------------------------
+
+    real(dp),      intent(in)  :: lon !*FD Longitude (degrees).
+    real(dp),      intent(in)  :: lat !*FD Latitude (degrees).
+    real(dp),      intent(out) :: x   !*FD $x$-location (m).
+    real(dp),      intent(out) :: y   !*FD $y$-location (m).
+    type(gmt_pinf),intent(in)  :: project_info !*FD GMT parameters to use.
+
+    ! Internal variables --------------------------------------------------------
 
     real(dp) :: dlon,dlat,s,c,clon,slon,A
+
+    ! ---------------------------------------------------------------------------
     
     dlon = lon - project_info%central_meridian
     if (abs (dlon - 180.0) < GMT_CONV_LIMIT) then
@@ -516,10 +607,13 @@ contains
 
   subroutine sincos(a,s,c)
 
+    !*FD Calculates the sin and cos of an angle.
+
     implicit none
 
-    real(dp),intent(in) :: a
-    real(dp),intent(out) :: s,c
+    real(dp),intent(in)  :: a !*FD Input value (radians).
+    real(dp),intent(out) :: s !*FD sin(\texttt{a})
+    real(dp),intent(out) :: c !*FD cos(\texttt{a})
 
       s = sin (a)
       c = cos (a)
@@ -530,11 +624,14 @@ contains
 
   real(dp) function hypot(x,y)
 
-  ! This is an implementation of a standard C library function
+  !*FD This is an implementation of a standard C library function, 
+  !*FD returning the value of $\sqrt{x^2+y^2}$.
+  !*RV Returns the value of $\sqrt{x^2+y^2}$.
 
     implicit none
 
-    real(dp),intent(in) :: x,y
+    real(dp),intent(in) :: x !*FD One input value
+    real(dp),intent(in) :: y !*FD Another input value
 
     hypot=sqrt(x*x+y*y)
 
@@ -544,11 +641,13 @@ contains
 
   real(dp) function d_atan2(x,y)
 
-  ! Macro-implemented function from GMT
+  !*FD A macro-implemented function from GMT
+  !*RV If \texttt{x} and \texttt{0} are both zero, zero is returned, else
+  !*FD \texttt{atan2 (y, x)} is returned.
 
     implicit none
 
-    real(dp),intent(in) :: x,y
+    real(dp),intent(in) :: x,y !*FD Input value
 
     if (x==0.0 .and. y==0.0) then
       d_atan2=0.0
@@ -562,11 +661,13 @@ contains
 
   real(dp) function d_asin(x)
 
-  ! Macro-implemented function from GMT
+  !*FD Macro-implemented function from GMT
+  !*RV If $\mathtt{x}\geq 1$, \texttt{sign(M\_PI\_2,x)} is returned, else
+  !*RV \texttt{asin(x)} is returned.
 
     implicit none
 
-    real(dp),intent(in) :: x
+    real(dp),intent(in) :: x !*FD Input value
 
     if (abs(x) >= 1.0) then
       d_asin=sign(M_PI_2,x)

@@ -1044,7 +1044,7 @@ contains
     !*FD Checks to see whether a 
     !*FD longitudinal coordinate is between two bounds,
     !*FD taking into account the periodic boundary conditions.
-    !*FDRV Returns \texttt{.true.} if $\mathtt{x}\geq \mathtt{a}$ and $\mathtt{x}<\mathtt{b}$.
+    !*RV Returns \texttt{.true.} if $\mathtt{x}\geq \mathtt{a}$ and $\mathtt{x}<\mathtt{b}$.
 
     ! Arguments
 

@@ -456,12 +456,12 @@ contains
     !*FD Retrieve ice model fractional 
     !*FD coverage map. This function is provided so that glimmer may
     !*FD be restructured without altering the interface.
-    !*FDRV Three return values are possible:
-    !*FDRV \begin{description}
-    !*FDRV \item[0 ---] Successful return
-    !*FDRV \item[1 ---] Coverage map not calculated yet (fail)
-    !*FDRV \item[2 ---] Coverage array is the wrong size (fail)
-    !*FDRV \end{description}
+    !*RV Three return values are possible:
+    !*RV \begin{description}
+    !*RV \item[0 ---] Successful return
+    !*RV \item[1 ---] Coverage map not calculated yet (fail)
+    !*RV \item[2 ---] Coverage array is the wrong size (fail)
+    !*RV \end{description}
 
     implicit none
     
@@ -490,8 +490,8 @@ contains
 
 !*FD Returns the value of the 
 !*FD main logical file unit used by glimmer
-!*FDRV The value of the 
-!*FDRV main logical file unit used by glimmer.
+!*RV The value of the 
+!*RV main logical file unit used by glimmer.
 
     implicit none
 

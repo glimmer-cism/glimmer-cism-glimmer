@@ -39,7 +39,7 @@ clean :
 	\rm -f *.o *.a *.mod f90_dep.mak
 
 f90_dep.mak: $(SOURCES)
-	../python/f90_dependencies.py -o $@ $(SOURCES)
+	python ../python/f90_dependencies.py -o $@ $(SOURCES)
 
 code_doc: $(SOURCES) $(OTHER_FILES)
 	f90doc -t "GLIMMER Code Documentation" -a "Ian Rutt" $(SOURCES) > ../../doc/code_doc.tex
