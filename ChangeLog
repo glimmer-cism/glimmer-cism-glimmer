@@ -1,5 +1,6 @@
 2005-02-18 Ian Rutt
  * Added fix_acab call to glint_timestep.f90
+ * Converted precip to m in glint_timestep.f90
 
 2005-02-17 Ian Rutt
  * Tidied up GLINT pdd scheme and added config file handling

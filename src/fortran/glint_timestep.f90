@@ -200,6 +200,10 @@ contains
        call write_log('Invalid value of whichprecip',GM_FATAL,__FILE__,__LINE__)
     end select
 
+    ! Convert from mm to m - very important!
+
+    instance%whichprecip=instance%whichprecip*0.001
+
     ! ------------------------------------------------------------------------ 
     ! Calculate ablation, and thus mass-balance
     ! ------------------------------------------------------------------------ 
