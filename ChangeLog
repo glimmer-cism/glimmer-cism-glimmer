@@ -1,3 +1,9 @@
+2004-10-21 Ian Rutt
+ * Sorted out water budgeting. This is something of a fudge, for although
+   melt and run-off maps are determined reasonably well, an overall constant
+   is added to ablation to account for any non-conservation of mass in the dynamics.
+ * Also adjusted ablation calculations so as not to remove more mass than is present.
+
 2004-10-14 Ian Rutt
  * Fixed problem with coverage map normalisation
 

@@ -482,7 +482,8 @@ contains
             model%climate%presprcp, &
             model%climate%ablt,     &
             model%climate%lati,     &
-            model%climate%acab)     
+            model%climate%acab,     &
+            model%geometry%thck)     
        
        ! Set ice thickness to be mass-balance*time-step, where positive
        
@@ -678,13 +679,13 @@ contains
 
 !-------------------------------------------------------------------------
 
-  subroutine marinlim(which,whicht,thck,usrf,relx,topg,lati,mlimit)
+  subroutine marinlim(which,whicht,thck,usrf,relx,topg,lati,mlimit,ablation_field)
 
     !*FD Removes non-grounded ice, according to one of two altenative
     !*FD criteria, and sets upper surface of non-ice-covered points 
     !*FD equal to the topographic height, or sea-level, whichever is higher.
 
-    use glimmer_global, only : dp, sp
+    use glimmer_global, only : dp, sp,rk
     use physcon, only : f  
 
     implicit none
@@ -711,6 +712,7 @@ contains
     real(dp)                              :: mlimit  !*FD Lower limit on topography elevation for
                                                      !*FD ice to be present (scaled). Used with 
                                                      !*FD $\mathtt{which}=0$.
+    real(rk),dimension(:,:),intent(inout) :: ablation_field 
 
     !---------------------------------------------------------------------
 
@@ -720,6 +722,7 @@ contains
             ! given level
 
       where (relx < mlimit)
+        ablation_field=ablation_field+thck
         thck = 0.0d0
         usrf = max(0.0d0,topg)
       end where
@@ -727,6 +730,7 @@ contains
     case(1) ! Set thickness to zero if ice is floating
 
       where (thck < f * topg)
+        ablation_field=ablation_field+thck
         thck = 0.0d0
         usrf = max(0.0d0,topg)
       end where

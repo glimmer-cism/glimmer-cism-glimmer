@@ -586,7 +586,7 @@ contains
 
   !---------------------------------------------------------------------------------
 
-  subroutine calcacab(numerics,params,pddcalc,which,usrf,artm,arng,prcp,ablt,lati,acab)
+  subroutine calcacab(numerics,params,pddcalc,which,usrf,artm,arng,prcp,ablt,lati,acab,thck)
 
     use glimmer_global, only : dp, sp 
     use paramets, only : len0
@@ -612,6 +612,7 @@ contains
     real(sp),dimension(:,:),intent(out)   :: ablt
     real(sp),dimension(:,:),intent(in)    :: lati
     real(sp),dimension(:,:),intent(out)   :: acab
+    real(dp),dimension(:,:),intent(in)    :: thck
 
     !-----------------------------------------------------------------------------
     ! Internal variables
@@ -650,16 +651,32 @@ contains
        call glide_msg(GM_FATAL,__FILE__,__LINE__,'Unrecognised value of whichacab')
     end select
 
+    ! Adjust ablation to be no greater than ice available for melting
+
+    where (ablt*numerics%dt>(thck+prcp*numerics%dt)) 
+      ablt=(thck/numerics%dt)+prcp
+      acab=prcp-ablt
+    endwhere
+
     ! If the upper ice/land surface is at or below sea-level, set accumulation,
     ! ablation and mass-balance to zero. This is to prevent accumulation of ice below
     ! sea-level.
 
-    ! ****** REMOVED THIS BECAUSE I'M NOT SURE IT'S THE RIGHT WAY TO TACKLE THE ISSUE ******
-    !where (usrf<=0.0)
-    !  ablt=0.0
-    !  acab=0.0
-    !  prcp=0.0
-    !end where
+    where (usrf<=0.0)
+      ablt=prcp
+      acab=0.0
+    end where
+
+    ! Remove accumulation from domain edges
+
+    ablt(:,1)=prcp(:,1)
+    acab(:,1)=0.0
+    ablt(:,nsn)=prcp(:,nsn)
+    acab(:,nsn)=0.0
+    ablt(1,:)=prcp(1,:)
+    acab(1,:)=0.0
+    ablt(ewn,:)=prcp(ewn,:)
+    acab(ewn,:)=0.0
 
   end subroutine calcacab
 
