@@ -206,10 +206,7 @@ netCDF I/O can be configured in the main configuration file or in a separate fil
     \texttt{name} & The name of the output netCDF file. Typically netCDF files end with \texttt{.nc}.\\
     \texttt{start} & Start writing to file when this time is reached.\\
     \texttt{frequency} & The time interval in years, determining how often selected variables are written to file.\\
-    \texttt{variables} & List of variables to be written to file. See Appendix \ref{ug.sec.varlist} for a list of known variables. Names should be separated by at least one space. The variable names are case sensitive. Append \texttt{\_spot} to the variable name to store variable at specified locations. Variable \texttt{hot} selects all variables necessary for a hotstart.\\
-    \texttt{numspot} & The number of spot locations\\
-    \texttt{spotx} & List of $x$--indecies specifying spot locations.\\
-    \texttt{spoty} & List of $y$--indecies specifying spot locations.\\   
+    \texttt{variables} & List of variables to be written to file. See Appendix \ref{ug.sec.varlist} for a list of known variables. Names should be separated by at least one space. The variable names are case sensitive. Variable \texttt{hot} selects all variables necessary for a hotstart.\\
     \hline
   \end{supertabular}
 \end{center}

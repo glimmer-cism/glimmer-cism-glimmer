@@ -264,7 +264,7 @@ contains
     call glide_tstep_p1(instance%model,time)
     
     ! write glint data to file
-    call glint_writeall(instance)
+    call glint_io_writeall(instance,instance%model)
 
     ! ------------------------------------------------------------------------
     ! At this point we need to do the water flux output calculations, as the 

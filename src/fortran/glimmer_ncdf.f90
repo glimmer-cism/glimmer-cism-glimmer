@@ -1,6 +1,6 @@
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! +                                                           +
-! +  ncdf.f90 - part of the GLIMMER ice model                 + 
+! +  glimmer_ncdf.f90 - part of the GLIMMER ice model         + 
 ! +                                                           +
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! 
@@ -40,78 +40,60 @@
 !
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-module glimmer_ncdf
-  !*FD Data structures and utility functions for netCDF I/O
+#define NCO outfile%nc
+#define NCI infile%nc
+
+module glimmer_ncdf  
+  !*FD netCDF type definitions and functions for managing linked lists
   !*FD written by Magnus Hagdorn, 2004
 
   use glimmer_global, only: fname_length
   use netcdf
 
-  integer, private, parameter :: num_vars = !GENVARS_NUMVARS!
-  integer, private, parameter :: meta_len = 100
-
-  !GENVAR_TYPES!
+  integer, parameter :: glimmer_nc_meta_len = 100
+  !*FD maximum length for meta data
+  character(len=*), parameter :: glimmer_nc_mapvarname = 'mapping'
+  !*FD name of the grid mapping variable
 
   type glimmer_nc_stat
      !*FD Data structure holding netCDF file description
 
+     logical :: define_mode = .TRUE.
+     !*FD set to .TRUE. when we are in define mode
      logical :: just_processed = .FALSE.
      !*FD set to .TRUE. if the file was used during the last time step
      real :: processsed_time = 0.0
      !*FD the time when the file was last processed
      character(len=fname_length) :: filename = " "
      !*FD name of netCDF file
-     logical, dimension(num_vars) :: do_var
-     !*FD array specifying which variables should be written to netCDF file
-     logical :: do_spot = .false.
-     !*FD write spot data
      integer id
      !*FD id of netCDF file
 
-     integer x0dim
-     !*FD id of x0 dimension
-     integer y0dim
-     !*FD id of y0 dimension
-     integer x1dim
-     !*FD id of x1 dimension
-     integer y1dim
-     !*FD id of y1 dimension
-     integer leveldim
-     !*FD id of sigma level dimension
+     integer :: nlevel = 0
+     !*FD size of vertical coordinate
+
      integer timedim
      !*FD id of time dimension
-     integer spotdim
-     !*FD id of spot index dimensions
-     integer x0var, x0_spotvar
-     !*FD id of x0 variable
-     integer y0var, y0_spotvar
-     !*FD id of y0 variable
-     integer x1var, x1_spotvar
-     !*FD id of x1 variable
-     integer y1var, y1_spotvar
-     !*FD id of y1 variable
-     integer levelvar
-     !*FD id of sigma level variable
      integer timevar
      !*FD id of time variable 
-     integer, dimension(num_vars) :: varids
-     !*FD array holding variable ids
-  end type glimmer_nc_stat
+     character(len=310) vars
+     !*FD string containing variables to be processed
+  end type glimmer_nc_stat     
 
   type glimmer_nc_meta
      !*FD Data structure holding netCDF meta data, see CF user guide
      
-     character(len=meta_len) :: title = ''
+     character(len=glimmer_nc_meta_len) :: title = ''
      !*FD title of netCDF file
-     character(len=meta_len) :: institution = ''
+     character(len=glimmer_nc_meta_len) :: institution = ''
      !*FD where the data was produced
-     character(len=meta_len) :: references = ''
+     character(len=glimmer_nc_meta_len) :: references = ''
      !*FD list of references
-     character(len=meta_len) :: source = ''
+     character(len=glimmer_nc_meta_len) :: source = ''
      !*FD this string will hold the GLIMMER version
-     character(len=meta_len) :: history = ''
+     character(len=glimmer_nc_meta_len) :: history = ''
      !*FD netCDF file history string
-     character(len=meta_len) :: comment = ''
+     character(len=glimmer_nc_meta_len) :: comment = ''
      !*FD some comments
   end type glimmer_nc_meta
 
@@ -126,10 +108,6 @@ module glimmer_ncdf
      !*FD next time step at which data is dumped
      integer :: timecounter=1
      !*FD time counter
-     integer, pointer, dimension(:) :: spotx=>NULL()
-     !*FD array containg spot x-index
-     integer, pointer, dimension(:) :: spoty=>NULL()
-     !*FD array containg spot y-index
      
      type(glimmer_nc_meta) :: metadata
      !*FD structure holding metadata
@@ -142,7 +120,7 @@ module glimmer_ncdf
 
   type glimmer_nc_input
      !*FD element of linked list describing netCDF input file
-
+     
      type(glimmer_nc_stat) :: nc
      !*FD structure containg file info
      integer, pointer, dimension(:) :: times => NULL()     
@@ -248,7 +226,6 @@ contains
     type(glimmer_nc_output), pointer :: oc
 
     allocate(add_output)
-    add_output%nc%do_var(:) = .false.
 
     if (associated(oc)) then
        add_output%previous => oc
@@ -267,7 +244,6 @@ contains
     type(glimmer_nc_input), pointer :: ic
 
     allocate(add_input)
-    add_input%nc%do_var(:) = .false.
 
     if (associated(ic)) then
        add_input%previous => ic
@@ -278,19 +254,6 @@ contains
        ic%next => add_input
     end if
   end function add_input
-
-  subroutine check_vars(nc,unit)
-    !*FD print netCDF variables handled by nc to unit
-    implicit none
-    type(glimmer_nc_stat) :: nc
-    !*FD netCDF file descriptor
-    integer, intent(in) :: unit
-    !*FD file unit to be written to
-
-    !GENVARS!
-    
-  end subroutine check_vars
-
 end module glimmer_ncdf
 
 module glimmer_scales
@@ -298,14 +261,14 @@ module glimmer_scales
 
   use glimmer_global, only : dp
 
-  real(dp) :: scale2d_f1, scale2d_f2, scale2d_f3, scale2d_f4, scale2d_f5, scale2d_f6, scale2d_f7, scale2d_f8
+  real(dp) :: scale2d_f1, scale2d_f2, scale2d_f3, scale2d_f4, scale2d_f5, scale2d_f6, scale2d_f7, scale2d_f8, scale2d_f9
   real(dp) :: scale3d_f1, scale3d_f2, scale3d_f3, scale3d_f4, scale3d_f5, scale3d_f6, scale3d_f7, scale3d_f8
 
 contains
   subroutine glimmer_init_scales
     !*FD calculate scale factors (can't have non-integer powers)
     use physcon, only : scyr, gn
-    use paramets, only : thk0, tim0, vel0, vis0, len0, tau0
+    use paramets, only : thk0, tim0, vel0, vis0, len0, tau0, acc0
     implicit none
 
     scale2d_f1 = scyr * thk0 / tim0
@@ -316,6 +279,7 @@ contains
     scale2d_f6 = scyr * vel0 * len0 / (thk0**2)
     scale2d_f7 = tau0
     scale2d_f8 = tau0 * len0 / (scyr * vel0)
+    scale2d_f9 = scyr * acc0
 
     scale3d_f1 = scyr * vel0
     scale3d_f2 = vis0 * (vel0/len0)**(gn - 1)

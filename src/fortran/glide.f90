@@ -45,6 +45,7 @@ module glide
 
   use glide_types
   use glide_stop
+  use glide_nc_custom
 
   integer, private, parameter :: dummyunit=99
 
@@ -53,8 +54,8 @@ contains
     !*FD initialise GLIDE model instance
     use glide_setup
     use glimmer_ncparams
-    use glimmer_ncfile
-    use glimmer_ncinfile
+    use glimmer_ncio
+    use glide_io
     use glide_isot
     use glide_velo
     use glide_thck
@@ -89,11 +90,11 @@ contains
     else
        call ConfigRead(model%funits%ncfile,ncconfig)
     end if
-    call ReadNCParams(model,ncconfig)
+    call glimmer_nc_readparams(model,ncconfig)
     ! open all input files
     call openall_in(model)
     ! and read first time slice
-    call readall(model)
+    call glide_io_readall(model,model)
 
     ! handle relaxed topo
     if (model%options%whichrelaxed.eq.1) then
@@ -102,6 +103,8 @@ contains
 
     ! open all output files
     call openall_out(model)
+    ! create glide variables
+    call glide_io_createall(model)
 
     ! initialise glide components
     call init_isostasy(model)
@@ -127,7 +130,6 @@ contains
     !*FD Performs first part of time-step of an ice model instance.
     !*FD calculate velocity and temperature
     use glimmer_global, only : rk
-    use glimmer_ncfile
     use glide_isot
     use glide_thck
     use glide_velo
@@ -220,7 +222,7 @@ contains
     !*FD Performs second part of time-step of an ice model instance.
     !*FD write data and move ice
     use glimmer_global, only : rk
-    use glimmer_ncfile
+    use glide_io
     use glide_isot
     use glide_thck
     use glide_velo
@@ -234,7 +236,7 @@ contains
     ! ------------------------------------------------------------------------ 
     ! write to netCDF file
     ! ------------------------------------------------------------------------ 
-    call writeall(model)
+    call glide_io_writeall(model,model)
 
     ! ------------------------------------------------------------------------ 
     ! Calculate flow evolution by various different methods

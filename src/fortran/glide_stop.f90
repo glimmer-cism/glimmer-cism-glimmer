@@ -49,10 +49,10 @@ contains
   
   subroutine glide_finalise(model,crash)
     !*FD finalise GLIDE model instance
-    use glimmer_ncfile
-    use glimmer_ncinfile
+    use glimmer_ncio
     use glimmer_log
     use glide_types
+    use glide_io
     implicit none
     type(glide_global_type) :: model        !*FD model instance
     logical, optional :: crash              !*FD set to true if the model died unexpectedly
@@ -60,7 +60,7 @@ contains
     ! force last write if crashed
     if (present(crash)) then
        if (crash) then
-          call writeall(model,.true.)
+          call glide_io_writeall(model,model,.true.)
        end if
     end if
 

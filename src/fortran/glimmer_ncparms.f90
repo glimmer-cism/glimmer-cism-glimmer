@@ -1,6 +1,6 @@
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! +                                                           +
-! +  glimmer_outp.f90 - part of the GLIMMER ice model         + 
+! +  glimmer_ncparams.f90 - part of the GLIMMER ice model     + 
 ! +                                                           +
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! 
@@ -40,18 +40,21 @@
 !
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#define NCO outfile%nc
+#define NCI infile%nc
+
 module glimmer_ncparams
   !*FD read netCDF I/O related configuration files
   !*FD written by Magnus Hagdorn, May 2004
   use glimmer_ncdf, only: glimmer_nc_meta
     
   private
-  public :: ReadNCParams
+  public :: glimmer_nc_readparams
 
   type(glimmer_nc_meta),save :: default_metadata
 
 contains
-  subroutine ReadNCParams(model,config)
+    subroutine glimmer_nc_readparams(model,config)
     !*FD read netCDF I/O related configuration file
     use glide_types
     use glimmer_config
@@ -90,7 +93,7 @@ contains
        call GetSection(section%next,section,'input')
     end do
 
-  end subroutine ReadNCParams
+  end subroutine glimmer_nc_readparams
 
   !==================================================================================
   ! private procedures
@@ -131,7 +134,7 @@ contains
        metadata%history = trim(default_metadata%history)
     end if
   end subroutine handle_metadata
-
+  
   function handle_output(section, output, start_yr)
     use glimmer_ncdf
     use glimmer_config
@@ -142,9 +145,6 @@ contains
     type(glimmer_nc_output), pointer :: handle_output
     real, intent(in) :: start_yr
     character(len=100) :: message
-    ! local variables
-    character(len=210) vars
-    integer :: numspots=-1
 
     handle_output=>add(output)
     
@@ -154,37 +154,14 @@ contains
     call GetValue(section,'name',handle_output%nc%filename)
     call GetValue(section,'start',handle_output%next_write)
     call GetValue(section,'frequency',handle_output%freq)
-    call GetValue(section,'variables',vars)
-    call GetValue(section,'numspot',numspots)
-    if (numspots.eq.-1) then
-       numspots=100
-    end if
-    call GetValue(section,'spotx',handle_output%spotx,numspots)
-    call GetValue(section,'spoty',handle_output%spoty,numspots)
+    call GetValue(section,'variables',handle_output%nc%vars)
 
     ! get metadata
     call handle_metadata(section, handle_output%metadata,.false.)
-
-    if (associated(handle_output%spotx) .and. associated(handle_output%spoty)) then
-       if (size(handle_output%spotx).ne.size(handle_output%spoty)) then
-          write(message,*) 'Warning [netCDF output]  number of spot x and y locations differ ', &
-               size(handle_output%spotx), size(handle_output%spoty)
-          call write_log(trim(message))
-       else
-          handle_output%nc%do_spot = .true.
-       end if
-    end if
-    
-    vars = ' '//trim(vars)//' '
-
     if (handle_output%nc%filename(1:1).eq.' ') then
        call error_log('Error, no file name specified [netCDF output]')
        stop
-    end if
-
-    ! select which variables should be written
-    !GENVARS_HOT!
-    !GENVARS!
+    end if  
   end function handle_output
   
   function handle_input(section, input)

@@ -9,12 +9,12 @@ GLIMMERFLAGS=$(F77FLAGS) $(GLIMMERPRECOPT)
 #
 SUBDIRS = SLAP_library
 LIBS = libglimmer.a libglide.a libglint.a
-PROGS = glimmer_example bin2ncdf input2ncdf simple_glide eis_glide
-#relaxed is currently broken...
+PROGS = glimmer_example simple_glide eis_glide
+#relaxed, bin2ncdf, input2ncdf are currently broken...
 TESTS = test_config test_setup test_ts
-DATA = ncdf_vars.def
+DATA = eis_vars.def  glide_vars.def  glint_vars.def
 
-AUTOGEN = ncdf.f90 ncdf_file.f90 ncdf_infile.f90 ncdf_params.f90 glint_io.f90 eis_io.f90
+AUTOGEN = glide_io.f90 eis_io.f90 glint_io.f90
 
 SOURCES = *.f90
 
@@ -36,11 +36,11 @@ $(SUBDIRS):
 
 
 libglimmer.a: 	glimmer_CFproj.o glimmer_config.o glimmer_global.o glimmer_utils.o glimmer_log.o glimmer_ts.o\
-		ncdf.o ncdf_params.o ncdf_file.o ncdf_infile.o glimmer_paramets.o glimmer_physcon.o glimmer_degd.o gmt.o
+		glimmer_ncdf.o glimmer_ncio.o glimmer_ncparms.o glimmer_paramets.o glimmer_physcon.o glimmer_degd.o gmt.o
 		ar rcv $@ $^
 		if [ "$(RANLIB)" != "" ] ; then $(RANLIB) $@ ; fi
 
-libglide.a:	glide.o glide_setup.o glide_types.o glimmer_temp.o glimmer_isot.o glimmer_thck.o glimmer_velo.o glide_mask.o glide_stop.o
+libglide.a:	glide.o glide_setup.o glide_types.o glimmer_temp.o glimmer_isot.o glimmer_thck.o glimmer_velo.o glide_mask.o glide_stop.o glide_io.o glide_nc_custom.o
 		ar rcv $@ $^
 		if [ "$(RANLIB)" != "" ] ; then $(RANLIB) $@ ; fi
 
@@ -108,17 +108,11 @@ f90_dep.mak: *.f90 $(AUTOGEN)
 	python ../python/f90_dependencies.py -o $@ $^
 
 #some special rules for automatically generating ncdf src code
-ncdf.f90:	ncdf_vars.def ncdf.f90.in
-		python ../python/generate_ncvars.py $< $@.in	
-ncdf_file.f90:	ncdf_vars.def ncdf_file.f90.in
-		python ../python/generate_ncvars.py $< $@.in	
-ncdf_infile.f90:	ncdf_vars.def ncdf_infile.f90.in
-		python ../python/generate_ncvars.py $< $@.in	
-ncdf_params.f90:	ncdf_vars.def ncdf_params.f90.in
-		python ../python/generate_ncvars.py $< $@.in
-glint_io.f90:	ncdf_vars.def glint_io.f90.in
-		python ../python/generate_ncvars.py $< $@.in
-eis_io.f90:	ncdf_vars.def eis_io.f90.in
-		python ../python/generate_ncvars.py $< $@.in
+glide_io.f90:	glide_vars.def ncdf_template.f90.in
+		python ../python/generate_ncvars2.py $^
+eis_io.f90:	eis_vars.def ncdf_template.f90.in
+		python ../python/generate_ncvars2.py $^
+glint_io.f90:	glint_vars.def ncdf_template.f90.in
+		python ../python/generate_ncvars2.py $^
 
 include f90_dep.mak 

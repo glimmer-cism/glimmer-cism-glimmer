@@ -70,12 +70,14 @@ program eis_glide
   ! initialise GLIDE
   call glide_initialise(model,config)
   call eis_initialise(climate,config,model)
+  ! fill dimension variables
+  call glide_nc_fillall(model)
 
   time = model%numerics%tstart
   do while(time.le.model%numerics%tend)
      call eis_climate(climate,model,time)
      call glide_tstep_p1(model,time)
-     call eis_writeall(climate,model)
+     call eis_io_writeall(climate,model)
      call glide_tstep_p2(model)
      ! override masking stuff for now
      time = time + model%numerics%tinc

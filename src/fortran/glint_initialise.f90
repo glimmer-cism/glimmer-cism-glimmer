@@ -56,6 +56,7 @@ contains
     !*FD Initialise an ice model (glide) instance
     use glimmer_config
     use glint_global_grid
+    use glint_io
     use glide
     implicit none
 
@@ -69,6 +70,8 @@ contains
 
     ! initialise model
     call glide_initialise(instance%model,config)
+    ! create glint variables
+    call glint_io_createall(instance%model)
     instance%model%numerics%tinc=time_step             ! Initialise the model time step
     ! read glint configuration
     call glint_i_readconfig(instance,config)    
@@ -156,7 +159,7 @@ contains
   subroutine glint_i_readdata(instance)
     !*FD read data from netCDF file and initialise climate
     use glimmer_log
-    use glimmer_ncinfile
+    use glimmer_ncdf
     use glint_climate
     use glint_io
     use glide_setup
@@ -168,45 +171,9 @@ contains
     real(sp),dimension(:,:),allocatable :: arng
     type(glimmer_nc_input), pointer :: ic
     logical found_precip,found_presurf,found_usurf
-
-    ic=>instance%model%funits%in_first
-    found_precip = .false.
-    found_presurf = .false.
-    found_usurf = .false.
-    do while(associated(ic))
-       ! read present-day precip file if required      
-       if (instance%climate%whichprecip==3) then
-          if (ic%nc%do_var(NC_B_PRESPRCP)) then
-             found_precip = .true.
-          end if
-       else
-          ic%nc%do_var(NC_B_PRESPRCP) = .false.
-       end if
-
-       if ((instance%climate%whichartm.eq.0).or. (instance%climate%whichartm.eq.1).or. &
-            (instance%climate%whichartm.eq.2).or. (instance%climate%whichartm.eq.3).or. &
-            (instance%climate%whichartm.eq.4)) then
-          if (ic%nc%do_var(NC_B_PRESUSRF)) then
-             found_presurf = .true.
-          else
-             ic%nc%do_var(NC_B_PRESUSRF) = .false.
-          end if
-       end if
-
-       if (ic%nc%do_var(NC_B_USURF)) then
-          found_usurf = .true.
-       end if
-
-       ic=>ic%next
-    end do
-
-    if (instance%climate%whichprecip==3 .and. .not. found_precip) then
-       call error_log("To run with whichprecip=3, you need to supply a forcing filename...")
-       stop
-    endif
     
     ! read data
-    call glint_readall(instance)
+    call glint_io_readall(instance,instance%model)
 
     if (instance%forcdata%forcfile .ne. '') then
       call redtsout(instance%forcdata%forcfile,50,instance%forcdata)

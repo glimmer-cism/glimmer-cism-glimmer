@@ -1,3 +1,19 @@
+2004-12-09 Magnus Hagdorn
+ new netCDF I/O subsystem
+ * Makfile: updated to use new files
+ * glimmer_ncdf.f90, glimmer_ncio.f90, glimmer_ncparms.f90: basic netCDF I/O system handling opening and closing of
+   files, I/O time, parsing of configuration. This functionality can be used in other subsystems which require netCDF
+   I/O
+ * ncdf_template.f90.in: template for subsystem specific I/O functions, i.e. variable definition, writing, reading
+ * glide_vars.def, eis_vars.def, glint_vars.def: split up (and removed) the original ncdf_vars.def file into files
+   belonging to each model subsystem
+ * glide_nc_custom.f90: module for filling in dimension variables
+ * glide.f90, glide_stop.f90: hooked up glide netCDF functionality
+ * eis_forcing.f90, eis_glide.f90: hooked up eis netCDF functionality
+ * glint_initialise.f90, glint_timestep.f90: hooked up glint netCDF functionality
+ * generate_ncvars.py: updated code generator
+ * updated netCDF documentation
+	
 2004-12-03 Magnus Hagdorn
  * glimmer_velo.f90: changed interface to slipvelo to avoid creating a temporary array
    everytime it is called.

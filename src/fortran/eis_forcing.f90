@@ -51,6 +51,7 @@ contains
     !*FD initialise EIS climate
     use glide_types
     use glimmer_config
+    use eis_io
     implicit none
     type(eis_climate_type) :: climate      !*FD structure holding EIS climate
     type(ConfigSection), pointer :: config !*FD structure holding sections of configuration file   
@@ -60,6 +61,8 @@ contains
     call eis_readconfig(climate,config)
     ! print config
     call eis_printconfig(climate)
+    ! create eis variables
+    call eis_io_createall(model)
 
     ! initialise subsystems
     call eis_init_cony(climate%cony,model)

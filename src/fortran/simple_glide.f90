@@ -68,7 +68,8 @@ program simple_glide
   ! initialise GLIDE
   call simple_initialise(climate,config)
   call glide_initialise(model,config)
-
+  ! fill dimension variables
+  call glide_nc_fillall(model)
   time = model%numerics%tstart
   do while(time.le.model%numerics%tend)
      call simple_massbalance(climate,model,time)
