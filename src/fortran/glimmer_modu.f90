@@ -321,7 +321,6 @@ module glimmer_types
   end type glimmer_stress
 
   type glimmer_funits
-    character(fname_length) :: usrffile, topgfile, relxfile    ! input filenames
     character(fname_length) :: sigfile                         !*FD sigma coordinates file
     character(fname_length) :: prcpfile                        !*FD Precipitation file
     character(fname_length) :: presusrffile                    !*FD Present-day surface file
@@ -330,7 +329,6 @@ module glimmer_types
     character(fname_length) :: ncfile                          !*FD configuration file for netCDF I/O
     type(glimmer_nc_output),pointer :: out_first=>NULL()       !*FD first element of linked list defining netCDF outputs
     type(glimmer_nc_input), pointer :: in_first=>NULL()        !*FD first element of linked list defining netCDF inputs
-    character(fname_length) :: latifile                        !*FD File containing latitudes of all points
   end type glimmer_funits
 
   type glimmer_numerics
@@ -523,9 +521,6 @@ contains
 
     params%forcdata%flines       = 0
 
-    params%funits%usrffile       = 'none'
-    params%funits%topgfile       = 'none'
-    params%funits%relxfile       = 'none'
     params%funits%sigfile        = ''
     params%funits%output_stem    = 'untitled'
     params%funits%ncfile         = ''

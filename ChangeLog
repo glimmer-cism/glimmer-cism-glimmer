@@ -1,3 +1,7 @@
+2004-06-03 Magnus Hagdorn
+ * removed unused filenames for namelists and structures
+   usrffile, topgfile, relxfile, prcpfile, presusrffile, latifile
+
 2004-06-01 Magnus Hagdorn
  * new documentation structure
 

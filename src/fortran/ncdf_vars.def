@@ -93,7 +93,6 @@ units:         meter2/year
 long_name:     flux in x direction
 data:          model%velocity%uflx(1:ewnv,1:nsnv)
 factor:        f2
-standard_name: 
 
 [vflx]
 dimensions:    time, y0, x0
@@ -101,7 +100,6 @@ units:         meter2/year
 long_name:     flux in x direction
 data:          model%velocity%vflx(1:ewnv,1:nsnv)
 factor:        f2
-standard_name: 
 
 [diffu]
 dimensions:    time, y0, x0

@@ -105,9 +105,7 @@ contains
 
     ! ...for funits
 
-    character(fname_length) :: usrffile, topgfile, relxfile
-    character(fname_length) :: presusrffile, forcfile, prcpfile
-    character(fname_length) :: latifile
+    character(fname_length) :: forcfile
 
     ! ...for other parameters
 
@@ -136,8 +134,7 @@ contains
                       whichevol, whichwvel, whichprecip
     namelist / nums / ntem, nvel, niso, nout, nstr, thklim, mlimit, dew, dns 
     namelist / pars / geot, fiddle, airt, nmsb, hydtim, isotim, bpar
-    namelist / dats / usrffile, topgfile, relxfile, presusrffile, forcfile, &
-                      prcpfile, latifile
+    namelist / dats / forcfile
     namelist / cons / lapse_rate,precip_rate,air_temp,albedo
     namelist / forc / trun
 
@@ -171,9 +168,7 @@ contains
 
     ! For funits
 
-    usrffile     ='none'; topgfile='none'; relxfile='none'
-    presusrffile ='none'; forcfile='none'; prcpfile='none'
-    latifile     ='none'
+    forcfile='none'
 
     ! For other parameters
 
@@ -272,13 +267,7 @@ contains
 
     ! copy funits type
 
-    model%funits%usrffile   = usrffile
-    model%funits%topgfile   = topgfile
-    model%funits%relxfile   = relxfile
-    model%funits%prcpfile   = prcpfile
-    model%funits%presusrffile = presusrffile
     model%funits%forcfile = forcfile
-    model%funits%latifile = latifile
 
     ! filenames
 

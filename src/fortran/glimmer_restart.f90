@@ -177,9 +177,6 @@ contains
 
     ! funits
 
-    write(unit) instance%model%funits% usrffile
-    write(unit) instance%model%funits% topgfile
-    write(unit) instance%model%funits% relxfile
     write(unit) instance%model%funits% sigfile
     write(unit) instance%model%funits% output_stem
     write(unit) instance%model%funits% ncfile
@@ -511,9 +508,6 @@ contains
 
     ! funits
 
-    read(unit) instance%model%funits% usrffile
-    read(unit) instance%model%funits% topgfile
-    read(unit) instance%model%funits% relxfile
     read(unit) instance%model%funits% sigfile
     read(unit) instance%model%funits% output_stem
     read(unit) instance%model%funits% ncfile
