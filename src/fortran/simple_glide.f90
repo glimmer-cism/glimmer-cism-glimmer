@@ -46,6 +46,7 @@ program simple_glide
   use glimmer_global, only:rk
   use glide
   use simple_forcing
+  use glimmer_log
   implicit none
 
   type(glide_global_type) :: model        ! model instance
@@ -56,14 +57,17 @@ program simple_glide
   write(*,*) 'Enter name of GLIDE configuration file to be read'
   read(*,*) fname
   
+  ! start logging
+  call open_log(unit=50)
+
   ! initialise GLIDE
   call simple_initialise(climate,fname)
   call glide_initialise(model,fname)
   call simple_massbalance(climate,model)
   call simple_surftemp(climate,model)
 
-  time = 0.
-  do while(time.le.50000.)
+  time = model%numerics%tstart
+  do while(time.le.model%numerics%tend)
      call glide_tstep(model,time)
      call simple_surftemp(climate,model)     
      ! override masking stuff for now

@@ -64,7 +64,7 @@ contains
     character(len=*), intent(in) :: fname   !*FD name of paramter file
 
     call simple_readconfig(climate,fname)
-    call simple_printconfig(6,climate)
+    call simple_printconfig(climate)
 
     ! scale parameters
     climate%airt(2) = climate%airt(2) * thk0
@@ -105,20 +105,27 @@ contains
     end if
   end subroutine simple_readconfig
 
-  subroutine simple_printconfig(unit,climate)
+  subroutine simple_printconfig(climate)
     !*FD print simple climate configuration
+    use glimmer_log
     implicit none
-    integer, intent(in) :: unit       !*FD unit to print to
     type(simple_climate) :: climate   !*FD structure holding climate info
-    write(unit,*) '*******************************************************************************'
-    write(unit,*) 'Simple Climate configuration'
-    write(unit,*) '----------------------------'
-    write(unit,*) 'temperature  : ',climate%airt(1)
-    write(unit,*) '               ',climate%airt(2)
-    write(unit,*) 'massbalance  : ',climate%nmsb(1)
-    write(unit,*) '               ',climate%nmsb(2)
-    write(unit,*) '               ',climate%nmsb(3)
-    write(unit,*) 
+    character(len=100) :: message
+
+    call write_log_div
+    call write_log('Simple Climate configuration')
+    call write_log('----------------------------')
+    write(message,*) 'temperature  : ',climate%airt(1)
+    call write_log(message)
+    write(message,*) '               ',climate%airt(2)
+    call write_log(message)
+    write(message,*) 'massbalance  : ',climate%nmsb(1)
+    call write_log(message)
+    write(message,*) '               ',climate%nmsb(2)
+    call write_log(message)
+    write(message,*) '               ',climate%nmsb(3)
+    call write_log(message)
+    call write_log('')
   end subroutine simple_printconfig
 
   subroutine simple_massbalance(climate,model)

@@ -55,13 +55,14 @@ contains
     use glimmer_ncfile
     use glimmer_ncinfile
     use glide_temp
+    use glimmer_log
     implicit none
     type(glide_global_type) :: model        !*FD model instance
     character(len=*), intent(in) :: fname   !*FD name of paramter file
    
     ! read configuration file
     call glide_readconfig(model,fname)
-    call glide_printconfig(6,model)
+    call glide_printconfig(model)
     ! scale parameters
     call glide_scale_params(model)
     ! allocate arrays
@@ -250,6 +251,7 @@ contains
     !*FD finalise GLIDE model instance
     use glimmer_ncfile
     use glimmer_ncinfile
+    use glimmer_log
     implicit none
     type(glide_global_type) :: model        !*FD model instance
     
@@ -257,5 +259,7 @@ contains
     call closeall_out(model)
     
     call glide_deallocarr(model)
+
+    call close_log
   end subroutine glide_finalise
 end module glide

@@ -47,7 +47,7 @@ libglimmer.a: $(OBJECTS) $(INCLUDE_FILES)
 	if [ "$(RANLIB)" != "" ] ; then $(RANLIB) $@ ; fi
 
 libglide.a:	glide.o glide_setup.o glide_types.o glimmer_temp.o glimmer_isot.o glimmer_thck.o glimmer_velo.o\
-	glimmer_paramets.o glimmer_CFproj.o glimmer_config.o glimmer_global.o glimmer_physcon.o glimmer_utils.o \
+	glimmer_paramets.o glimmer_CFproj.o glimmer_config.o glimmer_global.o glimmer_physcon.o glimmer_utils.o glimmer_log.o \
 	ncdf.o ncdf_params.o ncdf_file.o ncdf_infile.o 
 		ar rcv $@ $^
 		if [ "$(RANLIB)" != "" ] ; then $(RANLIB) $@ ; fi

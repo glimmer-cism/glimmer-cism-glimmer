@@ -92,18 +92,18 @@ contains
     end if
   end subroutine glide_readconfig
 
-  subroutine glide_printconfig(unit,model)
-    !*FD print model configuration to unit
+  subroutine glide_printconfig(model)
+    !*FD print model configuration to log
+    use glimmer_log
     use glide_types
     implicit none
-    integer, intent(in) :: unit       !*FD unit to print to
     type(glide_global_type)  :: model !*FD model instance
 
-    write(unit,*) '*******************************************************************************'
-    call print_grid(unit,model)
-    call print_time(unit,model)
-    call print_options(unit,model)
-    call print_parameters(unit,model)
+    call write_log_div
+    call print_grid(model)
+    call print_time(model)
+    call print_options(model)
+    call print_parameters(model)
   end subroutine glide_printconfig
     
   subroutine glide_scale_params(model)
@@ -346,6 +346,7 @@ contains
     !*FD Loads a file containing
     !*FD sigma vertical coordinates.
     use glide_types
+    use glimmer_log
     implicit none
 
     ! Arguments
@@ -372,7 +373,7 @@ contains
       return
     end if
 
-10  print *, 'something wrong with sigma coord file'
+10  call error_log('something wrong with sigma coord file')
  
     stop
 
@@ -398,21 +399,29 @@ contains
     call GetValue(section,'sigma_file',model%funits%sigfile)
   end subroutine handle_grid
 
-  subroutine print_grid(unit,model)
+  subroutine print_grid(model)
     use glide_types
+    use glimmer_log
     implicit none
-    integer, intent(in) :: unit
     type(glide_global_type)  :: model
+    character(len=100) :: message
 
-    write(unit,*) 'Grid specification'
-    write(unit,*) '------------------'
-    write(unit,*) 'ewn             : ',model%general%ewn
-    write(unit,*) 'nsn             : ',model%general%nsn
-    write(unit,*) 'upn             : ',model%general%upn
-    write(unit,*) 'EW grid spacing : ',model%numerics%dew
-    write(unit,*) 'NS grid spacing : ',model%numerics%dns
-    write(unit,*) 'sigma file      : ',trim(model%funits%sigfile)
-    write(unit,*)
+
+    call write_log('Grid specification')
+    call write_log('------------------')
+    write(message,*) 'ewn             : ',model%general%ewn
+    call write_log(trim(message))
+    write(message,*) 'nsn             : ',model%general%nsn
+    call write_log(trim(message))
+    write(message,*) 'upn             : ',model%general%upn
+    call write_log(trim(message))
+    write(message,*) 'EW grid spacing : ',model%numerics%dew
+    call write_log(trim(message))
+    write(message,*) 'NS grid spacing : ',model%numerics%dns
+    call write_log(trim(message))
+    write(message,*) 'sigma file      : ',trim(model%funits%sigfile)
+    call write_log(trim(message))
+    call write_log('')
   end subroutine print_grid
 
   ! time
@@ -423,25 +432,35 @@ contains
     type(ConfigSection), pointer :: section
     type(glide_global_type)  :: model
 
+    call GetValue(section,'tstart',model%numerics%tstart)
+    call GetValue(section,'tend',model%numerics%tend)
     call GetValue(section,'dt',model%numerics%tinc)
     call GetValue(section,'ntem',model%numerics%ntem)
     call GetValue(section,'nvel',model%numerics%nvel)
     call GetValue(section,'niso',model%numerics%niso)
   end subroutine handle_time
   
-  subroutine print_time(unit,model)
+  subroutine print_time(model)
     use glide_types
+    use glimmer_log
     implicit none
-    integer, intent(in) :: unit
     type(glide_global_type)  :: model
+    character(len=100) :: message
 
-    write(unit,*) 'Time steps'
-    write(unit,*) '----------'
-    write(unit,*) 'main time step    : ',model%numerics%tinc
-    write(unit,*) 'thermal dt factor : ',model%numerics%ntem
-    write(unit,*) 'velo dt factor    : ',model%numerics%nvel
-    write(unit,*) 'isostasy dt factor: ',model%numerics%niso
-    write(unit,*) ''
+    call write_log('Time steps')
+    call write_log('----------')
+    write(message,*) 'start time        : ',model%numerics%tstart
+    call write_log(message)
+    write(message,*) 'end time          : ',model%numerics%tend
+    call write_log(message)
+    write(message,*) 'main time step    : ',model%numerics%tinc
+    call write_log(message)
+    write(message,*) 'thermal dt factor : ',model%numerics%ntem
+    call write_log(message)
+    write(message,*) 'velo dt factor    : ',model%numerics%nvel
+    call write_log(message)
+    write(message,*) 'isostasy dt factor: ',model%numerics%niso
+    call write_log('')
   end subroutine print_time
 
   ! options
@@ -465,11 +484,12 @@ contains
     call GetValue(section,'vertical_integration',model%options%whichwvel)
   end subroutine handle_options
   
-  subroutine print_options(unit,model)
+  subroutine print_options(model)
     use glide_types
+    use glimmer_log
     implicit none
-    integer, intent(in) :: unit
     type(glide_global_type)  :: model
+    character(len=100) :: message
 
     ! local variables
     character(len=*), dimension(0:1), parameter :: temperature = (/ &
@@ -514,60 +534,70 @@ contains
          'obey upper BC' /)
 
 
-    write(unit,*) 'GLIDE options'
-    write(unit,*) '-------------'
-    write(*,*) 'I/O parameter file      : ',trim(model%funits%ncfile)
+    call write_log('GLIDE options')
+    call write_log('-------------')
+    write(message,*) 'I/O parameter file      : ',trim(model%funits%ncfile)
+    call write_log(message)
     if (model%options%whichtemp.lt.0 .or. model%options%whichtemp.ge.size(temperature)) then
-       write(*,*) 'Error, temperature out of range'
+       call error_log('Error, temperature out of range')
        stop
     end if
-    write(unit,*) 'temperature calculation : ',model%options%whichtemp,temperature(model%options%whichtemp)
+    write(message,*) 'temperature calculation : ',model%options%whichtemp,temperature(model%options%whichtemp)
+    call write_log(message)
     if (model%options%whichflwa.lt.0 .or. model%options%whichflwa.ge.size(flow_law)) then
-       write(*,*) 'Error, flow_law out of range'
+       call error_log('Error, flow_law out of range')
        stop
     end if
-    write(unit,*) 'flow law                : ',model%options%whichflwa,flow_law(model%options%whichflwa)
+    write(message,*) 'flow law                : ',model%options%whichflwa,flow_law(model%options%whichflwa)
+    call write_log(message)
     if (model%options%whichisot.lt.0 .or. model%options%whichisot.ge.size(isostasy)) then
-       write(*,*) 'Error, isostasy out of range'
+       call error_log('Error, isostasy out of range')
        stop
     end if
-    write(unit,*) 'isostasy                : ',model%options%whichisot,isostasy(model%options%whichisot)
+    write(message,*) 'isostasy                : ',model%options%whichisot,isostasy(model%options%whichisot)
+    call write_log(message)
     if (model%options%whichslip.lt.0 .or. model%options%whichslip.ge.size(sliding)) then
-       write(*,*) 'Error, sliding_law out of range'
+       call error_log('Error, sliding_law out of range')
        stop
     end if
-    write(unit,*) 'sliding_law             : ',model%options%whichslip, sliding(model%options%whichslip)
+    write(message,*) 'sliding_law             : ',model%options%whichslip, sliding(model%options%whichslip)
+    call write_log(message)
     if (model%options%whichbwat.lt.0 .or. model%options%whichbwat.ge.size(basal_water)) then
-       write(*,*) 'Error, basal_water out of range'
+       call error_log('Error, basal_water out of range')
        stop
     end if
-    write(unit,*) 'basal_water             : ',model%options%whichbwat,basal_water(model%options%whichbwat)
+    write(message,*) 'basal_water             : ',model%options%whichbwat,basal_water(model%options%whichbwat)
+    call write_log(message)
     if (model%options%whichmarn.lt.0 .or. model%options%whichmarn.ge.size(marine_margin)) then
-       write(*,*) 'Error, marine_margin out of range'
+       call error_log('Error, marine_margin out of range')
        stop
     end if
-    write(unit,*) 'marine_margin           : ', model%options%whichmarn, marine_margin(model%options%whichmarn)
+    write(message,*) 'marine_margin           : ', model%options%whichmarn, marine_margin(model%options%whichmarn)
     if (model%options%whichbtrc.lt.0 .or. model%options%whichbtrc.ge.size(slip_coeff)) then
        write(*,*) 'Error, slip_coeff out of range'
        stop
     end if
-    write(unit,*) 'slip_coeff              : ', model%options%whichbtrc, slip_coeff(model%options%whichbtrc)
+    write(message,*) 'slip_coeff              : ', model%options%whichbtrc, slip_coeff(model%options%whichbtrc)
+    call write_log(message)
     if (model%options%whichstrs.lt.0 .or. model%options%whichstrs.ge.size(stress)) then
-       write(*,*) 'Error, stress_calc out of range'
+       call error_log('Error, stress_calc out of range')
        stop
     end if
-    write(unit,*) 'stress_calc             : ', model%options%whichstrs, stress(model%options%whichstrs)
+    write(message,*) 'stress_calc             : ', model%options%whichstrs, stress(model%options%whichstrs)
+    call write_log(message)
     if (model%options%whichevol.lt.0 .or. model%options%whichevol.ge.size(evolution)) then
-       write(*,*) 'Error, evolution out of range'
+       call error_log('Error, evolution out of range')
        stop
     end if
-    write(unit,*) 'evolution               : ', model%options%whichevol, evolution(model%options%whichevol)
+    write(message,*) 'evolution               : ', model%options%whichevol, evolution(model%options%whichevol)
+    call write_log(message)
     if (model%options%whichwvel.lt.0 .or. model%options%whichwvel.ge.size(vertical_integration)) then
-       write(*,*) 'Error, vertical_integration out of range'
+       call error_log('Error, vertical_integration out of range')
        stop
     end if
-    write(unit,*) 'vertical_integration    : ',model%options%whichwvel,vertical_integration(model%options%whichwvel)
-    write(unit,*) ''
+    write(message,*) 'vertical_integration    : ',model%options%whichwvel,vertical_integration(model%options%whichwvel)
+    call write_log(message)
+    call write_log('')
   end subroutine print_options
 
   ! parameters
@@ -592,26 +622,38 @@ contains
     end if
   end subroutine handle_parameters
 
-  subroutine print_parameters(unit,model)
+  subroutine print_parameters(model)
     use glide_types
+    use glimmer_log
     implicit none
-    integer, intent(in) :: unit
     type(glide_global_type)  :: model
+    character(len=100) :: message
 
-    write(unit,*) 'Parameters'
-    write(unit,*) '----------'
-    write(unit,*) 'ice limit             : ',model%numerics%thklim
-    write(unit,*) 'marine depth limit    : ',model%numerics%mlimit
-    write(unit,*) 'geothermal heat flux  : ',model%paramets%geot
-    write(unit,*) 'flow enhancement      : ',model%paramets%fiddle
-    write(unit,*) 'basal hydro time const: ',model%paramets%hydtim
-    write(unit,*) 'isostasy time const   : ',model%paramets%isotim
-    write(unit,*) 'basal tractio factors : ',model%paramets%bpar(1)
-    write(unit,*) '                        ',model%paramets%bpar(2)
-    write(unit,*) '                        ',model%paramets%bpar(3)
-    write(unit,*) '                        ',model%paramets%bpar(4)
-    write(unit,*) '                        ',model%paramets%bpar(5)
-    write(unit,*)
+    call write_log('Parameters')
+    call write_log('----------')
+    write(message,*) 'ice limit             : ',model%numerics%thklim
+    call write_log(message)
+    write(message,*) 'marine depth limit    : ',model%numerics%mlimit
+    call write_log(message)
+    write(message,*) 'geothermal heat flux  : ',model%paramets%geot
+    call write_log(message)
+    write(message,*) 'flow enhancement      : ',model%paramets%fiddle
+    call write_log(message)
+    write(message,*) 'basal hydro time const: ',model%paramets%hydtim
+    call write_log(message)
+    write(message,*) 'isostasy time const   : ',model%paramets%isotim
+    call write_log(message)
+    write(message,*) 'basal tractio factors : ',model%paramets%bpar(1)
+    call write_log(message)
+    write(message,*) '                        ',model%paramets%bpar(2)
+    call write_log(message)
+    write(message,*) '                        ',model%paramets%bpar(3)
+    call write_log(message)
+    write(message,*) '                        ',model%paramets%bpar(4)
+    call write_log(message)
+    write(message,*) '                        ',model%paramets%bpar(5)
+    call write_log(message)
+    call write_log('')
   end subroutine print_parameters
 
 

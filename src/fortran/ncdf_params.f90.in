@@ -138,11 +138,12 @@ contains
   function handle_output(section, output)
     use glimmer_ncdf
     use glimmer_config
+    use glimmer_log
     implicit none
     type(ConfigSection), pointer :: section
     type(glimmer_nc_output), pointer :: output
     type(glimmer_nc_output), pointer :: handle_output
-
+    character(len=100) :: message
     ! local variables
     character(len=210) vars
     integer :: numspots=-1
@@ -165,8 +166,9 @@ contains
 
     if (associated(handle_output%spotx) .and. associated(handle_output%spoty)) then
        if (size(handle_output%spotx).ne.size(handle_output%spoty)) then
-          write(*,*) 'Warning [netCDF output]  number of spot x and y locations differ ', &
+          write(message,*) 'Warning [netCDF output]  number of spot x and y locations differ ', &
                size(handle_output%spotx), size(handle_output%spoty)
+          call write_log(trim(message))
        else
           handle_output%nc%do_spot = .true.
        end if
@@ -175,7 +177,7 @@ contains
     vars = ' '//trim(vars)//' '
 
     if (handle_output%nc%filename(1:1).eq.' ') then
-       write(*,*) 'Error, no file name specified [netCDF output]'
+       call error_log('Error, no file name specified [netCDF output]')
        stop
     end if
 
@@ -186,6 +188,7 @@ contains
   function handle_input(section, input)
     use glimmer_ncdf
     use glimmer_config
+    use glimmer_log
     implicit none
     type(ConfigSection), pointer :: section
     type(glimmer_nc_input), pointer :: input
@@ -200,7 +203,7 @@ contains
     handle_input%current_time = handle_input%get_time_slice
 
     if (handle_input%nc%filename(1:1).eq.' ') then
-       write(*,*) 'Error, no file name specified [netCDF input]'
+       call error_log('Error, no file name specified [netCDF input]')
        stop
     end if
   end function handle_input

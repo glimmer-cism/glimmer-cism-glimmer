@@ -1,3 +1,7 @@
+2004-06-25 Magnus Hagdorn
+ * added start and end time (glide_setup.f90, glide_types.f90, simple_glide.f90)
+ * added and used logging
+	
 2004-06-24 Magnus Hagdorn
  * fixed problem with time derivative, where we divide by zero at the first time step
    now we set the derivative to zero (glimmer_thck.f90)

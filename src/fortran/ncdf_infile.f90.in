@@ -105,6 +105,7 @@ contains
     use glimmer_ncdf
     use glide_types
     use glimmer_cfproj
+    use glimmer_log
     implicit none
     type(glimmer_nc_input), pointer :: infile
     !*FD structure containg input netCDF descriptor
@@ -116,12 +117,13 @@ contains
     integer nvars
     integer i, dimsize
     integer status    
+    character(len=100) message
     
     ! open netCDF file
     status = nf90_open(NC%filename,NF90_NOWRITE,NC%id)
     call nc_errorhandle(__FILE__,__LINE__,status)
-    write(*,*) '*******************************************************************************'
-    write(*,*) 'opening file ',trim(NC%filename),' for input'
+    call write_log_div
+    call write_log('opening file '//trim(NC%filename)//' for input')
 
     ! getting projections
     model%projection = CFproj_GetProj(NC%id)
@@ -146,25 +148,29 @@ contains
     status = nf90_inquire_dimension(NC%id,NC%x0dim,len=dimsize)
     call nc_errorhandle(__FILE__,__LINE__,status)
     if (dimsize.ne.model%general%ewn-1) then
-       write(*,*) 'Error, reading file ',trim(NC%filename),' size x0dim does not match: ',dimsize,model%general%ewn-1
+       write(message,*) 'Error, reading file ',trim(NC%filename),' size x0dim does not match: ',dimsize,model%general%ewn-1
+       call error_log(message)
        stop
     end if
     status = nf90_inquire_dimension(NC%id,NC%y0dim,len=dimsize)
     call nc_errorhandle(__FILE__,__LINE__,status)
     if (dimsize.ne.model%general%nsn-1) then
-       write(*,*) 'Error, reading file ',trim(NC%filename),' size y0dim does not match: ',dimsize,model%general%nsn-1
+       write(message,*) 'Error, reading file ',trim(NC%filename),' size y0dim does not match: ',dimsize,model%general%nsn-1
+       call error_log(message)
        stop
     end if
     status = nf90_inquire_dimension(NC%id,NC%x1dim,len=dimsize)
     call nc_errorhandle(__FILE__,__LINE__,status)
     if (dimsize.ne.model%general%ewn) then
-       write(*,*) 'Error, reading file ',trim(NC%filename),' size x1dim does not match: ',dimsize,model%general%ewn
+       write(message,*) 'Error, reading file ',trim(NC%filename),' size x1dim does not match: ',dimsize,model%general%ewn
+       call error_log(message)
        stop
     end if
     status = nf90_inquire_dimension(NC%id,NC%y1dim,len=dimsize)
     call nc_errorhandle(__FILE__,__LINE__,status)
     if (dimsize.ne.model%general%nsn) then
-       write(*,*) 'Error, reading file ',trim(NC%filename),' size y1dim does not match: ',dimsize,model%general%nsn
+       write(message,*) 'Error, reading file ',trim(NC%filename),' size y1dim does not match: ',dimsize,model%general%nsn
+       call error_log(message)
        stop
     end if  
 
@@ -194,6 +200,7 @@ contains
 
   subroutine glimmer_nc_read(infile,model,scale_vars)
     !*FD read variables from a netCDF file
+    use glimmer_log
     use glimmer_ncdf
     use glide_types
     use glimmer_global, only : dp
@@ -213,6 +220,7 @@ contains
     real(dp):: f1, f2, f3, f4, f5, f6, f7, f8
     integer :: ewnv, nsnv
     logical :: scale=.true.
+    character(len=100) :: message
 
     ! Deal with optional argument
 
@@ -232,9 +240,10 @@ contains
     f7 = tau0
     f8 = tau0 * len0 / (scyr * vel0) 
 
-    write(*,*) '*******************************************************************************'
-    write(*,*) 'Reading time slice ',infile%current_time,'(',infile%times(infile%current_time),') from file ', &
+    call write_log_div
+    write(message,*) 'Reading time slice ',infile%current_time,'(',infile%times(infile%current_time),') from file ', &
          trim(NC%filename), ' at time ', model%numerics%time
+    call write_log(message)
     
     ! read variables
     !GENVAR_READ!

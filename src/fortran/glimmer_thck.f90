@@ -154,8 +154,10 @@ contains
       thck = max(0.0d0, thck)
       usrf = thck + lsrf
 
+#ifdef DEBUG
       print *, "* thck ", model%numerics%time, linit, model%pcgdwk%mlinit, model%pcgdwk%tlinit, totpts, &
           real(thk0*thck(model%general%ewn/2+1,model%general%nsn/2+1))
+#endif
 
       deallocate(model%pcgdwk%pcgrow,model%pcgdwk%pcgcol)
       deallocate(model%pcgdwk%pcgval,model%pcgdwk%rhsd,model%pcgdwk%answ)
@@ -802,10 +804,11 @@ contains
                     model%velocity%vflx,     &
                     model%velocity%diffu)
 
+#ifdef DEBUG
         print *, "* thck ", model%numerics%time, linit, model%pcgdwk%mlinit, model%pcgdwk%tlinit, model%geometry%totpts, &
         real(thk0*model%geometry%thck(model%general%ewn/2+1,model%general%nsn/2+1)), &
         real(vel0*maxval(abs(model%velocity%ubas))), real(vel0*maxval(abs(model%velocity%vbas))) 
-
+#endif
       deallocate(model%pcgdwk%pcgrow,model%pcgdwk%pcgcol,model%pcgdwk%pcgval,model%pcgdwk%rhsd,model%pcgdwk%answ)
 
     end if

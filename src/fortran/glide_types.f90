@@ -282,7 +282,8 @@ module glide_types
   type glide_numerics
 
     !*FD Parameters relating to the model numerics.
-
+    real(sp) :: tstart = 0.0      !*FD starting time
+    real(sp) :: tend   = 20000.0  !*FD end time
     real(sp) :: time   =    0.0   !*FD main loop counter in years
     real(sp) :: tinc   =   20.0   !*FD time step of main loop in years 
     real(sp) :: ntem   =    1.0   !*FD temperature time step (multiplier of main time step)

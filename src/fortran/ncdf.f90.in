@@ -165,6 +165,7 @@ module glimmer_ncdf
 contains
   function delete_output(oc, cf)
     !*FD remove element from linked list
+    use glimmer_log
     implicit none
     type(glimmer_nc_output), pointer :: delete_output
     type(glimmer_nc_output), pointer :: oc
@@ -191,8 +192,8 @@ contains
        end if
        if (closefile) then
           status = nf90_close(oc%nc%id)
-          write(*,*) '*******************************************************************************'
-          write(*,*) 'Closing output file ', trim(oc%nc%filename)
+          call write_log_div
+          call write_log('Closing output file '//trim(oc%nc%filename))
        end if
        deallocate(oc)
     end if
@@ -200,6 +201,7 @@ contains
   
   function delete_input(ic,cf)
     !*FD remove element from linked list
+    use glimmer_log
     implicit none
     type(glimmer_nc_input), pointer :: delete_input
     type(glimmer_nc_input), pointer :: ic
@@ -227,8 +229,8 @@ contains
        end if
        if (closefile) then
           status = nf90_close(ic%nc%id)
-          write(*,*) '*******************************************************************************'
-          write(*,*) 'Closing input file ', trim(ic%nc%filename)
+          call write_log_div
+          call write_log('Closing input file '//trim(ic%nc%filename))
        end if
        deallocate(ic%times)
        deallocate(ic)
@@ -290,6 +292,7 @@ end module glimmer_ncdf
 subroutine nc_errorhandle(file,line,status)
   !*FD handle netCDF error
   use netcdf
+  use glimmer_log
   implicit none
   character(len=*), intent(in) :: file
   !*FD name of f90 file error occured in
@@ -299,7 +302,7 @@ subroutine nc_errorhandle(file,line,status)
   !*FD netCDF return value
   
   if (status.ne.NF90_NOERR) then
-     write(*,*) 'Error (',file,line,'): ', nf90_strerror(status)
+     call error_log(nf90_strerror(status),file=file,line=line)
      stop
   end if
 end subroutine nc_errorhandle

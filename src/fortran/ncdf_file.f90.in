@@ -111,6 +111,7 @@ contains
 
   subroutine glimmer_nc_createfile(outfile,model)
     !*FD create a new netCDF file
+    use glimmer_log
     use glimmer_ncdf
     use glide_types
     use glimmer_CFproj
@@ -124,12 +125,14 @@ contains
     ! local variables
     integer status
     integer i,mapid
+    character(len=100) message
     
     ! create new netCDF file
     status = nf90_create(NC%filename,NF90_CLOBBER,NC%id)
     call nc_errorhandle(__FILE__,__LINE__,status)
-    write(*,*) '*******************************************************************************'
-    write(*,*) 'Opening file ', trim(NC%filename), ' for output; write period every',outfile%freq,' years'
+    call write_log_div
+    write(message,*) 'Opening file ',trim(NC%filename),' for output; write period every ',outfile%freq,' years'
+    call write_log(trim(message))
 
     ! writing meta data
     status = nf90_put_att(NC%id, NF90_GLOBAL, 'Conventions', "CF-1.0")
@@ -219,6 +222,7 @@ contains
 
   subroutine glimmer_nc_write(outfile,model)
     !*FD write variables to a netCDF file
+    use glimmer_log
     use glimmer_ncdf
     use glide_types
     use glimmer_global, only : dp
@@ -235,7 +239,7 @@ contains
     integer up, spot
     real(dp):: f1, f2, f3, f4, f5, f6, f7, f8
     integer :: ewnv, nsnv
-
+    character(len=100) :: message
     ! Set up various constants. These were originally only
     ! done once, but are done each time now, for safety.
 
@@ -250,8 +254,9 @@ contains
     f7 = tau0
     f8 = tau0 * len0 / (scyr * vel0) 
 
-    write(*,*) '*******************************************************************************'
-    write(*,*) 'Writing to file ', trim(NC%filename), ' at time ', model%numerics%time
+    call write_log_div
+    write(message,*) 'Writing to file ', trim(NC%filename), ' at time ', model%numerics%time
+    call write_log(trim(message))
 
     ! increase next_write 
     outfile%next_write=outfile%next_write+outfile%freq

@@ -79,6 +79,7 @@ module glimmer_config
 contains
   subroutine ConfigRead(fname,config)
     !*FD read configuration file
+    use glimmer_log
     implicit none
     character(len=*), intent(in) :: fname
     !*FD name of configuration file
@@ -90,10 +91,11 @@ contains
     logical there
     integer unit,ios,linenr
     character(len=linelen) :: line
+    character(len=100) :: message
 
     inquire (exist=there,file=fname)
     if (.not.there) then
-       write(*,*) 'Cannot open configuration file ',trim(fname)
+       call error_log('Cannot open configuration file '//trim(fname))
        stop
     end if
     
@@ -122,8 +124,9 @@ contains
           else
              ! handle value
              if (.not.associated(this_section)) then
-                write(*,*) 'Error, no section defined yet'
-                write(*,*) trim(adjustl(fname)), linenr
+                call write_log('Error, no section defined yet')
+                write(message,*) trim(adjustl(fname)), linenr
+                call error_log(message)
                 stop
              end if
              call handle_value(linenr,line,this_value)
@@ -361,6 +364,7 @@ contains
   !==================================================================================
 
   subroutine handle_section(linenr,line,section)
+    use glimmer_log
     implicit none
     integer, intent(in) :: linenr
     character(len=*) :: line
@@ -368,6 +372,7 @@ contains
 
     ! local variables
     integer i
+    character(len=100) :: message
 
     do i=1,linelen
        if (line(i:i).eq.']') then
@@ -375,8 +380,8 @@ contains
        end if
     end do
     if (line(i:i).ne.']') then
-       write(*,*) 'Cannot find end of section'
-       write(*,*) linenr
+       write(message,*) 'Cannot find end of section ',linenr
+       call error_log(message)
        stop
     end if
 
@@ -384,6 +389,7 @@ contains
   end subroutine handle_section
   
   subroutine handle_value(linenr,line,value)
+    use glimmer_log
     implicit none
     integer, intent(in) :: linenr
     character(len=*) :: line
@@ -391,15 +397,15 @@ contains
 
     ! local variables
     integer i
-
+    character(len=100) :: message
     do i=1,linelen
        if (line(i:i).eq.'=' .or. line(i:i).eq.':') then
           exit
        end if
     end do
     if (.not.(line(i:i).eq.'=' .or. line(i:i).eq.':')) then
-       write(*,*) 'Cannot find = or : '
-       write(*,*) linenr
+       write(message,*) 'Cannot find = or : ',linenr
+       call error_log(message)
        stop
     end if
 

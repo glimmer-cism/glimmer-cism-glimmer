@@ -330,8 +330,10 @@ contains
          model%options%whichflwa) 
 
     ! Output some information ----------------------------------------------------
+#ifdef DEBUG
     print *, "* temp ", model%numerics%time, iter, model%temper%niter, &
          real(model%temper%temp(model%general%upn,model%general%ewn/2+1,model%general%nsn/2+1))
+#endif
 
   end subroutine timeevoltemp
 

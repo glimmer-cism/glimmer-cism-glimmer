@@ -110,6 +110,7 @@ contains
   function CFproj_GetProj(ncid)
     !*FD read projection from netCDF file
     use netcdf
+    use glimmer_log
     implicit none
     type(CFproj_projection) :: CFproj_GetProj
     integer, intent(in) :: ncid
@@ -163,17 +164,18 @@ contains
        end if
     else
        CFproj_GetProj%found = .false.
-       write(*,*) 'Warning, no map projection found'
+       call write_log('Warning, no map projection found')
     end if
   end function CFproj_GetProj
 
   function CFproj_proj4(projection)
+    use glimmer_log
     implicit none
     character(len=proj4len), dimension(:), pointer :: CFproj_proj4
     type(CFproj_projection) :: projection
 
     if (.not.CFproj_allocated(projection)) then
-       write(*,*) 'Warning, no projection found!'
+       call write_log('Warning, no projection found!')
        return
     end if
 
@@ -190,20 +192,21 @@ contains
        CFproj_proj4 => CFproj_proj4_stere(projection%stere)
        return
     else
-       write(*,*) 'Warning, no projection found!'
+       call write_log('Warning, no known projection found!')
     end if
   end function CFproj_proj4
 
   subroutine CFproj_PutProj(ncid,mapid,projection)
     !*FD write projection to netCDF file
     use netcdf
+    use glimmer_log
     implicit none
     type(CFproj_projection) :: projection
     integer, intent(in) :: ncid
     integer, intent(in) :: mapid
 
     if (.not.CFproj_allocated(projection)) then
-       write(*,*) 'Warning, no projection found!'
+       call write_log('Warning, no projection found!')
        return
     end if
 
@@ -220,7 +223,7 @@ contains
        call CFproj_put_stere(ncid,mapid,projection%stere)
        return
     else
-       write(*,*) 'Warning, could not find any projection'
+       call write_log('Warning, could not find any projection')
     end if
   end subroutine CFproj_PutProj
 
@@ -253,6 +256,7 @@ contains
 
   function CFproj_get_stere_polar(ncid,mapid)
     use netcdf
+    use glimmer_log
     implicit none
     type(CFproj_stere), pointer :: CFproj_get_stere_polar
     integer, intent(in) :: ncid
@@ -279,7 +283,7 @@ contains
        CFproj_get_stere_polar%standard_parallel = dummy
     end if
     if (CFproj_get_stere_polar%standard_parallel.ne.0 .and. CFproj_get_stere_polar%scale_at_orig.ne.0.) then
-       write(*,*) 'Error (stereographic projection), can only handle either standard_parallel or scale_at_orig'
+       call error_log('Error (stereographic projection), can only handle either standard_parallel or scale_at_orig')
        stop
     end if
   end function CFproj_get_stere_polar
