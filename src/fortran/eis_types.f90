@@ -1,6 +1,6 @@
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! +                                                           +
-! +  eis_glide.f90 - part of the GLIMMER ice model            + 
+! +  eis_types.f90 - part of the GLIMMER ice model            + 
 ! +                                                           +
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! 
@@ -40,46 +40,20 @@
 !
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-program eis_glide
-  !*FD This is the Edinburgh Ice Sheet GLIDE driver
-  use glimmer_global, only:rk
-  use glide
-  use eis_forcing
-  use eis_io
-  use glimmer_log
-  use glimmer_config
-  implicit none
-
-  type(glide_global_type) :: model        ! model instance
-  type(eis_climate_type) :: climate       ! climate
-  type(ConfigSection), pointer :: config  ! configuration stuff
-  character(len=50) :: fname   ! name of paramter file
-  real(kind=rk) time
+module eis_types
+  !*FD climate forcing similar to the old Edinburgh Ice Sheet model
+  !*FD Magnus Hagdorn, June 2004
   
+  use eis_ela
+  use eis_temp
+  use eis_slc
+  use eis_cony
 
-
-  write(*,*) 'Enter name of GLIDE configuration file to be read'
-  read(*,*) fname
-  
-  ! start logging
-  call open_log(unit=50)
-
-  ! read configuration
-  call ConfigRead(fname,config)
-
-  ! initialise GLIDE
-  call glide_initialise(model,config)
-  call eis_initialise(climate,config,model)
-
-  time = model%numerics%tstart
-  do while(time.le.model%numerics%tend)
-     call eis_climate(climate,model,time)
-     call glide_tstep(model,time)
-     call eis_writeall(climate,model)
-     ! override masking stuff for now
-     time = time + model%numerics%tinc
-  end do
-
-  ! finalise GLIDE
-  call glide_finalise(model)
-end program eis_glide
+  type eis_climate_type
+     !*FD holds EIS climate
+     type(eis_ela_type)  :: ela  !*FD ELA forcing
+     type(eis_temp_type) :: temp !*FD temperature forcing
+     type(eis_slc_type)  :: slc  !*FD sea level forcing
+     type(eis_cony_type) :: cony !*FD continentality forcing
+  end type eis_climate_type
+end module eis_types

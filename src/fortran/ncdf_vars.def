@@ -348,3 +348,18 @@ data:          model%temper%temp(up,1:model%general%ewn,1:model%general%nsn)
 standard_name: land_ice_temperature
 hot:           1
 mask:          1
+
+[ela]
+dimensions:    time, y1, x1
+units:         meter
+long_name:     equilibrium line altitude
+data:          climate%ela%ela
+f90file:       eis_io.f90
+factor:        thk0
+
+[cony]
+dimensions:    time, y1, x1
+units:         1
+long_name:     continentality
+data:          climate%cony%cony
+f90file:       eis_io.f90

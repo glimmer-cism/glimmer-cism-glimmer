@@ -1,3 +1,10 @@
+2004-09-22 Magnus Hagdorn
+ * new continentality calculations (eis_cony.f90, glimmer_searchcircle.f90, eis_forcing.f90
+ * eis_ela.f90: distinguish between maritime and continental mass balance
+ * eis specific netCDF I/O (eis_io.f90.in, eis_glide.f90, ncdf_vars.def)
+ * eis_types.f90: split out type definition to avoid circular dependency
+ * Makefile: updated accordingly
+	
 2004-09-21 Magnus Hagdorn
  * add eus to lower ice boundary calculations (glide_setup.f90, glide.f90, glint_initialise.f90, glint_timestep.f90)
  * glide_mask.f90: eustatic sea level change is considered when calculating mask

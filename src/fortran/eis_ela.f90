@@ -55,9 +55,10 @@ module eis_ela
      real :: ela_a = 10821.                      !*FD ELA paramters
      real :: ela_b = -238.                       !*FD ELA paramters
      real :: ela_c = 1.312                       !*FD ELA paramters
-     real :: zmax = 1200.                        !*FD parameters describing how the MB
-     real :: bmax = 1.5                          !*FD parameters describing how the MB
-                                                 !*FD varies around the ELA
+     real :: zmax_mar = 1200.                    !*FD parameters describing how the MB
+     real :: bmax_mar = 1.5                      !*FD varies around the ELA
+     real :: zmax_cont = 500.                    !*FD parameters describing how the MB
+     real :: bmax_cont = 0.3                     !*FD varies around the ELA
      character(len=fname_length) :: fname=''     !*FD name of file containing ELA ts
      type(glimmer_tseries) :: ela_ts             !*FD ELA time series 
      real,dimension(:,:),pointer :: ela => null()!*FD ELA field
@@ -78,8 +79,10 @@ contains
     call GetSection(config,section,'EIS ELA')
     if (associated(section)) then
        call GetValue(section,'ela_file',ela%fname)
-       call GetValue(section,'zmax',ela%zmax)
-       call GetValue(section,'bmax',ela%bmax)
+       call GetValue(section,'zmax_mar',ela%zmax_mar)
+       call GetValue(section,'bmax_mar',ela%bmax_mar)
+       call GetValue(section,'zmax_cont',ela%zmax_cont)
+       call GetValue(section,'bmax_cont',ela%bmax_cont)
        call GetValue(section,'ela_a',ela%ela_a)
        call GetValue(section,'ela_b',ela%ela_b)
        call GetValue(section,'ela_c',ela%ela_c)
@@ -95,17 +98,21 @@ contains
     character(len=100) :: message
     call write_log('EIS ELA')
     call write_log('-------')
-    write(message,*) 'ELA file: ',trim(ela%fname)
+    write(message,*) 'ELA file     : ',trim(ela%fname)
     call write_log(message)
-    write(message,*) 'zmax    : ',ela%zmax
+    write(message,*) 'maritime zmax: ',ela%zmax_mar
     call write_log(message)
-    write(message,*) 'bmax    : ',ela%bmax
+    write(message,*) 'maritime bmax: ',ela%bmax_mar
     call write_log(message)
-    write(message,*) 'ela A   : ',ela%ela_a
+    write(message,*) 'cont zmax    : ',ela%zmax_cont
     call write_log(message)
-    write(message,*) 'ela B   : ',ela%ela_B
+    write(message,*) 'cont bmax    : ',ela%bmax_cont
     call write_log(message)
-    write(message,*) 'ela C   : ',ela%ela_C
+    write(message,*) 'ela A        : ',ela%ela_a
+    call write_log(message)
+    write(message,*) 'ela B        : ',ela%ela_B
+    call write_log(message)
+    write(message,*) 'ela C        : ',ela%ela_C
     call write_log(message)
     call write_log('')
   end subroutine eis_ela_printconfig
@@ -113,8 +120,7 @@ contains
   subroutine eis_init_ela(ela,model)
     !*FD initialise ELA forcing
     use glide_types
-    use physcon, only : scyr
-    use paramets, only: thk0, tim0
+    use paramets, only: thk0, acc0, scyr
     implicit none
     type(eis_ela_type)      :: ela   !*FD ela data
     type(glide_global_type) :: model !*FD model instance
@@ -123,8 +129,10 @@ contains
     
     ! scale parameters
     ela%ela_ts%values = ela%ela_ts%values/thk0
-    ela%zmax = ela%zmax/thk0
-    ela%bmax = ela%bmax*tim0/(scyr * thk0)
+    ela%zmax_mar = ela%zmax_mar/thk0
+    ela%bmax_mar = ela%bmax_mar/ (acc0 * scyr)
+    ela%zmax_cont = ela%zmax_cont/thk0
+    ela%bmax_cont = ela%bmax_cont/ (acc0 * scyr)
     ela%ela_a = ela%ela_a/thk0
     ela%ela_b = ela%ela_b/thk0
     ela%ela_c = ela%ela_c/thk0
@@ -134,12 +142,14 @@ contains
     ela%ela = ela_lat(ela%ela_a,ela%ela_b,ela%ela_c,model%climate%lati)
   end subroutine eis_init_ela
     
-  subroutine eis_massbalance(ela,model,time)
+  subroutine eis_massbalance(ela,cony,model,time)
     !*FD calculate mass balance
+    use eis_cony
     use glide_types
     use glimmer_global, only : rk
     implicit none
     type(eis_ela_type)        :: ela   !*FD ela data
+    type(eis_cony_type)       :: cony  !*FD cony data
     type(glide_global_type)   :: model !*FD model instance
     real(kind=rk), intent(in) :: time  !*FD current time
 
@@ -147,28 +157,35 @@ contains
     real :: ela_time = 0.
 
     call glimmer_ts_step(ela%ela_ts,real(time),ela_time)
+
     model%climate%acab = calc_mb(ela%ela+ela_time, &
          model%geometry%topg, &
          model%geometry%thck, &
-         model%climate%eus, ela%zmax,ela%bmax)
+         cony%cony, &
+         model%climate%eus, &
+         ela%zmax_mar,ela%bmax_mar, &
+         ela%zmax_cont,ela%bmax_cont)
   end subroutine eis_massbalance
 
   !*****************************************************************************
   ! private procedures
   !*****************************************************************************
-  elemental function calc_mb(ela,topo,thick,eus,zmax,bmax)
+  elemental function calc_mb(ela,topo,thick,cony,eus,mzmax,mbmax,czmax,cbmax)
     !*FD calculate mass balance
     use glimmer_global, only : dp
     implicit none
     real, intent(in) :: ela       !*FD equilibrium line altitude
     real(kind=dp), intent(in) :: topo      !*FD topography
     real(kind=dp), intent(in) :: thick     !*FD ice thickness
+    real,intent(in)           :: cony      !*FD continentality
     real, intent(in) :: eus       !*FD eustatic sea level
-    real, intent(in) :: zmax,bmax !*FD parameters describing MB variation around ELA
+    real, intent(in) :: mzmax,mbmax !*FD parameters describing MB variation around ELA
+    real, intent(in) :: czmax,cbmax !*FD parameters describing MB variation around ELA
     real calc_mb
 
     ! local variables
     real z
+    real zmax,bmax
 
     if (topo.ge.eus .or. thick.gt.0) then
        z = topo+thick-eus
@@ -177,6 +194,8 @@ contains
           return
        end if
        z = z - ela
+       zmax = mzmax - (mzmax - czmax)*cony
+       bmax = mbmax - (mbmax - cbmax)*cony
        if ((zmax.le.0.01).or.(z .ge. zmax)) then
           ! first condition allows forcing of mb=bmax.
           calc_mb = bmax

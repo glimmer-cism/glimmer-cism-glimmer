@@ -44,16 +44,7 @@ module eis_forcing
   !*FD climate forcing similar to the old Edinburgh Ice Sheet model
   !*FD Magnus Hagdorn, June 2004
   
-  use eis_ela
-  use eis_temp
-  use eis_slc
-
-  type eis_climate_type
-     !*FD holds EIS climate
-     type(eis_ela_type)  :: ela  !*FD ELA forcing
-     type(eis_temp_type) :: temp !*FD temperature forcing
-     type(eis_slc_type)  :: slc  !*FD sea level forcing
-  end type eis_climate_type
+  use eis_types
   
 contains
   subroutine eis_initialise(climate,config,model)
@@ -71,6 +62,7 @@ contains
     call eis_printconfig(climate)
 
     ! initialise subsystems
+    call eis_init_cony(climate%cony,model)
     call eis_init_ela(climate%ela,model)
     call eis_init_temp(climate%temp,model)
     call eis_init_slc(climate%slc)
@@ -85,6 +77,7 @@ contains
     ! local variables
     type(ConfigSection), pointer :: section
  
+    call eis_cony_config(config,climate%cony)
     call eis_ela_config(config,climate%ela)
     call eis_temp_config(config,climate%temp)
     call eis_slc_config(config,climate%slc)
@@ -98,6 +91,7 @@ contains
     
     call write_log_div
     call write_log('Edinburgh Ice Model')
+    call eis_cony_printconfig(climate%cony)
     call eis_ela_printconfig(climate%ela)
     call eis_temp_printconfig(climate%temp)
     call eis_slc_printconfig(climate%slc)
@@ -113,7 +107,8 @@ contains
     real(kind=rk), intent(in) :: time  !*FD current time
     
     call eis_eus(climate%slc,model,time)
-    call eis_massbalance(climate%ela,model,time)
+    call eis_continentality(climate%cony,model,time)
+    call eis_massbalance(climate%ela,climate%cony,model,time)
     call eis_surftemp(climate%temp,model,time)
   end subroutine eis_climate
     
