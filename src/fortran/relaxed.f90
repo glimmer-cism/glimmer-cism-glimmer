@@ -53,7 +53,7 @@ program relaxed
   use glimmer_setup
   use glimmer_cfproj
   use netcdf
-
+  use paramets, only: len0
   implicit none
 
   ! File-handling stuff
@@ -127,7 +127,7 @@ program relaxed
   ! Calculate thickness
 
   where (model%climate%out_mask .eq. 0.0)
-     model%geometry%thck = max(0.0,model%climate%presusrf - model%geometry%topg)
+     model%geometry%thck = max(0.,real(model%climate%presusrf - model%geometry%topg))
   elsewhere
      model%geometry%thck = 0.0
   end where
@@ -167,7 +167,8 @@ program relaxed
   NCO%do_var= NCI%do_var
 
   ! Create new file
-
+  model%numerics%dew = model%numerics%dew / len0
+  model%numerics%dns = model%numerics%dns / len0
   call glimmer_nc_createfile(outfile, model)
 
   status = nf90_put_var(NCO%id, NCO%varids(NC_B_TOPG), model%geometry%topg, (/1,1,1/))
