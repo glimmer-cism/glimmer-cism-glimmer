@@ -388,8 +388,8 @@ contains
 
     project_info%central_meridian = rlong0
     project_info%pole = plat          ! This is always geodetic
-    project_info%sinp = sin (clat)   ! These may be conformal
-    project_info%cosp = cos (clat)
+    project_info%sinp = sin (D2R*clat)    ! These may be conformal
+    project_info%cosp = cos (D2R*clat)
     project_info%north_pole = (plat > 0.0)
     project_info%s_c = 2.0 * project_info%EQ_RAD * GMT_map_scale_factor
     project_info%s_ic = 1.0 / project_info%s_c

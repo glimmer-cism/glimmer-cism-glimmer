@@ -11,6 +11,8 @@
 	added appropriate aliasing interface block. This was to
 	allow the addition of a compile flag to invoke a single-precision
 	interface (compile with GLIMMER_SP defined).
+ * Corrected error in GMT code - sines and cosines being taken without 
+	converting from degrees to radians!
 
 2004-05-05 Ian Rutt
  * Realised several crucial aspects of the orography output were
