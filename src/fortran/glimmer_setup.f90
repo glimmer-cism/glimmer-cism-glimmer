@@ -70,7 +70,7 @@ contains
 
     ! -------------------------------------------------------------------
     ! Internal variables - these are needed, as namelists can't include
-    ! components of derived types
+    ! components of derived types, or pointers, or anything else useful...
     ! -------------------------------------------------------------------
 
     logical :: there  ! Flag used when checking file is present.
@@ -78,7 +78,7 @@ contains
     ! temporary variables...
     ! ...for general
 
-    integer :: ewn,nsn,upn
+    integer  :: ewn,nsn,upn
 
     ! ...for the projection
 
@@ -144,61 +144,84 @@ contains
     namelist / forc / trun
 
     ! -------------------------------------------------------------------
-    ! Set default values for namelist parameters here
+    ! Copy default values of namelist parameters here
     ! -------------------------------------------------------------------
 
     ! For general:
 
-    upn=1
+    ewn = model%general%ewn
+    nsn = model%general%nsn
+    upn = model%general%upn
 
     ! For the projection:
 
-    p_type=1
+    p_type = proj%p_type
+    cpx    = proj%cpx
+    cpy    = proj%cpy
+    latc   = proj%latc
+    lonc   = proj%lonc
 
     ! For options:
 
-    whichtemp=1; whichartm=3; whichthck=4; whichflwa=0
-    whichisot=1; whichslip=4; whichbwat=2; whichmarn=0
-    whichbtrc=1; whichacab=2; whichstrs=2
-    whichevol=0; whichwvel=0; whichprecip=0
+    whichtemp   = model%options%whichtemp
+    whichartm   = model%options%whichartm
+    whichthck   = model%options%whichthck
+    whichflwa   = model%options%whichflwa
+    whichisot   = model%options%whichisot
+    whichslip   = model%options%whichslip
+    whichbwat   = model%options%whichbwat
+    whichmarn   = model%options%whichmarn
+    whichbtrc   = model%options%whichbtrc
+    whichacab   = model%options%whichacab
+    whichstrs   = model%options%whichstrs
+    whichevol   = model%options%whichevol
+    whichwvel   = model%options%whichwvel
+    whichprecip = model%options%whichprecip
 
     ! For numerics:
 
-    ntem=1.0
-    nvel=1.0
-    niso=1.0
-    nout=(/1.0,10.0,10.0/)
-    nstr=0.0
-    thklim=100.0
+    ntem   = model%numerics%ntem
+    nvel   = model%numerics%nvel
+    niso   = model%numerics%niso
+    nout   = model%numerics%nout
+    nstr   = model%numerics%nstr
+    thklim = model%numerics%thklim
+    mlimit = model%numerics%mlimit
+    dew    = model%numerics%dew
+    dns    = model%numerics%dns
 
     ! For funits
 
-    indices0dx=(/1,1,1,1,1,1,1,1/)
-    indices0dy=(/1,1,1,1,1,1,1,1/)
-    usrffile     ='none'; topgfile='none'; relxfile='none'
-    presusrffile ='none'; forcfile='none'; prcpfile='none'
-    latifile     ='none'
+    indices0dx   = model%funits%indices0dx
+    indices0dy   = model%funits%indices0dy
+    usrffile     = model%funits%usrffile
+    topgfile     = model%funits%topgfile
+    relxfile     = model%funits%relxfile
+    presusrffile = model%funits%presusrffile
+    forcfile     = model%funits%forcfile
+    prcpfile     = model%funits%prcpfile
+    latifile     = model%funits%latifile
 
     ! For other parameters
 
-    geot=-5.0d-2
-    fiddle=3.0
-    hydtim=1000.0
-    isotim=3000.0
-    airt=(/-3.15,-0.01/)
-    nmsb=(/0.5,1.05e-5,4.5e5/)
-    bpar=(/2.0,10.0,10.0,0.0,1.0/)
+    geot   = model%paramets%geot
+    fiddle = model%paramets%fiddle
+    hydtim = model%paramets%hydtim
+    isotim = model%paramets%isotim
+    airt   = model%paramets%airt
+    nmsb   = model%paramets%nmsb
+    bpar   = model%paramets%bpar
 
     ! For constants
 
-    lapse_rate=-8.0
-    precip_rate=0.5
-    air_temp=-20.0
-    albedo=0.4
+    lapse_rate  = model%climate%ulapse_rate
+    precip_rate = model%climate%uprecip_rate
+    air_temp    = model%climate%usurftemp
+    albedo      = model%climate%ice_albedo
 
     ! For the forcing
 
-    trun=10000
+    trun        = model%forcdata%trun
 
     ! -------------------------------------------------------------------
     ! Load the namelist, having first checked that it exists

@@ -57,25 +57,47 @@ module glimmer_object
 
     !*FD Derived type holding information about ice model instance. 
 
-    type(projection)                 :: proj          !*FD The projection definition of the instance.
-    type(downscale)                  :: downs         !*FD Downscaling parameters.
-    type(upscale)                    :: ups           !*FD Upscaling parameters
-    type(upscale)                    :: ups_orog      !*FD Upscaling parameters for orography (to cope
-                                                      !*FD with need to convert to spectral form).
-    character(fname_length)          :: paramfile     !*FD The name list file of parameters.
-    type(glimmer_global_type)        :: model         !*FD The instance and all its arrays.
-    logical                          :: newtemps      !*FD Flag to say we have new temperatures.
-    real(dp), dimension(:,:),pointer :: xwind         !*FD $x$-component of surface winds on local grid.
-    real(dp), dimension(:,:),pointer :: ywind         !*FD $y$-component of surface winds on local grid.
-    real(dp), dimension(:,:),pointer :: global_orog   !*FD Global orography on local coordinates.
-    real(dp), dimension(:,:),pointer :: local_orog    !*FD Local orography on local coordinates.
-    real(rk) ,dimension(:,:),pointer :: frac_coverage !*FD Fractional coverage of each global gridbox by
-                                                      !*FD the projected grid.
-    real(rk) ,dimension(:,:),pointer :: frac_cov_orog !*FD Fractional coverage of each global gridbox by
-                                                      !*FD the projected grid (orography).
-    logical                          :: first         !*FD Is this the first timestep?
+    type(projection)                 :: proj               !*FD The projection definition of the instance.
+    type(downscale)                  :: downs              !*FD Downscaling parameters.
+    type(upscale)                    :: ups                !*FD Upscaling parameters
+    type(upscale)                    :: ups_orog           !*FD Upscaling parameters for orography (to cope
+                                                           !*FD with need to convert to spectral form).
+    type(glimmer_global_type)        :: model              !*FD The instance and all its arrays.
+    character(fname_length)          :: paramfile          !*FD The name list file of parameters.
+    logical                          :: newtemps           !*FD Flag to say we have new temperatures.
+    logical                          :: first     = .true. !*FD Is this the first timestep?
+
+    ! Arrays to hold downscaled versions of input data --------------------------
+
+    real(dp), dimension(:,:),pointer :: xwind         => null() 
+    
+    !*FD $x$-component of surface winds on local grid.
+    
+    real(dp), dimension(:,:),pointer :: ywind         => null() 
+    
+    !*FD $y$-component of surface winds on local grid.
+    
+    real(dp), dimension(:,:),pointer :: global_orog   => null() 
+    
+    !*FD Global orography on local coordinates.
+    
+    real(dp), dimension(:,:),pointer :: local_orog    => null() 
+    
+    !*FD Local orography on local coordinates.
+ 
+    ! Fractional coverage information ------------------------------------------- 
+    
+    real(rk) ,dimension(:,:),pointer :: frac_coverage => null() 
+    
+    !*FD Fractional coverage of each global gridbox by the projected grid.
+
+    real(rk) ,dimension(:,:),pointer :: frac_cov_orog => null() 
+    
+    !*FD Fractional coverage of each global gridbox by the projected grid (orography).
 
   end type glimmer_instance
+
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   type output_flags
 
@@ -108,21 +130,14 @@ contains
     type(glimmer_instance),intent(inout) :: instance    !*FD The instance being initialised.
     real(rk),              intent(in)    :: radea       !*FD Radius of the earth (m).
     type(global_grid),     intent(in)    :: grid        !*FD Global grid to use
-                                                        !*FD The number of elements must be one more than \texttt{lats}.
     real(rk),              intent(in)    :: time_step   !*FD Model time-step (years).
     real(rk),optional,     intent(in)    :: start_time  !*FD Start time of model (years).
 
     ! Internal variables
 
-    real(rk) :: dlon
-
     instance%model%numerics%tinc=time_step             ! Initialise the model time step
-    dlon=grid%lons(2)-grid%lons(1)                     ! Calculate the longitudinal grid spacing - 
-                                                       ! this needs generalising, somehow
 
-    call glimmer_global_type_initialise(instance%model)         ! Do (probably redundant) initialisation
     call initial(unit,nmlfile,instance%model,instance%proj)     ! Read namelists and initialise variables
-    instance%first=.true.                                       ! This is the first time-step
 
     call new_proj(instance%proj,radea)                          ! Initialise the projection
     call new_downscale(instance%downs,instance%proj,grid)       ! Initialise the downscaling

@@ -51,8 +51,11 @@ module glimmer_types
   !*FD instead. However, there is probably one too many levels in this scheme. 
   !*FD It would be better if the different types here were contained in the 
   !*FD higher-level instance type (\texttt{glimmer\_params}), rather than 
-  !*FD the intermediate model type (\texttt{glimmer\_global\_type}).
-
+  !*FD the intermediate model type (\texttt{glimmer\_global\_type}). 
+  !*FD 
+  !*FD Note that this \emph{is} now where the defaults are defined for these
+  !*FD variables.
+ 
   use glimmer_global
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -61,9 +64,9 @@ module glimmer_types
 
     !*FD Holds fundamental parameters of the ice model geometry.
 
-    integer :: ewn   !*FD The number of grid-points in the E-W direction.
-    integer :: nsn   !*FD The number of grid-points in the N-S direction.
-    integer :: upn   !*FD The number of vertical levels in the model.
+    integer :: ewn = 0  !*FD The number of grid-points in the E-W direction.
+    integer :: nsn = 0  !*FD The number of grid-points in the N-S direction.
+    integer :: upn = 1  !*FD The number of vertical levels in the model.
 
   end type glimmer_general
 
@@ -74,7 +77,7 @@ module glimmer_types
     !*FD Holds user options controlling the methods used in the ice-model
     !*FD integration.
 
-    integer :: whichtemp
+    integer :: whichtemp = 1
 
     !*FD Method of ice temperature calculation:
     !*FD \begin{description} 
@@ -83,7 +86,7 @@ module glimmer_types
     !*FD and apparent vertical velocity)
     !*FD \end{description}
 
-    integer :: whichartm
+    integer :: whichartm = 3
 
     !*FD Method of calculation of surface air temperature:
     !*FD \begin{description} 
@@ -100,7 +103,7 @@ module glimmer_types
     !*FD \item[7] Use large-scale temperature and range. 
     !*FD \end{description}
 
-    integer :: whichthck
+    integer :: whichthck = 4
 
     !*FD Source of initial conditions: 
     !*FD \begin{description} 
@@ -112,7 +115,7 @@ module glimmer_types
     !*FD \item[5--7] Unknown 
     !*FD \end{description}
 
-    integer :: whichflwa
+    integer :: whichflwa = 0
 
     !*FD Method for calculating flow factor $A$:
     !*FD \begin{description} 
@@ -123,7 +126,7 @@ module glimmer_types
     !*FD \,\mathrm{Pa}^{-n}$
     !*FD \end{description}
 
-    integer :: whichisot
+    integer :: whichisot = 1
 
     !*FD Bedrock elevation: 
     !*FD \begin{description} 
@@ -132,7 +135,7 @@ module glimmer_types
     !*FD \item[2] Local function of ice loading history (ODE) with flexure
     !*FD \end{description}
 
-    integer :: whichslip
+    integer :: whichslip = 4
 
     !*FD Horizontal bed velocity: 
     !*FD \begin{description} 
@@ -141,7 +144,7 @@ module glimmer_types
     !*FD \item[4] Set to zero everywhere 
     !*FD \end{description}
 
-    integer :: whichbwat
+    integer :: whichbwat = 2
 
     !*FD Basal water depth: 
     !*FD \begin{description} 
@@ -150,7 +153,7 @@ module glimmer_types
     !*FD \item[2] Set to zero everywhere 
     !*FD \end{description}
 
-    integer :: whichmarn
+    integer :: whichmarn = 0
 
     !*FD Ice thickness: 
     !*FD \begin{description} 
@@ -160,7 +163,7 @@ module glimmer_types
     !*FD \item[2] No action 
     !*FD \end{description}
 
-    integer :: whichbtrc
+    integer :: whichbtrc = 1
 
     !*FD Basal slip coefficient: 
     !*FD \begin{description}
@@ -168,7 +171,7 @@ module glimmer_types
     !*FD \item[1] Set equal to zero everywhere 
     !*FD \end{description}
 
-    integer :: whichacab
+    integer :: whichacab = 2
 
     !*FD Net accumulation: 
     !*FD \begin{description}
@@ -177,7 +180,7 @@ module glimmer_types
     !*FD \item[2] Accumulation only 
     !*FD \end{description}
 
-    integer :: whichstrs
+    integer :: whichstrs = 2
 
     !*FD Stress solution: 
     !*FD \begin{description}
@@ -187,7 +190,7 @@ module glimmer_types
     !*FD \item[3] No action (use when velocity found elsewhere) 
     !*FD \end{description}
 
-    integer :: whichevol
+    integer :: whichevol = 0
 
     !*FD Thickness evolution method:
     !*FD \begin{description}
@@ -195,7 +198,7 @@ module glimmer_types
     !*FD \item[2] Diffusion approach (also calculates velocities) 
     !*FD \end{description}
 
-    integer :: whichwvel
+    integer :: whichwvel = 0
 
     !*FD Vertical velocities: 
     !*FD \begin{description}
@@ -204,7 +207,7 @@ module glimmer_types
     !*FD upper kinematic B.C. obeyed 
     !*FD \end{description}
 
-    integer :: whichprecip
+    integer :: whichprecip = 0
 
     !*FD Source of precipitation:
     !*FD \begin{description}
@@ -223,38 +226,38 @@ module glimmer_types
     !*FD Holds fields and other information relating to the
     !*FD geometry of the ice sheet and bedrock.
 
-    real(dp),dimension(:,:),pointer :: thck 
+    real(dp),dimension(:,:),pointer :: thck => null()
     
     !*FD The thickness of the ice, divided by \texttt{thck0}.
 
-    real(dp),dimension(:,:),pointer :: usrf
+    real(dp),dimension(:,:),pointer :: usrf => null()
     
     !*FD The elevation of the upper ice surface, divided by \texttt{thck0}.
 
-    real(dp),dimension(:,:),pointer :: lsrf 
+    real(dp),dimension(:,:),pointer :: lsrf => null() 
     
     !*FD The elevation of the lower ice surface, divided by \texttt{thck0}.
 
-    real(dp),dimension(:,:),pointer :: topg 
+    real(dp),dimension(:,:),pointer :: topg => null() 
     
     !*FD The elevation of the topography, divided by \texttt{thck0}.
 
-    real(dp),dimension(:,:),pointer :: relx 
-    
+    real(dp),dimension(:,:),pointer :: relx => null()
+     
     !*FD The elevation of the relaxed topography, by \texttt{thck0}.
 
-    integer, dimension(:,:),pointer :: mask 
+    integer, dimension(:,:),pointer :: mask => null()
     
     !*FD Set to zero for all points where $\mathtt{thck}=0$, otherwise non-zero.
     !*FD the non-zero points are numbered in sequence from the bottom left to the 
     !*FD top right, going along the rows.
 
-    integer :: totpts 
+    integer :: totpts = 0
     
     !*FD The total number of points with non-zero thickness
 
-    integer, dimension(4) :: dom            !*FD I have no idea what this is for.
-    logical :: empty                        !*FD I have no idea what this is for.
+    integer, dimension(4) :: dom   = 0      !*FD I have no idea what this is for.
+    logical               :: empty = .true. !*FD I have no idea what this is for.
 
   end type glimmer_geometry
 
@@ -265,91 +268,157 @@ module glimmer_types
     !*FD Holds the horizontal and temporal derivatives of the thickness and
     !*FD upper surface elevation, as well as the thickness on the staggered grid.
 
-    real(dp),dimension(:,:),pointer :: dthckdew !*FD E-W derivative of thickness.
-    real(dp),dimension(:,:),pointer :: dusrfdew !*FD E-W derivative of upper surface elevation.
-    real(dp),dimension(:,:),pointer :: dthckdns !*FD N-S derivative of thickness.
-    real(dp),dimension(:,:),pointer :: dusrfdns !*FD N-S derivative of upper surface elevation.
-    real(dp),dimension(:,:),pointer :: dthckdtm !*FD Temporal derivative of thickness.
-    real(dp),dimension(:,:),pointer :: dusrfdtm !*FD Temporal derivative of upper surface elevation.
-    real(dp),dimension(:,:),pointer :: stagthck !*FD Thickness averaged onto the staggered grid.
+    real(dp),dimension(:,:),pointer :: dthckdew => null() !*FD E-W derivative of thickness.
+    real(dp),dimension(:,:),pointer :: dusrfdew => null() !*FD E-W derivative of upper surface elevation.
+    real(dp),dimension(:,:),pointer :: dthckdns => null() !*FD N-S derivative of thickness.
+    real(dp),dimension(:,:),pointer :: dusrfdns => null() !*FD N-S derivative of upper surface elevation.
+    real(dp),dimension(:,:),pointer :: dthckdtm => null() !*FD Temporal derivative of thickness.
+    real(dp),dimension(:,:),pointer :: dusrfdtm => null() !*FD Temporal derivative of upper surface elevation.
+    real(dp),dimension(:,:),pointer :: stagthck => null() !*FD Thickness averaged onto the staggered grid.
 
   end type glimmer_geomderv
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   type glimmer_velocity
-    real(dp),dimension(:,:,:),pointer :: uvel, vvel, wvel, wgrd
-    real(dp),dimension(:,:)  ,pointer :: uflx, vflx, diffu
-    real(dp),dimension(:,:)  ,pointer :: ubas, vbas, btrc
+
+    !*FD Holds the velocity fields in 2D and 3D. At least some of these fields
+    !*FD are stored on the displaced grid.
+
+    real(dp),dimension(:,:,:),pointer :: uvel  => null() !*FD 3D $x$-velocity.
+    real(dp),dimension(:,:,:),pointer :: vvel  => null() !*FD 3D $y$-velocity.
+    real(dp),dimension(:,:,:),pointer :: wvel  => null() !*FD 3D $z$-velocity.
+    real(dp),dimension(:,:,:),pointer :: wgrd  => null() !*FD 3D grid vertical velocity.
+    real(dp),dimension(:,:)  ,pointer :: uflx  => null() !*FD 
+    real(dp),dimension(:,:)  ,pointer :: vflx  => null() !*FD 
+    real(dp),dimension(:,:)  ,pointer :: diffu => null() !*FD 
+    real(dp),dimension(:,:)  ,pointer :: ubas  => null() !*FD 
+    real(dp),dimension(:,:)  ,pointer :: vbas  => null() !*FD 
+    real(dp),dimension(:,:)  ,pointer :: btrc  => null() !*FD 
   end type glimmer_velocity
 
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
   type glimmer_climate
-    real(sp),dimension(:,:),pointer :: acab, artm
-    real(sp),dimension(:,:),pointer :: arng, lati, ablt
-    real(sp),dimension(:,:),pointer :: g_arng,g_artm  ! Global fields as input
-    real(sp),dimension(:,:),pointer :: prcp
-    real(sp),dimension(:,:),pointer :: presprcp  !*FD Present-day annual precip (mm)
-    real(sp),dimension(:,:),pointer :: presartm  !*FD Present-day mean air-temp ($^{\circ}$C)
-    real(dp),dimension(:,:),pointer :: presusrf  !*FD Present-day upper surface (km)
-    real(sp) :: uprecip_rate   !*FD Uniform precipitaion rate in m/a
-    real(sp) :: usurftemp      !*FD Uniform surface temperature in deg C
-    real(sp) :: ice_albedo     !*FD Ice albedo. (fraction)
-    real(sp) :: ulapse_rate    !*FD Uniform lapse rate in deg C/km
+
+    !*FD Holds fields relating to the atmospheric climate of the model.
+
+    real(sp),dimension(:,:),pointer :: acab     => null() !*FD Annual mass balance.
+    real(sp),dimension(:,:),pointer :: artm     => null() !*FD Annual mean air temperature
+    real(sp),dimension(:,:),pointer :: arng     => null() !*FD Annual air temperature range
+    real(sp),dimension(:,:),pointer :: lati     => null() !*FD Latitudes of model grid points
+    real(sp),dimension(:,:),pointer :: ablt     => null() !*FD Annual ablation.
+    real(sp),dimension(:,:),pointer :: g_arng   => null() !*FD Global annual air temperature range
+    real(sp),dimension(:,:),pointer :: g_artm   => null() !*FD Global annual mean air temperature
+    real(sp),dimension(:,:),pointer :: prcp     => null() !*FD Annual precipitation.
+    real(sp),dimension(:,:),pointer :: presprcp => null() !*FD Present-day annual precip (mm)
+    real(sp),dimension(:,:),pointer :: presartm => null() !*FD Present-day mean air-temp ($^{\circ}$C)
+    real(dp),dimension(:,:),pointer :: presusrf => null() !*FD Present-day upper surface (km)
+    real(sp) :: uprecip_rate =   0.5 !*FD Uniform precipitaion rate in m/a
+    real(sp) :: usurftemp    = -20.0 !*FD Uniform surface temperature in $^{\circ}$C.
+    real(sp) :: ice_albedo   =   0.4 !*FD Ice albedo. (fraction)
+    real(sp) :: ulapse_rate  =  -8.0 !*FD Uniform lapse rate in deg C/km 
+                                     !*FD (N.B. This should be \emph{negative}!)
   end type glimmer_climate
 
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
   type glimmer_temper
-    real(dp),dimension(:,:,:),pointer :: temp
-    real(dp),dimension(:,:,:),pointer :: flwa  
-    real(dp),dimension(:,:),  pointer :: bwat, bmlt
-    integer :: niter
-    real(sp) :: perturb 
-    real(sp) :: grid
-    integer :: tpt         ! pointer to time series data
-    logical :: first1
+
+    !*FD Holds fields relating to temperature.
+
+    real(dp),dimension(:,:,:),pointer :: temp => null() !*FD Three-dimensional temperature field.
+    real(dp),dimension(:,:,:),pointer :: flwa => null() !*FD Glenn's $A$.
+    real(dp),dimension(:,:),  pointer :: bwat => null() !*FD Basal water depth(?)
+    real(dp),dimension(:,:),  pointer :: bmlt => null() !*FD Basal melt-rate(?)
+    integer  :: niter   = 0      !*FD
+    real(sp) :: perturb = 0.0    !*FD
+    real(sp) :: grid    = 0.0    !*FD
+    integer  :: tpt     = 0      !*FD Pointer to time series data
+    logical  :: first1  = .true. !*FD
   end type glimmer_temper
 
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
   type glimmer_forcdata
-    real(sp),pointer,dimension(:,:) :: forcing
-    integer :: flines
-    real(sp) :: trun
+
+    !*FD Holds information relating to time-series forcing.
+
+    real(sp),dimension(:,:),pointer :: forcing => null() !*FD Forcing data(?)
+    integer  :: flines = 0
+    real(sp) :: trun   = 10000
   end type glimmer_forcdata
 
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
   type glimmer_funits
-    integer, dimension(8) :: indices0dx
-    integer, dimension(8) :: indices0dy
-    integer, dimension(n2d) :: which2d
-    integer, dimension(n3d) :: which3d 
-    character(fname_length) :: usrffile, topgfile, relxfile    ! input filenames
-    character(fname_length) :: sigfile                         !*FD sigma coordinates file
-    character(fname_length) :: prcpfile                        !*FD Precipitation file
-    character(fname_length) :: presusrffile                    !*FD Present-day surface file
-    character(fname_length) :: forcfile                        !*FD Temperature forcing file
-    character(fname_length) :: output_stem                     !*FD output filename stem
-    character(fname_length) :: b0dfile,b2dfile,b3dfile         !*FD output filenames
-    character(fname_length) :: outfile                         !*FD configuration file for outputs
-    character(fname_length) :: latifile                        !*FD File containing latitudes of all points
+
+    !*FD Contains information relating to file handling by GLIMMER.
+
+    ! Binary 2d field input files ------------------------------------
+
+    character(fname_length) :: usrffile     = 'none' !*FD Upper-surface elevation file
+    character(fname_length) :: topgfile     = 'none' !*FD Starting topography filename
+    character(fname_length) :: relxfile     = 'none' !*FD Relaxed topography filename
+    character(fname_length) :: prcpfile     = 'none' !*FD Precipitation file
+    character(fname_length) :: presusrffile = 'none' !*FD Present-day surface file
+    character(fname_length) :: latifile     = 'none' !*FD File containing latitudes of all points
+
+    ! Other input filenames ------------------------------------------
+
+    character(fname_length) :: sigfile      = 'none' !*FD sigma coordinates file
+    character(fname_length) :: forcfile     = 'none' !*FD Temperature forcing file
+
+    ! Filenames and other info for data output -----------------------
+
+    character(fname_length) :: output_stem  = 'glimmer_output' !*FD output filename stem
+    character(fname_length) :: b0dfile      = ''     !*FD Time-series output filename, constructed internally.
+    character(fname_length) :: b2dfile      = ''     !*FD 2d output filename, constructed internally.
+    character(fname_length) :: b3dfile      = ''     !*FD 3d output filename, constructed internally.
+    character(fname_length) :: outfile      = 'none' !*FD configuration file for outputs
+    integer, dimension(8)   :: indices0dx   = (/1,1,1,1,1,1,1,1/)
+    integer, dimension(8)   :: indices0dy   = (/1,1,1,1,1,1,1,1/)
+    integer, dimension(n2d) :: which2d      = 1
+    integer, dimension(n3d) :: which3d      = 1
   end type glimmer_funits
 
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
   type glimmer_numerics
-    real(sp) :: time         !*FD main loop counter in years
-    real(sp) :: tinc         !*FD time step of main loop in years 
-    real(sp) :: ntem         !*FD temperature time step in years
-    real(sp) :: nvel         !*FD velocity time step in years
-    real(sp) :: niso         !*FD flexure time step in years
-    real(sp),dimension(3) :: nout !*FD output time step in years 
-                                  !*FD for time series, horiz. and full data                        
-    real(sp) :: nstr         !*FD output start time in years
-    real(dp) :: alpha        !*FD richard suggests 1.5 - was a parameter in original
-    real(dp) :: alphas       !*FD was a parameter in the original
-    real(dp) :: thklim    
-    real(dp) :: mlimit  
-    real(dp) :: dew 
-    real(dp) :: dns 
-    real(dp) :: dt       
-    real(dp) :: dttem 
-    real(dp),dimension(:),pointer :: sigma 
-    real(sp) :: nshlf 
+
+    !*FD Parameters relating to the model numerics.
+
+    real(sp) :: time   =    0.0   !*FD main loop counter in years
+    real(sp) :: tinc   =   20.0   !*FD time step of main loop in years 
+    real(sp) :: ntem   =    1.0   !*FD temperature time step in years
+    real(sp) :: nvel   =    1.0   !*FD velocity time step in years
+    real(sp) :: niso   =    1.0   !*FD flexure time step in years
+    real(sp) :: nstr   =    0.0   !*FD output start time in years
+    real(dp) :: alpha  =    0.5d0 !*FD richard suggests 1.5 - was a parameter in original
+    real(dp) :: alphas =    0.5d0 !*FD was a parameter in the original
+    real(dp) :: thklim =  100.0   
+    real(dp) :: mlimit = -200.0d0
+    real(dp) :: dew    =   20.0d3
+    real(dp) :: dns    =   20.0d3
+    real(dp) :: dt     =    0.0
+    real(dp) :: dttem  =    0.0
+    real(sp) :: nshlf  =    0.0
+
+    ! Data output frequency -------------------------------------------------
+
+    real(sp),dimension(3)         :: nout = (/1.0,10.0,10.0/)
+    
+    !*FD output time step in years for time series, horiz. and full data 
+                                          
+    ! Vertical coordinate ---------------------------------------------------
+                                                               
+    real(dp),dimension(:),pointer :: sigma => null() !*FD Sigma values for 
+                                                     !*FD vertical spacing of 
+                                                     !*FD model levels
+
   end type glimmer_numerics
+
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   type glimmer_pddcalc
 
@@ -358,99 +427,142 @@ module glimmer_types
     !*FD difference between mean annual and July temps, while the
     !*FD $y$- axis is the mean annual temp
 
-    integer :: dx !*FD Spacing of values in x-direction ($^{\circ}$C) --- default=1
-    integer :: dy !*FD Spacing of values in y-direction ($^{\circ}$C) --- default=1
-    integer :: ix !*FD Lower bound of $x$-axis ($^{\circ}$C) --- default=0
-    integer :: iy !*FD Lower bound of $y$-axis ($^{\circ}$C) --- default=-50
-    integer :: nx !*FD Number of values in x-direction
-    integer :: ny !*FD Number of values in y-direction
+    integer  :: dx        = 1   !*FD Spacing of values in x-direction ($^{\circ}$C)
+    integer  :: dy        = 1   !*FD Spacing of values in y-direction ($^{\circ}$C)
+    integer  :: ix        = 0   !*FD Lower bound of $x$-axis ($^{\circ}$C)
+    integer  :: iy        = -50 !*FD Lower bound of $y$-axis ($^{\circ}$C)
+    integer  :: nx        = 31  !*FD Number of values in x-direction
+    integer  :: ny        = 71  !*FD Number of values in y-direction
+    real(sp) :: dailytemp = 0.0 
+    real(sp) :: tma       = 0.0
+    real(sp) :: tmj       = 0.0
+    real(sp) :: dtmj      = 0.0
+    real(sp) :: dd_sigma  = 5.0
+    logical  :: first     = .true.
+    logical  :: pt_alloc  = .false. !*FD set \texttt{.true.} if \texttt{pddtab}
+                                    !*FD has been allocated.
+ 
+    ! The actual PDD table ---------------------------------------------
 
-    real(sp),dimension(:,:),pointer :: pddtab !*FD PDD table - must be 
-                                              !*FD allocated with dimensions nx,ny.
+    real(sp),dimension(:,:),pointer :: pddtab  => null() 
+    
+    !*FD PDD table - must be allocated with dimensions nx,ny.
 
-    logical  :: pt_alloc !*FD set \texttt{.true.} if \texttt{pddtab} has been allocated.
-    real(sp) :: dailytemp, tma, tmj, dtmj
-    real(sp) :: dd_sigma
-    logical  :: first
-  end type glimmer_pddcalc
+ end type glimmer_pddcalc
+
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   type glimmer_isotwk
-    real(dp),pointer,dimension(:,:) :: load
-    real(dp),dimension(4) :: fact
-    logical :: first1
-    integer :: nflx
-    real(sp),dimension(:,:),pointer :: dflct
-    logical :: first2
+    real(dp),dimension(:,:),pointer :: load  => null()
+    real(sp),dimension(:,:),pointer :: dflct => null()
+    real(dp),dimension(4)           :: fact  =  0.0
+    integer :: nflx   = 0
+    logical :: first1 = .true.
+    logical :: first2 = .true.
   end type glimmer_isotwk
 
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
   type glimmer_velowk
-    real(dp),dimension(:),pointer :: depth, dupsw, depthw
-    real(dp),dimension(:),pointer :: suvel, svvel
-    real(dp),dimension(:,:),pointer :: fslip
-    logical :: first1
-    real(dp),dimension(:,:),pointer :: dintflwa
-    logical :: first2
-    real(dp),dimension(:),pointer :: dups
-    logical :: first3
-    logical :: first4
+    real(dp),dimension(:),  pointer :: depth    => null()
+    real(dp),dimension(:),  pointer :: dupsw    => null()
+    real(dp),dimension(:),  pointer :: depthw   => null()
+    real(dp),dimension(:),  pointer :: suvel    => null()
+    real(dp),dimension(:),  pointer :: svvel    => null()
+    real(dp),dimension(:,:),pointer :: fslip    => null()
+    real(dp),dimension(:,:),pointer :: dintflwa => null()
+    real(dp),dimension(:),  pointer :: dups     => null()
     real(dp),dimension(4) :: fact
-    logical :: first5
-    real(dp) :: watwd, watct, trc0
-    real(dp) :: trcmin, marine, trcmax
-    real(dp),dimension(4) :: c 
-    logical :: first6
+    real(dp),dimension(4) :: c    = 0.0
+    real(dp) :: watwd  = 3.0d0
+    real(dp) :: watct  = 10.0d0
+    real(dp) :: trc0   = 0.0
+    real(dp) :: trcmin = 0.0d0
+    real(dp) :: marine = 1.0d0
+    real(dp) :: trcmax = 10.0d0
+
+    ! Initialisation flags ---------------------------------------
+
+    logical :: first1 = .true.
+    logical :: first2 = .true.
+    logical :: first3 = .true.
+    logical :: first4 = .true.
+    logical :: first5 = .true.
+    logical :: first6 = .true.
   end type glimmer_velowk
 
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
   type glimmer_pcgdwk
-    real(dp), pointer, dimension(:) :: pcgval, rhsd, answ
-    integer, pointer, dimension(:) :: pcgcol, pcgrow
-    integer, dimension(2) :: pcgsize
-    integer :: ct
-    real(dp), dimension(4) :: fc
-    real(dp), dimension(6) :: fc2
-    integer :: mlinit
-    integer :: tlinit
-    logical :: first1
+    real(dp),dimension(:),pointer :: pcgval  => null()
+    real(dp),dimension(:),pointer :: rhsd    => null()
+    real(dp),dimension(:),pointer :: answ    => null()
+    integer, dimension(:),pointer :: pcgcol  => null()
+    integer, dimension(:),pointer :: pcgrow  => null()
+    integer, dimension(2)         :: pcgsize = 0
+    real(dp),dimension(4)         :: fc      = 0.0
+    real(dp),dimension(6)         :: fc2     = 0.0
+    integer :: ct     = 0
+    integer :: mlinit = 0
+    integer :: tlinit = 0
+    logical :: first1 = .true.
   end type glimmer_pcgdwk
 
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
   type glimmer_thckwk
-    integer :: nwhich
-    real(dp), pointer, dimension(:,:,:) :: olds
-    real(sp) :: oldtime
-    real(dp), dimension(:,:), pointer :: oldthck, basestate 
-    real(dp) :: few, fns
-    logical :: first1
+    real(dp),dimension(:,:),  pointer :: oldthck   => null()
+    real(dp),dimension(:,:),  pointer :: basestate => null()
+    real(dp),dimension(:,:,:),pointer :: olds      => null()
+    integer  :: nwhich  = 2
+    real(sp) :: oldtime = 0.0
+    real(dp) :: few     = 0.0
+    real(dp) :: fns     = 0.0
+    logical  :: first1  =.true.
   end type glimmer_thckwk
 
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
   type glimmer_tempwk
-    real(dp), pointer, dimension(:,:,:) :: inittemp, dissip, initadvt
-    real(dp) :: advconst(2)
-    real(dp), dimension(:), pointer :: dupa, dupb, dupc, c1
-    real(dp), dimension(:,:),pointer :: dups
-    real(dp) :: noflow
-    logical :: first1
-    real(dp),dimension(4) :: cons 
-    real(dp) :: zbed, dupn, wmax 
-    logical :: first2
-    logical :: first3
-    real(dp), dimension(4) :: f
-    logical :: first4
-    real(dp) :: dt_wat
-    integer  :: nwat
-    real(dp), dimension(8) :: c 
-    logical  :: first5
+    real(dp),dimension(:,:,:),pointer :: inittemp => null()
+    real(dp),dimension(:,:,:),pointer :: dissip   => null()
+    real(dp),dimension(:,:,:),pointer :: initadvt => null()
+    real(dp),dimension(:),    pointer :: dupa     => null()
+    real(dp),dimension(:),    pointer :: dupb     => null()
+    real(dp),dimension(:),    pointer :: dupc     => null()
+    real(dp),dimension(:),    pointer :: c1       => null()
+    real(dp),dimension(:,:),  pointer :: dups     => null()
+    real(dp),dimension(4)             :: cons     = 0.0
+    real(dp),dimension(4)             :: f        = 0.0
+    real(dp),dimension(8)             :: c        = 0.0
+    real(dp) :: noflow      = -1
+    real(dp) :: advconst(2) = 0.0
+    real(dp) :: zbed        = 0.0
+    real(dp) :: dupn        = 0.0
+    real(dp) :: wmax        = 0.0
+    real(dp) :: dt_wat      = 0.0
+    integer  :: nwat        = 0
+    logical  :: first1      = .true.
+    logical  :: first2      = .true.
+    logical  :: first3      = .true.
+    logical  :: first4      = .true.
+    logical  :: first5      = .true.
   end type glimmer_tempwk
 
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
   type glimmer_paramets
-    real(dp) :: geot     ! W m^{-2}
-    real(dp) :: fiddle   ! -
-    real(sp),dimension(2) :: airt       ! K, K km^{-3}
-    real(sp),dimension(3) :: nmsb  ! m yr^{-1}, yr^{-1}, m                
-    real(dp) :: hydtim  ! yr^{-1} converted to s^{-1} and scaled, 
-                                    ! 0 if no drainage = 0.0d0 * tim0 / scyr
-    real(dp) :: isotim
-    real(dp),dimension(5) :: bpar 
+    real(sp),dimension(2) :: airt = (/ -3.150, -1.0e-2 /)       ! K, K km^{-3}
+    real(sp),dimension(3) :: nmsb = (/ 0.5, 1.05e-5, 450.0e3 /) ! m yr^{-1}, yr^{-1}, m                
+    real(dp),dimension(5) :: bpar = (/ 2.0d0, 10.0d0, 10.0d0, 0.0d0, 1.0d0 /)
+    real(dp) :: geot   = -5.0d-2  ! W m^{-2}
+    real(dp) :: fiddle = 3.0d0    ! -
+    real(dp) :: hydtim = 1000.0d0 ! yr^{-1} converted to s^{-1} and scaled, 
+                                  ! 0 if no drainage = 0.0d0 * tim0 / scyr
+    real(dp) :: isotim = 3000.0d0
   end type glimmer_paramets
+
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   type glimmer_global_type
     type(glimmer_general)  :: general
@@ -471,156 +583,6 @@ module glimmer_types
     type(glimmer_tempwk)   :: tempwk
     type(glimmer_paramets) :: paramets
   end type glimmer_global_type
-
-contains
-
-  subroutine glimmer_global_type_initialise(params)
-
-    !*FD Initialise the model parameters. Note that this is
-    !*FD \emph{not} the place to put the default values of
-    !*FD parameters read in from the namelist. Those defaults
-    !*FD are set in the \texttt{initial} subroutine.
-
-    type(glimmer_global_type),intent(inout) :: params
-
-    params%general%ewn  = 0
-    params%general%nsn  = 0
-    params%general%upn  = 0
-
-    params%options%whichtemp     = 1
-    params%options%whichartm     = 3
-    params%options%whichthck     = 4
-    params%options%whichflwa     = 0
-    params%options%whichisot     = 1
-    params%options%whichslip     = 4
-    params%options%whichbwat     = 2
-    params%options%whichmarn     = 0
-    params%options%whichbtrc     = 1
-    params%options%whichacab     = 2
-    params%options%whichstrs     = 2
-    params%options%whichevol     = 0
-    params%options%whichwvel     = 0
-    params%options%whichprecip   = 0
-
-    params%geometry%dom          = 0
-    params%geometry%totpts       = 0
-    params%geometry%empty        = .true.
-
-    params%climate%uprecip_rate  = 0.0
-    params%climate%usurftemp     = 0.0
-    params%climate%ice_albedo    = 0.0
-    params%climate%ulapse_rate   = 0.0
-
-    params%temper%niter          = 0
-    params%temper%perturb        = 0.0
-    params%temper%grid           = 0.0 
-    params%temper%tpt            = 0
-    params%temper%first1         = .true.
-
-    params%forcdata%flines       = 0
-
-    params%funits%indices0dx     = 0
-    params%funits%indices0dy     = 0
-    params%funits%which2d        = 1 
-    params%funits%which3d        = 1
-    params%funits%usrffile       = 'none'
-    params%funits%topgfile       = 'none'
-    params%funits%relxfile       = 'none'
-    params%funits%sigfile        = ''
-    params%funits%output_stem    = 'untitled'
-    params%funits%b0dfile        = ''
-    params%funits%b2dfile        = ''
-    params%funits%b3dfile        = ''
-    params%funits%outfile        = ''
-
-    params%numerics%time         = 0.0
-!    params%numerics%tinc         = 20.0  ! We don't want to touch this...
-    params%numerics%ntem         = 5.0  
-    params%numerics%nvel         = 10.0 
-    params%numerics%niso         = 5.0 
-    params%numerics%nout         = (/ 1.0, 1.0e1, 1.0e1 /) 
-    params%numerics%nstr         = 0.0
-    params%numerics%alpha        = 0.5d0
-    params%numerics%alphas       = 0.5d0
-    params%numerics%thklim       = 100.0d0
-    params%numerics%mlimit       = -200.0d0
-    params%numerics%dew          = 20.0d3
-    params%numerics%dns          = 20.0d3
-    params%numerics%dt           = 0.0
-    params%numerics%dttem        = 0.0
-    params%numerics%nshlf        = 0.0
-
-    params%pddcalc%dx = 1
-    params%pddcalc%dy = 1
-    params%pddcalc%ix = 0
-    params%pddcalc%iy = -50
-    params%pddcalc%nx = 31
-    params%pddcalc%ny = 71
-    params%pddcalc%pt_alloc=.false.
-    params%pddcalc%dailytemp = 0.0
-    params%pddcalc%tma =0.0 
-    params%pddcalc%tmj =0.0
-    params%pddcalc%dtmj =0.0
-    params%pddcalc%dd_sigma = 5.0
-    params%pddcalc%first=.true.
-
-    params%isotwk%first1 = .true.
-    params%isotwk%fact   = 0.0
-    params%isotwk%nflx   = 0
-    params%isotwk%first2 = .true.
-
-    params%velowk%first1 = .true.
-    params%velowk%first2 = .true.
-    params%velowk%first3 = .true.
-    params%velowk%first4 = .true.
-    params%velowk%first5 = .true.
-    params%velowk%watwd = 3.0d0
-    params%velowk%watct = 10.0d0
-    params%velowk%trc0  = 0.0
-    params%velowk%trcmin = 0.0d0
-    params%velowk%marine = 1.0d0
-    params%velowk%trcmax = 10.0d0
-    params%velowk%c      = 0.0
-    params%velowk%first6 = .true.
-
-    params%pcgdwk%ct  = 0
-    params%pcgdwk%fc  = 0.0
-    params%pcgdwk%fc2 = 0.0
-    params%pcgdwk%mlinit = 0
-    params%pcgdwk%tlinit = 0
-    params%pcgdwk%first1 = .true.
-
-    params%thckwk%nwhich = 2
-    params%thckwk%oldtime = 0.0
-    params%thckwk%few = 0.0
-    params%thckwk%fns = 0.0
-    params%thckwk%first1=.true.
-
-    params%tempwk%advconst = 0.0
-    params%tempwk%cons = 0.0
-    params%tempwk%zbed = 0.0
-    params%tempwk%dupn = 0.0
-    params%tempwk%wmax = 0.0
-    params%tempwk%f = 0.0
-    params%tempwk%dt_wat = 0.0
-    params%tempwk%nwat = 0
-    params%tempwk%c = 0.0
-    params%tempwk%noflow = -1
-    params%tempwk%first1 = .true.
-    params%tempwk%first2 = .true.
-    params%tempwk%first3 = .true.
-    params%tempwk%first4 = .true.
-    params%tempwk%first5 = .true.
-
-    params%paramets%geot = -5.0d-2
-    params%paramets%fiddle = 3.0d0
-    params%paramets%airt = (/ -3.150, -1.0e-2 /)
-    params%paramets%nmsb = (/ 0.5, 1.05e-5, 450.0e3 /)
-    params%paramets%hydtim = 1000.0d0
-    params%paramets%isotim = 3000.0d0
-    params%paramets%bpar = (/ 2.0d0, 10.0d0, 10.0d0, 0.0d0, 1.0d0 /)
-
-  end subroutine glimmer_global_type_initialise
 
 end module glimmer_types
 
