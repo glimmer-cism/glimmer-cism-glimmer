@@ -1,6 +1,0 @@
-&timesteps
-tinc = 1.0/
-&file_paras
-ninst=1/
-g_land.gln
-
