@@ -65,9 +65,8 @@ contains
     !*FD Calculates mass-balance over the ice model domain, by the
     !*FD positive-degree-day method.
 
-    use glimmer_global, only : sp, dp
-    use physcon, only : rhow, rhoi, scyr
-    use paramets, only : acc0,pddfs, pddfi, wmax, pfac
+    use glimmer_global, only : sp
+    use paramets, only : pddfs, pddfi, wmax
 
     implicit none 
  
@@ -84,7 +83,7 @@ contains
 
     ! Internal variables
 
-    real(sp) :: wfrac, runo, pablt, tx, ty, pdd, forc
+    real(sp) :: wfrac, pablt, tx, ty, pdd
     integer  :: ns,ew,nsn,ewn,kx,ky,jx,jy
 
     ! Get size of arrays. All arrays should be the same size as this.
@@ -227,7 +226,7 @@ contains
 
     ! Internal variables
 
-    real(sp)           :: ddtmj,tma,dtmj
+    real(sp)           :: tma,dtmj
     real(sp),parameter :: twopi = 3.1416 * 2.0 
     integer  :: kx,ky
     
@@ -389,7 +388,10 @@ contains
         w=c(i+1)-d(i)
         den=ho-hp
     
-        if (den == 0.) pause 'failure in polint'
+        if (den == 0.) then
+           write(*,*) 'failure in polint'
+           stop
+        end if
 
         den=w/den
         d(i)=hp*den

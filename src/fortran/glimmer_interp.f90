@@ -1,4 +1,3 @@
-
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! +                                                           +
 ! +  glimmer_interp.f90 - part of the GLIMMER ice model       + 
@@ -375,7 +374,7 @@ contains
 
     real(rk),dimension(2,2) :: f
     integer :: nxg,nyg,nxl,nyl,i,j,xx,yy
-    real(rk) :: stm,x,y
+    real(rk) :: x,y
 
     nxg=size(global,1) ; nyg=size(global,2)
     nxl=size(local,1)  ; nyl=size(local,2)
@@ -424,7 +423,6 @@ contains
     ! Internal variables
 
     integer :: nxl,nyl,i,j
-    real(rk) :: stm
 
     ! Beginning of code
 
@@ -509,7 +507,7 @@ contains
   
     ! Internal variables
 
-    integer :: nx,ny,i,j
+    integer :: nx,ny
     integer,dimension(1) :: loc
 
     nx=size(lons) ; ny=size(lats)
@@ -597,16 +595,26 @@ contains
     type(downscale),intent(in) :: downs  !*FD The downscaling parameters to be written
     integer,        intent(in) :: unit   !*FD The logical file unit to use
 
+    ! temporary variable, this is need to fix an internal compiler error of the SUN WS f95 compiler.
+    logical :: temp
+
     ! Beginning of code
     
-    write(unit) associated(downs%il)
-    if (associated(downs%il))  write(unit) downs%il
-    write(unit) associated(downs%ilp)
-    if (associated(downs%ilp)) write(unit) downs%ilp
-    write(unit) associated(downs%jl)
-    if (associated(downs%jl))  write(unit) downs%jl
-    write(unit) associated(downs%il)
-    if (associated(downs%jlp)) write(unit) downs%jlp
+    temp = associated(downs%il)
+    write(unit) temp
+    if (temp)  write(unit) downs%il
+
+    temp = associated(downs%ilp)
+    write(unit) temp
+    if (temp)  write(unit) downs%il
+
+    temp = associated(downs%jl)
+    write(unit) temp
+    if (temp)  write(unit) downs%il
+
+    temp = associated(downs%jlp)
+    write(unit) temp
+    if (temp)  write(unit) downs%il
 
   end subroutine downs_write_restart
 

@@ -54,8 +54,8 @@ contains
     !*FD subroutine also holds the defaults for all the parameters
     !*FD that are read in from the namelist
 
-    use physcon,  only: scyr,rhoi,grav,gn
-    use paramets, only: acc0,thk0,tim0,len0,vel0,vis0,tau0
+    use physcon,  only: scyr
+    use paramets, only: acc0,thk0,tim0,len0
     use glimmer_types
     use glimmer_project
 
@@ -843,7 +843,6 @@ contains
 
     type(glimmer_global_type),intent(inout) :: model
 
-    logical :: fr_temp
     integer :: ewn,nsn,upn
 
     ! for simplicity, copy these values...

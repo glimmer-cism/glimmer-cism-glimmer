@@ -52,7 +52,7 @@ program glimmer_example
   implicit none
 
   type(glimmer_params) :: ice_sheet
-  integer :: np=1,nx,ny,i,j
+  integer :: nx,ny,i,j
   character(fname_length) :: paramfile='example.glp'
   real(rk) :: time
   real(rk),dimension(:,:),allocatable :: temp,precip,zonwind,merwind,orog,coverage
@@ -162,7 +162,7 @@ program glimmer_example
     stop
   endif
 
-  do time=0.0*24.0*360.0,50000.0*24.0*360.0,24.0*360.0
+  do time=0.0*24.0*360.0,10000.0*24.0*360.0,24.0*360.0
     call glimmer(ice_sheet,time,temp,precip,zonwind,merwind,orog, &
                  orog_out=orog_out,albedo=albedo,output_flag=out, &
                  ice_frac=ice_frac,fw_flux=fw) 

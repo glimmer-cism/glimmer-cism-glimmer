@@ -1,0 +1,20 @@
+2004-04-26 Ian Rutt
+ * Merged port_to_nag branch into HEAD
+ * Extended interpolation routines (glimmer_interp.f90) to include 
+	averaging high-resolution global field onto local
+	grid. Also generalised find_ll_index somewhat to cope 
+	with longitudes that have limits other than 0->360 
+	(e.g. 180->360, 0->180). This may need more work, though.
+ * Added matlab visualisation routines to the repository.
+
+2004-04-19 Magnus Hagdorn
+ * added ChangeLog
+ * added NAG f95 makros
+ * new build system (using Python script to work out module dependencies)
+ * reduced number of time slices in example code to 10000yrs
+ * made kind rk=dp (rather than 8)
+ * (glimmer_outp.f90) integer array index
+ * added SUN WS f95 makros
+ * (glimmer_restart.f90, glimmer_interp.f90) workaround for SUN WS compiler bug
+ * (glimmer.f90, glimmer_velo.f90) avoid division by zero
+ * removed unused symbols and unused module symbols

@@ -60,8 +60,7 @@ contains
     !*FD else).
 
     use glimmer_global, only : dp
-    use physcon, only : rhoi, grav, scyr
-    use paramets, only : vel0 
+    use physcon, only : rhoi, grav
 
     implicit none
 
@@ -182,7 +181,7 @@ contains
 
     use glimmer_global, only : dp
     use glimmer_utils, only : hsum
-    use physcon, only : rhoi, grav, gn, scyr
+    use physcon, only : rhoi, grav, gn
     use paramets, only : thk0, len0, vis0, vel0
 
     implicit none
@@ -341,9 +340,13 @@ contains
 
             hrzflwa = hsum(flwa(:,ew:ew+1,ns:ns+1))  
 
-            const(2) = c * diffu(ew,ns) / velowk%dintflwa(ew,ns)
-            const(3) = const(2) * dusrfdns(ew,ns)  
-            const(2) = const(2) * dusrfdew(ew,ns) 
+            if (velowk%dintflwa(ew,ns) /= 0.0d0) then
+               const(2) = c * diffu(ew,ns) / velowk%dintflwa(ew,ns)
+               const(3) = const(2) * dusrfdns(ew,ns)  
+               const(2) = const(2) * dusrfdew(ew,ns) 
+            else
+               const(2:3) = 0.0d0
+            end if
 
             do up = upn-1, 1, -1
               const(1) = velowk%depth(up) * sum(hrzflwa(up:up+1)) 
@@ -450,7 +453,6 @@ contains
 
     use glimmer_global, only : dp
     use glimmer_utils, only : hsum 
-    use paramets, only : tim0, thk0
 
     implicit none
 
@@ -696,8 +698,6 @@ contains
     !*FD condition.
 
     use glimmer_global, only : dp, sp 
-    use paramets, only : acc0
-    use physcon, only : scyr
 
     implicit none
 

@@ -46,14 +46,6 @@ module glimmer_global
   !*FD Module holding global variables for Glimmer. Holds real-type
   !*FD kind values, and other global code parameters.
 
-  integer,parameter :: rk=8 
-  
-  !*FD Precision of glimmer module --- the general Fortran real-type kind value 
-  !*FD for the Glimmer module and its interfaces.
-  !*FD
-  !*FD Note that if the code is being compiled with forced typing (e.g. with 
-  !*FD the -r8 flag), then this parameter must be set in agreement with that. 
-
   integer,parameter :: sp = kind(1.0) 
   
   !*FD Single precision --- Fortran single-precision real-type kind 
@@ -71,6 +63,14 @@ module glimmer_global
   !*FD Note that if the code is being compiled with forced typing (e.g. with
   !*FD the -r8 flag), then this parameter may need to be set in agreement
   !*FD with that
+
+  integer,parameter :: rk=dp 
+  
+  !*FD Precision of glimmer module --- the general Fortran real-type kind value 
+  !*FD for the Glimmer module and its interfaces.
+  !*FD
+  !*FD Note that if the code is being compiled with forced typing (e.g. with 
+  !*FD the -r8 flag), then this parameter must be set in agreement with that. 
 
   integer,parameter :: fname_length=70
 

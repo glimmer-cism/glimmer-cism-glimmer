@@ -56,8 +56,13 @@ contains
 
     use glimmer_object
 
+    implicit none
+
     type(glimmer_instance),intent(in) :: instance !*FD The ice model instance to be written
     integer,            intent(in) :: unit     !*FD The logical file unit to use
+
+    ! temporary variable, this is need to fix an internal compiler error of the SUN WS f95 compiler.
+    logical :: temp
 
     ! top level variables
 
@@ -165,9 +170,10 @@ contains
 
     ! forcdata
 
-    write(unit) associated(instance%model%forcdata%forcing)
+    temp = associated(instance%model%forcdata%forcing)
+    write(unit) temp
     write(unit) instance%model%forcdata% flines
-    if (associated(instance%model%forcdata%forcing)) write(unit) instance%model%forcdata% forcing
+    if (temp) write(unit) instance%model%forcdata% forcing
 
     ! funits
 
@@ -224,37 +230,45 @@ contains
 
     ! isotwk
 
-    write(unit) associated(instance%model%isotwk%dflct)
+    temp = associated(instance%model%isotwk%dflct)
+    write(unit) temp
     write(unit) instance%model%isotwk% load
     write(unit) instance%model%isotwk% fact
     write(unit) instance%model%isotwk% first1
     write(unit) instance%model%isotwk% nflx
-    if (associated(instance%model%isotwk%dflct)) write(unit) instance%model%isotwk%dflct
+    if (temp) write(unit) instance%model%isotwk%dflct
     write(unit) instance%model%isotwk% first2
 
     ! velowk
 
+    temp = associated(instance%model%velowk% dupsw)
     write(unit) instance%model%velowk% depth
-    write(unit) associated(instance%model%velowk% dupsw)
-    if (associated(instance%model%velowk% dupsw)) write(unit) instance%model%velowk% dupsw
+    write(unit) temp
+    if (temp) write(unit) instance%model%velowk% dupsw
 
-    write(unit) associated(instance%model%velowk% depthw)
-    if (associated(instance%model%velowk% depthw)) write(unit) instance%model%velowk% depthw
+    temp = associated(instance%model%velowk% depthw)
+    write(unit) temp
+    if (temp) write(unit) instance%model%velowk% depthw
 
-    write(unit) associated(instance%model%velowk% suvel)
-    if (associated(instance%model%velowk% suvel)) write(unit) instance%model%velowk% suvel
+    temp = associated(instance%model%velowk% suvel)
+    write(unit) temp
+    if (temp) write(unit) instance%model%velowk% suvel
 
-    write(unit) associated(instance%model%velowk% svvel)
-    if (associated(instance%model%velowk% svvel)) write(unit) instance%model%velowk% svvel
+    temp = associated(instance%model%velowk% svvel)
+    write(unit) temp
+    if (temp) write(unit) instance%model%velowk% svvel
 
-    write(unit) associated(instance%model%velowk% fslip)
-    if (associated(instance%model%velowk% fslip)) write(unit) instance%model%velowk% fslip
+    temp = associated(instance%model%velowk% fslip)
+    write(unit) temp
+    if (temp) write(unit) instance%model%velowk% fslip
 
-    write(unit) associated(instance%model%velowk% dintflwa)
-    if (associated(instance%model%velowk% dintflwa)) write(unit) instance%model%velowk% dintflwa
+    temp = associated(instance%model%velowk% dintflwa)
+    write(unit) temp
+    if (temp) write(unit) instance%model%velowk% dintflwa
 
-    write(unit) associated(instance%model%velowk% dups)
-    if (associated(instance%model%velowk% dups)) write(unit) instance%model%velowk% dups
+    temp = associated(instance%model%velowk% dups)
+    write(unit) temp
+    if (temp) write(unit) instance%model%velowk% dups
 
     write(unit) instance%model%velowk% first1
     write(unit) instance%model%velowk% first2
@@ -287,29 +301,36 @@ contains
     write(unit) instance%model%thckwk% olds
     write(unit) instance%model%thckwk% oldtime
 
-    write(unit) associated(instance%model%thckwk%oldthck)
-    if (associated(instance%model%thckwk%oldthck)) write(unit) instance%model%thckwk%oldthck
-    write(unit) associated(instance%model%thckwk% basestate)
-    if (associated(instance%model%thckwk% basestate)) write(unit) instance%model%thckwk% basestate 
+    temp = associated(instance%model%thckwk%oldthck)
+    write(unit) temp
+    if (temp) write(unit) instance%model%thckwk%oldthck
+    temp = associated(instance%model%thckwk% basestate)
+    write(unit) temp
+    if (temp) write(unit) instance%model%thckwk% basestate 
 
     write(unit) instance%model%thckwk% few
     write(unit) instance%model%thckwk% fns
     write(unit) instance%model%thckwk% first1
 
    ! tempwk
-
-    write(unit) associated(instance%model%tempwk% inittemp)
-    if (associated(instance%model%tempwk% inittemp)) write(unit) instance%model%tempwk% inittemp
-    write(unit) associated(instance%model%tempwk% dupa)
-    if (associated(instance%model%tempwk% dupa)) write(unit) instance%model%tempwk% dupa
-    write(unit) associated(instance%model%tempwk% dupb)
-    if (associated(instance%model%tempwk% dupb)) write(unit) instance%model%tempwk% dupb
-    write(unit) associated(instance%model%tempwk% dupc)
-    if (associated(instance%model%tempwk% dupc)) write(unit) instance%model%tempwk% dupc
-    write(unit) associated(instance%model%tempwk% c1)
-    if (associated(instance%model%tempwk% c1)) write(unit) instance%model%tempwk% c1
-    write(unit) associated(instance%model%tempwk% dups)
-    if (associated(instance%model%tempwk% dups)) write(unit) instance%model%tempwk% dups
+    temp = associated(instance%model%tempwk% inittemp)
+    write(unit) temp
+    if (temp) write(unit) instance%model%tempwk% inittemp
+    temp = associated(instance%model%tempwk% dupa)
+    write(unit) temp
+    if (temp) write(unit) instance%model%tempwk% dupa
+    temp = associated(instance%model%tempwk% dupb)
+    write(unit) temp
+    if (temp) write(unit) instance%model%tempwk% dupb
+    temp = associated(instance%model%tempwk% dupc)
+    write(unit) temp
+    if (temp) write(unit) instance%model%tempwk% dupc
+    temp = associated(instance%model%tempwk% c1)
+    write(unit) temp
+    if (temp) write(unit) instance%model%tempwk% c1
+    temp = associated(instance%model%tempwk% dups)
+    write(unit) temp
+    if (temp) write(unit) instance%model%tempwk% dups
 
     write(unit) instance%model%tempwk% advconst
     write(unit) instance%model%tempwk% noflow
@@ -347,6 +368,8 @@ contains
 
     use glimmer_object
     use glimmer_setup
+
+    implicit none
 
     type(glimmer_instance),intent(inout) :: instance !*FD The ice model instance to be written
     integer,            intent(in)    :: unit     !*FD The logical file unit to use
