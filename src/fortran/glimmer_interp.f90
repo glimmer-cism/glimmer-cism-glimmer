@@ -178,7 +178,7 @@ contains
     type(downscale),         intent(in)           :: downs     !*FD Downscaling parameters
     real(sp),dimension(:,:),intent(out),optional :: localsp    !*FD Local field on projected grid (output) sp
     real(dp),dimension(:,:),intent(out),optional :: localdp    !*FD Local field on projected grid (output) dp
-    real(sp),optional :: global_fn                             !*FD Function returning values in global field. This  
+    real(sp),optional,external :: global_fn                    !*FD Function returning values in global field. This  
                                                                !*FD may be used as an alternative to passing the
                                                                !*FD whole array in \texttt{global} if, for instance the
                                                                !*FD data-set is in a large file, being accessed point by point.
@@ -281,7 +281,7 @@ contains
     real(rk),dimension(:),intent(in)    :: lons                !*FD Longitudes of global gridpoints 
     real(sp),dimension(:,:),intent(out),optional :: localsp   !*FD Local field on projected grid (output) sp
     real(dp),dimension(:,:),intent(out),optional :: localdp   !*FD Local field on projected grid (output) dp
-    real(sp),optional :: global_fn                            !*FD Function returning values in global field. This  
+    real(sp),optional, external :: global_fn                   !*FD Function returning values in global field. This  
                                                                !*FD may be used as an alternative to passing the
                                                                !*FD whole array in \texttt{global} if, for instance the
                                                                !*FD data-set is in a large file, being accessed point by point.

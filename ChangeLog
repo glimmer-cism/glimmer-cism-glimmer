@@ -1,3 +1,14 @@
+2004-05-14 Magnus Hagdorn
+ netCDF output, Round 1
+ * glimmer/data: output file configuration format changed to something similar to Windows .ini files (g_land.glw)
+                 added a new directory containg test data files (test/test_config.conf)
+ * new configuration file parser (glimmer_config.f90/test_config.f90)
+ * glimmer_interp.f90: SUN compiler complains about a functions passed as dummy arguments which are not declared external
+ * ncdf_params.f90.in, generate_ncvars.py: netCDF output file configuration reader
+ * ncdf.f90.in: initialise variables to sensible defaults
+ * ncdf_file.f90.in: added subroutines openall_out and writeall
+ * glimmer_modu.f90, glimmer_object.f90: hooked up netCDF output
+	
 2004-05-10 Magnus Hagdorn
  * input2ncdf.f90: actually does what it is supposed to
  * ncdf_vars.def: added presusrf, present day surface of the ice-sheet

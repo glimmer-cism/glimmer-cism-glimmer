@@ -198,6 +198,18 @@ class PrintNCDF(PrintVars):
         self.infile.close()
         self.stream.close()
 
+class PrintNCDF_PARAMS(PrintVars):
+    """Process ncdf_params.f90"""
+    canhandle = 'ncdf_params.f90'
+
+    def print_var(self, var):
+        """Write single variable block to stream for ncdf_params."""
+
+        # skip variables associated with dimension 
+        if not is_dimvar(var):
+            self.stream.write("    if (index(vars,' %s ').ne.0) then\n"%(var['name'].upper()))
+            self.stream.write("       handle_output%%nc%%do_var(%s) = .true.\n"%var_type(var))
+            self.stream.write("    end if\n\n")
 
 class PrintNCDF_FILE(PrintVars):
     """Process ncdf_file.f90"""
@@ -306,7 +318,7 @@ def usage():
     print 'outfile.in: output template to be processed'
     print 'print variables if no templates are given'
 
-HandleFile = {'ncdf.f90.in' : PrintNCDF, 'ncdf_file.f90.in' : PrintNCDF_FILE}
+HandleFile = {'ncdf.f90.in' : PrintNCDF, 'ncdf_file.f90.in' : PrintNCDF_FILE, 'ncdf_params.f90.in' : PrintNCDF_PARAMS}
 
 if __name__ == '__main__':
 

@@ -1,0 +1,111 @@
+! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+! +                                                           +
+! +  glimmer_outp.f90 - part of the GLIMMER ice model         + 
+! +                                                           +
+! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+! 
+! Copyright (C) 2004 GLIMMER contributors - see COPYRIGHT file 
+! for list of contributors.
+!
+! This program is free software; you can redistribute it and/or 
+! modify it under the terms of the GNU General Public License as 
+! published by the Free Software Foundation; either version 2 of 
+! the License, or (at your option) any later version.
+!
+! This program is distributed in the hope that it will be useful, 
+! but WITHOUT ANY WARRANTY; without even the implied warranty of 
+! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+! GNU General Public License for more details.
+!
+! You should have received a copy of the GNU General Public License 
+! along with this program; if not, write to the Free Software 
+! Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 
+! 02111-1307 USA
+!
+! GLIMMER is maintained by:
+!
+! Ian Rutt
+! School of Geographical Sciences
+! University of Bristol
+! University Road
+! Bristol
+! BS8 1SS
+! UK
+!
+! email: <i.c.rutt@bristol.ac.uk> or <ian.rutt@physics.org>
+!
+! GLIMMER is hosted on NeSCForge:
+!
+! http://forge.nesc.ac.uk/projects/glimmer/
+!
+! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+module glimmer_ncparams
+  !*FD read netCDF I/O related configuration files
+  !*FD written by Magnus Hagdorn, May 2004
+  private
+  public :: ReadNCParams
+
+contains
+  subroutine ReadNCParams(model)
+    !*FD read netCDF I/O related configuration file
+    use glimmer_types
+    use glimmer_config
+    implicit none
+    type(glimmer_global_type) :: model
+    
+    ! local variables
+    type(ConfigSection), pointer :: config
+    type(ConfigSection), pointer :: section
+    type(glimmer_nc_output), pointer :: output
+
+    ! read configuration
+    model%funits%outfile  = trim(model%funits%output_stem) // '.glw'
+    config => ConfigRead(model%funits%outfile)
+
+    ! setup outputs
+    section => GetSection(config,'output')
+    do while(associated(section))
+       write(*,*)
+       output => handle_output(section,output)
+       if (.not.associated(model%funits%out_first)) then
+          model%funits%out_first => output
+       end if
+       section => GetSection(section%next,'output')
+    end do
+
+  end subroutine ReadNCParams
+
+  !==================================================================================
+  ! private procedures
+  !==================================================================================
+
+  function handle_output(section, output)
+    use glimmer_ncdf
+    use glimmer_config
+    implicit none
+    type(ConfigSection), pointer :: section
+    type(glimmer_nc_output), pointer :: output
+    type(glimmer_nc_output), pointer :: handle_output
+
+    ! local variables
+    character(len=210) vars
+
+    handle_output=>add(output)
+    
+    ! get filename
+    call GetValue(section,'name',handle_output%nc%filename)
+    call GetValue(section,'frequency',handle_output%freq)
+    call GetValue(section,'variables',vars)
+
+    vars = ' '//trim(vars)//' '
+
+    if (handle_output%nc%filename(1:1).eq.' ') then
+       write(*,*) 'Error, no file name specified [netCDF output]'
+       stop
+    end if
+
+    ! select which variables should be written
+    !GENVARS!
+  end function handle_output
+end module glimmer_ncparams

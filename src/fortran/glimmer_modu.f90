@@ -54,6 +54,7 @@ module glimmer_types
   !*FD the intermediate model type (\texttt{glimmer\_global\_type}).
 
   use glimmer_global
+  use glimmer_ncdf
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -332,6 +333,7 @@ module glimmer_types
     character(fname_length) :: output_stem                     !*FD output filename stem
     character(fname_length) :: b0dfile,b2dfile,b3dfile         !*FD output filenames
     character(fname_length) :: outfile                         !*FD configuration file for outputs
+    type(glimmer_nc_output),pointer :: out_first=>NULL()       !*FD first element of linked list defining netCDF outputs
     character(fname_length) :: latifile                        !*FD File containing latitudes of all points
   end type glimmer_funits
 

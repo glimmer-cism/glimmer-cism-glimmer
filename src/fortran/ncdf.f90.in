@@ -54,7 +54,7 @@ module glimmer_ncdf
   type glimmer_nc_stat
      !*FD Data structure holding netCDF file description
 
-     character(len=fname_length) filename
+     character(len=fname_length) :: filename = " "
      !*FD name of netCDF file
      logical, dimension(num_vars) :: do_var
      !*FD array specifying which variables should be written to netCDF file
@@ -100,7 +100,7 @@ module glimmer_ncdf
      
      type(glimmer_nc_stat) :: nc
      !*FD structure containg file info
-     integer :: freq
+     integer :: freq=1
      !*FD frequency at which data is written to file
      integer :: next_write=0
      !*FD next time step at which data is dumped

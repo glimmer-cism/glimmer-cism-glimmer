@@ -47,6 +47,49 @@ module glimmer_ncfile
   !*FD written by Magnus Hagdorn, 2004
 
 contains
+  subroutine openall_out(model)
+    !*FD open all netCDF files for output
+    use glimmer_types
+    use glimmer_ncdf
+    implicit none
+    type(glimmer_global_type) :: model
+    
+    ! local variables
+    type(glimmer_nc_output), pointer :: oc
+
+    oc=>model%funits%out_first
+    do while(associated(oc))
+       call glimmer_nc_createfile(oc,model)
+       oc%next_write=model%numerics%time
+       oc=>oc%next
+    end do
+  end subroutine openall_out
+
+  subroutine writeall(model,atend)
+    !*FD if necessary write to netCDF files
+    use glimmer_types
+    use glimmer_ncdf
+    implicit none
+    type(glimmer_global_type) :: model
+    logical, optional :: atend
+
+    ! local variables
+    type(glimmer_nc_output), pointer :: oc
+    logical :: forcewrite=.false.
+
+    if (present(atend)) then
+       forcewrite = atend
+    end if
+
+    oc=>model%funits%out_first
+    do while(associated(oc))
+       if (model%numerics%time.ge.oc%next_write .or. forcewrite) then
+          call glimmer_nc_write(oc,model)
+       end if
+       oc=>oc%next
+    end do
+  end subroutine writeall
+
   subroutine glimmer_nc_createfile(outfile,model)
     !*FD create a new netCDF file
     use glimmer_ncdf
@@ -164,6 +207,9 @@ contains
     f7 = tau0
     f8 = tau0 * len0 / (scyr * vel0) 
 
+    write(*,*) '*******************************************************************************'
+    write(*,*) 'Writing to file ', trim(NC%filename), ' at time ', model%numerics%time
+
     ! increase next_write 
     outfile%next_write=outfile%next_write+outfile%freq
     ! write time
@@ -174,6 +220,8 @@ contains
 
     ! increase time counter
     outfile%timecounter = outfile%timecounter + 1
+
+    status = nf90_sync(NC%id)
 
   end subroutine glimmer_nc_write
 end module glimmer_ncfile
