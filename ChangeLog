@@ -11,6 +11,7 @@
    time units.
  * Removed redundant Matlab code
  * Removed redundant config files from data directory
+ * Renamed enmabal module to glint_enmabal
 
 2005-02-22 Ian Rutt
  * Substantial reorganisation of GLINT. 

@@ -43,6 +43,7 @@
 module glint_mbal
 
   use glint_pdd
+  use glint_enmabal
   use glimmer_global
 
   implicit none
@@ -89,6 +90,7 @@ contains
       params%tstep=years2hours
     case(3)
       ! The energy-balance model will go here...
+      call enmabal
       call write_log('Energy-balance mass-balance model not implemented yet',GM_FATAL,__FILE__,__LINE__)
       params%tstep=1
     case default
