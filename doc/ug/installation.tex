@@ -2,11 +2,14 @@
 GLIMMER is a relatively complex system of libraries and programs which build on other libraries. This section documents how to get GLIMMER and its prerequisites, compile and install it. Please report problems and bugs to the \href{http://forge.nesc.ac.uk/mailman/listinfo/glimmer-discuss}{GLIMMER mailing list}.
 
 \subsection{Prerequisites}
-GLIMMER is distributed as source code, a sane built environment is therefore required to compile the system. On UNIX systems \href{http://www.gnu.org/software/make/}{GNU make} is suggested since the Makefiles may rely on some GNU make specific features. The latest version of GLIMMER and friends can be downloaded from \href{http://forge.nesc.ac.uk/}{NeSCForge} using \href{http://www.gnu.org/software/cvs/}{CVS}.
+GLIMMER is distributed as source code, a sane built environment is therefore required to compile the system. On UNIX systems \href{http://www.gnu.org/software/make/}{GNU make} is suggested since the Makefiles may rely on some GNU make specific features. There are two ways of getting the source code:
+\begin{enumerate}
+\item download a released version from the GLIMMER website, or
+\item download the latest developer's version of GLIMMER and friends from \href{http://forge.nesc.ac.uk/}{NeSCForge} using \href{http://www.gnu.org/software/cvs/}{CVS}.
+\end{enumerate}
+If you want to build GLIMMER from CVS then you need GNU autoconf and automake to generate the built system and \href{http://www.python.org}{python} which is used for analysing dependencies and f95 code generation. Furthermore, the Python scripts rely on language features which were only introduced with version 2.3.
 
-GLIMMER is mostly written in FORTRAN95, a good f95 compiler is, therefore, required. GLIMMER is known to work with the NAGware f95, Intel ifort compilers. GLIMMER does not compile with the SUN WS 6.0 f95 compiler due to a compiler bug.
-
-Part of the make system relies on \href{http://www.python.org}{python} which is used for analysing dependencies and f95 code generation. Furthermore, the Python scripts rely on language features which were only introduced with version 2.3. However, this requirement might be relaxed at some stage.
+GLIMMER is mostly written in FORTRAN95, a good f95 compiler is, therefore, required. GLIMMER is known to work with the NAGware f95, Intel ifort compilers. GLIMMER does not compile with the SUN WS 7.0 f95 compiler due to a compiler bug. The current SUN f95 compiler might work but has not been tested yet.
 
 In addition to f90 and python you will also need {\LaTeX} if you want to build the documentation.
 
@@ -17,68 +20,66 @@ Furthermore, GLIMMER depends on these packages:
 \item \href{http://gmt.soest.hawaii.edu/}{{\bf GMT}}: The Generic Mapping Tools are used for visualisation.
 \end{itemize}
 
-\subsection{Installing GLIMMER Components}
-We recommend that GLIMMER and its components is installed in its own directory tree, e.g. \texttt{GLIMMER}, and sources in a subdirectory, e.g. \texttt{GLIMMER/src}. The build system expects the environment variables summarised in Table \ref{ug.tab.env}.
+\subsection{Installing a Released Version of GLIMMER}\label{ug.sec.tarball}
+We recommend that GLIMMER and its components is installed in its own directory tree, e.g. \texttt{GLIMMER}, and sources in a subdirectory, e.g. \texttt{GLIMMER/src}. 
 
+Once you have downloaded the tar-balls from the GLIMMER website you need to unpack them using
+\begin{verbatim}
+tar -xvzf libfproj4-VERS.tar.gz
+\end{verbatim}
+and
+\begin{verbatim}
+tar -xvzf glimmer-VERS.tar.gz
+\end{verbatim}
+where \texttt{VERS} is the package version.
+
+The packages are then compiled using the usual GNU sequence of commands:
+\begin{verbatim}
+./configure [options]
+make
+make install
+\end{verbatim}
+The options and relevant environment variables are described in Table \ref{ug.tab.env}.
 \begin{table}[htbp]
   \centering
   \begin{tabular}{|l|p{10cm}|}
     \hline
     Variable & Description \\
     \hline
+    \texttt{FC} & f95 compiler to be used \\
+    \texttt{FCFLAGS} & flags passed to the f95 compiler \\
+    \texttt{LDFLAGS} & linker flags\\
     \hline
-    \texttt{GLIMMER\_PREFIX} & The top level GLIMMER directory. The build system installs libraries into \texttt{\$GLIMMER\_PREFIX/lib}, f95 modules into \texttt{\$GLIMMER/mod}, include files into \texttt{\$GLIMMER/include} and executables into \texttt{\$GLIMMER/bin}. Add \texttt{\$GLIMMER/bin} to your \texttt{PATH}.\\
+    Option  & Description \\
     \hline
-    \texttt{PROJ\_PREFIX} & Prefix where \texttt{PROJ.4} is installed. \\
-    \hline
-    \texttt{GMTINC} & Directory where the GMT header file \texttt{gmt\_grd.h} can be found.\\
-    \hline
-    \texttt{BLASLIB} & if you want to use your own BLAS library you can set this variable to point to the required libraries which should get linked. If this variable is not set a non--optimised BLAS is provided by the model is used.\\
+    \texttt{--help} & print help \\
+    \texttt{--prefix} & the installation prefix, e.g. \texttt{GLIMMER} \\
+    \texttt{--with-netcdf} & prefix where the netCDF library is installed \\
+    \texttt{--with-blas} & extra libraries used to provide BLAS functionality. A built--in, non--optimised version of BLAS is used if this option is not used. \\
+    \texttt{--enable-doc} & build documentation.\\
+    \texttt{--enable-profile} & enable profiling of GLIMMER (see Sec. \ref{ug.sec.profile})\\
     \hline
   \end{tabular}
-  \caption{Environment variables used by GLIMMER.}
+  \caption{Environment variables and \texttt{configure} options used by GLIMMER.}
   \label{ug.tab.env}
 \end{table}
 
-\subsubsection{proj4}
-\texttt{proj4} is the f90 wrapper for the \texttt{PROJ.4} library. \texttt{proj4} is a CVS module of the GLIMMER system. You can get it using CVS:
-{\small
+\subsection{Installing from CVS}
+Revisions of GLIMMER are managed using CVS. You can download the latest development version of GLIMMER and proj4 using the following sequence of cvs commands:
 \begin{verbatim}
 cvs -d:pserver:anonymous@forge.nesc.ac.uk:/cvsroot/glimmer login
 cvs -z3 -d:pserver:anonymous@forge.nesc.ac.uk:/cvsroot/glimmer co proj4
-\end{verbatim}}
-
-\texttt{proj4} uses \texttt{cfortran.h} to wrap C code with fortran code. In order for \texttt{cfortran.h} to work you need to specify your fortran compiler while compiling, e.g. if you use the NAG f90 compiler you have to compile \texttt{proj4} using:
-{\small
-\begin{verbatim}
-CFLAGS=-DNAGf90Fortran make
-\end{verbatim}}
-Install \texttt{proj4} with
-{\small
-\begin{verbatim}
-make install
-\end{verbatim}}
-
-\subsubsection{GLIMMER}
-Get GLIMMER from the CVS repository at NeSCForge:
-{\small
-\begin{verbatim}
-cvs -d:pserver:anonymous@forge.nesc.ac.uk:/cvsroot/glimmer login
 cvs -z3 -d:pserver:anonymous@forge.nesc.ac.uk:/cvsroot/glimmer co glimmer
-\end{verbatim}}
+\end{verbatim}
 
-Options for the compilation of the model are set the file \texttt{makefile.arc}. You can choose one of the compiler specific makefiles and create a symbolic link, e.g.
-{\small
+The cvs version does not include some automatically generated files. In order to be able to compile the cvs version you need the GNU autotools and python. The built scripts are generated by running
 \begin{verbatim}
-ln -s makefile.nag makefile.arc
-\end{verbatim}}
-Model compilation and installation should be straight forward:
-{\small
-\begin{verbatim}
-make
-make install
-\end{verbatim}}
+./bootstrap
+\end{verbatim}
+in the \texttt{proj4} and \texttt{glimmer} source directories. The packages are then configured and built as described in Section \ref{ug.sec.tarball}.
 
+
+\subsection{Profiling}\label{ug.sec.profile}
 You can enable profiling by setting the environment variable \texttt{FFLAGS} to contain \texttt{-DPROFILING}. By default times are integrated over 100 time steps. You can cheange this behaviour by setting the variable \texttt{PROFILE\_PERIOD}. The timing data is written to the file \texttt{glide.profile} which contains 5 columns of data (see Table \ref{ug.tab.profile_format}).
 \begin{table}[htbp]
   \centering
