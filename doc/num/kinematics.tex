@@ -47,13 +47,17 @@ The vertical ice velocity stems from the conservation of mass for an incompressi
 Integrating \eqref{kin.eq.incompress} with respect to $z$ gives the vertical velocity distribution of each ice column:
 \begin{equation}
   \label{kin.eq.vert_velo}
-  w(z=-\int_h^z\vec\nabla\cdot\vec u(z)dz+w(h),
+  w(z)=-\int_h^z\vec\nabla\cdot\vec u(z)dz+w(h),
 \end{equation}
 with lower, kinematic boundary condition
 \begin{equation}
   w(h)=\frac{\pd h}{\pd t}+\vec u(h)\cdot\vec\nabla h+m,
 \end{equation}
-where $m$ is the melt rate at the ice base.
+where $m$ is the melt rate at the ice base. The upper kinematic boundary is given by the surface mass balance and must satisfy:
+\begin{equation}
+  \label{kin.eq.upper_bc}
+  w(s)=\frac{\pd s}{\pd t}+\vec u(s)\cdot\vec\nabla s+b.
+\end{equation}
 
 \input{\dir/grid.tex}
 
@@ -71,7 +75,7 @@ and the vertically averaged velocity
 The vertical velocity, Equation \eqref{kin.eq.vert_velo}, becomes
 \begin{equation}
   \label{kin.eq.vert_velo_scaled}
-  w(\sigma)=-\int_1^\sigma\left(\frac{\pd\vec u}{\pd\sigma}\cdot(\vec\nabla s-\sigma\vec\nabla h)+H\vec\nabla\cdot\vec u\right)d\sigma+w(1)
+  w(\sigma)=-\int_1^\sigma\left(\frac{\pd\vec u}{\pd\sigma}\cdot(\vec\nabla s-\sigma\vec\nabla H)+H\vec\nabla\cdot\vec u\right)d\sigma+w(1)
 \end{equation}
 and lower boundary condition
 \begin{equation}
@@ -140,31 +144,4 @@ Quantities $\vec u$ and $D$ are found on the velocity grid. Integrating from the
 \end{subequations}
 Expressions for $\vec{u}_{i,j,k}$ and $\vec{q}_{i,j}$ are straight forward.
 
-\subsection{Calculating Vertical Velocities}
-
-\subsubsection{Grid Velocity}
-The vertical grid moves as a consequence of using a $\sigma$--coordinate system. The grid velocity is
-\begin{equation}
-  \label{kin.eq.grid_velo}
-  w^{\text{grid}}(\sigma)=\frac{\pd s}{\pd t}+\vec u\cdot\vec\nabla s-\sigma\left(\frac{\pd H}{\pd t}+\vec u\cdot\vec\nabla H\right)
-\end{equation}
-The numerical implementation of Equation \eqref{kin.eq.grid_velo} is straight--forward.
-
-\subsubsection{Vertical Velocity}
-The discretised version of the vertical velocity equation \eqref{kin.eq.vert_velo_scaled} is slightly more compilicated because the horizontal velocities are calculated on the $(r,s)$ grid. The vertical velocity at the ice base is $w_{i,j,N}=w^{\text{grid}}_{i,j,N}-b_{i,j}$, where $b_{i,j}$ is the basal melt rate. Integrating from the bottom, the vertical velocity is then
-\begin{equation}
-  \begin{split}
-  w_{i,j,k}=-\sum_{\tilde{k}=N-1}^1\left\{\mathcal{H}_{i,j}\left(\frac{u^x_{i,j,k}+u^x_{i,j,k+1}}{2}+\frac{v^y_{i,j,k}+v^y_{i,j,k+1}}{2}\right)(\sigma_{k+1}-\sigma_k)\right. \\
-     +(\tilde{u}_{i,j,k+1}-\tilde{u}_{i,j,k})  \left(\tilde{s}^x_{i,j}-\frac12(\sigma_{k+1}+\sigma_k)\tilde{H}^x_{i,j}\right)  \\
-     \left.+(\tilde{v}_{i,j,k+1}-\tilde{v}_{i,j,k})  \left(\tilde{s}^y_{i,j}-\frac12(\sigma_{k+1}+\sigma_k)\tilde{H}^y_{i,j}\right)\right\} + w_{i,j,N}
-  \end{split}
-\end{equation}
-with the weighted ice thickness
-\begin{equation*}
-  \begin{split}
-  \mathcal{H}_{i,j}=\frac{4H_{i,j}+2(H_{i-1,j}+H_{i+1,j}+H_{i,j-1}+H_{i,j+1})}{16}\\
-  +\frac{H_{i-1,j-1}+H_{i+1,j-1}+H_{i+1,j+1}+H_{i-1,j+1}}{16}    
-  \end{split}
-\end{equation*}
-
-Note, this scheme produces vertical velocities at the ice divide which are too small.
+\input{\dir/vert_velo.tex}
