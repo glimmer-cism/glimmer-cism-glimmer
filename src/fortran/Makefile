@@ -14,14 +14,14 @@ DATA = ncdf_vars.def
 
 AUTOGEN = ncdf.f90 ncdf_file.f90 ncdf_infile.f90 ncdf_params.f90
 
-OBJECTS = glimmer_degd.o glimmer_isot.o glimmer_setup.o \
+OBJECTS = glide_pdd.o glimmer_isot.o glimmer_setup.o \
           glimmer_modu.o glimmer_outp.o glimmer_paramets.o glimmer_physcon.o glimmer_restart.o \
           glimmer_temp.o glimmer_thck.o glimmer_velo.o glimmer.o glimmer_global.o \
           glimmer_interp.o glimmer_mbal.o glimmer_object.o glimmer_proj.o \
           glimmer_utils.o gmt.o glimmer_global_grid.o ncdf.o ncdf_file.o ncdf_params.o \
           ncdf_infile.o glimmer_config.o glimmer_CFproj.o glide_messages.o
 
-SOURCES = glimmer_degd.f90 glimmer_isot.f90 glimmer_setup.f90 \
+SOURCES = glide_pdd.f90 glimmer_isot.f90 glimmer_setup.f90 \
           glimmer_modu.f90 glimmer_outp.f90 glimmer_paramets.f90 glimmer_physcon.f90 \
           glimmer_restart.f90 glimmer_temp.f90 glimmer_thck.f90 glimmer_velo.f90 \
           glimmer.f90 glimmer_global.f90 glimmer_interp.f90 glimmer_mbal.f90 \

@@ -25,7 +25,7 @@ F77_LD=ifort
 # http://www.unidata.ucar.edu/packages/netcdf/index.html
 #
 NETCDF_LIB=-lnetcdf
-NETCDF_PREFIX=/usr/local/netcdf-3.5.1
+NETCDF_PREFIX=/usr/local/lib/netcdf-3.5.1
 #
 # Compilation flags for C compiler
 #
