@@ -56,7 +56,7 @@ units:         1
 long_name:     sigma layers
 
 [lat]
-dimensions:    y1, x1
+dimensions:    time, y1, x1
 units:         degreeN
 long_name:     Latitude
 data:          model%climate%lati
@@ -65,7 +65,7 @@ hot:           1
 standard_name: latitude
 
 [lon]
-dimensions:    y1, x1
+dimensions:    time, y1, x1
 units:         degreeE
 long_name:     Longitude
 data:          model%climate%loni
@@ -81,7 +81,7 @@ load:          1
 f90file:       glint_io.f90
 
 [relx]
-dimensions:    y1, x1
+dimensions:    time, y1, x1
 units:         meter
 long_name:     relaxed bedrock topography
 data:          model%geometry%relx
@@ -90,7 +90,7 @@ load:          1
 hot:           1
 
 [presprcp]
-dimensions:    y1, x1
+dimensions:    time, y1, x1
 units:         meter/year
 long_name:     present day precipitation
 data:          climate%presprcp
@@ -99,7 +99,7 @@ load:          1
 f90file:       glint_io.f90
 
 [presusrf]
-dimensions:    y1, x1
+dimensions:    time, y1, x1
 units:         meter
 long_name:     present day surface of the ice-sheet
 data:          climate%presusrf
