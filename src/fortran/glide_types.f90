@@ -195,6 +195,11 @@ module glide_types
     !*FD Holds fields and other information relating to the
     !*FD geometry of the ice sheet and bedrock.
 
+    real, dimension(:,:), pointer :: temporary0 => null()
+    !*FD temporary array used for masking velocity grid
+    real, dimension(:,:), pointer :: temporary1 => null()
+    !*FD temporary array used for masking temperature grid
+
     real(dp),dimension(:,:),pointer :: thck => null()
     !*FD The thickness of the ice, divided by \texttt{thck0}.
 
@@ -569,6 +574,8 @@ contains
     allocate(model%geomderv%dusrfdtm(ewn,nsn));       model%geomderv%dusrfdtm = 0.0d0
     allocate(model%geomderv%stagthck(ewn-1,nsn-1));   model%geomderv%stagthck = 0.0d0
   
+    allocate(model%geometry%temporary0(ewn-1,nsn-1));
+    allocate(model%geometry%temporary1(ewn,nsn));
     allocate(model%geometry%thck(ewn,nsn));           model%geometry%thck = 0.0d0
     allocate(model%geometry%usrf(ewn,nsn));           model%geometry%usrf = 0.0d0
     allocate(model%geometry%lsrf(ewn,nsn));           model%geometry%lsrf = 0.0d0
@@ -620,6 +627,8 @@ contains
     deallocate(model%geomderv%dusrfdtm)
     deallocate(model%geomderv%stagthck)
   
+    deallocate(model%geometry%temporary0)
+    deallocate(model%geometry%temporary1)
     deallocate(model%geometry%thck)
     deallocate(model%geometry%usrf)
     deallocate(model%geometry%lsrf)

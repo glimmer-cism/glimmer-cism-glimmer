@@ -73,7 +73,7 @@ contains
     ! setup outputs
     call GetSection(config,section,'output')
     do while(associated(section))
-       output => handle_output(section,output)
+       output => handle_output(section,output,model%numerics%tstart)
        if (.not.associated(model%funits%out_first)) then
           model%funits%out_first => output
        end if
@@ -132,7 +132,7 @@ contains
     end if
   end subroutine handle_metadata
 
-  function handle_output(section, output)
+  function handle_output(section, output, start_yr)
     use glimmer_ncdf
     use glimmer_config
     use glimmer_log
@@ -140,6 +140,7 @@ contains
     type(ConfigSection), pointer :: section
     type(glimmer_nc_output), pointer :: output
     type(glimmer_nc_output), pointer :: handle_output
+    real, intent(in) :: start_yr
     character(len=100) :: message
     ! local variables
     character(len=210) vars
@@ -147,8 +148,11 @@ contains
 
     handle_output=>add(output)
     
+    handle_output%next_write = start_yr
+
     ! get filename
     call GetValue(section,'name',handle_output%nc%filename)
+    call GetValue(section,'start',handle_output%next_write)
     call GetValue(section,'frequency',handle_output%freq)
     call GetValue(section,'variables',vars)
     call GetValue(section,'numspot',numspots)

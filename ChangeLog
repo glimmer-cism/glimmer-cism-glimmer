@@ -1,3 +1,9 @@
+2004-09-06 Magnus Hagdorn
+ * glide_types.f90: add temporary arrays for both U and T grids
+ * netCDF output can start at later time (ncdf_file.f90.in, ncdf_params.f90.in)
+ * generate_ncvars.py: variables can be masked using ice thickness
+ * ncdf_vars.def: enable mask for some variables
+
 2004-09-03 Magnus Hagdorn
  * glide_types.f90, ncdf_vars.def: new mask variable
  * glide.f90: calculating mask

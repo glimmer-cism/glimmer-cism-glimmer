@@ -129,6 +129,7 @@ units:         meter2/year
 long_name:     flux in x direction
 data:          model%velocity%uflx(1:ewnv,1:nsnv)
 factor:        scale2d_f2
+mask:          1
 
 [vflx]
 dimensions:    time, y0, x0
@@ -136,6 +137,7 @@ units:         meter2/year
 long_name:     flux in x direction
 data:          model%velocity%vflx(1:ewnv,1:nsnv)
 factor:        scale2d_f2
+mask:          1
 
 [diffu]
 dimensions:    time, y0, x0
@@ -143,6 +145,7 @@ units:         meter2/year
 long_name:     apparent diffusivity
 data:          model%velocity%diffu(1:ewnv,1:nsnv)
 factor:        scale2d_f4
+mask:          1
 
 [btrc]
 dimensions:    time, y0, x0
@@ -150,6 +153,7 @@ units:         meter/pascal/year
 long_name:     basal slip coefficient
 data:          model%velocity%btrc(1:ewnv,1:nsnv)
 factor:        scale2d_f6
+mask:          1
 
 [ubas]
 dimensions:    time, y0, x0
@@ -158,6 +162,7 @@ long_name:     basal slip velocity in x direction
 data:          model%velocity%ubas(1:ewnv,1:nsnv)
 factor:        scale2d_f5
 standard_name: land_ice_basal_x_velocity
+mask:          1
 
 [vbas]
 dimensions:    time, y0, x0
@@ -166,6 +171,7 @@ long_name:     basal slip velocity in y direction
 data:          model%velocity%vbas(1:ewnv,1:nsnv)
 factor:        scale2d_f5
 standard_name: land_ice_basal_y_velocity
+mask:          1
 
 [thk]
 dimensions:    time, y1, x1
@@ -175,6 +181,14 @@ data:          model%geometry%thck
 factor:        thk0
 standard_name: land_ice_thickness
 hot:           1
+mask:          1
+
+[thkmask]
+dimensions:    time, y1, x1
+long_name:     mask
+units:         1
+data:          model%geometry%thkmask
+type:          int
 
 [thkmask]
 dimensions:    time, y1, x1
@@ -224,6 +238,7 @@ data:          model%temper%bmlt
 factor:        scale2d_f1
 standard_name: land_ice_basal_melt_rate
 hot:           1
+mask:          1
 
 [bwat]
 dimensions:    time, y1, x1
@@ -232,6 +247,7 @@ long_name:     basal water depth
 data:          model%temper%bwat
 factor:        thk0
 hot:           1
+mask:          1
 
 [artm]
 dimensions:    time, y1, x1
@@ -246,6 +262,7 @@ dimensions:    time, y1, x1
 units:         degree_Celcius
 long_name:     basal ice temperature
 data:          model%temper%temp(model%general%upn,1:model%general%ewn,1:model%general%nsn)
+mask:          1
 
 [arng]
 dimensions:    time, y1, x1
@@ -277,6 +294,7 @@ units:         meter/year
 long_name:     rate of upper ice surface elevation change
 data:          model%geomderv%dusrfdtm
 factor:        scale2d_f1
+mask:          1
 
 [uvel]
 dimensions:    time, level, y0, x0
@@ -285,6 +303,7 @@ long_name:     ice velocity in x direction
 data:          model%velocity%uvel(up,1:ewnv,1:nsnv)
 factor:        scale3d_f1
 standard_name: land_ice_x_velocity
+mask:          1
 
 [vvel]
 dimensions:    time, level, y0, x0
@@ -293,6 +312,7 @@ long_name:     ice velocity in y direction
 data:          model%velocity%vvel(up,1:ewnv,1:nsnv)
 factor:        scale3d_f1
 standard_name: land_ice_y_velocity
+mask:          1
 
 [wvel]
 dimensions:    time, level, y1, x1
@@ -301,6 +321,7 @@ long_name:     vertical ice velocity
 data:          model%velocity%wvel(up,:,:)
 factor:        scale3d_f7
 standard_name: land_ice_z_velocity
+mask:          1
 
 [wgrd]
 dimensions:    time, level, y1, x1
@@ -308,6 +329,7 @@ units:         meter/year
 long_name:     ?? some velo ??
 data:          model%velocity%wgrd(up,:,:)
 factor:        scale3d_f7
+mask:          1
 
 [flwa]
 dimensions:    time, level, y1, x1
@@ -316,6 +338,7 @@ long_name:     Pre-exponential flow law parameter
 data:          model%temper%flwa(up,:,:)
 factor:        scale3d_f8
 hot:           1
+mask:          1
 
 [temp]
 dimensions:    time, level, y1, x1
@@ -324,3 +347,4 @@ long_name:     ice temperature
 data:          model%temper%temp(up,1:model%general%ewn,1:model%general%nsn)
 standard_name: land_ice_temperature
 hot:           1
+mask:          1
