@@ -51,24 +51,18 @@ module glide_setup
 
 contains
 
-  subroutine glide_readconfig(model,fname)
+  subroutine glide_readconfig(model,config)
     !*FD read GLIDE configuration file
     use glide_types
     use glimmer_config
     implicit none
     type(glide_global_type) :: model        !*FD model instance
-    character(len=*), intent(in) :: fname   !*FD name of paramter file
+    type(ConfigSection), pointer :: config  !*FD structure holding sections of configuration file
     
     ! local variables
-    type(ConfigSection), pointer :: config
     type(ConfigSection), pointer :: section
     type(glimmer_nc_output), pointer :: output => null()
     type(glimmer_nc_input), pointer :: input => null()
-
-    model%funits%ncfile = fname
-
-    ! read configuration
-    call ConfigRead(fname,config)
 
     ! read grid size  parameters
     call GetSection(config,section,'grid')

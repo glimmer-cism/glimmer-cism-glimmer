@@ -47,10 +47,12 @@ program simple_glide
   use glide
   use simple_forcing
   use glimmer_log
+  use glimmer_config
   implicit none
 
   type(glide_global_type) :: model        ! model instance
   type(simple_climate) :: climate         ! climate
+  type(ConfigSection), pointer :: config  ! configuration stuff
   character(len=50) :: fname   ! name of paramter file
   real(kind=rk) time
 
@@ -59,10 +61,13 @@ program simple_glide
   
   ! start logging
   call open_log(unit=50)
+  
+  ! read configuration
+  call ConfigRead(fname,config)
 
   ! initialise GLIDE
-  call simple_initialise(climate,fname)
-  call glide_initialise(model,fname)
+  call simple_initialise(climate,config)
+  call glide_initialise(model,config)
   call simple_massbalance(climate,model)
   call simple_surftemp(climate,model)
 

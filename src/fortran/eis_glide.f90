@@ -46,12 +46,16 @@ program eis_glide
   use glide
   use eis_forcing
   use glimmer_log
+  use glimmer_config
   implicit none
 
   type(glide_global_type) :: model        ! model instance
-  type(eis_climate_type) :: climate         ! climate
+  type(eis_climate_type) :: climate       ! climate
+  type(ConfigSection), pointer :: config  ! configuration stuff
   character(len=50) :: fname   ! name of paramter file
   real(kind=rk) time
+  
+
 
   write(*,*) 'Enter name of GLIDE configuration file to be read'
   read(*,*) fname
@@ -59,9 +63,12 @@ program eis_glide
   ! start logging
   call open_log(unit=50)
 
+  ! read configuration
+  call ConfigRead(fname,config)
+
   ! initialise GLIDE
-  call glide_initialise(model,fname)
-  call eis_initialise(climate,fname,model)
+  call glide_initialise(model,config)
+  call eis_initialise(climate,config,model)
 
   time = model%numerics%tstart
   do while(time.le.model%numerics%tend)

@@ -48,7 +48,7 @@ module glide
   integer, private, parameter :: dummyunit=99
 
 contains
-  subroutine glide_initialise(model,fname)
+  subroutine glide_initialise(model,config)
     !*FD initialise GLIDE model instance
     use glide_setup
     use glimmer_ncparams
@@ -56,12 +56,14 @@ contains
     use glimmer_ncinfile
     use glide_temp
     use glimmer_log
+    use glimmer_config
     implicit none
     type(glide_global_type) :: model        !*FD model instance
-    character(len=*), intent(in) :: fname   !*FD name of paramter file
+    type(ConfigSection), pointer :: config  !*FD structure holding sections of configuration file
    
+    type(ConfigSection), pointer :: ncconfig
     ! read configuration file
-    call glide_readconfig(model,fname)
+    call glide_readconfig(model,config)
     call glide_printconfig(model)
     ! scale parameters
     call glide_scale_params(model)
@@ -72,7 +74,12 @@ contains
     call glide_load_sigma(model,dummyunit)
 
     ! netCDF I/O
-    call ReadNCParams(model)
+    if (trim(model%funits%ncfile).eq.'') then
+       ncconfig => config
+    else
+       call ConfigRead(model%funits%ncfile,ncconfig)
+    end if
+    call ReadNCParams(model,ncconfig)
     ! open all input files
     call openall_in(model)
     ! and read first time slice

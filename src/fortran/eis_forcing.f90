@@ -56,16 +56,17 @@ module eis_forcing
   end type eis_climate_type
   
 contains
-  subroutine eis_initialise(climate,fname,model)
+  subroutine eis_initialise(climate,config,model)
     !*FD initialise EIS climate
     use glide_types
+    use glimmer_config
     implicit none
-    type(eis_climate_type) :: climate    !*FD structure holding EIS climate
-    character(len=*),intent(in) :: fname !*FD name of file containing configuration
-    type(glide_global_type) :: model     !*FD model instance
+    type(eis_climate_type) :: climate      !*FD structure holding EIS climate
+    type(ConfigSection), pointer :: config !*FD structure holding sections of configuration file   
+    type(glide_global_type) :: model       !*FD model instance
 
     ! read config
-    call eis_readconfig(climate,fname)
+    call eis_readconfig(climate,config)
     ! print config
     call eis_printconfig(climate)
 
@@ -75,31 +76,18 @@ contains
     call eis_init_slc(climate%slc)
   end subroutine eis_initialise
 
-  subroutine eis_readconfig(climate,fname)
+  subroutine eis_readconfig(climate,config)
     !*FD read EIS configuration
     use glimmer_config
     implicit none
     type(eis_climate_type) :: climate    !*FD structure holding EIS climate
-    character(len=*),intent(in) :: fname !*FD name of file containing configuration
+    type(ConfigSection), pointer :: config  !*FD structure holding sections of configuration file   
     ! local variables
-    type(ConfigSection), pointer :: config
     type(ConfigSection), pointer :: section
  
-    ! read configuration
-    call ConfigRead(fname,config)
-
-    call GetSection(config,section,'EIS ELA')
-    if (associated(section)) then
-       call eis_ela_config(section,climate%ela)
-    end if
-    call GetSection(config,section,'EIS Temperature')
-    if (associated(section)) then
-       call eis_temp_config(section,climate%temp)
-    end if
-    call GetSection(config,section,'EIS SLC')
-    if (associated(section)) then
-       call eis_slc_config(section,climate%slc)
-    end if
+    call eis_ela_config(config,climate%ela)
+    call eis_temp_config(config,climate%temp)
+    call eis_slc_config(config,climate%slc)
   end subroutine eis_readconfig
 
   subroutine eis_printconfig(climate)

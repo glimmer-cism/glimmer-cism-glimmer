@@ -56,14 +56,16 @@ module simple_forcing
   end type simple_climate
 
 contains
-  subroutine simple_initialise(climate,fname)
+  subroutine simple_initialise(climate,config)
     !*FD initialise simple climate model
     use paramets, only: thk0, acc0, scyr
+    use glimmer_config
     implicit none
     type(simple_climate) :: climate         !*FD structure holding climate info
-    character(len=*), intent(in) :: fname   !*FD name of paramter file
+    type(ConfigSection), pointer :: config  !*FD structure holding sections of configuration file   
 
-    call simple_readconfig(climate,fname)
+  
+    call simple_readconfig(climate,config)
     call simple_printconfig(climate)
 
     ! scale parameters
@@ -72,20 +74,16 @@ contains
     climate%nmsb(2) = climate%nmsb(2) / (acc0 * scyr)
   end subroutine simple_initialise
 
-  subroutine simple_readconfig(climate,fname)
+  subroutine simple_readconfig(climate, config)
     !*FD read configuration
     use glimmer_config
     implicit none
     type(simple_climate) :: climate         !*FD structure holding climate info
-    character(len=*), intent(in) :: fname   !*FD name of paramter file
+    type(ConfigSection), pointer :: config  !*FD structure holding sections of configuration file   
 
     ! local variables
-    type(ConfigSection), pointer :: config
     type(ConfigSection), pointer :: section
     real(kind=sp), dimension(:), pointer :: dummy
-
-    ! read configuration
-    call ConfigRead(fname,config)
 
     call GetSection(config,section,'simple')
     if (associated(section)) then

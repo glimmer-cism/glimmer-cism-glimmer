@@ -55,14 +55,19 @@ module eis_slc
   end type eis_slc_type
   
 contains  
-  subroutine eis_slc_config(section,slc)
+  subroutine eis_slc_config(config,slc)
     !*FD get SLC configuration from config file
     use glimmer_config
     implicit none
-    type(ConfigSection), pointer :: section !*FD section containing config values
     type(eis_slc_type)           :: slc     !*FD slc data
+    type(ConfigSection), pointer :: config  !*FD structure holding sections of configuration file   
+    ! local variables
+    type(ConfigSection), pointer :: section
 
-    call GetValue(section,'slc_file',slc%fname)
+    call GetSection(config,section,'EIS SLC')
+    if (associated(section)) then
+       call GetValue(section,'slc_file',slc%fname)
+    end if
   end subroutine eis_slc_config
 
   subroutine eis_slc_printconfig(slc)

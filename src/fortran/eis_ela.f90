@@ -66,19 +66,24 @@ module eis_ela
   private :: ela_lat, calc_mb
 
 contains
-  subroutine eis_ela_config(section,ela)
+  subroutine eis_ela_config(config,ela)
     !*FD get ELA configuration from config file
     use glimmer_config
     implicit none
-    type(ConfigSection), pointer :: section !*FD section containing config values
     type(eis_ela_type)           :: ela     !*FD ela data
+    type(ConfigSection), pointer :: config  !*FD structure holding sections of configuration file   
+    ! local variables
+    type(ConfigSection), pointer :: section
 
-    call GetValue(section,'ela_file',ela%fname)
-    call GetValue(section,'zmax',ela%zmax)
-    call GetValue(section,'bmax',ela%bmax)
-    call GetValue(section,'ela_a',ela%ela_a)
-    call GetValue(section,'ela_b',ela%ela_b)
-    call GetValue(section,'ela_c',ela%ela_c)
+    call GetSection(config,section,'EIS ELA')
+    if (associated(section)) then
+       call GetValue(section,'ela_file',ela%fname)
+       call GetValue(section,'zmax',ela%zmax)
+       call GetValue(section,'bmax',ela%bmax)
+       call GetValue(section,'ela_a',ela%ela_a)
+       call GetValue(section,'ela_b',ela%ela_b)
+       call GetValue(section,'ela_c',ela%ela_c)
+    end if
   end subroutine eis_ela_config
     
   subroutine eis_ela_printconfig(ela)

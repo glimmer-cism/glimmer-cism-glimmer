@@ -57,16 +57,21 @@ module eis_temp
   end type eis_temp_type
 
 contains
-   subroutine eis_temp_config(section,temp)
+   subroutine eis_temp_config(config,temp)
     !*FD get temperature configuration from config file
     use glimmer_config
     implicit none
-    type(ConfigSection), pointer :: section !*FD section containing config values
     type(eis_temp_type)           :: temp     !*FD ela data
+    type(ConfigSection), pointer :: config  !*FD structure holding sections of configuration file   
+    ! local variables
+    type(ConfigSection), pointer :: section
 
-    call GetValue(section,'temp_file',temp%fname)
-    call GetValue(section,'order',temp%torder)
-    call GetValue(section,'lapse_rate',temp%lapse_rate)
+    call GetSection(config,section,'EIS Temperature')
+    if (associated(section)) then
+       call GetValue(section,'temp_file',temp%fname)
+       call GetValue(section,'order',temp%torder)
+       call GetValue(section,'lapse_rate',temp%lapse_rate)
+    end if
   end subroutine eis_temp_config
 
   subroutine eis_temp_printconfig(temp)
