@@ -228,7 +228,7 @@ program glimmer_example
 
   ! Initialise the ice model
 
-  call initialise_glimmer(ice_sheet,lats,lons,paramfile)
+  call initialise_glimmer(ice_sheet,lats,lons,paramfile,orog=orog,ice_frac=ice_frac,albedo=albedo)
 
   ! Set alternative output grid for orography
 

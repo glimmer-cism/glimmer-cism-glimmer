@@ -1,3 +1,7 @@
+2004-10-13 Ian Rutt
+ * Reorganised upscaling and field splicing to enable easy output of 
+   initial fields to global model at initialisation time.
+
 2004-09-20 Ian Rutt
  * Updated f90_dependencies.py to Magi's latest version - handles more
  than one module per file.

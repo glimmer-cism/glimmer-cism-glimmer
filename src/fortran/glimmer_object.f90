@@ -150,7 +150,7 @@ contains
     call calc_lats(instance%proj,instance%model%climate%lati)   ! Initialise the local latitude array. 
                                                                 ! This may be redundant, though.
     call testinisthk(instance%model,unit,instance%first, &
-	                 instance%newtemps,instance%global_orog) ! Load in initial surfaces, and other 2d fields
+	                 instance%newtemps,real(instance%global_orog,rk)) ! Load in initial surfaces, and other 2d fields
     call new_upscale(instance%ups,grid,instance%proj, &
                      instance%model%climate%out_mask)           ! Initialise upscaling parameters
     call calc_coverage(instance%proj, &                         ! Calculate coverage map
@@ -740,49 +740,12 @@ contains
 
     ! Upscale the output orography field, and re-dimensionalise --------------
 
-    if (out_f%orog) then
-      call mean_to_global(instance%proj, &
-                          instance%ups_orog, &
-                          instance%model%geometry%usrf, &
-                          g_orog_out,    &
-                          instance%model%climate%out_mask)
-      g_orog_out=thk0*g_orog_out
-    endif
+    if (out_f%orog) call get_i_upscaled_fields(instance,orog=g_orog_out)
 
     ! Use thickness to calculate albedo and ice fraction ---------------------
 
     if (out_f%albedo.or.out_f%ice_frac.or.out_f%water_out) then
-
-      ! First, ice coverage on local grid 
-  
-      where (instance%model%geometry%thck>0.0)
-        upscale_temp=1.0
-      elsewhere
-        upscale_temp=0.0
-      endwhere
-
-      ! Upscale it...
-
-      call mean_to_global(instance%proj, &
-                          instance%ups, &
-                          upscale_temp, &
-                          g_albedo,    &
-                          instance%model%climate%out_mask)
-
-      ! Copy to ice fraction
-
-      g_ice_frac=g_albedo
-
-    endif
-
-    ! Calculate albedo -------------------------------------------------------
-
-    if (out_f%albedo) then 
-      where (g_ice_frac>0.0)
-        g_albedo=instance%model%climate%ice_albedo
-      elsewhere
-        g_albedo=0.0
-      endwhere
+      call get_i_upscaled_fields(instance,albedo=g_albedo,ice_frac=g_ice_frac)
     endif
 
     ! Calculate ice volume ---------------------------------------------------
@@ -865,6 +828,77 @@ contains
     instance%proj%lonc=lonc
 
   end subroutine get_instance_params
+
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  subroutine get_i_upscaled_fields(instance,orog,albedo,ice_frac)
+
+    !*FD Upscales and returns certain fields, according to the 
+    !*FD arguments supplied
+
+    use paramets
+
+    type(glimmer_instance),          intent(in)  :: instance
+    real(rk),dimension(:,:),optional,intent(out) :: orog
+    real(rk),dimension(:,:),optional,intent(out) :: albedo
+    real(rk),dimension(:,:),optional,intent(out) :: ice_frac
+
+    real(rk),dimension(:,:),allocatable :: if_temp,upscale_temp
+
+	  ! Calculate orography
+
+    if (present(orog)) then
+      call mean_to_global(instance%proj, &
+                          instance%ups_orog, &
+                          instance%model%geometry%usrf, &
+                          orog,    &
+                          instance%model%climate%out_mask)
+      orog=thk0*orog
+    endif
+
+    if (present(albedo).or.present(ice_frac)) then
+
+      if (present(albedo)) then
+        allocate(if_temp(size(albedo,1),size(albedo,2)))
+      else
+        allocate(if_temp(size(ice_frac,1),size(ice_frac,2)))
+      endif
+      allocate(upscale_temp(instance%model%general%ewn,instance%model%general%nsn))
+
+      ! First, ice coverage on local grid 
+  
+      where (instance%model%geometry%thck>0.0)
+        upscale_temp=1.0
+      elsewhere
+        upscale_temp=0.0
+      endwhere
+
+      ! Upscale it...
+
+      call mean_to_global(instance%proj, &
+                          instance%ups, &
+                          upscale_temp, &
+                          if_temp,    &
+                          instance%model%climate%out_mask)
+
+      if (present(ice_frac)) ice_frac=if_temp
+
+    endif
+
+    ! Calculate albedo -------------------------------------------------------
+
+    if (present(albedo)) then 
+      where (if_temp>0.0)
+        albedo=instance%model%climate%ice_albedo
+      elsewhere
+        albedo=0.0
+      endwhere
+    endif
+
+    if (allocated(if_temp)) deallocate(if_temp)
+    if (allocated(upscale_temp)) deallocate(upscale_temp)
+
+  end subroutine get_i_upscaled_fields
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

@@ -131,7 +131,8 @@ module glimmer_main
 
 contains
 
-  subroutine initialise_glimmer(params,lats,longs,paramfile,latb,lonb)
+  subroutine initialise_glimmer(params,lats,longs,paramfile,latb,lonb,orog,albedo, &
+                                ice_frac,output_flag)
 
     !*FD Initialises the model
 
@@ -153,11 +154,17 @@ contains
                                                                 !*FD boundaries of the grid-boxes.
     real(rk),dimension(:),optional,intent(in)    :: lonb        !*FD Locations of the longitudinal
                                                                 !*FD boundaries of the grid-boxes.
+    real(rk),dimension(:,:),optional,intent(out) :: orog        !*FD Initial global orography
+    real(rk),dimension(:,:),optional,intent(out) :: albedo      !*FD Initial albedo
+    real(rk),dimension(:,:),optional,intent(out) :: ice_frac    !*FD Initial ice fraction 
+    logical,                optional,intent(out) :: output_flag !*FD Flag to show output set (provided for
+                                                                !*FD consistency
 
     ! Internal variables
 
     character(fname_length),dimension(:),pointer :: fnamelist=>null()   ! The parameter filenames for each instance
     integer :: i,args
+    real(rk),dimension(:,:),allocatable :: orog_temp,if_temp,alb_temp
 
     ! ---------------------------------------------------------------
     ! Basic initialisation beginning with common initialisation
@@ -251,6 +258,42 @@ contains
     where (params%total_cov_orog>1.0) params%total_cov_orog=1.0
     params%coverage_calculated=.true.
 
+	  ! Get initial fields from instances, splice together and return
+
+    if (present(orog)) then
+      allocate(orog_temp(size(orog,1),size(orog,2)))
+      do i=1,params%ninstances
+        call get_i_upscaled_fields(params%instances(i),orog=orog_temp)
+        orog=splice_field(orog,orog_temp,params%instances(i)%frac_cov_orog, &
+                          params%cov_norm_orog)
+      enddo
+      deallocate(orog_temp)
+    endif
+
+    if (present(albedo).or.present(ice_frac)) then
+      if (present(albedo)) then
+        allocate(if_temp(size(albedo,1),size(albedo,2)))
+        allocate(alb_temp(size(albedo,1),size(albedo,2)))
+      else
+        allocate(if_temp(size(ice_frac,1),size(ice_frac,2)))
+        allocate(alb_temp(size(ice_frac,1),size(ice_frac,2)))
+      endif
+      do i=1,params%ninstances
+        call get_i_upscaled_fields(params%instances(i),ice_frac=if_temp,albedo=alb_temp)
+        if (present(albedo)) then
+          albedo=splice_field(albedo,alb_temp,params%instances(i)%frac_coverage, &
+                              params%cov_normalise)
+        endif
+        if (present(ice_frac)) then
+          ice_frac=splice_field(ice_frac,if_temp,params%instances(i)%frac_coverage, &
+                              params%cov_normalise)
+        endif
+      enddo
+      deallocate(if_temp,alb_temp)
+    endif
+
+    if (present(output_flag)) output_flag=.true.
+  
   end subroutine initialise_glimmer
 
 !================================================================================
@@ -450,56 +493,36 @@ contains
                           out_f)
 
         ! Add this contribution to the output orography
-  
-        if (present(orog_out)) then
-           where (params%cov_norm_orog==0.0)
-              orog_out=0.0
-           elsewhere
-              orog_out=orog_out+(orog_out_temp* &
-                   params%instances(i)%frac_cov_orog/ &
-                   params%cov_norm_orog)
-           end where
-        endif
-
-        if (present(albedo)) then
-           where (params%cov_normalise==0.0) 
-              albedo=0.0
-           elsewhere
-              albedo=albedo+(albedo_temp* &
-                   params%instances(i)%frac_coverage/ &
-                   params%cov_normalise)
-           end where
-        endif
-
-        if (present(ice_frac)) then
-           where (params%cov_normalise==0.0) 
-              ice_frac=0.0
-           elsewhere
-              ice_frac=ice_frac+(if_temp* &
-                   params%instances(i)%frac_coverage/ &
-                   params%cov_normalise)
-           end where
-        endif
-
-        if (present(water_in)) then
-           where (params%cov_normalise==0.0) 
-              water_in=0.0
-           elsewhere
-              water_in=water_in+(win_temp* &
-                   params%instances(i)%frac_coverage/ &
-                   params%cov_normalise)
-           end where
-        endif
-
-        if (present(water_out)) then
-           where (params%cov_normalise==0.0) 
-              water_out=0.0
-           elsewhere
-              water_out=water_out+(wout_temp* &
-                   params%instances(i)%frac_coverage/ &
-                   params%cov_normalise)
-           end where
-        endif
+ 
+        if (present(orog_out)) &
+            orog_out=splice_field(orog_out, &
+            orog_out_temp, &
+            params%instances(i)%frac_cov_orog, &
+            params%cov_norm_orog)
+            
+        if (present(albedo)) &
+            albedo=splice_field(albedo,&
+            albedo_temp, &
+            params%instances(i)%frac_coverage, &
+            params%cov_normalise)
+            
+        if (present(ice_frac)) &
+            ice_frac=splice_field(ice_frac, &
+            if_temp, &
+            params%instances(i)%frac_coverage, &
+            params%cov_normalise)
+            
+        if (present(water_in)) &
+            water_in=splice_field(water_in, &
+            win_temp, &
+            params%instances(i)%frac_coverage, &
+            params%cov_normalise)
+            
+        if (present(water_out)) &
+            water_out=splice_field(water_out, &
+            wout_temp, &
+            params%instances(i)%frac_coverage, &
+            params%cov_normalise)
 
         ! Add total water variables to running totals
 
@@ -973,6 +996,27 @@ contains
     params%ninstances=size(instance_fnames)
     
   end subroutine read_global_parameters
+
+!========================================================
+
+  function splice_field(global,local,coverage,normalise)
+
+	!*FD Splices an upscaled field into a global field
+
+	real(rk),dimension(:,:),intent(in) :: global  !*FD Field to receive the splice
+	real(rk),dimension(:,:),intent(in) :: local    !*FD The field to be spliced in
+	real(rk),dimension(:,:),intent(in) :: coverage  !*FD The coverage fraction
+	real(rk),dimension(:,:),intent(in) :: normalise  !*FD The normalisation field
+
+    real(rk),dimension(size(global,1),size(global,2)) :: splice_field
+
+    where (coverage==0.0)
+      splice_field=global
+    elsewhere
+      splice_field=(global*(1-coverage/normalise))+(local*coverage/normalise)
+    end where
+
+  end function splice_field
 
 !========================================================
 

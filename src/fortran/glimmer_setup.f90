@@ -497,7 +497,7 @@ contains
        
        model%geometry%usrf = model%geometry%thck + model%geometry%lsrf
        
-       call timeevoltemp(model,0,global_orog)     ! calculate initial temperature distribution
+       call timeevoltemp(model,0,real(global_orog,dp))     ! calculate initial temperature distribution
 	   newtemps = .true.                          ! we have new temperatures
 
 	   call calcflwa(model%numerics,        &              ! Calculate Glen's A
