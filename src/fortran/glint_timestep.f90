@@ -209,24 +209,33 @@ contains
 
     end select
 
+    ! apply climate
+
+    call calcartm(instance, instance%climate%whichartm, &
+            instance%climate%presusrf, &
+            instance%model%climate%lati,     &
+            instance%climate%presartm, &  !** OUTPUT
+            instance%climate%  arng)                      !** OUTPUT
+
+    call calcacab(instance%model%numerics, &
+         instance%climate, &
+         instance%pddcalc,  &
+         instance%climate%whichacab, &
+         instance%model%geometry% usrf,      &
+         instance%model%climate%  artm,      &
+         instance%climate%  arng,      &
+         instance%climate%  prcp,      &
+         instance%climate%  ablt,      &
+         instance%model%climate%  lati,      &
+         instance%model%climate%  acab)
+
     ! ------------------------------------------------------------------------  
     ! If first step, use as seed...
     ! ------------------------------------------------------------------------  
 
     if (instance%first) then
-       call calcacab(instance%model%numerics, &
-            instance%climate, &
-            instance%pddcalc,  &
-            instance%climate%whichacab, &
-            instance%model%geometry% usrf,      &
-            instance%model%climate%  artm,      &
-            instance%climate%  arng,      &
-            instance%climate%  prcp,      &
-            instance%climate%  ablt,      &
-            instance%model%climate%  lati,      &
-            instance%model%climate%  acab)
        instance%model%geometry%thck = max(0.0d0, instance%model%climate%acab* instance%model%numerics%dt)
-
+       
        call glide_calclsrf(instance%model%geometry%thck, &
             instance%model%geometry%topg, &
             instance%model%geometry%lsrf)

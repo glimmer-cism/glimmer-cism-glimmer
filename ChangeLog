@@ -1,3 +1,17 @@
+2004-07-15 Magnus Hagdorn
+ * glint_timestep.f90: must apply climate forcing every time step
+
+2004-07-15 Magnus Hagdorn
+ * glide_setup.f90: initialise tau0 which somehow escaped initialisation
+ * fixed check when netCDF should be read from/written to(ncdf.f90.in, ncdf_file.f90.in, ncdf_infile.f90.in)
+ * glimmer_proj.f90: fixed minor bug and renamed config file section
+ * glint_climate.f90: renamed glimmer_lapserate to glint_lapserate
+ * glint_initialise.f90: fixed api and added some proj initialisation
+ * glint_io.f90.in: minor compile fixes
+ * glint_timestep.f90: renamed some subroutines from glimmer_ to glint_
+ * updated to use new glint stuff (glimmer.f90, bin2ncdf.f90, input2ncdf.f90, glimmer_example.f90, test_setup.f90)
+ * updated greenland input file
+	
 2004-07-14 Magnus Hagdorn
  * glint_timestep.f90: timestep of glint instance
 
