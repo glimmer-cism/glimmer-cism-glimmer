@@ -1,92 +1,105 @@
 
 module glint_global_interp
 
+  use glint_global_grid
+
   implicit none
 
 contains
 
-  subroutine global_interp (idl,il,alon,jl,alat,a,mask,idlo,ilo,alono,jlo,alato,ao,masko,ier)
+  subroutine global_interp (in_grid,a,out_grid,ao,in_mask,out_mask,missing,error)
+    
+    ! This subroutine does an area weighted average from one grid,
+    ! on a spherical earth, to another.  Logical masks may be assigned
+    ! for each grid, and only those grid boxes which are masked true
+    ! on both grids will be used.  A value of amm will be assigned
+    ! to all nodes of the new grid which are initially false or have
+    ! no data from the old grid. The new mask will also be changed to
+    ! false where no data is available.
     !
-    !          this subroutine does an area weighted average from one grid,
-    !          on a spherical earth, to another.  logical masks may be assigned
-    !          for each grid, and only those grid boxes which are masked true
-    !          on both grids will be used.  a value of amm   will be assigned
-    !          to all nodes of the new grid which are initially false or have
-    !          no data from the old grid.  the new mask will also be changed to
-    !          false where no data is available.
+    ! Restrictions:  longitude must be the first dimension and it
+    !                be monotonically increasing (west to east).
     !
-    !          restrictions:  longitude must be the first dimension and it
-    !                         be monotonically increasing (west to east).
+    !                latitude must be the second dimension and it
+    !                must be monotonic.
     !
-    !                         latitude must be the second dimension and it
-    !                         must be monotonic.
+    !                values for longitude and latitude must be in
+    !                degrees.
     !
-    !                         values for longitude and latitude must be in
-    !                         degrees.
+    !                arrays that wrap around must repeat longitudes
+    !                with a 360 degree increment.  it will be assumed
+    !                that values in the wrapped input and mask arrays
+    !                will also repeat (wrapped values in these arrays
+    !                will not be used).
     !
-    !                         arrays that wrap around must repeat longitudes
-    !                         with a 360 degree increment.  it will be assumed
-    !                         that values in the wrapped input and mask arrays
-    !                         will also repeat (wrapped values in these arrays
-    !                         will not be used).
+    ! input
     !
-    !        input
+    ! integer   idl    first dimension of input a and mask.
+    ! integer   il     number of grid boxes in longitude for a and mask.
+    ! real      alon   longitude (deg) limits of grid boxes for a and mask.
+    ! integer   jl     number of grid boxes in latitude for a and mask.
+    ! real      alat   latitude (deg) limits of grid boxes for a and mask.
+    ! real      a      array of input data.
+    ! logical   mask   mask for input data (.false. to mask out data).
     !
-    !   integer   idl    first dimension of input a and mask.
-    !   integer   il     number of grid boxes in longitude for a and mask.
-    !   real      alon   longitude (deg) limits of grid boxes for a and mask.
-    !   integer   jl     number of grid boxes in latitude for a and mask.
-    !   real      alat   latitude (deg) limits of grid boxes for a and mask.
-    !   real      a      array of input data.
-    !   logical   mask   mask for input data (.false. to mask out data).
+    ! output
     !
-    !        output
-    !
-    !   integer   idlo   first dimension of output ao and masko.
-    !   integer   ilo    number of grid boxes in longitude for ao and masko.
-    !   real      alono  longitude (deg) limits of grid boxes for ao and masko.
-    !   integer   jlo    number of grid boxes in latitude for ao and masko.
-    !   real      alato  latitude (deg) limits of grid boxes for ao and masko.
-    !   real      ao     array of output data.
-    !   logical   masko  mask for output data (.false. to mask out data).
-    !   integer   ier    error indication:
-    !                    (values may be summed for multiple errors)
-    !                    0  no errors
-    !                    1  input longitude dimension and/or length <=0.
-    !                    2  output dimension and/or length <=0.
-    !                    4  input latititude dimension <=0.
-    !                    8  output latitude dimension <=0.
-    !                   16  wrap-around on input longitude grid doesn't
-    !                       repeat (+360).
-    !                   32  wrap-around on output longitude grid doesn't
-    !                       repeat (+360).
-    !                   64  longitude of input is not monotonic increasing.
-    !                  128  longitude of output is not monotonic increasing.
-    !                  256  latitude of input is not monotonic.
-    !                  512  latitude of output is not monotonic.
-    !                 1024  input longitude wraps but doesn't repeat identically.
-    !                 2048  output longitude wraps but doesn't repeat identically.
-    !                   -1  output mask is changed.
-    !                   -2  output mask contains all false values.
+    ! integer   idlo   first dimension of output ao and masko.
+    ! integer   ilo    number of grid boxes in longitude for ao and masko.
+    ! real      alono  longitude (deg) limits of grid boxes for ao and masko.
+    ! integer   jlo    number of grid boxes in latitude for ao and masko.
+    ! real      alato  latitude (deg) limits of grid boxes for ao and masko.
+    ! real      ao     array of output data.
+    ! logical   masko  mask for output data (.false. to mask out data).
+    ! integer   ier    error indication:
+    !                  (values may be summed for multiple errors)
+    !                  0  no errors
+    !                  1  input longitude dimension and/or length <=0.
+    !                  2  output dimension and/or length <=0.
+    !                  4  input latititude dimension <=0.
+    !                  8  output latitude dimension <=0.
+    !                 16  wrap-around on input longitude grid doesn't
+    !                     repeat (+360).
+    !                 32  wrap-around on output longitude grid doesn't
+    !                     repeat (+360).
+    !                 64  longitude of input is not monotonic increasing.
+    !                128  longitude of output is not monotonic increasing.
+    !                256  latitude of input is not monotonic.
+    !                512  latitude of output is not monotonic.
+    !               1024  input longitude wraps but doesn't repeat identically.
+    !               2048  output longitude wraps but doesn't repeat identically.
+    !                 -1  output mask is changed.
+    !                 -2  output mask contains all false values.
 
     ! --------------------------------------------------------
     ! Subroutine arguments
     ! --------------------------------------------------------
 
-    integer                     :: idl,il,jl,idlo,ilo,jlo,ier
-    real,   dimension(il+1)     :: alon
-    real,   dimension(jl+1)     :: alat
-    real,   dimension(ilo+1)    :: alono
-    real,   dimension(jlo+1)    :: alato
-    real,   dimension(idl,jl)   :: a
-    real,   dimension(idlo,jlo) :: ao
-    logical,dimension(idl,jl)   :: mask
-    logical,dimension(idlo,jlo) :: masko
+    type(global_grid)                             :: in_grid
+    real,   dimension(:,:),         intent(in)    :: a
+    type(global_grid)                             :: out_grid
+    real,   dimension(:,:),         intent(out)   :: ao
+    logical,dimension(:,:),optional,intent(inout) :: in_mask
+    logical,dimension(:,:),optional,intent(inout) :: out_mask
+    real,                  optional,intent(in)    :: missing
+    integer,               optional,intent(out)   :: error
+
+    ! --------------------------------------------------------
+    ! Automatic arrays
+    ! --------------------------------------------------------
+
+    logical,dimension(size(a,1) ,size(a,2))  :: mask
+    logical,dimension(size(ao,1),size(ao,2)) :: masko
+    real,   dimension(size(a,1)+1)  :: alon
+    real,   dimension(size(a,2)+1)  :: alat
+    real,   dimension(size(ao,1)+1) :: alono
+    real,   dimension(size(ao,2)+1) :: alato
 
     ! --------------------------------------------------------
     ! Internal variables
     ! --------------------------------------------------------
 
+    integer :: idl,il,jl,idlo,ilo,jlo,ier
     real :: api=3.1415926536
     real :: amm,almx,almn,sgn,al,dln,almxo,almno,dlno,amnlto
     real :: amxlto,amnlt,amxlt,amnlno,amxlno,amnln,amxln,wt,avg
@@ -94,8 +107,52 @@ contains
     integer :: i,j,iil,iilo,j1,j2,jj,i1,i2,k,ii,iii,iip
 
     ! --------------------------------------------------------
+    ! Set up array sizes and check things match up.
+    ! --------------------------------------------------------
 
-    amm=50.
+    idl=size(a,1)
+    il=size(alon)-1
+    jl=size(alat)-1
+    idlo=size(ao,1)
+    ilo=size(alono)-1
+    jlo=size(alato)-1
+
+    alon=in_grid%lon_bound
+    alat=in_grid%lat_bound
+    alono=out_grid%lon_bound
+    alato=out_grid%lat_bound
+
+    ! Check array sizes --------------------------------------
+
+    if (idl/=in_grid%nx.or. &
+         jl/=in_grid%ny.or. &
+         idlo/=out_grid%nx.or. &
+         jlo/=out_grid%ny) then
+       print*,'Array size mismatch in global_interp'
+       stop
+    end if
+
+    ! Deal with optional mask input --------------------------
+
+    if (present(in_mask)) then
+       mask=in_mask
+    else
+       mask=.true.
+    endif
+
+    if (present(out_mask)) then
+       masko=out_mask
+    else
+       masko=.true.
+    endif
+
+    ! Set up missing value -----------------------------------
+
+    if (present(missing)) then
+       amm=missing
+    else
+       amm=50.
+    end if
     ier=0
 
     ! Check that the sizes of the arrays given are sensible --
@@ -104,7 +161,10 @@ contains
     if (idlo.lt.ilo.or.ilo.le.0) ier=ier+2
     if (jl.le.0)  ier=ier+4
     if (jlo.le.0) ier=ier+8
-    if (ier.gt.0) return
+    if (ier.gt.0) then
+       if (present(error)) error=ier
+       return
+    end if
 
     ! Check monotonic increasing input longitudes ------------
 
@@ -219,7 +279,10 @@ contains
 
     ! Test for errors.  return if any --------------------------
 
-    if (ier.ne.0) return
+    if (ier.ne.0) then
+       if (present(error)) error=ier
+       return
+    end if
 
     ! The output grid needs to begin with or after the input grid.
 
@@ -254,14 +317,13 @@ contains
              if (masko(i,j)) ier=-1
              masko(i,j)=.false.
           end do
-!          go to 200
           cycle
        endif
 
        do i=1,iilo ! loop 100
 
           ! no need to compute if it is masked out.
-          if (.not.masko(i,j)) cycle !go to 100
+          if (.not.masko(i,j)) cycle
 
           ! find index limits in longitude to cover the new grid.
           i1=3*il+1
@@ -297,7 +359,6 @@ contains
              ao(i,j)=amm
              if (masko(i,j)) ier=-1
              masko(i,j)=.false.
-!             go to 100
              cycle
           endif
 
@@ -357,6 +418,12 @@ contains
     ! Check if output masko is all false.
 
     if (all(masko==.false.)) ier=-2
+
+    ! Copy outputs if necessary
+
+    if (present(error)) error=ier
+    if (present(in_mask)) in_mask=mask
+    if (present(out_mask)) out_mask=masko
 
   end subroutine global_interp
 

@@ -68,11 +68,14 @@ program glint_example
   real(rk),dimension(:,:,:),pointer :: precip_clim2  => null()  ! Precip
   real(rk),dimension(:,:,:),pointer :: surftemp_clim => null()  ! Surface temperature
 
-  ! arrays for interpolation -------------------------------------------------------
+  type(global_grid),pointer :: orog_grid   => null()
+  type(global_grid),pointer :: precip_grid => null()
+  type(global_grid),pointer :: temp_grid   => null()
+
+  ! arrays for interpolation ------------------------------------------------------------
 
   logical,dimension(:,:),allocatable :: maskin,maskout
   real,dimension(:,:),allocatable :: intin,intout
-  real,dimension(:),pointer :: lonbin,latbin,lonbout,latbout
 
   ! Arrays which hold the global fields used as input to GLIMMER ------------------------
 
@@ -131,11 +134,9 @@ program glint_example
 
   ! Read in climate data
 
-  call read_ncdf_3d('monthly_precip_mean_1974-2003.nc','prate',precip_clim2, &
-       lonbound=lonbin,latbound=latbin)
-  call read_ncdf_3d('surf_temp_6h_1974-2003.nc','air_temperature',surftemp_clim,lats=lats,lons=lons, &
-       lonbound=lonbout,latbound=latbout)
-  call read_ncdf_3d('global_orog.nc','hgt',orog_clim)
+  call read_ncdf_3d('monthly_precip_mean_1974-2003.nc','prate',precip_clim2,precip_grid)
+  call read_ncdf_3d('surf_temp_6h_1974-2003.nc','air_temperature',surftemp_clim,temp_grid)
+  call read_ncdf_3d('global_orog.nc','hgt',orog_clim,orog_grid)
 
   ! Fix up a few things
 
@@ -157,7 +158,7 @@ program glint_example
      intin=precip_clim2(:,:,i)
      maskin=.true.
      maskout=.true.
-     call global_interp(nxp,nxp,lonbin,nyp,latbin,intin,maskin,nx,nx,lonbout,ny,latbout,intout,maskout,ierr)
+     call global_interp(precip_grid,intin,temp_grid,intout,in_mask=maskin,out_mask=maskout,error=ierr)
      precip_clim(:,:,i)=intout
   end do
 
@@ -194,14 +195,16 @@ program glint_example
   do i=1,nxo
     lons_orog(i)=(360.0/nxo)*i-(180.0/nxo)
   enddo
- 
+
   ! Set the message level (6 is the default - all messages on)
 
   call glimmer_set_msg_level(6)
 
   ! Initialise the ice model
 
-  call initialise_glint(ice_sheet,lats,lons,paramfile,orog=orog_out,ice_frac=ice_frac, &
+  print*,size(lats),size(lons),size(orog_out),size(ice_frac),size(albedo),size(lons_orog),size(lats_orog)
+
+  call initialise_glint(ice_sheet,temp_grid%lats,temp_grid%lons,paramfile,orog=orog_out,ice_frac=ice_frac, &
        albedo=albedo,orog_longs=lons_orog,orog_lats=lats_orog,daysinyear=365)
 
   ! Get coverage maps for the ice model instances
@@ -236,40 +239,76 @@ program glint_example
 
 contains
 
-  subroutine read_ncdf_3d(filename,varname,array,lons,lats,lonbound,latbound)
+  subroutine read_ncdf_3d(filename,varname,array,grid)
 
     use netcdf
 
-    character(*) :: filename,varname
+    character(*)                      :: filename,varname
     real(rk),dimension(:,:,:),pointer :: array
-    real(rk),dimension(:),pointer,optional :: lons,lats
-    real,dimension(:),pointer,optional :: lonbound,latbound
-    integer :: ncerr,ncid,i,varid
+    type(global_grid),        pointer :: grid
+
+    real(rk),dimension(:),allocatable :: dim1,dim2,dim3
+    real(rk),dimension(:),allocatable :: lonbound,latbound
+
+    integer  :: ncerr     ! NetCDF error 
+    integer  :: ncid      ! NetCDF file id
+    integer  :: varid     ! NetCDF variable id
+    integer  :: ndims     ! Number of dimensions
+    integer  :: i,args
     real(rk) :: offset=0.0,scale=1.0
-    integer,dimension(3) :: dimids,dimlens
+    integer,      dimension(3) :: dimids,dimlens
     character(20),dimension(3) :: dimnames
-    real(dp),dimension(:,:),allocatable :: lnb,ltb
+    real(dp),     dimension(:,:),allocatable :: lnb,ltb
+    logical :: lonb_present,latb_present
 
     if (associated(array)) deallocate(array)
+    if (associated(grid))  deallocate(grid)
+
+    ! Open file ----------------------------------------
 
     ncerr=nf90_open(filename,0,ncid)
     call handle_err(ncerr,__LINE__)
 
+    ! Find out the id of variable and its dimensions ---
+
     ncerr=nf90_inq_varid(ncid,varname,varid)
     call handle_err(ncerr,__LINE__)
+    ncerr=nf90_inquire_variable(ncid, varid, ndims=ndims)
+    call handle_err(ncerr,__LINE__)
+
+    ! If not a 3d variable, flag and error and exit ----
+
+    if (ndims/=3) then
+       print*,'NetCDF: Requested variable only has ',ndims,' dimensions'
+       stop
+    end if
+
+    ! Get dimensions ids -------------------------------
+
     ncerr=nf90_inquire_variable(ncid, varid, dimids=dimids)
     call handle_err(ncerr,__LINE__)
 
+    ! Retrieve dimension names -------------------------
+
     do i=1,3
-       ncerr=nf90_inquire_dimension(ncid, dimids(i), name=dimnames(i),len=dimlens(i))
+       ncerr=nf90_inquire_dimension(ncid, dimids(i), &
+            name=dimnames(i),len=dimlens(i))
        call handle_err(ncerr,__LINE__)
     end do
 
+    ! Allocate output and dimension arrays -------------
+
     allocate(array(dimlens(1),dimlens(2),dimlens(3)))
+    allocate(dim1(dimlens(1)))
+    allocate(dim2(dimlens(2)))
+    allocate(dim3(dimlens(3)))
     
+    ! Retrieve variable contents -----------------------
+
     ncerr=nf90_get_var(ncid, varid, array)
     call handle_err(ncerr,__LINE__)
-       call handle_err(ncerr,__LINE__)
+
+    ! Get scaling and offset, if present, and apply ----
 
     ncerr=nf90_get_att(ncid, varid, 'add_offset', offset)
     if (ncerr/=NF90_NOERR) then
@@ -285,28 +324,30 @@ contains
 
     array=offset+(array*scale)
 
-    if (present(lons)) then
-       if (associated(lons)) deallocate(lons)
-       ncerr=nf90_inq_varid(ncid,dimnames(1),varid)
-       call handle_err(ncerr,__LINE__)
-       allocate(lons(dimlens(1)))
-       ncerr=nf90_get_var(ncid, varid, lons)
-       call handle_err(ncerr,__LINE__)
-    end if
+    ! Get dimension variables --------------------------
 
-    if (present(lats)) then
-       if (associated(lats)) deallocate(lats)
-       ncerr=nf90_inq_varid(ncid,dimnames(2),varid)
-       call handle_err(ncerr,__LINE__)
-       allocate(lats(dimlens(2)))
-       ncerr=nf90_get_var(ncid, varid, lats)
-       call handle_err(ncerr,__LINE__)
-    end if
+    ncerr=nf90_inq_varid(ncid,dimnames(1),varid)
+    call handle_err(ncerr,__LINE__)
+    ncerr=nf90_get_var(ncid, varid, dim1)
+    call handle_err(ncerr,__LINE__)
 
-    if (present(lonbound)) then
-       if (associated(lonbound)) deallocate(lonbound)
-       ncerr=nf90_inq_varid(ncid,'bounds_lon',varid)
-       call handle_err(ncerr,__LINE__)
+    ncerr=nf90_inq_varid(ncid,dimnames(2),varid)
+    call handle_err(ncerr,__LINE__)
+    ncerr=nf90_get_var(ncid, varid, dim2)
+    call handle_err(ncerr,__LINE__)
+
+    ncerr=nf90_inq_varid(ncid,dimnames(3),varid)
+    call handle_err(ncerr,__LINE__)
+    ncerr=nf90_get_var(ncid, varid, dim3)
+    call handle_err(ncerr,__LINE__)
+
+    ! Get boundary arrays, if present ------------------
+
+    ncerr=nf90_inq_varid(ncid,'bounds_lon',varid)
+    if (ncerr/=NF90_NOERR) then
+       lonb_present=.false.
+       ncerr=NF90_NOERR
+    else
        ncerr=nf90_inquire_variable(ncid, varid, dimids=dimids)
        call handle_err(ncerr,__LINE__)
        do i=1,2
@@ -321,12 +362,14 @@ contains
           lonbound(i+1)=lnb(2,i)
        end do
        deallocate(lnb)
+       lonb_present=.true.
     end if
 
-    if (present(latbound)) then
-       if (associated(latbound)) deallocate(latbound)
-       ncerr=nf90_inq_varid(ncid,'bounds_lat',varid)
-       call handle_err(ncerr,__LINE__)
+    ncerr=nf90_inq_varid(ncid,'bounds_lat',varid)
+    if (ncerr/=NF90_NOERR) then
+       latb_present=.false.
+       ncerr=NF90_NOERR
+    else
        ncerr=nf90_inquire_variable(ncid, varid, dimids=dimids)
        call handle_err(ncerr,__LINE__)
        do i=1,2
@@ -341,7 +384,32 @@ contains
           latbound(i+1)=ltb(2,i)
        end do
        deallocate(ltb)
+       latb_present=.true.
     end if
+
+    ! Construct grid type ---------------------
+
+    allocate(grid)
+    args=0
+    if (lonb_present) args=args+1
+    if (latb_present) args=args+2
+
+    select case(args)
+    case(0)
+       call new_global_grid(grid,dim1,dim2)
+    case(1)
+       call new_global_grid(grid,dim1,dim2,lonb=lonbound)
+    case(2)
+       call new_global_grid(grid,dim1,dim2,latb=latbound)
+    case(3)
+       call new_global_grid(grid,dim1,dim2,lonb=lonbound,latb=latbound)
+    end select
+
+    ! Tidy up ---------------------------------
+
+    deallocate(dim1,dim2,dim3)
+    if (allocated(latbound)) deallocate(latbound)
+    if (allocated(lonbound)) deallocate(lonbound)
 
   end subroutine read_ncdf_3d
 

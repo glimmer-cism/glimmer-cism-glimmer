@@ -1,3 +1,8 @@
+2005-03-24 Ian Rutt
+ * Changed glint_global_interp to use global grid types to define
+   input and output grids
+ * Changed glint_example ncdf handling code to use global grid types
+
 2005-03-23 Ian Rutt
  * Extended length of variables used to construct log messages to 150
    chars
