@@ -1,0 +1,63 @@
+g_land
+&sizs
+ewn=83
+nsn=141
+upn=11/
+&prj
+p_type=1
+cpx=42.0
+cpy=71.0
+latc=71.0
+lonc=321.0/
+g_land.gls
+&opts
+whichtemp = 0
+whichartm = 6
+whichthck = 4
+whichflwa = 1
+whichisot = 1
+whichslip = 1
+whichbwat = 9
+whichmarn = 0
+whichbtrc = 1
+whichacab = 1
+whichstrs = 4
+whichevol = 2
+whichwvel = 0
+whichprecip = 0/
+&nums      
+ntem = 10.0
+nvel = 20.0
+niso = 10.0
+nout = 100.0e0, 5.0e3, 5.0e3
+nstr = 0.0e3
+thklim = 100.0d0
+mlimit = -200.0d0
+dew = 20.0d3 
+dns = 20.0d3/
+&pars
+geot = -4.2d-2 
+fiddle = 1.0d0
+airt = -23.0, -4.0d-3
+nmsb = 0.5, 1.0e-5, 450.0e3
+hydtim = 20.0d0
+isotim = 3000.0d0
+bpar = 4.0, 0.1d0, 0.0d0, 0.0d-3, 10.0d0/
+&outs
+indices0dx = 1, 1, 1, 1, 1, 1, 1, 1 
+indices0dy = 1, 1, 1, 1, 1, 1, 1, 1/
+&dats
+usrffile = 'none'
+latifile = 'g20lati'
+topgfile = 'g20topg'
+relxfile = 'g20relx'
+prcpfile = 'g20prcp'
+presusrffile = 'g20surf'
+forcfile = 'none'/
+&cons
+albedo=0.4
+lapse_rate=10.0
+precip_rate=0.5
+air_temp=-20.0/
+&forc
+trun=50000.0/

@@ -1,0 +1,67 @@
+
+GLIMMER README file:
+===================
+
+GLIMMER is a land ice model designed to be used as part of 
+an earth-system or climate model. Full documentation can be found 
+in the doc directory. 
+
+Licensing:
+=========
+
+GLIMMER is issued under the GNU General Public Licence. 
+See LICENCE in the main directory.
+
+Note that this licence DOES NOT APPLY to the SLAP linear algebra library, 
+which is contained in its own directory, and is in the public domain.
+
+Authors:
+======= 
+
+The original stand-alone ice model was written by Tony Payne. The 
+subsequent coupling, down/up-scaling and other associated code (and
+a significant amount of re-engineering of the original model) was
+written by Ian Rutt.
+
+The authors may be contacted at:
+
+School of Geographical Sciences
+University of Bristol
+University Road
+Bristol BS8 1SS
+United Kingdom
+
+Tel: +44 (0) 117 928 9954 (department office)
+Fax: +44 (0) 117 928 7878
+
+i.c.rutt@bristol.ac.uk   (maintainer)
+a.j.payne@bristol.ac.uk
+
+Additional work is being done by Magnus Hagdorn at the School of GeoSciences,
+University of Edinburgh:
+
+Magnus.Hagdorn@glg.ed.ac.uk 
+
+Bugs:
+====
+
+Please send all bug reports (preferably with fixes!) to Ian Rutt
+at the above address.
+
+Compiling:
+=========
+
+The model should build reasonably straightforwardly using make. 
+Additional notes are provided in COMPILE in the main directory.
+
+References:
+==========
+
+The ice model which froms the core of GLIMMER is described in:
+
+Payne, A.J. (1999) A thermomechanical model of ice flow in West Antarctica
+Climate Dynamics, 15:115-125
+
+Payne, A.J. and P.W. Dongelmans (1997) Self-organisation in the
+thermomechanical flow of ice sheets. J. Geophysical Research, 102 (B6)
+12219-12233

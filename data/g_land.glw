@@ -1,0 +1,48 @@
+&vars
+which3d = 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
+which2d = 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,/
+          1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26  
+3d variables
+1 uvel
+2 vvel
+3 wvel
+4 wgrd
+5 flwa
+6 temp
+7 efvs 
+8 tau 
+9 tauxz  
+10 tauyz 
+11 tauxy 
+12 tauxx 
+13 tauyy 
+14 gdsx 
+15 gdsy 
+
+2d variables
+1 uflx
+2 vflx
+3 diffu
+4 btrc
+5 ubas
+6 vbas
+7 thck
+8 usrf
+9 lsrf
+10 topg
+11 acab
+12 bmlt
+13 bwat
+14 artm
+15 temp(upn)
+16 arng
+17 prcp
+18 ablt
+19 dusrfdtm
+20 efvs 
+21 tau 
+22 tauxy 
+23 tauxx 
+24 tauyy 
+25 gdsx 
+26 gdsy 
