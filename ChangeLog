@@ -1,3 +1,8 @@
+2004-06-18 Ian Rutt
+ * Added possibility of reading in fields from netcdf file scaled or
+   unscaled
+ * Began code to calculate relaxed bedrock (relaxed.f90)
+
 2004-06-18 Magnus Hagdorn
  * glimmer_CFproj.f90: make a distinction between polar_stereographic and 
    general stereographic projections. Add a standard parallel to 

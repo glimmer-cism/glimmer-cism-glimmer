@@ -192,7 +192,7 @@ contains
     status = nf90_get_var(NC%id,NC%timevar,infile%times)
   end subroutine glimmer_nc_openfile
 
-  subroutine glimmer_nc_read(infile,model)
+  subroutine glimmer_nc_read(infile,model,scale_vars)
     !*FD read variables from a netCDF file
     use glimmer_ncdf
     use glimmer_types
@@ -204,12 +204,19 @@ contains
     !*FD structure containg output netCDF descriptor
     type(glimmer_global_type) :: model
     !*FD the model instance
+    logical,optional :: scale_vars
+    !*FD Specifies whether fields should be scaled by factors when read in.
 
     ! local variables
     integer status
     integer up
     real(dp):: f1, f2, f3, f4, f5, f6, f7, f8
     integer :: ewnv, nsnv
+    logical :: scale=.true.
+
+    ! Deal with optional argument
+
+    if (present(scale_vars)) scale=scale_vars
 
     ! Set up various constants. These were originally only
     ! done once, but are done each time now, for safety.

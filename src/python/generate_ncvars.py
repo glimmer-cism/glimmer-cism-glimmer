@@ -416,7 +416,7 @@ class PrintNCDF_INFILE(PrintVars):
                                                                                                                spaces,var['data'], dimstring))
                 self.stream.write("%s       call nc_errorhandle(__FILE__,__LINE__,status)\n"%(spaces))
                 if 'factor' in var:
-                    self.stream.write("%s       %s = %s/(%s)\n"%(spaces,var['data'],var['data'],var['factor']))
+                    self.stream.write("%s       if (scale) %s = %s/(%s)\n"%(spaces,var['data'],var['data'],var['factor']))
 
                 if  'level' in dims:
                     self.stream.write("       end do\n")
