@@ -20,6 +20,7 @@ units:         1
 long_name:     upscaling and downscaling mask
 data:          data%out_mask
 load:          1
+hot:           1
 coordinates:   lon lat
 
 [arng]

@@ -1,6 +1,8 @@
 2005-03-01 Ian Rutt
  * Removed redundant paramfiles.tex from doc/ug
-
+ * Removed a couple of redundent components from glint
+ * Hopefully fixed up hotstarts for glint (only a sinlge array needs to be written)
+	
 2005-02-29 Ian Rutt
  * Updated docs to match new GLINT API
  * Added additional underscore control code substitution to parts of LaTeX

@@ -108,9 +108,6 @@ module glint_main
      ! File information -----------------------------------------
 
      character(fname_length) :: paramfile      !*FD Name of global parameter file
-     integer                 :: file_unit = 20 !*FD File unit to use for all ouput operations
-     integer                 :: logf_unit = 21 !*FD File unit for logging. Could be confusing
-                                               !*FD as the same unit is used by all model instances...
 
      ! Start flag -----------------------------------------------
 
