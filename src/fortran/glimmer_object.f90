@@ -166,17 +166,6 @@ contains
     instance%frac_cov_orog=instance%frac_coverage        ! Set fractional coverage for orog to be same as
                                                          ! for other fields.
 
-  !  call timeevoltemp(instance%model,0,instance%global_orog)     ! calculate initial temperature distribution
-  !  instance%newtemps = .true.                                   ! we have new temperatures
-
-  !  call calcflwa(instance%model%numerics,        &              ! Calculate Glen's A
-  !                instance%model%velowk,          &
-  !                instance%model%paramets%fiddle, &
-  !                instance%model%temper%flwa,     &
-  !                instance%model%temper%temp,     &
-  !                instance%model%geometry%thck,   &
-  !                instance%model%options%whichflwa)
-
     if (present(start_time)) then
       instance%model%numerics%time = start_time       ! Initialise the counter.
     else                                              ! Despite being in the GLIMMER framework,

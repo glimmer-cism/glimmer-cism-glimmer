@@ -357,7 +357,6 @@ module glimmer_types
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   type glimmer_funits
-!    character(fname_length) :: outmaskfile  = 'none' !*FD File containing output mask
     character(fname_length) :: sigfile                         !*FD sigma coordinates file
     character(fname_length) :: forcfile                        !*FD Temperature forcing file
     character(fname_length) :: ncfile                          !*FD configuration file for netCDF I/O
