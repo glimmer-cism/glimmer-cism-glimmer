@@ -21,6 +21,8 @@ SOURCES = glimmer_degd.f90 glimmer_isot.f90 glimmer_setup.f90 \
           glimmer.f90 glimmer_global.f90 glimmer_interp.f90 glimmer_mbal.f90 \
           glimmer_object.f90 glimmer_proj.f90 glimmer_utils.f90 gmt.f90
 
+AUTOGEN = ncdf.f90 ncdf_file.f90
+
 INCLUDE_FILES=
 
 OTHER_FILES=$(ARC_FILE) $(THIS_FILE)
@@ -35,15 +37,24 @@ $(LIBNAME).a: $(OBJECTS) $(OTHER_FILES) $(INCLUDE_FILES)
 example :  $(LIBNAME).a glimmer_example.o
 	$(F77) $(GLIMMERFLAGS) -o glimmer_example glimmer_example.o -L. -lglimmer -lslap
 
-clean : 
-	\rm -f *.o *.a *.mod f90_dep.mak
+bin2ncdf: bin2ncdf.o glimmer_global.o  ncdf.o ncdf_file.o glimmer_modu.o glimmer_physcon.o glimmer_paramets.o
+	$(F77) -o $@ $^ $(LD_FLAGS) 
 
-f90_dep.mak: $(SOURCES)
-	python ../python/f90_dependencies.py -o $@ $(SOURCES)
+clean : 
+	\rm -f *.o *.a *.mod f90_dep.mak $(AUTOGEN)
+
+f90_dep.mak: *.f90 $(AUTOGEN)
+	python ../python/f90_dependencies.py -o $@ $^
 
 code_doc: $(SOURCES) $(OTHER_FILES)
 	f90doc -t "GLIMMER Code Documentation" -a "Ian Rutt" $(SOURCES) > ../../doc/code_doc.tex
 	cd ../../doc && latex2html -local_icons -split 4 -toc_depth 3 -link 1 code_doc.tex
+
+#some special rules for automatically generating ncdf src code
+ncdf.f90:	ncdf_vars.def ncdf.f90.in
+		python ../python/generate_ncvars.py $< $@.in	
+ncdf_file.f90:	ncdf_vars.def ncdf_file.f90.in
+		python ../python/generate_ncvars.py $< $@.in	
 
 include f90_dep.mak 
 

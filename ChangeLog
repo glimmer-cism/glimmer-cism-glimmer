@@ -1,3 +1,12 @@
+2004-05-08 Magnus Hagdorn
+ * first round of netCDF stuff
+   generate_ncvars.py: code generator taking netCDF file description
+	(ncdf_vars.def) to produce f90 files from inputfiles .f90.in
+	ncdf.f90.in basic data structures
+	ncdf_file.f90.in file I/O operations
+ * bin2ncdf.f90: testing netCDF stuff and converting old datafiles 
+	(2D only at the moment) to new netCDF
+
 2004-04-27 Ian Rutt
  * Added doc comments to gmt.f90
  * Updated return value documentation throughout to !*RV

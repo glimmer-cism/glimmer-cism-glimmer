@@ -1,0 +1,158 @@
+! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+! +                                                           +
+! +  ncdf_file.f90 - part of the GLIMMER ice model            + 
+! +                                                           +
+! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+! 
+! Copyright (C) 2004 GLIMMER contributors - see COPYRIGHT file 
+! for list of contributors.
+!
+! This program is free software; you can redistribute it and/or 
+! modify it under the terms of the GNU General Public License as 
+! published by the Free Software Foundation; either version 2 of 
+! the License, or (at your option) any later version.
+!
+! This program is distributed in the hope that it will be useful, 
+! but WITHOUT ANY WARRANTY; without even the implied warranty of 
+! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+! GNU General Public License for more details.
+!
+! You should have received a copy of the GNU General Public License 
+! along with this program; if not, write to the Free Software 
+! Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 
+! 02111-1307 USA
+!
+! GLIMMER is maintained by:
+!
+! Ian Rutt
+! School of Geographical Sciences
+! University of Bristol
+! University Road
+! Bristol
+! BS8 1SS
+! UK
+!
+! email: <i.c.rutt@bristol.ac.uk> or <ian.rutt@physics.org>
+!
+! GLIMMER is hosted on NeSCForge:
+!
+! http://forge.nesc.ac.uk/projects/glimmer/
+!
+! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+#define NC outfile%nc
+
+module glimmer_ncfile
+  !*FD routines for GLIMMER netCDF file I/O
+  !*FD written by Magnus Hagdorn, 2004
+
+contains
+  subroutine glimmer_nc_createfile(outfile,model)
+    !*FD create a new netCDF file
+    use glimmer_ncdf
+    use glimmer_types
+    use paramets, only : len0
+    implicit none
+    type(glimmer_nc_output), pointer :: outfile
+    !*FD structure containg output netCDF descriptor
+    type(glimmer_global_type) :: model
+    !*FD the model instance
+
+    ! local variables
+    integer status
+    integer i
+    
+    ! create new netCDF file
+    status = nf90_create(NC%filename,NF90_CLOBBER,NC%id)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    write(*,*) '*******************************************************************************'
+    write(*,*) 'Opening file ', trim(NC%filename), ' for output; write period every',outfile%freq,' years'
+
+    ! defining dimensions
+    status = nf90_def_dim(NC%id,'x0',model%general%ewn-1,NC%x0dim)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    status = nf90_def_dim(NC%id,'y0',model%general%nsn-1,NC%y0dim)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    status = nf90_def_dim(NC%id,'x1',model%general%ewn,NC%x1dim)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    status = nf90_def_dim(NC%id,'y1',model%general%nsn,NC%y1dim)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    status = nf90_def_dim(NC%id,'level',model%general%upn,NC%leveldim)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    status = nf90_def_dim(NC%id,'time',NF90_UNLIMITED,NC%timedim)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+
+    ! defining variables
+    !GENVARS!
+
+    ! leaving define mode
+    status = nf90_enddef(NC%id)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    
+    ! filling coordinate variables
+    do i=1, model%general%ewn-1
+       status=nf90_put_var(NC%id,NC%x0var,((i-0.5)*model%numerics%dew*len0),(/i/))
+       call nc_errorhandle(__FILE__,__LINE__,status)
+    end do
+    do i=1, model%general%nsn-1
+       status=nf90_put_var(NC%id,NC%y0var,(i-0.5)*model%numerics%dns*len0,(/i/))
+       call nc_errorhandle(__FILE__,__LINE__,status)
+    end do
+    do i=1, model%general%ewn
+       status=nf90_put_var(NC%id,NC%x1var,(i-1.)*model%numerics%dew*len0,(/i/))
+       call nc_errorhandle(__FILE__,__LINE__,status)
+    end do
+    do i=1, model%general%nsn
+       status=nf90_put_var(NC%id,NC%y1var,(i-1.)*model%numerics%dns*len0,(/i/))
+       call nc_errorhandle(__FILE__,__LINE__,status)
+    end do    
+    status=nf90_put_var(NC%id,NC%levelvar,model%numerics%sigma)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+  end subroutine glimmer_nc_createfile
+
+  subroutine glimmer_nc_write(outfile,model)
+    !*FD write variables to a netCDF file
+    use glimmer_ncdf
+    use glimmer_types
+    use glimmer_global, only : dp
+    use physcon, only : scyr
+    use paramets, only : thk0, tim0, vel0, vis0, len0, tau0
+    implicit none
+    type(glimmer_nc_output), pointer :: outfile
+    !*FD structure containg output netCDF descriptor
+    type(glimmer_global_type) :: model
+    !*FD the model instance
+
+    ! local variables
+    integer status
+    integer up
+    real(dp):: f1, f2, f3, f4, f5, f6, f7, f8
+    integer :: ewnv, nsnv
+
+    ! Set up various constants. These were originally only
+    ! done once, but are done each time now, for safety.
+
+    ewnv = model%general%ewn - 1
+    nsnv = model%general%nsn - 1
+    f1 = scyr * thk0 / tim0
+    f2 = scyr * vel0 * thk0
+    f3 = vel0 / (vis0 * len0)
+    f4 = vel0 * scyr * len0
+    f5 = scyr * vel0
+    f6 = scyr * vel0 * len0 / (thk0**2)
+    f7 = tau0
+    f8 = tau0 * len0 / (scyr * vel0) 
+
+    ! increase next_write 
+    outfile%next_write=outfile%next_write+outfile%freq
+    ! write time
+    status = nf90_put_var(NC%id,NC%timevar,model%numerics%time,(/outfile%timecounter/))
+
+    ! write variables
+    !GENVAR_WRITE!
+
+    ! increase time counter
+    outfile%timecounter = outfile%timecounter + 1
+
+  end subroutine glimmer_nc_write
+end module glimmer_ncfile

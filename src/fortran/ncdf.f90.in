@@ -1,0 +1,203 @@
+! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+! +                                                           +
+! +  ncdf.f90 - part of the GLIMMER ice model                 + 
+! +                                                           +
+! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+! 
+! Copyright (C) 2004 GLIMMER contributors - see COPYRIGHT file 
+! for list of contributors.
+!
+! This program is free software; you can redistribute it and/or 
+! modify it under the terms of the GNU General Public License as 
+! published by the Free Software Foundation; either version 2 of 
+! the License, or (at your option) any later version.
+!
+! This program is distributed in the hope that it will be useful, 
+! but WITHOUT ANY WARRANTY; without even the implied warranty of 
+! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+! GNU General Public License for more details.
+!
+! You should have received a copy of the GNU General Public License 
+! along with this program; if not, write to the Free Software 
+! Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 
+! 02111-1307 USA
+!
+! GLIMMER is maintained by:
+!
+! Ian Rutt
+! School of Geographical Sciences
+! University of Bristol
+! University Road
+! Bristol
+! BS8 1SS
+! UK
+!
+! email: <i.c.rutt@bristol.ac.uk> or <ian.rutt@physics.org>
+!
+! GLIMMER is hosted on NeSCForge:
+!
+! http://forge.nesc.ac.uk/projects/glimmer/
+!
+! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+module glimmer_ncdf
+  !*FD Data structures and utility functions for netCDF I/O
+  !*FD written by Magnus Hagdorn, 2004
+
+  use glimmer_global, only: fname_length
+  use netcdf
+
+  integer, private, parameter :: num_vars = !GENVARS_NUMVARS!
+
+  !GENVAR_TYPES!
+
+  type glimmer_nc_stat
+     !*FD Data structure holding netCDF file description
+
+     character(len=fname_length) filename
+     !*FD name of netCDF file
+     logical, dimension(num_vars) :: do_var
+     !*FD array specifying which variables should be written to netCDF file
+     integer id
+     !*FD id of netCDF file
+
+     integer x0dim
+     !*FD id of x0 dimension
+     integer y0dim
+     !*FD id of y0 dimension
+     integer x1dim
+     !*FD id of x1 dimension
+     integer y1dim
+     !*FD id of y1 dimension
+     integer leveldim
+     !*FD id of sigma level dimension
+     integer timedim
+     !*FD id of time dimension
+     integer x0var
+     !*FD id of x0 variable
+     integer y0var
+     !*FD id of y0 variable
+     integer x1var
+     !*FD id of x1 variable
+     integer y1var
+     !*FD id of y1 variable
+     integer levelvar
+     !*FD id of sigma level variable
+     integer timevar
+     !*FD id of time variable     
+     integer, dimension(num_vars) :: varids
+     !*FD array holding variable ids
+  end type glimmer_nc_stat
+
+  type glimmer_nc_output
+     !*FD element of linked list describing netCDF output file
+     
+     type(glimmer_nc_stat) :: nc
+     !*FD structure containg file info
+     integer :: freq
+     !*FD frequency at which data is written to file
+     integer :: next_write=0
+     !*FD next time step at which data is dumped
+     integer :: timecounter=1
+     !*FD time counter
+     
+     type(glimmer_nc_output), pointer :: next=>NULL()
+     !*FD next element in list
+     type(glimmer_nc_output), pointer :: previous=>NULL()
+     !*FD previous element in list
+  end type glimmer_nc_output
+
+  interface delete
+     module procedure delete_output
+  end interface
+
+  interface add
+     module procedure add_output
+  end interface
+
+contains
+  
+  function delete_output(oc, cf)
+    !*FD remove element from linked list
+    implicit none
+    type(glimmer_nc_output), pointer :: delete_output
+    type(glimmer_nc_output), pointer :: oc
+    logical, intent(in), optional :: cf
+    ! local variables
+    logical closefile
+    integer status
+
+    if (present(cf)) then
+       closefile = cf
+    else
+       closefile = .true.
+    end if
+
+    if (associated(oc)) then
+       if (associated(oc%previous)) then
+          oc%previous%next => oc%next
+       end if
+       if (associated(oc%next)) then
+          oc%next%previous => oc%previous
+          delete_output => oc%next
+       else
+          delete_output => NULL()
+       end if
+       if (closefile) then
+          status = nf90_close(oc%nc%id)
+          write(*,*) 'Closing output file ', trim(oc%nc%filename)
+       end if
+       deallocate(oc)
+    end if
+  end function delete_output
+
+  function add_output(oc)
+    !*FD add new element to linked list
+    implicit none
+    type(glimmer_nc_output), pointer :: add_output
+    type(glimmer_nc_output), pointer :: oc
+    ! local variables
+    type(glimmer_nc_output), pointer :: new_output
+
+    allocate(new_output)
+    new_output%nc%do_var(:) = .false.
+    add_output => new_output
+    if (associated(oc)) then
+       new_output%previous => oc
+       if (associated(oc%next)) then
+          new_output%next => oc%next
+          oc%next%previous => new_output
+       end if
+       oc%next => new_output
+    end if
+  end function add_output
+
+  subroutine check_vars(nc,unit)
+    !*FD print netCDF variables handled by nc to unit
+    implicit none
+    type(glimmer_nc_stat) :: nc
+    !*FD netCDF file descriptor
+    integer, intent(in) :: unit
+    !*FD file unit to be written to
+
+    !GENVARS!
+    
+  end subroutine check_vars
+
+  subroutine nc_errorhandle(file,line,status)
+    !*FD handle netCDF error
+    implicit none
+    character(len=*), intent(in) :: file
+    !*FD name of f90 file error occured in
+    integer, intent(in) :: line
+    !*FD line number error occured at
+    integer, intent(in) :: status
+    !*FD netCDF return value
+
+    if (status.ne.NF90_NOERR) then
+       write(*,*) 'Error (',file,line,'): ', nf90_strerror(status)
+       stop
+    end if
+  end subroutine nc_errorhandle
+
+end module glimmer_ncdf
