@@ -1,4 +1,8 @@
 2004-09-27 Magnus Hagdorn
+ * removed masking of netCDF variables. This causes more pain than it is worth it. The two 
+   files are tagged (generate_ncvars.py, ncdf_vars.def)
+
+2004-09-27 Magnus Hagdorn
  * glimmer_temp.f90: applied Tony's fix for floating ice temperature problem
    see http://forge.nesc.ac.uk/pipermail/glimmer-discuss/2004-September/000041.html
 	

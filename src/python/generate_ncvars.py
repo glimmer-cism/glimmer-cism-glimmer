@@ -22,7 +22,7 @@
 
 import ConfigParser, sys, time, string,re, os.path
 
-NOATTRIB = ['name','dimensions','data','factor','load','f90file','hot','type','mask']
+NOATTRIB = ['name','dimensions','data','factor','load','f90file','hot','type']
 VAR1D = ['eus']
 hotvars = []
 
@@ -62,12 +62,8 @@ class Variables(dict):
         for v in vars.sections():
             vardef = {}
             vardef['name'] = v
-            vardef['mask']=False
             for (name, value) in vars.items(v):
-                if name == 'mask' and value in ['1','true','t']:
-                    vardef['mask']=True
-                else:
-                    vardef[name] = value    
+                vardef[name] = value
             if 'hot' in vardef:
                 if vardef['hot'].lower() in ['1','true','t']:
                     hotvars.append(v)
@@ -183,6 +179,7 @@ class PrintNCDF_BASEIO(PrintVars):
             for i in range(0,len(dims)):
                 dims[i] = dims[i].strip()
             self.stream.write("    if (NCO%%do_var(%s)) then\n"%(var_type(var)))
+            
             if isspot(var):
                 if len(dims)==2:
                     if var['name']=='btemp_spot':
@@ -227,25 +224,11 @@ class PrintNCDF_BASEIO(PrintVars):
                     spaces = ' '*3
                     self.stream.write("       do up=1,model%general%upn\n")
 
+                        
                 if 'factor' in var:
                     data = '(%s)*(%s)'%(var['factor'], var['data'])
                 else:
                     data = var['data']
-                if var['mask']:
-                    if 'x1' in dims:
-                        self.stream.write("%s       where (model%%geometry%%thck>0)\n"%spaces)
-                        tempd = 'model%geometry%temporary1'
-                    elif 'x0' in dims:
-                        self.stream.write("%s       where (model%%geomderv%%stagthck>0)\n"%spaces)
-                        tempd = 'model%geometry%temporary0'
-                    else:
-                        raise RunTimeError, 'No idea how to mask variable with these dimensions: %s',dims
-                    self.stream.write("%s          %s = %s\n"%(spaces,tempd,data))
-                    self.stream.write("%s       elsewhere\n"%spaces)
-                    self.stream.write("%s          %s = NF90_FILL_REAL\n"%(spaces,tempd))
-                    self.stream.write("%s       end where\n"%spaces)
-                    data = tempd
-                    
                 self.stream.write("%s       status = nf90_put_var(NCO%%id, %s, &\n%s            %s, (/%s/))\n"%(spaces,'NCO%%varids(%s)'%var_type(var),
                                                                                                              spaces,data, dimstring))
                 self.stream.write("%s       call nc_errorhandle(__FILE__,__LINE__,status)\n"%(spaces))
@@ -288,12 +271,6 @@ class PrintNCDF_BASEIO(PrintVars):
                 self.stream.write("%s       status = nf90_get_var(NCI%%id, %s, &\n%s            %s, (/%s/))\n"%(spaces,'NCI%%varids(%s)'%var_type(var),
                                                                                                                spaces,var['data'], dimstring))
                 self.stream.write("%s       call nc_errorhandle(__FILE__,__LINE__,status)\n"%(spaces))
-
-                if var['mask']:
-                    self.stream.write("%s       where (%s.eq.NF90_FILL_REAL)\n"%(spaces,var['data']))
-                    self.stream.write("%s          %s = 0.\n"%(spaces,var['data']))
-                    self.stream.write("%s       end where\n"%spaces)
-                    
                 if 'factor' in var:
                     self.stream.write("%s       if (scale) %s = %s/(%s)\n"%(spaces,var['data'],var['data'],var['factor']))
 
