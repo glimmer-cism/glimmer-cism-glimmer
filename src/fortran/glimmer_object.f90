@@ -473,6 +473,13 @@ contains
                   instance%model%geometry% topg,      &
                   instance%model%geometry% relx)
 
+    call calclsrf(instance%model%geometry%thck, &
+                  instance%model%geometry%topg, &
+                  instance%model%geometry%lsrf)
+
+    instance%model%geometry%usrf = instance%model%geometry%thck + &
+                                   instance%model%geometry%lsrf
+
     ! ------------------------------------------------------------------------ 
     ! Calculate various derivatives...
     ! ------------------------------------------------------------------------ 

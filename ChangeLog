@@ -1,3 +1,8 @@
+2004-08-18 Ian Rutt
+ * Formatting and documentation of glimmer_thck.f90
+ * Changes to g_land.gln to be compatible with changes to option handling
+ * Added upper-surface calculation after isostasy calc
+
 2004-08-17 Ian Rutt
  * Added unrecognised option handling for whichevol and whichwvel
  * Improved formatting of line numbers in glide_messages.f90

@@ -49,70 +49,109 @@ contains
 
   subroutine timeevolthck(model,thckflag,usrf,thck,lsrf,acab,mask,uflx,vflx,dusrfdew,dusrfdns,totpts,logunit)
 
+    !*FD Performs thickness evolution calculation with pre-calculated u and v fluxes
+
     use glimmer_global, only : dp, sp 
     use paramets, only : thk0
     use glide_messages
 
     implicit none
 
-    type(glimmer_global_type) :: model
-    real(dp), intent(in), dimension(:,:) :: uflx, vflx, dusrfdew, dusrfdns
-    real(sp), intent(in), dimension(:,:) :: acab 
-    integer, intent(in), dimension(:,:) :: mask
-    integer, intent(in) :: totpts, thckflag
-    real(dp), intent(inout), dimension(:,:) :: usrf, lsrf, thck 
-    integer,intent(in) :: logunit
+    ! Subroutine arguments ---------------------------------------------
 
-    integer, parameter :: flag = 0
+    type(glimmer_global_type)             :: model     !*FD Ice model instance
+    integer,                intent(in)    :: thckflag  !*FD Thickness flag (\texttt{whichthck})
+    real(dp),dimension(:,:),intent(inout) :: usrf      !*FD Ice upper surface
+    real(dp),dimension(:,:),intent(inout) :: thck      !*FD Ice thickness
+    real(dp),dimension(:,:),intent(inout) :: lsrf      !*FD Ice lower surface
+    real(sp),dimension(:,:),intent(in)    :: acab      !*FD Mass balance
+    integer, dimension(:,:),intent(in)    :: mask      !*FD Mask of ice-covered points
+    real(dp),dimension(:,:),intent(in)    :: uflx      !*FD $u$-flux
+    real(dp),dimension(:,:),intent(in)    :: vflx      !*FD $v$-flux
+    real(dp),dimension(:,:),intent(in)    :: dusrfdew  !*FD $x$-derivative of surface elevation
+    real(dp),dimension(:,:),intent(in)    :: dusrfdns  !*FD $y$-derivative of surface elevation
+    integer,                intent(in)    :: totpts    !*FD Total number of ice-covered points
+    integer,                intent(in)    :: logunit   !*FD File unit for log output
+
+    ! Internal variables/arrays ----------------------------------------
+
+    integer, parameter     :: flag = 0
     real(dp), dimension(5) :: sumd 
-    real(dp) :: err 
-    real(dp), parameter :: tolbnd = 1.0d-12
-    integer :: linit 
-    integer, parameter :: mxtbnd = 10
-    integer :: ew,ns
+    real(dp)               :: err 
+    real(dp), parameter    :: tolbnd = 1.0d-12
+    integer                :: linit 
+    integer, parameter     :: mxtbnd = 10
+    integer                :: ew,ns
+    
+    ! Character variables for use with glide_msg -----------------------
 
-    character(40) :: timetxt
-    character(80) :: outtxt
+    character(40)          :: timetxt
+    character(80)          :: outtxt
+
+    ! If this is the first call, initialise array fc -------------------
 
     if (model%pcgdwk%first1) then
-       model%pcgdwk%fc = (/ model%numerics%alpha * model%numerics%dt / (2.0d0 * model%numerics%dew), &
-            model%numerics%alpha * model%numerics%dt / (2.0d0 * model%numerics%dew), model%numerics%dt, &
-            (1.0d0-model%numerics%alpha) / model%numerics%alpha/) 
+       model%pcgdwk%fc = (/ &
+            model%numerics%alpha * model%numerics%dt / (2.0d0 * model%numerics%dew), & 
+            model%numerics%alpha * model%numerics%dt / (2.0d0 * model%numerics%dew), &   !***** Shouldn't this be dns, not dew?
+            model%numerics%dt, &
+            (1.0d0-model%numerics%alpha) / model%numerics%alpha &
+            /) 
        model%pcgdwk%first1 = .false.
     end if
 
+    ! Main code starts here --------------------------------------------
+
     if (model%geometry%empty) then
+
+       ! If there is no ice cover, simply add accumulation
+       ! and update surface elevations
 
        thck = dmax1(0.0d0,thck + acab * model%pcgdwk%fc(2))
        usrf = thck + lsrf
        write(timetxt,*)model%numerics%time
        call glide_msg(GM_INFO,__FILE__,__LINE__,"* thck empty - net accumulation added "//trim(timetxt))
+
     else
 
        !* the number of grid points and the number of nonzero matrix elements (including bounary points)
        model%pcgdwk%pcgsize = (/ totpts, totpts * 5 /)
 
        !* allocate sparse matrices of the appropriate size 
-       allocate (model%pcgdwk%pcgrow(model%pcgdwk%pcgsize(2)))
-       allocate (model%pcgdwk%pcgcol(model%pcgdwk%pcgsize(2)))
-       allocate (model%pcgdwk%pcgval(model%pcgdwk%pcgsize(2)))
-       allocate (model%pcgdwk%rhsd(model%pcgdwk%pcgsize(1)))
-       allocate (model%pcgdwk%answ(model%pcgdwk%pcgsize(1)))
+       allocate (model%pcgdwk%pcgrow(model%pcgdwk%pcgsize(2)))  ! row location of value
+       allocate (model%pcgdwk%pcgcol(model%pcgdwk%pcgsize(2)))  ! column location of value
+       allocate (model%pcgdwk%pcgval(model%pcgdwk%pcgsize(2)))  ! value itself
+       allocate (model%pcgdwk%rhsd(model%pcgdwk%pcgsize(1)))    ! right-hand side of calculation
+       allocate (model%pcgdwk%answ(model%pcgdwk%pcgsize(1)))    ! Answer
 
        model%pcgdwk%ct = 1
 
+       ! Loop through all points in domain
+
        do ns = 1,model%general%nsn
           do ew = 1,model%general%ewn 
+
+             ! Only do something if mask is non-zero
+
              if (mask(ew,ns) /= 0) then
                 if (ew == 1 .or. ew == model%general%ewn .or. ns == 1 .or. ns == model%general%nsn) then
+
+                   ! Deal with edge and corner points
+
                    call putpcgc(model%pcgdwk,1.0d0,mask(ew,ns),mask(ew,ns))           ! point (ew,ns)
                    model%pcgdwk%rhsd(mask(ew,ns)) = thck(ew,ns) 
                    model%pcgdwk%answ(mask(ew,ns)) = thck(ew,ns) 
                 else if (any((thck(ew-1:ew+1,ns-1:ns+1) == 0.0d0)) .and. thckflag == 5) then
+
+                   ! No idea what this does - depends on meaning of whichthck=5
+
                    call putpcgc(model%pcgdwk,1.0d0,mask(ew,ns),mask(ew,ns))           ! point (ew,ns)
                    model%pcgdwk%rhsd(mask(ew,ns)) = thck(ew,ns) + acab(ew,ns) * model%pcgdwk%fc(3) 
                    model%pcgdwk%answ(mask(ew,ns)) = thck(ew,ns) 
                 else
+                   
+                   ! Non-edge/corner points
+
                    sumd = findsums(uflx(ew-1:ew,ns-1:ns),dusrfdew(ew-1:ew,ns-1:ns),&
                         vflx(ew-1:ew,ns-1:ns),dusrfdns(ew-1:ew,ns-1:ns),model%pcgdwk%fc)
                    call putpcgc(model%pcgdwk,sumd(1),mask(ew-1,ns),mask(ew,ns))       ! point (ew-1,ns)
@@ -130,6 +169,7 @@ contains
 
                 end if
              end if
+
           end do
        end do
 
@@ -171,6 +211,7 @@ contains
     end if
 
   contains
+
 
     function findsums(uf,dsx,vf,dsy,fc)
 
@@ -288,14 +329,16 @@ contains
 
   subroutine putpcgc(pcgdwk,value,col,row)
 
-    use glimmer_global, only : dp
-    ! use pcgdwk, only : pcgval, pcgcol, pcgrow, ct
+    !*FD Puts matrix elements into sparse matrix arrays, and advances the
+    !*FD counter by one
 
+    use glimmer_global, only : dp
+ 
     implicit none
 
-    type(glimmer_pcgdwk) :: pcgdwk
-    integer, intent(in) :: row, col
-    real(dp), intent(in) :: value
+    type(glimmer_pcgdwk) :: pcgdwk   !*FD Type holding sparse matrix arrays
+    integer, intent(in) :: row, col  !*FD Location of element
+    real(dp), intent(in) :: value    !*FD Value of element
 
     if (value /= 0.0d0) then
        pcgdwk%pcgval(pcgdwk%ct) = value
