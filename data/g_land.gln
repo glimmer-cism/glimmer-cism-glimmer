@@ -43,9 +43,6 @@ nmsb = 0.5, 1.0e-5, 450.0e3
 hydtim = 20.0d0
 isotim = 3000.0d0
 bpar = 4.0, 0.1d0, 0.0d0, 0.0d-3, 10.0d0/
-&outs
-indices0dx = 1, 1, 1, 1, 1, 1, 1, 1 
-indices0dy = 1, 1, 1, 1, 1, 1, 1, 1/
 &dats
 usrffile = 'none'
 latifile = 'g20lati'

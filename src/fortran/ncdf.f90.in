@@ -48,6 +48,7 @@ module glimmer_ncdf
   use netcdf
 
   integer, private, parameter :: num_vars = !GENVARS_NUMVARS!
+  integer, private, parameter :: meta_len = 100
 
   !GENVAR_TYPES!
 
@@ -93,6 +94,23 @@ module glimmer_ncdf
      !*FD array holding variable ids
   end type glimmer_nc_stat
 
+  type glimmer_nc_meta
+     !*FD Data structure holding netCDF meta data, see CF user guide
+     
+     character(len=meta_len) :: title = ''
+     !*FD title of netCDF file
+     character(len=meta_len) :: institution = ''
+     !*FD where the data was produced
+     character(len=meta_len) :: references = ''
+     !*FD list of references
+     character(len=meta_len) :: source = ''
+     !*FD this string will hold the GLIMMER version
+     character(len=meta_len) :: history = ''
+     !*FD netCDF file history string
+     character(len=meta_len) :: comment = ''
+     !*FD some comments
+  end type glimmer_nc_meta
+
   type glimmer_nc_output
      !*FD element of linked list describing netCDF output file
 
@@ -109,6 +127,9 @@ module glimmer_ncdf
      integer, pointer, dimension(:) :: spoty=>NULL()
      !*FD array containg spot y-index
      
+     type(glimmer_nc_meta) :: metadata
+     !*FD structure holding metadata
+
      type(glimmer_nc_output), pointer :: next=>NULL()
      !*FD next element in list
      type(glimmer_nc_output), pointer :: previous=>NULL()

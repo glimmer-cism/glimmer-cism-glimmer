@@ -283,15 +283,15 @@ class PrintNCDF_FILE(PrintVars):
             if isspot(var):
                 if len(dims)==2:
                     if var['name']=='btemp_spot':
-                        dimstring_in='model%general%upn,outfile%spotx(sp),outfile%spoty(sp)'
+                        dimstring_in='model%general%upn,outfile%spotx(spot),outfile%spoty(spot)'
                     else:
-                        dimstring_in='outfile%spotx(sp),outfile%spoty(sp)'
-                    dimstring_out='(/sp,outfile%timecounter/)'
+                        dimstring_in='outfile%spotx(spot),outfile%spoty(spot)'
+                    dimstring_out='(/spot,outfile%timecounter/)'
                 elif len(dims)==3:
-                    dimstring_in=':,outfile%spotx(sp),outfile%spoty(sp)'
-                    dimstring_out='(/sp,1,outfile%timecounter/),(/1,model%general%upn,1/)'
+                    dimstring_in=':,outfile%spotx(spot),outfile%spoty(spot)'
+                    dimstring_out='(/spot,1,outfile%timecounter/),(/1,model%general%upn,1/)'
 
-                self.stream.write("       do sp=1,size(outfile%spotx)\n")
+                self.stream.write("       do spot=1,size(outfile%spotx)\n")
                 pos = var['data'].find('(')
                 if pos>-1:
                     data=var['data'][:pos]

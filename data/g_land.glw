@@ -1,3 +1,9 @@
+[default]
+title: GLIMMER test run
+institution: Glimmer Inst
+references:  some reference
+comment: results from the simple test run
+
 [output]
 name:      g_land.100a.nc
 frequency: 100
@@ -5,6 +11,7 @@ variables: THK TOPG ABLT_SPOT ACAB_SPOT DIFFU_SPOT TEMP_SPOT
 numspot:   4
 spotx:     40 10 60 20 
 spoty:     70 10 30 100 
+comment:   spots are taken at nodes
 
 [output]
 name:      g_land.1000a.nc

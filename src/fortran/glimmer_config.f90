@@ -95,7 +95,8 @@ contains
        stop
     end if
     
-    open(unit,file=trim(fname))
+    unit=99
+    open(unit,file=trim(fname),status='old')
     ios=0
     linenr=0
     config=>NULL()

@@ -1,3 +1,10 @@
+2004-05-24 Magnus Hagdorn
+ * g_land.gln: removed outs namelist
+ * glimmer_global.f90: added version string
+ * ncdf_file.f90.in, generate_ncvars.py: renamed loop index sp to spot
+ * glimmer_config.f90: fixed silly bug
+ * added global meta data to netCDF output (g_land.glw, ncdf.f90.in, ncdf_file.f90.in, ncdf_params.f90.in)
+	
 2004-05-18 Magnus Hagdorn
  * added integer and real array parameters (test_config.conf, glimmer_config.f90, test_config.f90)
  * removed indices0dx and indices0dy (glimmer_setup.f90, glimmer_restart.f90, glimmer_modu.f90)
