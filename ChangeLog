@@ -1,3 +1,7 @@
+2005-02-16 Ian Rutt
+ * First stage of making sure GLINT does what it should. Build
+   successfully, but as yet untested.
+
 2005-02-16 Magnus Hagdorn
  * glide.f90: load glide_io module into glide module name space
  * glide_types.f90: added some static accessor functions

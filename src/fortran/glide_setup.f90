@@ -306,8 +306,7 @@ contains
     !*FD equal to the topographic height, or sea-level, whichever is higher.
 
     use glimmer_global, only : dp, sp
-    use paramets, only : f  
-    use physcon, only : rhoi, rhoo
+    use physcon, only : rhoi, rhoo, f
     use glide_mask
     implicit none
 

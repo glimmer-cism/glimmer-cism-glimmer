@@ -44,6 +44,7 @@ module glint_climate
   !*FD handle glint climate
 
 contains
+
   subroutine calcartm(instance,which,usrf,lati,artm,arng,g_orog,g_artm,g_arng)
 
     !*FD Calculate the surface air temperature and mean annual range,
@@ -67,7 +68,7 @@ contains
     real(sp),dimension(:,:),optional,intent(in)    :: g_arng !*FD Supplied global air temp range ($^{\circ}$C)
 
     integer, intent(in) :: which                    !*FD which method to use (see documentation for
-    !*FD allowed values of whichartm)
+                                                    !*FD allowed values of whichartm)
 
     real(sp) :: dist, ewct, nsct, inve, esurf   
     integer :: ns,ew
@@ -77,11 +78,11 @@ contains
     !--------------------------------------------------------------------
 
     if (instance%model%temper%first1) then
-       instance%model%temper%grid = instance%model%numerics%dew * len0
+      instance%model%temper%grid = instance%model%numerics%dew * len0
 
-       if (which == 0 .or. which == 4) then
+      if (which == 0 .or. which == 4) then
           instance%climate%airt(2) = instance%climate%airt(2) * thk0
-       end if
+      end if
 
        instance%model%temper%first1 = .false.
     end if
@@ -92,159 +93,158 @@ contains
 
     select case(which)
 
-       ! ----------------------------------------------------------
+            ! ----------------------------------------------------------
     case(0) ! Linear decrease from sea-level according to lapse-rate
-       ! ----------------------------------------------------------
+            ! ----------------------------------------------------------
 
-       artm = instance%climate%airt(1) + usrf * instance%climate%airt(2)
+      artm = instance%climate%airt(1) + usrf * instance%climate%airt(2)
 
-       ! ----------------------------------------------------------
+            ! ----------------------------------------------------------
     case(1) ! 2d EISMINT test - Cubic function of distance from domain centre
-       ! ----------------------------------------------------------
+            ! ----------------------------------------------------------
 
-       ewct = real(instance%model%general%ewn+1) / 2.0
-       nsct = real(instance%model%general%nsn+1) / 2.0
+      ewct = real(instance%model%general%ewn+1) / 2.0
+      nsct = real(instance%model%general%nsn+1) / 2.0
 
-       do ns = 1,instance%model%general%nsn
-          do ew = 1,instance%model%general%ewn
-             dist = instance%model%temper%grid * sqrt((real(ew) - ewct)**2 + (real(ns) - nsct)**2) 
-             artm(ew,ns) = instance%climate%airt(1) + dist**3 * instance%climate%airt(2)
-          end do
-       end do
+      do ns = 1,instance%model%general%nsn
+        do ew = 1,instance%model%general%ewn
+          dist = instance%model%temper%grid * sqrt((real(ew) - ewct)**2 + (real(ns) - nsct)**2) 
+          artm(ew,ns) = instance%climate%airt(1) + dist**3 * instance%climate%airt(2)
+        end do
+      end do            
 
-       ! version for 1d (ew) eismint test
-       ! ** ewct = real(model%general%tewn+1) / 2.0
-       ! ** do ns = 1,model%general%nsn; do ew = 1,model%general%ewn
-       ! **   dist = grid * sqrt((real(ew) - ewct)**2) 
-       ! **   artm(ew,ns) = model%paramets%airt(1) + dist**3 * model%paramets%airt(2)
-       ! ** end do; end do            
-
-       ! ----------------------------------------------------------
+      ! version for 1d (ew) eismint test
+      ! ** ewct = real(model%general%tewn+1) / 2.0
+      ! ** do ns = 1,model%general%nsn; do ew = 1,model%general%ewn
+      ! **   dist = grid * sqrt((real(ew) - ewct)**2) 
+      ! **   artm(ew,ns) = model%paramets%airt(1) + dist**3 * model%paramets%airt(2)
+      ! ** end do; end do            
+            ! ----------------------------------------------------------
     case(2) ! Linear function of distance from domain centre
-       ! ----------------------------------------------------------
+            ! ----------------------------------------------------------
 
-       ewct = real(instance%model%general%ewn+1) / 2.0; nsct = real(instance%model%general%nsn+1) / 2.0
+      ewct = real(instance%model%general%ewn+1) / 2.0; nsct = real(instance%model%general%nsn+1) / 2.0
 
-       do ns = 1,instance%model%general%nsn
-          do ew = 1,instance%model%general%ewn
-             dist = instance%model%temper%grid * sqrt((real(ew) - ewct)**2 + (real(ns) - nsct)**2) 
-             artm(ew,ns) = instance%climate%airt(1) + dist * instance%climate%airt(2)
-          end do
-       end do
+      do ns = 1,instance%model%general%nsn
+        do ew = 1,instance%model%general%ewn
+          dist = instance%model%temper%grid * sqrt((real(ew) - ewct)**2 + (real(ns) - nsct)**2) 
+          artm(ew,ns) = instance%climate%airt(1) + dist * instance%climate%airt(2)
+        end do
+      end do            
 
-       ! ----------------------------------------------------------
+            ! ----------------------------------------------------------
     case(3) ! Obtaining appropriate temperature forcing from file
-       ! ----------------------------------------------------------
+            ! ----------------------------------------------------------
 
-       do while ( instance%model%numerics%time .ge. instance%forcdata%forcing(instance%model%temper%tpt+1,1) .and. &
+      do while ( instance%model%numerics%time .ge. instance%forcdata%forcing(instance%model%temper%tpt+1,1) .and. &
             instance%model%temper%tpt+1 .le. instance%forcdata%flines)
           instance%model%temper%tpt = instance%model%temper%tpt + 1
           instance%model%temper%perturb = instance%forcdata%forcing(instance%model%temper%tpt,2)
-          ! ** print '(a26,f10.1,f10.3)', &
-          ! **       '---> forcing read at      ', model%numerics%time, perturb 
-       end do
+         ! ** print '(a26,f10.1,f10.3)', &
+         ! **       '---> forcing read at      ', model%numerics%time, perturb 
+      end do
 
-       !   find air temps based on regr equation for greenland
+      !   find air temps based on regr equation for greenland
 
-       do ns = 1, instance%model%general%nsn
-          do ew = 1, instance%model%general%ewn 
+      do ns = 1, instance%model%general%nsn
+        do ew = 1, instance%model%general%ewn 
+      
+      !   find latitude dependent height of inversion layer  
+ 
+          inve = max(0.0, 300 * (lati(ew,ns) - 65.0) / 15.0)
+       
+      !   make sure that surface is above sealevel
 
-             !   find latitude dependent height of inversion layer  
+          esurf = max(0.0, sngl(usrf(ew,ns)*thk0))
+     
+      !   find mean annual temp (is surface above inversion layer?)
 
-             inve = max(0.0, 300 * (lati(ew,ns) - 65.0) / 15.0)
+          if ( esurf <= inve ) then
+            artm(ew,ns) = 49.13 - 0.007992 * inve - 0.7576 * lati(ew,ns) + instance%model%temper%perturb
+          else
+            artm(ew,ns) = 49.13 - 0.007992 * esurf - 0.7576 * lati(ew,ns) + instance%model%temper%perturb
+          end if
 
-             !   make sure that surface is above sealevel
+      !   find July temp (express as annual half range for convenience)
+    
+          arng(ew,ns)= 30.38 - 0.006277 * esurf - 0.3262 * lati(ew,ns) + instance%model%temper%perturb - artm(ew,ns)
 
-             esurf = max(0.0, sngl(usrf(ew,ns)*thk0))
+        end do
+      end do
 
-             !   find mean annual temp (is surface above inversion layer?)
-
-             if ( esurf <= inve ) then
-                artm(ew,ns) = 49.13 - 0.007992 * inve - 0.7576 * lati(ew,ns) + instance%model%temper%perturb
-             else
-                artm(ew,ns) = 49.13 - 0.007992 * esurf - 0.7576 * lati(ew,ns) + instance%model%temper%perturb
-             end if
-
-             !   find July temp (express as annual half range for convenience)
-
-             !   arng(ew,ns)= 30.78 - 0.006277 * esurf - 0.3262 * lati(ew,ns) + perturb - artm(ew,ns)
-
-             ! CHANGED BY ALT 14/02/01 TO MATCH EISMINT 
-             arng(ew,ns)= 30.38 - 0.006277 * esurf - 0.3262 * lati(ew,ns) + instance%model%temper%perturb - artm(ew,ns)
-
-          end do
-       end do
-
-       ! ----------------------------------------------------------
+            ! ----------------------------------------------------------
     case(4) ! Air temperature is function of latitude and height
-       ! ----------------------------------------------------------
+            ! ----------------------------------------------------------
+    
+      ! Note that we are using the array lati to hold sealevel air temperatures
 
-       ! Note that we are using the array lati to hold sealevel air temperatures
+      artm = lati + usrf * instance%climate%airt(2)
 
-       artm = lati + usrf * instance%climate%airt(2)
-
-       ! ----------------------------------------------------------
+            ! ----------------------------------------------------------
     case(5) ! Uniform temperature, zero range
-       ! ----------------------------------------------------------
+            ! ----------------------------------------------------------
 
-       artm=instance%climate%usurftemp
-       arng=0.0
+      artm=instance%climate%usurftemp
+      arng=0.0
 
-       ! ----------------------------------------------------------
+            ! ----------------------------------------------------------
     case(6) ! Uniform temperature, lapse-rate corrected, zero range
-       ! ----------------------------------------------------------
+            ! ----------------------------------------------------------
 
-       artm=instance%climate%usurftemp
-       arng=0.0
-       call glint_lapserate(artm,real(usrf*thk0,rk),real(instance%climate%ulapse_rate,rk))
+      artm=instance%climate%usurftemp
+      arng=0.0
+      call glint_lapserate(artm,real(usrf*thk0,rk),real(instance%climate%ulapse_rate,rk))
 
-       ! ----------------------------------------------------------
+            ! ----------------------------------------------------------
     case(7) ! Supplied large-scale temperature and range
-       ! ----------------------------------------------------------
+            ! ----------------------------------------------------------
 
-       ! Check we have the necessary arguments first
+      ! Check we have the necessary arguments first
 
-       if (present(g_arng).and.present(g_artm).and.present(g_orog)) then
+      if (present(g_arng).and.present(g_artm).and.present(g_orog)) then
 
-          ! Copy the fields
+      ! Copy the fields
 
-          arng=g_arng
-          artm=g_artm
+        arng=g_arng
+        artm=g_artm
 
-          ! Reduce temperatures to sea-level
+      ! Reduce temperatures to sea-level
 
-          call glint_lapserate(artm,real(g_orog,rk),real(-instance%climate%ulapse_rate,rk))
+        call glint_lapserate(artm,real(g_orog,rk),real(-instance%climate%ulapse_rate,rk))
 
-          ! Raise them to high-res orography 
+      ! Raise them to high-res orography 
 
-          call glint_lapserate(artm,real(usrf*thk0,rk),real(instance%climate%ulapse_rate,rk))
+        call glint_lapserate(artm,real(usrf*thk0,rk),real(instance%climate%ulapse_rate,rk))
 
-       else
+      else
           call write_log('ERROR: Error in arguments to CALCARTM - stopping', &
               GM_FATAL,__FILE__,__LINE__)
-       endif
 
-       ! ----------------------------------------------------------
+      endif
+
+            ! ----------------------------------------------------------
     case(8) ! Leave everything alone
-       ! ----------------------------------------------------------
+            ! ----------------------------------------------------------
 
-       ! -----------------------------------------------------
+                 ! -----------------------------------------------------
     case default ! Flag an error otherwise
-       ! -----------------------------------------------------
+                 ! -----------------------------------------------------
 
        call write_log('ERROR: Unsupported value of whichartm', &
            GM_FATAL,__FILE__,__LINE__)
 
     end select
+                
   end subroutine calcartm
 
-  subroutine calcacab(numerics,climate,pddcalc,which,usrf,artm,arng,prcp,ablt,lati,acab)
+  subroutine calcacab(numerics,climate,pddcalc,which,usrf,artm,arng,prcp,ablt,lati,acab,thck)
 
     use glimmer_global, only : dp, sp 
     use paramets, only : len0
-    use glide_pdd
+    use glint_pdd
     use glide_types
     use glint_type
+    use glimmer_log
 
     implicit none
 
@@ -254,7 +254,7 @@ contains
 
     type(glide_numerics), intent(in)    :: numerics
     type(glint_climate), intent(in)     :: climate
-    type(glimmer_pddcalc),  intent(inout) :: pddcalc
+    type(glint_pdd_params),  intent(inout) :: pddcalc
     integer,                intent(in)    :: which
     real(dp),dimension(:,:),intent(in)    :: usrf
     real(sp),dimension(:,:),intent(in)    :: artm
@@ -263,6 +263,7 @@ contains
     real(sp),dimension(:,:),intent(out)   :: ablt
     real(sp),dimension(:,:),intent(in)    :: lati
     real(sp),dimension(:,:),intent(out)   :: acab
+    real(dp),dimension(:,:),intent(in)    :: thck
 
     !-----------------------------------------------------------------------------
     ! Internal variables
@@ -294,21 +295,91 @@ contains
        end do
 
     case(1)
-       call masbgrn(pddcalc,artm,arng,prcp,lati,ablt,acab) 
+       call glint_pdd_mbal(pddcalc,artm,arng,prcp,lati,ablt,acab) 
     case(2) 
        acab = prcp
+    case(3)
+!       call enmabal
+       call glint_pdd_mbal(pddcalc,artm,arng,prcp,lati,ablt,acab)
+    case default
+       call write_log('Unrecognised value of whichacab',GM_FATAL,__FILE__,__LINE__)
     end select
+
+    ! Adjust ablation to be no greater than ice available for melting
+
+    where (ablt*numerics%dt>(thck+prcp*numerics%dt)) 
+      ablt=(thck/numerics%dt)+prcp
+      acab=prcp-ablt
+    endwhere
 
     ! If the upper ice/land surface is at or below sea-level, set accumulation,
     ! ablation and mass-balance to zero. This is to prevent accumulation of ice below
     ! sea-level.
 
-    ! ****** REMOVED THIS BECAUSE I'M NOT SURE IT'S THE RIGHT WAY TO TACKLE THE ISSUE ******
-    !where (usrf<=0.0)
-    !  ablt=0.0
-    !  acab=0.0
-    !  prcp=0.0
-    !end where
+    where (usrf<=0.0)
+      ablt=prcp
+      acab=0.0
+    end where
+
+    ! Remove accumulation from domain edges
+
+    ablt(:,1)=prcp(:,1)
+    acab(:,1)=0.0
+    ablt(:,nsn)=prcp(:,nsn)
+    acab(:,nsn)=0.0
+    ablt(1,:)=prcp(1,:)
+    acab(1,:)=0.0
+    ablt(ewn,:)=prcp(ewn,:)
+    acab(ewn,:)=0.0
 
   end subroutine calcacab
+
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  subroutine calcprcp(which,prcp,up_rate,f1,xwind,ywind,artm,orog,dx,dy,presprcp, &
+                      presartm,pfac)
+
+    use glint_mbal
+
+    integer,                intent(in)    :: which    !*FD Precipitation option
+    real(sp),dimension(:,:),intent(inout) :: prcp     !*FD Large-scale precip on input,
+                                                      !*FD desired precip field on output
+    real(sp),               intent(in)    :: up_rate  !*FD user-specified uniform precip rate
+    real(rk),               intent(in)    :: f1       !*FD scaling parameter
+    real(rk),dimension(:,:),intent(in)    :: xwind    !*FD x-wind
+    real(rk),dimension(:,:),intent(in)    :: ywind    !*FD y-wind
+    real(sp),dimension(:,:),intent(in)    :: artm     !*FD air temperature
+    real(rk),dimension(:,:),intent(in)    :: orog     !*FD local orography
+    real(rk),               intent(in)    :: dx       !*FD x-spacing
+    real(rk),               intent(in)    :: dy       !*FD y-spacing
+    real(sp),dimension(:,:),intent(in)    :: presprcp !*FD present-day precip
+    real(sp),dimension(:,:),intent(in)    :: presartm !*FD present-day air temp
+    real(sp),               intent(in)    :: pfac     !*FD precip parameterisation factor
+
+   select case(which)
+
+    case(0)   ! Uniform precipitation ----------------------------------------
+
+      prcp=up_rate/f1
+
+    case(1)   ! Large scale precip -------------------------------------------
+              ! Note that we / by 1000 to convert to meters, and then by
+              ! f1 for scaling in the model.
+
+      prcp=prcp/(1000.0*f1)
+
+    case(2)   ! Precip parameterization --------------------------------------
+
+      call glint_precip(prcp,xwind,ywind,artm,orog,dx,dy,fixed_a=.true.)
+      prcp=prcp/(1000.0*f1)
+
+    case(3)   ! Prescribed small-scale precip from file, ---------------------
+              ! adjusted for temperature
+
+      prcp = presprcp * pfac ** (artm - presartm)
+
+    end select
+
+  end subroutine calcprcp
+
 end module glint_climate

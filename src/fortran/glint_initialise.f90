@@ -53,15 +53,16 @@ contains
 
   subroutine glint_i_initialise(config,instance,radea,grid,time_step,start_time)
 
-    !*FD Initialise an ice model (glide) instance
+    !*FD Initialise a GLINT ice model instance
+
     use glimmer_config
     use glint_global_grid
     use glint_io
     use glide
     implicit none
 
-    ! Arguments    
-    type(ConfigSection), pointer :: config              !*FD structure holding sections of configuration file   
+    ! Arguments
+    type(ConfigSection), pointer         :: config      !*FD structure holding sections of configuration file   
     type(glint_instance),  intent(inout) :: instance    !*FD The instance being initialised.
     real(rk),              intent(in)    :: radea       !*FD Radius of the earth (m).
     type(global_grid),     intent(in)    :: grid        !*FD Global grid to use
@@ -69,47 +70,65 @@ contains
     real(rk),optional,     intent(in)    :: start_time  !*FD Start time of model (years).
 
     ! initialise model
+
     call glide_initialise(instance%model,config)
+
     ! create glint variables
+
     call glint_io_createall(instance%model)
+
     instance%model%numerics%tinc=time_step             ! Initialise the model time step
+
     ! read glint configuration
+
     call glint_i_readconfig(instance,config)    
 
+    ! initialise the pdd scheme (does this regardless of need at the moment)
+
+    call glint_pdd_init(instance%pddcalc)
+
     ! setting nx,ny of proj
+
     instance%proj%nx = instance%model%general%ewn
     instance%proj%ny = instance%model%general%nsn
     instance%proj%dx = instance%model%numerics%dew
     instance%proj%dy = instance%model%numerics%dns
-    
-    call new_proj(instance%proj,radea)                          ! Initialise the projection
-    call new_downscale(instance%downs,instance%proj,grid)       ! Initialise the downscaling
-    call glint_i_allocate(instance,grid%nx,grid%ny)             ! Allocate arrays appropriately
+
+    call new_proj(instance%proj,radea)                        ! Initialise the projection
+    call new_downscale(instance%downs,instance%proj,grid)     ! Initialise the downscaling
+    call glint_i_allocate(instance,grid%nx,grid%ny)           ! Allocate arrays appropriately
 
     call glint_i_readdata(instance)
 
     call new_upscale(instance%ups,grid,instance%proj, &
-         instance%climate%out_mask)           ! Initialise upscaling parameters
+                     instance%climate%out_mask)           ! Initialise upscaling parameters
+
     call calc_coverage(instance%proj, &                         ! Calculate coverage map
-         instance%ups,  &             
-         grid,          &
-         radea,         &
-         instance%climate%out_mask, &
-         instance%frac_coverage)
+                       instance%ups,  &             
+                       grid,          &
+                       radea,         &
+                       instance%climate%out_mask, &
+                       instance%frac_coverage)
+
     call copy_upscale(instance%ups,instance%ups_orog)    ! Set upscaling for orog output to same as for 
                                                          ! other fields.
     instance%frac_cov_orog=instance%frac_coverage        ! Set fractional coverage for orog to be same as
                                                          ! for other fields.
 
     if (present(start_time)) then
-       instance%model%numerics%time = start_time       ! Initialise the counter.
+      instance%model%numerics%time = start_time       ! Initialise the counter.
     else                                              ! Despite being in the GLIMMER framework,
-       instance%model%numerics%time = 0.0              ! each instance has a copy of the counter
+      instance%model%numerics%time = 0.0              ! each instance has a copy of the counter
     endif                                             ! for simplicity.
+
   end subroutine glint_i_initialise
 
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
   subroutine glint_i_end(instance)
+
     !*FD Performs tidying-up for an ice model. 
+
     use glide
     implicit none
     type(glint_instance),  intent(inout) :: instance    !*FD The instance being initialised.
@@ -118,13 +137,14 @@ contains
 
   end subroutine glint_i_end
 
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine glint_i_readconfig(instance,config)
     !*FD read glint configuration
     use glimmer_config
     use glimmer_log
     implicit none
-    type(ConfigSection), pointer :: config              !*FD structure holding sections of configuration file   
+    type(ConfigSection), pointer         :: config      !*FD structure holding sections of configuration file   
     type(glint_instance),  intent(inout) :: instance    !*FD The instance being initialised.
 
     type(ConfigSection), pointer :: section
@@ -155,6 +175,8 @@ contains
     call write_log(message)
     call write_log('')
   end subroutine glint_i_readconfig
+
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine glint_i_readdata(instance)
     !*FD read data from netCDF file and initialise climate
@@ -220,7 +242,8 @@ contains
             instance%climate%presprcp, &
             instance%climate%ablt,     &
             instance%model%climate%lati,     &
-            instance%model%climate%acab)     
+            instance%model%climate%acab,     &
+            instance%model%geometry%thck)     
        
        ! Set ice thickness to be mass-balance*time-step, where positive
        
@@ -251,7 +274,10 @@ contains
        instance%model%geometry%usrf = instance%model%geometry%thck + instance%model%geometry%lsrf
        
     endif
+
   end subroutine glint_i_readdata
+
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine redtsout(fname,unit,forcdata)
 
@@ -329,7 +355,7 @@ contains
     real(rk),               intent(in)  :: radea         !*FD Radius of the earth (m)
     integer, dimension(:,:),intent(in)  :: mask          !*FD Mask of points for upscaling
     real(rk),dimension(:,:),intent(out) :: frac_coverage !*FD Map of fractional 
-    !*FD coverage of global by local grid-boxes.
+                                                         !*FD coverage of global by local grid-boxes.
     ! Internal variables
 
     integer,dimension(grid%nx,grid%ny) :: tempcount
@@ -340,21 +366,21 @@ contains
     tempcount=0
 
     do i=1,proj%nx
-       do j=1,proj%ny
-          tempcount(ups%gboxx(i,j),ups%gboxy(i,j))=tempcount(ups%gboxx(i,j),ups%gboxy(i,j))+mask(i,j)
-       enddo
+      do j=1,proj%ny
+        tempcount(ups%gboxx(i,j),ups%gboxy(i,j))=tempcount(ups%gboxx(i,j),ups%gboxy(i,j))+mask(i,j)
+      enddo
     enddo
 
     do i=1,grid%nx
-       do j=1,grid%ny
-          if (tempcount(i,j)==0) then
-             frac_coverage(i,j)=0.0
-          else
-             frac_coverage(i,j)=(tempcount(i,j)*proj%dx*proj%dy)/ &
-                  (lon_diff(grid%lon_bound(i+1),grid%lon_bound(i))*D2R*radea**2*    &
-                  (sin(grid%lat_bound(j)*D2R)-sin(grid%lat_bound(j+1)*D2R)))
-          endif
-       enddo
+      do j=1,grid%ny
+        if (tempcount(i,j)==0) then
+          frac_coverage(i,j)=0.0
+        else
+          frac_coverage(i,j)=(tempcount(i,j)*proj%dx*proj%dy)/ &
+                 (lon_diff(grid%lon_bound(i+1),grid%lon_bound(i))*D2R*radea**2*    &
+                 (sin(grid%lat_bound(j)*D2R)-sin(grid%lat_bound(j+1)*D2R)))
+        endif
+      enddo
     enddo
 
     ! Fix points that should be 1.0 by checking their surroundings
@@ -362,52 +388,52 @@ contains
     ! Interior points first
 
     do i=2,grid%nx-1
-       do j=2,grid%ny-1
-          if ((frac_coverage(i,j).ne.0).and. &
-               (frac_coverage(i+1,j).ne.0).and. &
-               (frac_coverage(i,j+1).ne.0).and. &
-               (frac_coverage(i-1,j).ne.0).and. &
-               (frac_coverage(i,j-1).ne.0)) &
-               frac_coverage(i,j)=1.0
-       enddo
+      do j=2,grid%ny-1
+        if ((frac_coverage(i,j).ne.0).and. &
+            (frac_coverage(i+1,j).ne.0).and. &
+            (frac_coverage(i,j+1).ne.0).and. &
+            (frac_coverage(i-1,j).ne.0).and. &
+            (frac_coverage(i,j-1).ne.0)) &
+                        frac_coverage(i,j)=1.0
+      enddo
     enddo
 
     ! top and bottom edges
 
     do i=2,grid%nx/2
-       if ((frac_coverage(i,1).ne.0).and. &
-            (frac_coverage(i+1,1).ne.0).and. &
-            (frac_coverage(i,2).ne.0).and. &
-            (frac_coverage(i-1,1).ne.0).and. &
-            (frac_coverage(i+grid%nx/2,1).ne.0)) &
-            frac_coverage(i,1)=1.0
+      if ((frac_coverage(i,1).ne.0).and. &
+          (frac_coverage(i+1,1).ne.0).and. &
+          (frac_coverage(i,2).ne.0).and. &
+          (frac_coverage(i-1,1).ne.0).and. &
+          (frac_coverage(i+grid%nx/2,1).ne.0)) &
+                      frac_coverage(i,1)=1.0
     enddo
 
     do i=grid%nx/2+1,grid%nx-1
-       if ((frac_coverage(i,1).ne.0).and. &
-            (frac_coverage(i+1,1).ne.0).and. &
-            (frac_coverage(i,2).ne.0).and. &
-            (frac_coverage(i-1,1).ne.0).and. &
-            (frac_coverage(i-grid%nx/2,1).ne.0)) &
-            frac_coverage(i,1)=1.0
+      if ((frac_coverage(i,1).ne.0).and. &
+          (frac_coverage(i+1,1).ne.0).and. &
+          (frac_coverage(i,2).ne.0).and. &
+          (frac_coverage(i-1,1).ne.0).and. &
+          (frac_coverage(i-grid%nx/2,1).ne.0)) &
+                      frac_coverage(i,1)=1.0
     enddo
 
     do i=2,grid%nx/2
-       if ((frac_coverage(i,grid%ny).ne.0).and. &
-            (frac_coverage(i+1,grid%ny).ne.0).and. &
-            (frac_coverage(i+grid%nx/2,grid%ny).ne.0).and. &
-            (frac_coverage(i-1,grid%ny).ne.0).and. &
-            (frac_coverage(i,grid%ny-1).ne.0)) &
-            frac_coverage(i,grid%ny)=1.0
+      if ((frac_coverage(i,grid%ny).ne.0).and. &
+          (frac_coverage(i+1,grid%ny).ne.0).and. &
+          (frac_coverage(i+grid%nx/2,grid%ny).ne.0).and. &
+          (frac_coverage(i-1,grid%ny).ne.0).and. &
+          (frac_coverage(i,grid%ny-1).ne.0)) &
+                      frac_coverage(i,grid%ny)=1.0
     enddo
 
     do i=grid%nx/2+1,grid%nx-1
-       if ((frac_coverage(i,grid%ny).ne.0).and. &
-            (frac_coverage(i+1,grid%ny).ne.0).and. &
-            (frac_coverage(i-grid%nx/2,grid%ny).ne.0).and. &
-            (frac_coverage(i-1,grid%ny).ne.0).and. &
-            (frac_coverage(i,grid%ny-1).ne.0)) &
-            frac_coverage(i,grid%ny)=1.0
+      if ((frac_coverage(i,grid%ny).ne.0).and. &
+          (frac_coverage(i+1,grid%ny).ne.0).and. &
+          (frac_coverage(i-grid%nx/2,grid%ny).ne.0).and. &
+          (frac_coverage(i-1,grid%ny).ne.0).and. &
+          (frac_coverage(i,grid%ny-1).ne.0)) &
+                      frac_coverage(i,grid%ny)=1.0
     enddo
  
     ! left and right edges
@@ -463,6 +489,8 @@ contains
 
   end subroutine calc_coverage
 
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
   real(rk) function lon_diff(a,b)
 
     implicit none
@@ -472,16 +500,16 @@ contains
 
     aa=a ; bb=b
 
-    do
-       if (aa>bb) exit
-       aa=aa+360.0
-    enddo
+      do
+        if (aa>bb) exit
+        aa=aa+360.0
+      enddo
 
     lon_diff=aa-bb
 
   end function lon_diff
 
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine get_i_upscaled_fields(instance,orog,albedo,ice_frac)
 

@@ -41,25 +41,21 @@
 !
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-module glide_pdd
+module glint_pdd
 
-  !*FD Contains subroutines required to calculate the mass-balance
-  !*FD of the ice-sheet. Formerly, this module included code specific to
-  !*FD Antarctica, but this has been removed for the time being. The current
-  !*FD code was originally specific to Greenland, but is in fact applied
-  !*FD regardless of which region the ice model is covering.
+  !*FD The GLINT annual positive degree day mass-balance scheme.
+  !*FD Based on the original pdd mass-balance code from Tony's model.
   !*FD 
-  !*FD This file replaces glimmer_degd.f90.
   !*FD {\bf N.B.} the module variables in this module are used for back-door 
   !*FD message passing, to make the integration of the PDD table look more 
   !*FD comprehensible, and avoid the need to have two customised copies of 
   !*FD the integration code.
 
-  use glide_types
+  use glimmer_global
 
   implicit none
 
-  type glimmer_pddcalc
+  type glint_pdd_params
 
     !*FD Holds parameters for positive-degree-day mass-balance
     !*FD calculation. The table has two axes - the $x$ axis is the
@@ -100,32 +96,47 @@ module glide_pdd
     ! eismint pddfs 0.003 and pddfi 0.008
     ! ritz et al 1997 pddfs 0.005 and pddfi 0.016
 
-  end type glimmer_pddcalc
-	 
+  end type glint_pdd_params
+ 	 
   real(sp) :: dd_sigma            !*FD The value of $\sigma$ in the PDD integral
   real(sp) :: t_a_prime           !*FD The value of $T'_{a}$ in the PDD integral
   real(sp) :: mean_annual_temp    !*FD Mean annual temperature
   real(sp) :: mean_july_temp      !*FD Mean july temperature
 
-  private :: dd_sigma, t_a_prime, mean_annual_temp, mean_july_temp
-  private :: pddtabgrn, inner_integral, pdd_integrand, romberg_int, findgrid
+  private
+  public :: glint_pdd_params, glint_pdd_init, glint_pdd_mbal
 
 contains
 
 !-------------------------------------------------------------------------------
-! PUBLIC subroutine
+! PUBLIC subroutines
 !-------------------------------------------------------------------------------
 
-  subroutine masbgrn(pddcalc,artm,arng,prcp,lati,ablt,acab)
+  subroutine glint_pdd_init(params)
+
+    type(glint_pdd_params),intent(inout) :: params !*FD The positive-degree-day parameters
+
+    ! Deallocate arrays
+
+    if (associated(params%pddtab)) deallocate(params%pddtab)
+    
+    ! Allocate pdd table
+
+    allocate(params%pddtab(params%nx,params%ny))
+    call pddtabgrn(params)  
+
+  end subroutine glint_pdd_init
+
+!-------------------------------------------------------------------------------
+
+  subroutine glint_pdd_mbal(pddcalc,artm,arng,prcp,lati,ablt,acab)
 
     !*FD Calculates mass-balance over the ice model domain, by the
     !*FD positive-degree-day method.
 
-    use glimmer_global, only : sp
-
     implicit none 
  
-    type(glimmer_pddcalc),    intent(inout) :: pddcalc !*FD The positive-degree-day parameters
+    type(glint_pdd_params),   intent(inout) :: pddcalc !*FD The positive-degree-day parameters
     real(sp), dimension(:,:), intent(in)    :: artm    !*FD Annual mean air-temperature 
                                                        !*FD ($^{\circ}$C)
     real(sp), dimension(:,:), intent(in)    :: arng    !*FD Annual temerature half-range ($^{\circ}$C)
@@ -144,21 +155,6 @@ contains
     ! Get size of arrays. All arrays should be the same size as this.
 
     ewn=size(artm,1) ; nsn=size(artm,2)
-
-    ! Check to see if pdd table is allocated. If not, then allocate it.
-
-    if (.not.pddcalc%pt_alloc) then
-      allocate(pddcalc%pddtab(pddcalc%nx,pddcalc%ny))
-      pddcalc%pt_alloc=.true.
-    endif
-
-    ! If this is the first call to the subroutine, perform initialisataion
-    ! of pdd table
-
-    if (pddcalc%first) then 
-      call pddtabgrn(pddcalc)  
-      pddcalc%first = .false.
-    end if
 
     !-----------------------------------------------------------------------
     ! Main loop
@@ -263,7 +259,7 @@ contains
       end do
     end do
 
-  end subroutine masbgrn                                  
+  end subroutine glint_pdd_mbal
 
 !-------------------------------------------------------------------------------
 ! PRIVATE subroutines and functions
@@ -280,7 +276,7 @@ contains
 
     implicit none
 
-    type(glimmer_pddcalc),intent(inout) :: pddcalc !*FD PDD parameters
+    type(glint_pdd_params),intent(inout) :: pddcalc !*FD PDD parameters
 
     ! Internal variables
 
@@ -452,4 +448,4 @@ contains
 
   end function findgrid
  
-end module glide_pdd
+end module glint_pdd
