@@ -60,6 +60,12 @@ program glimmer_example
 
   integer :: total_years ! Length of run in years
 
+  ! Pointer arrays to the global climate data -------------------------------------------
+
+  real(rk),dimension(:,:,:),pointer :: orog_clim     => null()  ! Orography
+  real(rk),dimension(:,:,:),pointer :: precip_clim   => null()  ! Precip
+  real(rk),dimension(:,:,:),pointer :: surftemp_clim => null()  ! Surface temperature
+
   ! Arrays which hold the global fields used as input to GLIMMER ------------------------
 
   real(rk),dimension(:,:),allocatable :: temp      ! Temperature     (degC)
@@ -84,8 +90,8 @@ program glimmer_example
 
   ! Arrays which hold information about the global grid ---------------------------------
 
-  real(rk),dimension(:),  allocatable :: lats      ! Latitudes of normal global gridpoints
-  real(rk),dimension(:),  allocatable :: lons      ! Longitudes of normal global gridpoints
+  real(rk),dimension(:),  pointer :: lats => null()     ! Latitudes of normal global gridpoints
+  real(rk),dimension(:),  pointer :: lons => null()     ! Longitudes of normal global gridpoints
   real(rk),dimension(:),  allocatable :: lats_orog ! Latitudes of global orography gridpoints
   real(rk),dimension(:),  allocatable :: lons_orog ! Longitudes of global oropraphy gridpoints
 
@@ -110,32 +116,42 @@ program glimmer_example
   ! Executable code starts here - Basic initialisation
   ! -------------------------------------------------------------------------------------
 
+  ! Read in climate data
+
+  call read_ncdf_3d('monthly_precip_mean_1974-2003.nc','pr_wtr',precip_clim,lats=lats,lons=lons)
+  call read_ncdf_3d('surf_temp_1974-2003.nc','air_temperature',surftemp_clim)
+  call read_ncdf_3d('global_orog.nc','hgt',orog_clim)
+
+  ! Fix up a few things
+
+  where (precip_clim<0.0) precip_clim=0.0  ! Fix negatives
+  precip_clim=precip_clim/2592000.0        ! Convert to mm/s
+  surftemp_clim=surftemp_clim-273.15       ! Convert temps to degreesC
+
   ! Set dimensions of global grids
 
-  nx=64   ; ny=32           ! Normal global grid
-  nxo=200 ; nyo=100         ! Grid used for orographic output
-
-  ! Allocate arrays appropriately
+  nx=size(precip_clim,1) ; ny=size(precip_clim,2) ! Normal global grid
+  nxo=200 ; nyo=100                               ! Grid used for orographic output
 
   ! start logging
   call open_log(unit=101)  
 
+  ! Allocate arrays appropriately
+
   allocate(temp(nx,ny),precip(nx,ny),zonwind(nx,ny))
-  allocate(merwind(nx,ny),lats(ny),lons(nx),orog(nx,ny))
+  allocate(merwind(nx,ny),orog(nx,ny))
   allocate(coverage(nx,ny),orog_out(nxo,nyo),albedo(nx,ny),ice_frac(nx,ny),fw(nx,ny))
   allocate(lats_orog(nyo),lons_orog(nxo),cov_orog(nxo,nyo),fw_in(nx,ny))
 
-  ! Set array contents to zero
+  ! Initialise array contents
 
   temp=0.0
   precip=0.0
   zonwind=0.0
   merwind=0.0
-  lats=0.0
-  lons=0.0
-  orog=0.0
   albedo=0.0
   orog_out=0.0
+  orog=orog_clim(:,:,1)                    ! Put orography where it belongs
 
   ! Set up global grids ----------------------------------------------------------------
 
@@ -150,79 +166,7 @@ program glimmer_example
   do i=1,nxo
     lons_orog(i)=(360.0/nxo)*i-(180.0/nxo)
   enddo
-
-  ! Load in latitudes for normal global grid
-
-  open(20,file='latitudes.txt')
-  do j=1,ny
-    read(20,100)lats(j)
-  enddo
-  close(20)
-
-  ! Load in longitudes for normal global grid
-
-  open(20,file='longitudes.txt')
-  do i=1,nx
-    read(20,100)lons(i)
-  enddo
-  close(20)
  
-  ! Load in example global fields ------------------------------------------------------
-
-  ! Load in sample temperature field
-
-  open(20,file='tempfield.dat')
-  do i=1,nx
-    do j=1,ny
-      read(20,101)temp(i,j)
-    enddo
-  enddo
-  close(20)
-
-  ! Load in sample precip field
-
-  open(20,file='precipfield.dat')
-  do i=1,nx
-    do j=1,ny
-      read(20,101)precip(i,j)
-    enddo
-  enddo
-  close(20)
-
-  ! Load in sample zonal wind field
-
-  open(20,file='zonwindfield.dat')
-  do i=1,nx
-    do j=1,ny
-      read(20,101)zonwind(i,j)
-    enddo
-  enddo
-  close(20)
-
-  ! Load in sample meridional wind field
-
-  open(20,file='merwindfield.dat')
-  do i=1,nx
-    do j=1,ny
-      read(20,101)merwind(i,j)
-    enddo
-  enddo
-  close(20)
-
-  ! Load global (large-scale) orography
-
-  open(20,file='largescale.orog')
-  do i=1,nx
-    do j=1,ny
-      read(20,101)orog(i,j)
-    enddo
-  enddo
-  close(20)
-
-  ! Do various bits of initialisation -------------------------------------------------------
-
-  precip=precip/3600.0   ! Convert background precip rate from mm/h to mm/s
-
   ! Set the message level (6 is the default - all messages on)
 
   call glimmer_set_msg_level(6)
@@ -246,12 +190,13 @@ program glimmer_example
 
   ! Do timesteps ---------------------------------------------------------------------------
 
-  do time=0*24*360,total_years*24*360,24*360
-    call glint(ice_sheet,time,temp,precip,zonwind,merwind,orog, &
-                 orog_out=orog_out,   albedo=albedo,         output_flag=out, &
-                 ice_frac=ice_frac,   water_out=fw,          water_in=fw_in, &
-                 total_water_in=twin, total_water_out=twout, ice_volume=ice_vol) 
-    call write_log_div ! Print a row of stars
+  do time=0*24*360,total_years*24*360,24
+     call example_climate(precip_clim,surftemp_clim,precip,temp,nint(real(time)/24.0))
+     call glint(ice_sheet,time,temp,precip,zonwind,merwind,orog, &
+          orog_out=orog_out,   albedo=albedo,         output_flag=out, &
+          ice_frac=ice_frac,   water_out=fw,          water_in=fw_in, &
+          total_water_in=twin, total_water_out=twout, ice_volume=ice_vol) 
+     call write_log_div ! Print a row of stars
   enddo
 
   ! Finalise/tidy up everything ------------------------------------------------------------
@@ -260,5 +205,131 @@ program glimmer_example
 
 100 format(f9.5)
 101 format(e12.5)
+
+contains
+
+  subroutine read_ncdf_3d(filename,varname,array,lons,lats)
+
+    use netcdf
+
+    character(*) :: filename,varname
+    real(rk),dimension(:,:,:),pointer :: array
+    real(rk),dimension(:),pointer,optional :: lons,lats
+    integer :: ncerr,ncid,i,varid
+    integer,dimension(3) :: dimids,dimlens
+    character(20),dimension(3) :: dimnames
+
+    if (associated(array)) deallocate(array)
+
+    ncerr=nf90_open(filename,0,ncid)
+    call handle_err(ncerr)
+
+    ncerr=nf90_inq_varid(ncid,varname,varid)
+    call handle_err(ncerr)
+    ncerr=nf90_inquire_variable(ncid, varid, dimids=dimids)
+    call handle_err(ncerr)
+
+    do i=1,3
+       ncerr=nf90_inquire_dimension(ncid, dimids(i), name=dimnames(i),len=dimlens(i))
+       call handle_err(ncerr)
+    end do
+
+    allocate(array(dimlens(1),dimlens(2),dimlens(3)))
+    
+    ncerr=nf90_get_var(ncid, varid, array)
+    call handle_err(ncerr)
+
+    if (present(lons)) then
+       if (associated(lons)) deallocate(lons)
+       ncerr=nf90_inq_varid(ncid,dimnames(1),varid)
+       call handle_err(ncerr)
+       allocate(lons(dimlens(1)))
+       ncerr=nf90_get_var(ncid, varid, lons)
+       call handle_err(ncerr)
+    end if
+
+    if (present(lats)) then
+       if (associated(lats)) deallocate(lats)
+       ncerr=nf90_inq_varid(ncid,dimnames(2),varid)
+       call handle_err(ncerr)
+       allocate(lats(dimlens(2)))
+       ncerr=nf90_get_var(ncid, varid, lats)
+       call handle_err(ncerr)
+    end if
+
+  end subroutine read_ncdf_3d
+
+  subroutine handle_err(status)
+
+    use netcdf
+
+    integer, intent (in) :: status
+    
+    if(status /= nf90_noerr) then
+       print *, trim(nf90_strerror(status))
+       stop "Stopped"
+    end if
+  end subroutine handle_err
+
+  subroutine example_climate(precip_clim,temp_clim,precip,temp,day)
+
+    real(rk),dimension(:,:,:),intent(in) :: precip_clim,temp_clim
+    real(rk),dimension(:,:),intent(out)  :: precip,temp
+    integer :: day
+
+    integer :: ntemp,nprecip
+    real(rk) :: tsp,tst
+    real(rk) :: daysinyear=360.0
+    real(rk) :: pos
+    integer :: lower,upper
+
+    ntemp=size(temp_clim,3) ; nprecip=size(precip_clim,3)
+    tst=daysinyear/ntemp ; tsp=daysinyear/nprecip
+    
+    ! Temperature first
+    
+    lower=int(real(day)/tst)
+    upper=lower+1
+    pos=mod(real(day),tst)/tst
+    call fixbounds(lower,1,ntemp)
+    call fixbounds(upper,1,ntemp)
+    temp=linear_interp(temp_clim(:,:,lower),temp_clim(:,:,upper),pos)
+
+    ! precip
+
+    lower=int(real(day)/tsp)
+    upper=lower+1
+    pos=mod(real(day),tsp)/tsp
+    call fixbounds(lower,1,nprecip)
+    call fixbounds(upper,1,nprecip)
+    precip=linear_interp(precip_clim(:,:,lower),precip_clim(:,:,upper),pos)
+
+  end subroutine example_climate
+
+  function linear_interp(a,b,pos)
+
+    real(rk),dimension(:,:),intent(in) :: a,b
+    real(rk),dimension(size(a,1),size(a,2)) :: linear_interp
+    real(rk),               intent(in) :: pos
+
+    linear_interp=a*(1.0-pos)+b*pos
+
+  end function linear_interp
+
+  subroutine fixbounds(in,bottom,top)
+
+    integer :: in,top,bottom
+
+    do
+       if (in<=top) exit
+       in=in-(top-bottom+1)
+    end do
+
+    do
+       if (in>=bottom) exit
+       in=in+(top-bottom+1)
+    end do
+
+  end subroutine fixbounds
 
 end program glimmer_example

@@ -1,5 +1,6 @@
 2005-03-03 Ian Rutt
  * Fixed array sized bug with glint orography output
+ * New glint_example code - uses ncep-reanalysis-derived climatology 
 
 2005-03-03 Magnus Hagdorn
  * added glide launcher utility

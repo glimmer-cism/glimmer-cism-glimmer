@@ -559,10 +559,10 @@ contains
        ! Calculate averages by dividing by number of steps elapsed
        ! since last model timestep.
 
-       params%g_av_temp    = params%g_av_temp   /params%av_steps
-       params%g_av_zonwind = params%g_av_zonwind/params%av_steps
-       params%g_av_merwind = params%g_av_merwind/params%av_steps
-       params%g_av_precip  = params%g_av_precip /params%av_steps
+       params%g_av_temp    = params%g_av_temp   /real(params%av_steps)
+       params%g_av_zonwind = params%g_av_zonwind/real(params%av_steps)
+       params%g_av_merwind = params%g_av_merwind/real(params%av_steps)
+       params%g_av_precip  = params%g_av_precip /real(params%av_steps)
 
        ! Calculate total accumulated precipitation - multiply
        ! by time since last model timestep
