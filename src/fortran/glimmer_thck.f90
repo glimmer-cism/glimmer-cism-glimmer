@@ -398,21 +398,11 @@ contains
       integer, intent(in) :: nsm,ns,nsp  ! ns index to lower, central, upper node
 
       ! fill sparse matrix
-      call putpcgc(model%pcgdwk,sumd(1), &
-           model%geometry%mask(ewm,ns), &
-           model%geometry%mask(ew,ns))       ! point (ew-1,ns)
-      call putpcgc(model%pcgdwk,sumd(2), &
-           model%geometry%mask(ewp,ns), &
-           model%geometry%mask(ew,ns))       ! point (ew+1,ns)
-      call putpcgc(model%pcgdwk,sumd(3), &
-           model%geometry%mask(ew,nsm), &
-           model%geometry%mask(ew,ns))       ! point (ew,ns-1)
-      call putpcgc(model%pcgdwk,sumd(4), &
-           model%geometry%mask(ew,nsp), &
-           model%geometry%mask(ew,ns))       ! point (ew,ns+1)
-      call putpcgc(model%pcgdwk,1.0d0 + sumd(5), &
-           model%geometry%mask(ew,ns), &
-           model%geometry%mask(ew,ns))       ! point (ew,ns)
+      call putpcgc(model%pcgdwk,sumd(1), model%geometry%mask(ewm,ns), model%geometry%mask(ew,ns))       ! point (ew-1,ns)
+      call putpcgc(model%pcgdwk,sumd(2), model%geometry%mask(ewp,ns), model%geometry%mask(ew,ns))       ! point (ew+1,ns)
+      call putpcgc(model%pcgdwk,sumd(3), model%geometry%mask(ew,nsm), model%geometry%mask(ew,ns))       ! point (ew,ns-1)
+      call putpcgc(model%pcgdwk,sumd(4), model%geometry%mask(ew,nsp), model%geometry%mask(ew,ns))       ! point (ew,ns+1)
+      call putpcgc(model%pcgdwk,1.0d0 + sumd(5), model%geometry%mask(ew,ns), model%geometry%mask(ew,ns))! point (ew,ns)
 
       ! calculate RHS
       if (calc_rhs) then
@@ -440,7 +430,7 @@ contains
            (model%velocity%ubas (ewm,nsm) + model%velocity%ubas (ewm,ns)))
       sumd(2) = model%pcgdwk%fc2(1) * (&
            (model%velocity%diffu(ew,nsm) + model%velocity%diffu(ew,ns)) + &
-           (model%velocity%ubas (ew,nsm) + model%velocity%ubas (ewm,ns)))
+           (model%velocity%ubas (ew,nsm) + model%velocity%ubas (ew,ns)))
       sumd(3) = model%pcgdwk%fc2(5) * (&
            (model%velocity%diffu(ewm,nsm) + model%velocity%diffu(ew,nsm)) + &
            (model%velocity%ubas (ewm,nsm) + model%velocity%ubas (ew,nsm)))

@@ -1,3 +1,6 @@
+2004-12-15 Magnus Hagdorn
+ * found and fixed a bug in glimmer_thck.f90
+
 2004-12-13 Magnus Hagdorn
  * new isostasy code (isostasy.f90, isostasy_el.f90, isostasy_setup.f90, isostasy_types.f90, kelvin.f90)
  * removed old isostasy code (glimmer_isot.f90, glide.f90, glide_setup.f90, glide_types.f90)
