@@ -54,6 +54,9 @@ contains
     use glimmer_ncparams
     use glimmer_ncfile
     use glimmer_ncinfile
+    use glide_isot
+    use glide_velo
+    use glide_thck
     use glide_temp
     use glimmer_log
     use glimmer_config
@@ -93,6 +96,12 @@ contains
     ! open all output files
     call openall_out(model)
 
+    ! initialise glide components
+    call init_isostasy(model)
+    call init_velo(model)
+    call init_temp(model)
+    call init_thck(model)
+
     ! initialise Glen's flow parameter A using an isothermal temperature distribution
     call timeevoltemp(model,0)
     ! and calculate lower and upper ice surface
@@ -125,7 +134,6 @@ contains
     ! Calculate isostasy
     ! ------------------------------------------------------------------------ 
     call isosevol(model%numerics,   & 
-         model%paramets,            &
          model%isotwk,              &                                      
          model%options%  whichisot, &
          model%geometry% thck,      &
@@ -160,7 +168,6 @@ contains
 
        call slipvelo(model%numerics, &
             model%velowk,   &
-            model%paramets, &
             model%geomderv, &
             (/model%options%whichslip,model%options%whichbtrc/), &
             model%temper%   bwat,     &
@@ -228,8 +235,7 @@ contains
             model%velocity% vflx, &
             model%geometry% thck, &
             model%geometry% usrf, &
-            model%geometry% lsrf, &
-            model%climate%  acab)
+            model%geometry% lsrf)
 
     case(2) ! Use non-linear calculation that incorporates velocity calc -----
 

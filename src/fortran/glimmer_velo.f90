@@ -52,7 +52,66 @@ module glide_velo
 
 contains
 
-  subroutine slipvelo(numerics,velowk,params,geomderv,flag,bwat,btrc,relx,ubas,vbas)
+  subroutine init_velo(model)
+    !*FD initialise velocity module
+    use physcon, only : arrmll, arrmlh, gascon, actenl, actenh, gn,scyr 
+    use paramets, only : vis0, thk0, vel0, len0
+    implicit none
+    type(glide_global_type) :: model
+
+    integer ewn, nsn, upn
+    integer up
+
+    ewn=model%general%ewn
+    nsn=model%general%nsn
+    upn=model%general%upn
+
+    allocate(model%velowk%fslip(ewn,nsn))
+
+    allocate(model%velowk%depth(upn))
+    allocate(model%velowk%dintflwa(ewn,nsn))
+
+    model%velowk%depth = (/ (((model%numerics%sigma(up+1)+model%numerics%sigma(up))/2.0d0)**gn &
+         *(model%numerics%sigma(up+1)-model%numerics%sigma(up)),up=1,upn-1),0.0d0 /)
+
+    allocate(model%velowk%dups(upn)) 
+    model%velowk%dups = (/ (model%numerics%sigma(up+1) - model%numerics%sigma(up), up=1,upn-1),0.0d0 /)
+
+    allocate(model%velowk%dupsw (upn))
+    allocate(model%velowk%depthw(upn))
+    allocate(model%velowk%suvel (upn))
+    allocate(model%velowk%svvel (upn))
+
+    ! Calculate the differences between adjacent sigma levels -------------------------
+
+    model%velowk%dupsw  = (/ (model%numerics%sigma(up+1)-model%numerics%sigma(up), up=1,upn-1), 0.0d0 /) 
+
+    ! Calculate the value of sigma for the levels between the standard ones -----------
+
+    model%velowk%depthw = (/ ((model%numerics%sigma(up+1)+model%numerics%sigma(up)) / 2.0d0, up=1,upn-1), 0.0d0 /)
+
+    model%velowk%fact = (/ model%paramets%fiddle * arrmlh / vis0, &   ! Value of a when T* is above -263K
+         model%paramets%fiddle * arrmll / vis0, &                     ! Value of a when T* is below -263K
+         -actenh / gascon,        &                                   ! Value of -Q/R when T* is above -263K
+         -actenl / gascon/)                                           ! Value of -Q/R when T* is below -263K
+    
+    model%velowk%watwd  = model%paramets%bpar(1) / model%paramets%bpar(2)
+    model%velowk%watct  = model%paramets%bpar(2) 
+    model%velowk%trcmin = model%paramets%bpar(3) / scyr
+    model%velowk%trcmax = model%paramets%bpar(4) / scyr
+    model%velowk%marine = model%paramets%bpar(5)
+    model%velowk%trc0   = vel0 * len0 / (thk0**2)
+    model%velowk%trcmax = model%velowk%trcmax / model%velowk%trc0
+    model%velowk%trcmin = model%velowk%trcmin / model%velowk%trc0
+    model%velowk%c(1)   = (model%velowk%trcmax - model%velowk%trcmin) / 2.0d0 + model%velowk%trcmin
+    model%velowk%c(2)   = (model%velowk%trcmax - model%velowk%trcmin) / 2.0d0
+    model%velowk%c(3)   = model%velowk%watwd * thk0 / 4.0d0
+    model%velowk%c(4)   = model%velowk%watct * 4.0d0 / thk0 
+    model%velowk%btrac_const = model%paramets%btrac_const/model%velowk%trc0/scyr
+
+  end subroutine init_velo
+
+  subroutine slipvelo(numerics,velowk,geomderv,flag,bwat,btrc,relx,ubas,vbas)
 
     !*FD Calculate the basal slip velocity and the value of $B$, the free parameter
     !*FD in the basal velocity equation (though I'm not sure that $B$ is used anywhere 
@@ -69,7 +128,6 @@ contains
 
     type(glide_numerics), intent(in)    :: numerics !*FD Ice model numerics parameters
     type(glide_velowk),   intent(inout) :: velowk   !*FD Velocity work arrays.
-    type(glide_paramets), intent(in)    :: params   !*FD Ice model parameters.
     type(glide_geomderv), intent(in)    :: geomderv !*FD Horizontal and temporal derivatives of 
                                                       !*FD ice model thickness and upper surface
                                                       !*FD elevation.
@@ -96,13 +154,6 @@ contains
 
     ewn=size(btrc,1) ; nsn=size(btrc,2)    
 
-    ! Allocate work array if this is the first call -------------------------------------
-
-    if (velowk%first1) then
-      allocate(velowk%fslip(ewn,nsn))
-      velowk%first1 = .false.
-    end if
-
     !------------------------------------------------------------------------------------
     ! Main calculation starts here
     !------------------------------------------------------------------------------------
@@ -112,7 +163,7 @@ contains
     
       ! Linear function of gravitational driving stress ---------------------------------
 
-      call calcbtrc(velowk,params,flag(2),bwat,relx,btrc(1:ewn-1,1:nsn-1))
+      call calcbtrc(velowk,flag(2),bwat,relx,btrc(1:ewn-1,1:nsn-1))
 
       where (numerics%thklim < geomderv%stagthck(1:ewn-1,1:nsn-1))
         ubas(1:ewn-1,1:nsn-1) = btrc(1:ewn-1,1:nsn-1) * c * &
@@ -131,7 +182,7 @@ contains
       ! *tp* option to be used in picard iteration for thck
       ! *tp* start by find constants which dont vary in iteration
 
-      call calcbtrc(velowk,params,flag(2),bwat,relx,btrc(1:ewn-1,1:nsn-1))
+      call calcbtrc(velowk,flag(2),bwat,relx,btrc(1:ewn-1,1:nsn-1))
 
       velowk%fslip(1:ewn-1,1:nsn-1) = c * btrc(1:ewn-1,1:nsn-1)
 
@@ -223,16 +274,6 @@ contains
 
     upn=size(sigma) ; ewn=size(ubas,1) ; nsn=size(ubas,2)
 
-    !------------------------------------------------------------------------------------
-
-    if (velowk%first2) then
-
-      allocate(velowk%depth(upn))
-      allocate(velowk%dintflwa(ewn,nsn))
-
-      velowk%depth = (/ (((sigma(up+1)+sigma(up))/2.0d0)**gn*(sigma(up+1)-sigma(up)),up=1,upn-1),0.0d0 /)
-      velowk%first2 = .false.
-    end if
 
     !------------------------------------------------------------------------------------
 
@@ -266,7 +307,7 @@ contains
 
             ! Calculate u diffusivity (?)
 
-            diffu(ew,ns) = vertintg(velowk,sigma,uvel(:,ew,ns)) * stagthck(ew,ns)
+            diffu(ew,ns) = vertintg(velowk,uvel(:,ew,ns)) * stagthck(ew,ns)
 
             ! Complete calculation of u and v
 
@@ -306,7 +347,7 @@ contains
                intflwa(up) = intflwa(up+1) + velowk%depth(up) * sum(hrzflwa(up:up+1)) 
             end do
 
-            velowk%dintflwa(ew,ns) = c * vertintg(velowk,sigma,intflwa)
+            velowk%dintflwa(ew,ns) = c * vertintg(velowk,intflwa)
 
           else 
 
@@ -496,32 +537,6 @@ contains
 
     upn=size(uvel,1) ; ewn=size(uvel,2) ; nsn=size(uvel,3)
 
-    !------------------------------------------------------------------------------------
-    ! Do initial set-up, if not already done before
-    !------------------------------------------------------------------------------------
-
-    if (velowk%first4) then
-
-      ! Allocate some arrays in velowk --------------------------------------------------
-
-      allocate(velowk%dupsw (upn))
-      allocate(velowk%depthw(upn))
-      allocate(velowk%suvel (upn))
-      allocate(velowk%svvel (upn))
-
-      ! Calculate the differences between adjacent sigma levels -------------------------
-
-      velowk%dupsw  = (/ (numerics%sigma(up+1)-numerics%sigma(up), up=1,upn-1), 0.0d0 /) 
-
-      ! Calculate the value of sigma for the levels between the standard ones -----------
-
-      velowk%depthw = (/ ((numerics%sigma(up+1)+numerics%sigma(up)) / 2.0d0, up=1,upn-1), 0.0d0 /)
-
-      ! Set flag to show the initialisation has been completed --------------------------
-
-      velowk%first4 = .false.
-
-    end if
 
     ! Multiply grid-spacings by 16 -----------------------------------------------------
 
@@ -652,7 +667,7 @@ contains
 
             ! Calculate Glenn's A
 
-            call patebudd(tempcor,flwa(:,ew,ns),velowk%fact,velowk%first5,fiddle) 
+            call patebudd(tempcor,flwa(:,ew,ns),velowk%fact) 
           else
             flwa(:,ew,ns) = fiddle
           end if
@@ -670,7 +685,7 @@ contains
 
             ! Calculate Glenn's A with a fixed temperature.
 
-            call patebudd((/(contemp, up=1,upn)/),flwa(:,ew,ns),velowk%fact,velowk%first5,fiddle) 
+            call patebudd((/(contemp, up=1,upn)/),flwa(:,ew,ns),velowk%fact) 
           else
             flwa(:,ew,ns) = fiddle
           end if
@@ -764,7 +779,7 @@ contains
 ! PRIVATE subroutines
 !------------------------------------------------------------------------------------------
 
-  function vertintg(velowk,sigma,in)
+  function vertintg(velowk,in)
 
     !*FD Performs a depth integral using the trapezium rule.
     !*RV The value of in integrated over depth.
@@ -778,7 +793,6 @@ contains
     !------------------------------------------------------------------------------------
 
     type(glide_velowk), intent(inout) :: velowk !*FD Work arrays and things for this module
-    real(dp),dimension(:),intent(in)    :: sigma  !*FD The model's sigma values
     real(dp),dimension(:),intent(in)    :: in     !*FD Input array of vertical velocities (size = upn)
     real(dp) :: vertintg
 
@@ -792,11 +806,6 @@ contains
 
     upn=size(in)
 
-    if (velowk%first3) then
-      allocate(velowk%dups(upn)) 
-      velowk%dups = (/ (sigma(up+1) - sigma(up), up=1,upn-1),0.0d0 /)
-      velowk%first3 = .false.
-    end if
 
     ! Do integration --------------------------------------------------------------------
 
@@ -813,7 +822,7 @@ contains
 
 !------------------------------------------------------------------------------------------
 
-  subroutine patebudd(tempcor,calcga,fact,first,fiddle)
+  subroutine patebudd(tempcor,calcga,fact)
 
     !*FD Calculates the value of Glenn's $A$ for the temperature values in a one-dimensional
     !*FD array. The input array is usually a vertical temperature profile. The equation used
@@ -835,8 +844,7 @@ contains
     !*FD $\Phi$ is the (constant) rate of change of melting point temperature with pressure.
 
     use glimmer_global, only : dp
-    use physcon, only : trpt, arrmll, arrmlh, gascon, actenl, actenh
-    use paramets, only : vis0
+    use physcon, only : trpt
 
     implicit none
 
@@ -849,26 +857,10 @@ contains
                                                      !*FD added to it later on; rather it is
                                                      !*FD $T-T_{\mathrm{pmp}}$.
     real(dp),dimension(:), intent(out)   :: calcga   !*FD The output values of Glenn's $A$.
-    real(dp),dimension(4), intent(inout) :: fact     !*FD Constants for the calculation. These
-                                                     !*FD are set when the subroutine is first
-                                                     !*FD called.
-    logical,               intent(inout) :: first    !*FD Should be set to \texttt{.true.} on the
-                                                     !*FD first call.
-    real(dp),              intent(in)    :: fiddle   !*FD A tuning parameter ($a$ is multiplied 
-                                                     !*FD by it).
+    real(dp),dimension(4), intent(in)    :: fact     !*FD Constants for the calculation. These
+                                                     !*FD are set when the velo module is initialised
 
     !------------------------------------------------------------------------------------
-
-    if (first) then
-
-      ! Need to set up constants for calculation, if not done before --------------------
-
-      fact = (/ fiddle * arrmlh / vis0, &   ! Value of a when T* is above -263K
-                fiddle * arrmll / vis0, &   ! Value of a when T* is below -263K
-               -actenh / gascon,        &   ! Value of -Q/R when T* is above -263K
-               -actenl / gascon         /)  ! Value of -Q/R when T* is below -263K
-      first = .false.
-    end if
 
     ! Actual calculation is done here - constants depend on temperature -----------------
 
@@ -882,13 +874,11 @@ contains
 
 !------------------------------------------------------------------------------------------
 
-  subroutine calcbtrc(velowk,params,flag,bwat,relx,btrc)
+  subroutine calcbtrc(velowk,flag,bwat,relx,btrc)
 
     !*FD Calculate the value of $B$ used for basal sliding calculations.
 
     use glimmer_global, only : dp 
-    use paramets, only : thk0, vel0, len0
-    use physcon, only : scyr
 
     implicit none
 
@@ -897,7 +887,6 @@ contains
     !------------------------------------------------------------------------------------
 
     type(glide_velowk),   intent(inout) :: velowk   !*FD Work arrays for this module.
-    type(glide_paramets), intent(in)    :: params   !*FD Model parameters.
     integer,                intent(in)    :: flag     !*FD Flag to select method of
     !*FD calculation. $\mathtt{flag}=0$ means
     !*FD use full calculation, otherwise set $B=0$.
@@ -920,25 +909,6 @@ contains
     !------------------------------------------------------------------------------------
 
     ewn=size(bwat,1) ; nsn=size(bwat,2)
-
-    !------------------------------------------------------------------------------------
-
-    if (velowk%first6) then
-       velowk%watwd  = params%bpar(1) / params%bpar(2)
-       velowk%watct  = params%bpar(2) 
-       velowk%trcmin = params%bpar(3) / scyr
-       velowk%trcmax = params%bpar(4) / scyr
-       velowk%marine = params%bpar(5)
-       velowk%trc0   = vel0 * len0 / (thk0**2)
-       velowk%trcmax = velowk%trcmax / velowk%trc0
-       velowk%trcmin = velowk%trcmin / velowk%trc0
-       velowk%c(1)   = (velowk%trcmax - velowk%trcmin) / 2.0d0 + velowk%trcmin
-       velowk%c(2)   = (velowk%trcmax - velowk%trcmin) / 2.0d0
-       velowk%c(3)   = velowk%watwd * thk0 / 4.0d0
-       velowk%c(4)   = velowk%watct * 4.0d0 / thk0 
-       velowk%btrac_const = params%btrac_const/velowk%trc0/scyr
-       velowk%first6 = .false. 
-    end if
 
     !------------------------------------------------------------------------------------
 

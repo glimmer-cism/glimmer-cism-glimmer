@@ -324,8 +324,6 @@ module glide_types
     real(sp),dimension(:,:),pointer :: dflct => null()
     real(dp),dimension(4)           :: fact  =  0.0
     integer :: nflx   = 0
-    logical :: first1 = .true.
-    logical :: first2 = .true.
   end type glide_isotwk
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -348,15 +346,6 @@ module glide_types
     real(dp) :: marine = 1.0d0
     real(dp) :: trcmax = 10.0d0
     real(dp) :: btrac_const = 0.0d0
-
-    ! Initialisation flags ---------------------------------------
-
-    logical :: first1 = .true.
-    logical :: first2 = .true.
-    logical :: first3 = .true.
-    logical :: first4 = .true.
-    logical :: first5 = .true.
-    logical :: first6 = .true.
   end type glide_velowk
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -373,7 +362,6 @@ module glide_types
     integer :: ct     = 0
     integer :: mlinit = 0
     integer :: tlinit = 0
-    logical :: first1 = .true.
   end type glide_pcgdwk
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -392,6 +380,7 @@ module glide_types
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   type glide_tempwk
+    logical, dimension(:,:), pointer  :: floater  => null() 
     real(dp),dimension(:,:,:),pointer :: inittemp => null()
     real(dp),dimension(:,:,:),pointer :: dissip   => null()
     real(dp),dimension(:,:,:),pointer :: initadvt => null()
@@ -400,6 +389,13 @@ module glide_types
     real(dp),dimension(:),    pointer :: dupc     => null()
     real(dp),dimension(:),    pointer :: c1       => null()
     real(dp),dimension(:,:),  pointer :: dups     => null()
+    real(dp),dimension(:,:),  pointer :: wphi     => null()
+    real(dp),dimension(:,:),  pointer :: bwatu    => null()
+    real(dp),dimension(:,:),  pointer :: bwatv    => null()
+    real(dp),dimension(:,:),  pointer :: fluxew   => null()
+    real(dp),dimension(:,:),  pointer :: fluxns   => null()
+    real(dp),dimension(:,:),  pointer :: bint     => null()
+    real(dp),dimension(:,:),  pointer :: smth     => null()
     real(dp),dimension(4)             :: cons     = 0.0
     real(dp),dimension(4)             :: f        = 0.0
     real(dp),dimension(8)             :: c        = 0.0
@@ -409,12 +405,8 @@ module glide_types
     real(dp) :: dupn        = 0.0
     real(dp) :: wmax        = 0.0
     real(dp) :: dt_wat      = 0.0
+    real(dp) :: watvel      = 0.0
     integer  :: nwat        = 0
-    logical  :: first1      = .true.
-    logical  :: first2      = .true.
-    logical  :: first3      = .true.
-    logical  :: first4      = .true.
-    logical  :: first5      = .true.
   end type glide_tempwk
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

@@ -1,3 +1,8 @@
+2004-08-13 Magnus Hagdorn
+ glide.f90, glide_types.f90, glimmer_isot.f90, glimmer_temp.f90, glimmer_thck.f90, glimmer_velo.f90
+ * moved initialisation code to separate subroutines which have to be called at start-up
+ * also avoid repeated allocate/deallocate of arrays
+
 2004-08-12 Magnus Hagdorn
  * forgot to scale basal traction constant (glide_types.f90, glimmer_velo.f90)
 

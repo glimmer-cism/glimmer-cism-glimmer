@@ -46,10 +46,27 @@ module glide_thck
 
 contains
 
+  subroutine init_thck(model)
+    !*FD initialise work data for ice thickness evolution
+    implicit none
+    type(glide_global_type) :: model
+    
+    select case(model%options%whichevol)
+    case(0)
+       model%pcgdwk%fc = (/ model%numerics%alpha * model%numerics%dt / (2.0d0 * model%numerics%dew), &
+            model%numerics%alpha * model%numerics%dt / (2.0d0 * model%numerics%dew), model%numerics%dt, &
+            (1.0d0-model%numerics%alpha) / model%numerics%alpha/)       
+    case(2)
+       model%pcgdwk%fc2 = (/ model%numerics%alpha * model%numerics%dt / (2.0d0 * model%numerics%dew * model%numerics%dew), &
+            model%numerics%dt, (1.0d0-model%numerics%alpha) / model%numerics%alpha, &
+            1.0d0 / model%numerics%alpha, model%numerics%alpha * model%numerics%dt / &
+            (2.0d0 * model%numerics%dns * model%numerics%dns), 0.0d0 /) 
+    end select
+  end subroutine init_thck
+
   subroutine timeevolthck(model,thckflag,usrf,thck,lsrf,acab,mask,uflx,vflx,dusrfdew,dusrfdns,totpts,logunit)
 
     use glimmer_global, only : dp, sp 
-    use paramets, only : thk0
 
     implicit none
 
@@ -69,12 +86,6 @@ contains
     integer, parameter :: mxtbnd = 10
     integer :: ew,ns
 
-    if (model%pcgdwk%first1) then
-      model%pcgdwk%fc = (/ model%numerics%alpha * model%numerics%dt / (2.0d0 * model%numerics%dew), &
-              model%numerics%alpha * model%numerics%dt / (2.0d0 * model%numerics%dew), model%numerics%dt, &
-              (1.0d0-model%numerics%alpha) / model%numerics%alpha/) 
-      model%pcgdwk%first1 = .false.
-    end if
 
     if (model%geometry%empty) then
 
@@ -586,7 +597,6 @@ contains
   subroutine nonlevolthck(model,thckflag,newtemps,logunit)
 
     use glimmer_global, only : dp
-    use paramets, only : thk0, vel0
 
     use glide_velo
 
@@ -609,14 +619,6 @@ contains
 
     integer :: ew,ns
 
-    if (model%pcgdwk%first1) then
-      model%pcgdwk%fc2 = (/ model%numerics%alpha * model%numerics%dt / (2.0d0 * model%numerics%dew * model%numerics%dew), &
-              model%numerics%dt, (1.0d0-model%numerics%alpha) / model%numerics%alpha, &
-              1.0d0 / model%numerics%alpha, model%numerics%alpha * model%numerics%dt / &
-              (2.0d0 * model%numerics%dns * model%numerics%dns), 0.0d0 /) 
-      model%pcgdwk%first1 = .false.
-    end if
-
     if (model%geometry%empty) then
 
       model%geometry%thck = dmax1(0.0d0,model%geometry%thck + model%climate%acab * model%pcgdwk%fc2(2))
@@ -628,7 +630,6 @@ contains
       if (newtemps) then
         call slipvelo(model%numerics,                &
                       model%velowk,                  &
-                      model%paramets,                &
                       model%geomderv,                &
                       (/1,model%options%whichbtrc/), &
                       model%temper%   bwat,          &
@@ -640,7 +641,6 @@ contains
 
       call slipvelo(model%numerics,                &
                     model%velowk,                  &
-                    model%paramets,                &
                     model%geomderv,                &
                     (/2,model%options%whichbtrc/), &
                     model%temper%   bwat,          &
@@ -778,12 +778,12 @@ contains
                     model%geometry%thck(1,:), &
                     model%geometry%thck(2,:), &
                     model%geometry%thck(model%general%ewn,:), &
-                    model%geometry%thck(model%general%ewn-1,:),0)
+                    model%geometry%thck(model%general%ewn-1,:))
       call swapbndh(nsbc, &
                     model%geometry%thck(:,1), &
                     model%geometry%thck(:,2), &
                     model%geometry%thck(:,model%general%nsn), &
-                    model%geometry%thck(:,model%general%nsn-1),1)
+                    model%geometry%thck(:,model%general%nsn-1))
     
       model%pcgdwk%tlinit = model%pcgdwk%tlinit + linit
       model%pcgdwk%mlinit = max(linit,model%pcgdwk%mlinit)
@@ -794,7 +794,6 @@ contains
 
       call slipvelo(model%numerics,                &
                     model%velowk,                  &
-                    model%paramets,                &
                     model%geomderv,                &
                     (/3,model%options%whichbtrc/), &
                     model%temper%bwat,             &
@@ -852,7 +851,7 @@ contains
 
 !----------------------------------------------------------------------
 
-  subroutine swapbndh(bc,a,b,c,d,flag)
+  subroutine swapbndh(bc,a,b,c,d)
 
     use glimmer_global, only : dp
 
@@ -860,7 +859,7 @@ contains
 
     real(dp), intent(out), dimension(:) :: a, c
     real(dp), intent(in), dimension(:) :: b, d
-    integer, intent(in) :: bc, flag
+    integer, intent(in) :: bc
 
     if (bc == 0) then
       a = b
@@ -871,29 +870,19 @@ contains
 
 !------------------------------------------------------------------------
 
-  subroutine stagleapthck(model,uflx,vflx,thck,usrf,lsrf,acab)
+  subroutine stagleapthck(model,uflx,vflx,thck,usrf,lsrf)
 
-    use glimmer_global, only : dp, sp
+    use glimmer_global, only : dp
 
     implicit none
  
     type(glide_global_type) :: model
     real(dp), intent(in), dimension(:,:) :: uflx, vflx, lsrf 
-    real(sp), intent(in), dimension(:,:) :: acab
     real(dp), intent(inout), dimension(:,:) :: thck
     real(dp), intent(out), dimension(:,:) :: usrf
 
     real(dp), dimension(:,:), allocatable :: newthck, bnduflx, bndvflx 
     integer :: ns,ew
-
-    if (model%thckwk%first1) then
-      model%thckwk%few = model%numerics%dt / model%numerics%dew
-      model%thckwk%fns = model%numerics%dt / model%numerics%dns
-      allocate(model%thckwk%oldthck(model%general%ewn,model%general%nsn))
-      model%thckwk%oldthck = thck
-      allocate(model%thckwk%basestate(model%general%ewn,model%general%nsn))
-      model%thckwk%basestate = 0.0d0
-    end if
 
     allocate(newthck(model%general%ewn,model%general%nsn))
     newthck = 0.0d0

@@ -56,106 +56,23 @@ contains
 ! PUBLIC subroutines
 !----------------------------------------------------------------------
 
-  subroutine isosevol(numerics,paramets,isotwk,which,thck,evol,rtop)
-
-    !*FD Calculates the elevation of the bedrock topography, by considering
-    !*FD the isostatic depression caused by the over-lying ice and water.
-
-    use glimmer_global, only : dp
-    use physcon, only : rhoi, rhom
-
-    implicit none
-
-    !------------------------------------------------------------------------------------
-    ! Subroutine arguments
-    !------------------------------------------------------------------------------------
- 
-    type(glide_numerics),   intent(in)    :: numerics !*FD Numerical parameters
-    type(glide_paramets),   intent(in)    :: paramets !*FD Other model parameters
-    type(glide_isotwk),     intent(inout) :: isotwk   !*FD Isostasy fields and parameters
-    real(dp), dimension(:,:), intent(inout) :: thck     !*FD Ice thickness field (scaled by $1/\mathtt{thck0}$).
-    real(dp), dimension(:,:), intent(inout) :: evol     !*FD The current elevation of the 
-                                                        !*FD topography/bathymetry (scaled by $1/\mathtt{thck0}$).
-    real(dp), dimension(:,:), intent(inout) :: rtop     !*FD The elevation of the topography
-                                                        !*FD in a relaxed state (scaled by $1/\mathtt{thck0}$).
-    integer,                  intent(in)    :: which    !*FD Option determining which method
-                                                        !*FD to use in the calculation.
-
-    !*FD
-    !*FD The possible range of values of \texttt{which} is as follows:
-    !*FD \begin{itemize}
-    !*FD \item \texttt{which=0} The topography is fixed. Somewhat bizarrely, this is accomplished by
-    !*FD setting the relaxed topography to be equal to the present state.
-    !*FD \item \texttt{which=1} Use a local function of ice thickness.
-    !*FD \item \texttt{which=2} Use a (different) local function of ice thickness, incorporating
-    !*FD flexure.
-    !*FD \end{itemize}
-
-    ! -----------------------------------------------------------------------------
-    ! Initialisation, if this is the first call
-    ! -----------------------------------------------------------------------------
-
-    if (isotwk%first1) then
-      isotwk%fact = (/ numerics%dt / paramets%isotim, &
-                       1.0d0 - 0.5d0 * numerics%dt / paramets%isotim, &
-                       1.0d0 + 0.5d0 * numerics%dt / paramets%isotim, &
-                       rhoi/rhom /)
-      isotwk%first1 = .false.
-    end if
-
-    ! -----------------------------------------------------------------------------
-    ! Choose one of three possible methods
-    ! -----------------------------------------------------------------------------
-
-    select case(which)
-    case(0)
-      rtop = evol    
-    case(1)
-      evol = (isotwk%fact(1) * (rtop - isotwk%fact(4)*thck) + &
-              isotwk%fact(2) * evol) / isotwk%fact(3)
-    case(2) 
-      if ( 0 == mod(numerics%time,numerics%niso) ) then
-        call flextopg(isotwk,numerics,isotwk%load,thck)
-      end if
-      evol = (isotwk%fact(1) * (rtop + isotwk%load) + &
-              isotwk%fact(2) * evol) / isotwk%fact(3)
-    end select 
-
-  end subroutine isosevol
-
-!---------------------------------------------------------------
-! PRIVATE subroutines
-!---------------------------------------------------------------
-
-  subroutine flextopg(isotwk,numerics,flex,thck)
-
-    !*FD This is the subroutine called for the case \texttt{whichisot}=2.
-    !*FD It calculates the load due to ice (and possibly water)
-
-    use glimmer_global, only : dp, sp
-    use paramets, only : len0
+  subroutine init_isostasy(model)
+    !*FD initialise isostasy module
+    use glimmer_global, only : sp
     use physcon, only : rhoi, rhom, grav, pi
-
+    use paramets, only : len0
     implicit none
 
-    !-----------------------------------------------------------
-    ! Subroutine arguments
-    !-----------------------------------------------------------
+    type(glide_global_type) :: model
 
-    type(glide_isotwk),     intent(inout) :: isotwk    !*FD Isostasy work arrays
-    type(glide_numerics),   intent(in)    :: numerics  !*FD Model numerics parameters
-    real(dp), dimension(:,:), intent(out)   :: flex      !*FD The load due to ice and
-                                                         !*FD water (?)
-    real(dp), dimension(:,:), intent(in)    :: thck      !*FD Current ice thickness (scaled)
-    
+
     !-----------------------------------------------------------
     ! Internal variables
     !-----------------------------------------------------------
 
-    integer :: ns,ew,nsn,ewn
-    integer :: ewpt, nspt, ewflx, nsflx, ikelv
+    integer :: ewflx, nsflx, ikelv
     integer, parameter :: nkelv = 82 
-      
+    
     ! ----------------------------------------------------------
     ! ** constants used in calc
     ! **
@@ -208,35 +125,120 @@ contains
     ! ** radius of stiffness
     ! ** multiplier for loads
      
-    real(sp),save :: rigid, alpha, multi, dist, load
+    real(sp) :: rigid, alpha, multi, dist
 
     ! ----------------------------------------------------------
 
-    ewn=size(thck,1) ; nsn=size(thck,2)
+    model%isotwk%fact = (/ model%numerics%dt / model%paramets%isotim, &
+         1.0d0 - 0.5d0 * model%numerics%dt / model%paramets%isotim, &
+         1.0d0 + 0.5d0 * model%numerics%dt / model%paramets%isotim, &
+         rhoi/rhom /)
+    
+    ! setup flexure operator
 
-    if (isotwk%first2) then                                                  
+    rigid = (youngs * thklith**3) / (12.0 * (1.0 - poiss**2))
+    alpha = (rigid / ((youngs * thklith / radlith**2) + rhom * grav))**0.25
+    multi = grav * (model%numerics%dew * len0)**2 * alpha**2 / (2.0 * pi * rigid)
+    model%isotwk%nflx = 7 * int(alpha / (model%numerics%dew * len0)) + 1
 
-      rigid = (youngs * thklith**3) / (12.0 * (1.0 - poiss**2))
-      alpha = (rigid / ((youngs * thklith / radlith**2) + rhom * grav))**0.25
-      multi = grav * (numerics%dew * len0)**2 * alpha**2 / (2.0 * pi * rigid)
-      isotwk%nflx = 7 * int(alpha / (numerics%dew * len0)) + 1
+    allocate(model%isotwk%dflct(model%isotwk%nflx,model%isotwk%nflx))
 
-      allocate(isotwk%dflct(isotwk%nflx,isotwk%nflx))
-
-      do nsflx = 1,isotwk%nflx
-        do ewflx = 1,isotwk%nflx
-          dist = len0 * numerics%dew * sqrt(real(ewflx-1)**2 + real(nsflx-1)**2) / alpha
+    do nsflx = 1,model%isotwk%nflx
+       do ewflx = 1,model%isotwk%nflx
+          dist = len0 * model%numerics%dew * sqrt(real(ewflx-1)**2 + real(nsflx-1)**2) / alpha
           ikelv = min(nkelv-1,int(dist/dkelv) + 1)
-          isotwk%dflct(ewflx,nsflx) = multi * &
-                              (kelvin0(ikelv) + &
-                              (dist - dkelv * (ikelv-1)) * &
-                              (kelvin0(ikelv+1)- kelvin0(ikelv)) / dkelv)
-        end do
-      end do
+          model%isotwk%dflct(ewflx,nsflx) = multi * &
+               (kelvin0(ikelv) + &
+               (dist - dkelv * (ikelv-1)) * &
+               (kelvin0(ikelv+1)- kelvin0(ikelv)) / dkelv)
+       end do
+    end do
+    
 
-      isotwk%first2 = .false.
-         
-    end if
+  end subroutine init_isostasy
+
+  subroutine isosevol(numerics,isotwk,which,thck,evol,rtop)
+
+    !*FD Calculates the elevation of the bedrock topography, by considering
+    !*FD the isostatic depression caused by the over-lying ice and water.
+
+    use glimmer_global, only : dp
+
+    implicit none
+
+    !------------------------------------------------------------------------------------
+    ! Subroutine arguments
+    !------------------------------------------------------------------------------------
+ 
+    type(glide_numerics),   intent(in)    :: numerics !*FD Numerical parameters
+    type(glide_isotwk),     intent(inout) :: isotwk   !*FD Isostasy fields and parameters
+    real(dp), dimension(:,:), intent(inout) :: thck     !*FD Ice thickness field (scaled by $1/\mathtt{thck0}$).
+    real(dp), dimension(:,:), intent(inout) :: evol     !*FD The current elevation of the 
+                                                        !*FD topography/bathymetry (scaled by $1/\mathtt{thck0}$).
+    real(dp), dimension(:,:), intent(inout) :: rtop     !*FD The elevation of the topography
+                                                        !*FD in a relaxed state (scaled by $1/\mathtt{thck0}$).
+    integer,                  intent(in)    :: which    !*FD Option determining which method
+                                                        !*FD to use in the calculation.
+
+    !*FD
+    !*FD The possible range of values of \texttt{which} is as follows:
+    !*FD \begin{itemize}
+    !*FD \item \texttt{which=0} The topography is fixed. Somewhat bizarrely, this is accomplished by
+    !*FD setting the relaxed topography to be equal to the present state.
+    !*FD \item \texttt{which=1} Use a local function of ice thickness.
+    !*FD \item \texttt{which=2} Use a (different) local function of ice thickness, incorporating
+    !*FD flexure.
+    !*FD \end{itemize}
+
+    ! -----------------------------------------------------------------------------
+    ! Choose one of three possible methods
+    ! -----------------------------------------------------------------------------
+
+    select case(which)
+    case(0)
+      rtop = evol    
+    case(1)
+      evol = (isotwk%fact(1) * (rtop - isotwk%fact(4)*thck) + &
+              isotwk%fact(2) * evol) / isotwk%fact(3)
+    case(2) 
+      if ( 0 == mod(numerics%time,numerics%niso) ) then
+        call flextopg(isotwk,numerics,isotwk%load,thck)
+      end if
+      evol = (isotwk%fact(1) * (rtop + isotwk%load) + &
+              isotwk%fact(2) * evol) / isotwk%fact(3)
+    end select 
+
+  end subroutine isosevol
+
+!---------------------------------------------------------------
+! PRIVATE subroutines
+!---------------------------------------------------------------
+
+  subroutine flextopg(isotwk,numerics,flex,thck)
+
+    !*FD This is the subroutine called for the case \texttt{whichisot}=2.
+    !*FD It calculates the load due to ice (and possibly water)
+
+    use glimmer_global, only : dp, sp
+    use physcon, only : rhoi
+
+    implicit none
+
+    !-----------------------------------------------------------
+    ! Subroutine arguments
+    !-----------------------------------------------------------
+
+    type(glide_isotwk),     intent(inout) :: isotwk    !*FD Isostasy work arrays
+    type(glide_numerics),   intent(in)    :: numerics  !*FD Model numerics parameters
+    real(dp), dimension(:,:), intent(out)   :: flex      !*FD The load due to ice and
+                                                         !*FD water (?)
+    real(dp), dimension(:,:), intent(in)    :: thck      !*FD Current ice thickness (scaled)
+    
+    integer :: ns,ew,nsn,ewn
+    integer :: ewflx, nsflx, ewpt, nspt
+    real(sp) :: load
+
+    ewn=size(thck,1) ; nsn=size(thck,2)
 
     flex = 0.0
 
@@ -262,8 +264,8 @@ contains
           ! ** only do this if there is a load to impose and 
           ! ** be careful not to extend past grid domain
                  
-          do nsflx = max(1.0,real(ns)-isotwk%nflx+1), min(nsn,nint(real(ns)+isotwk%nflx-1.0))
-            do ewflx = max(1.0,real(ew)-isotwk%nflx+1), min(ewn,nint(real(ew)+isotwk%nflx-1.0))
+          do nsflx = max(1,ns-isotwk%nflx+1), min(nsn,ns+isotwk%nflx-1)
+            do ewflx = max(1,ew-isotwk%nflx+1), min(ewn,ew+isotwk%nflx-1)
 
               ! ** find the correct function value to use
               ! ** the array dflct is one quadrant of the a square

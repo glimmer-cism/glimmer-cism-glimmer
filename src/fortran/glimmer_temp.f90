@@ -44,7 +44,115 @@ module glide_temp
 
   use glide_types
 
+  private :: find_dt_wat
+
 contains
+
+  subroutine init_temp(model)
+    !*FD initialise temperature module
+    use physcon, only : rhoi, shci, coni, scyr, grav, gn, lhci, rhow
+    use paramets, only : tim0, thk0, acc0, len0, vis0, vel0
+    use glimmer_global, only : dp 
+    implicit none
+    type(glide_global_type),intent(inout) :: model       !*FD Ice model parameters.
+
+    integer, parameter :: p1 = gn + 1  
+    integer up
+    real(dp) :: estimate
+
+    allocate(model%tempwk%floater(model%general%ewn,model%general%nsn))
+    
+    allocate(model%tempwk%initadvt(model%general%upn,model%general%ewn,model%general%nsn))
+    allocate(model%tempwk%inittemp(model%general%upn,model%general%ewn,model%general%nsn))
+    allocate(model%tempwk%dissip(model%general%upn,model%general%ewn,model%general%nsn))
+
+    allocate(model%tempwk%dups(model%general%upn,3))
+
+    allocate(model%tempwk%c1(model%general%upn))
+
+    allocate(model%tempwk%dupa(model%general%upn),model%tempwk%dupb(model%general%upn))
+    allocate(model%tempwk%dupc(model%general%upn))
+
+    allocate(model%tempwk%smth(model%general%ewn,model%general%nsn))
+    allocate(model%tempwk%wphi(model%general%ewn,model%general%nsn))
+    allocate(model%tempwk%bwatu(model%general%ewn,model%general%nsn))
+    allocate(model%tempwk%bwatv(model%general%ewn,model%general%nsn))
+    allocate(model%tempwk%fluxew(model%general%ewn,model%general%nsn))
+    allocate(model%tempwk%fluxns(model%general%ewn,model%general%nsn))
+    allocate(model%tempwk%bint(model%general%ewn-1,model%general%nsn-1))
+
+    model%tempwk%advconst(1) = model%numerics%dttem / (16.0d0 * model%numerics%dew)
+    model%tempwk%advconst(2) = model%numerics%dttem / (16.0d0 * model%numerics%dns)
+
+    model%tempwk%dups = 0.0d0
+
+    do up = 2, model%general%upn-1
+       model%tempwk%dups(up,1) = (model%numerics%sigma(up+1) - model%numerics%sigma(up-1)) * &
+            (model%numerics%sigma(up)   - model%numerics%sigma(up-1))
+       model%tempwk%dups(up,2) = (model%numerics%sigma(up+1) - model%numerics%sigma(up-1)) *  &
+            (model%numerics%sigma(up+1) - model%numerics%sigma(up))
+       model%tempwk%dups(up,3) = model%numerics%sigma(up+1)  - model%numerics%sigma(up-1)
+    end do
+
+    model%tempwk%zbed = 1.0d0 / thk0
+    model%tempwk%dupn = model%numerics%sigma(model%general%upn) - model%numerics%sigma(model%general%upn-1)
+    model%tempwk%wmax = 5.0d0 * tim0 / (scyr * thk0)
+
+    model%tempwk%cons = (/ 2.0d0 * tim0 * model%numerics%dttem * coni / (2.0d0 * rhoi * shci * thk0**2), &
+         model%numerics%dttem / 2.0d0, &
+         2.0d0 * tim0 * model%numerics%dttem * model%paramets%geot / (thk0 * rhoi * shci), &
+         tim0 * acc0 * model%numerics%dttem * model%paramets%geot / coni /)
+
+    model%tempwk%c1 = (model%numerics%sigma * rhoi * grav * thk0**2 / len0)**p1 * &
+         2.0d0 * vis0 * model%numerics%dttem * tim0 / (16.0d0 * rhoi * shci)
+
+    model%tempwk%dupc = (/ (model%numerics%sigma(2) - model%numerics%sigma(1)) / 2.0d0, &
+         ((model%numerics%sigma(up+1) - model%numerics%sigma(up-1)) / 2.0d0, &
+         up=2,model%general%upn-1), (model%numerics%sigma(model%general%upn) - &
+         model%numerics%sigma(model%general%upn-1)) / 2.0d0  /)
+    model%tempwk%dupa = (/ 0.0d0, 0.0d0, &
+         ((model%numerics%sigma(up) - model%numerics%sigma(up-1)) / &
+         ((model%numerics%sigma(up-2) - model%numerics%sigma(up-1)) * &
+         (model%numerics%sigma(up-2) - model%numerics%sigma(up))), &
+         up=3,model%general%upn)  /)
+    model%tempwk%dupb = (/ 0.0d0, 0.0d0, &
+         ((model%numerics%sigma(up) - model%numerics%sigma(up-2)) / &
+         ((model%numerics%sigma(up-1) - model%numerics%sigma(up-2)) * &
+         (model%numerics%sigma(up-1) - model%numerics%sigma(up))), &
+         up=3,model%general%upn)  /)
+    
+    model%tempwk%f = (/ tim0 * coni / (thk0**2 * lhci * rhoi), &
+         tim0 * model%paramets%geot / &
+         (thk0 * lhci * rhoi), &
+         tim0 * thk0 * rhoi * shci /  &
+         (thk0 * tim0 * model%numerics%dttem * lhci * rhoi), &
+         tim0 * thk0**2 * vel0 * grav * rhoi / &
+         (4.0d0 * thk0 * len0 * rhoi * lhci) /)
+
+    select case(model%options%whichbwat)
+       case(0)
+          model%paramets%hydtim = tim0 / (model%paramets%hydtim * scyr)
+          estimate = 0.2d0 / model%paramets%hydtim
+          call find_dt_wat(model%numerics%dttem,estimate,model%tempwk%dt_wat,model%tempwk%nwat) 
+          
+          ! ** print *, model%numerics%dttem*tim0/scyr, model%tempwk%dt_wat*tim0/scyr, model%tempwk%nwat
+
+          model%tempwk%c = (/ model%tempwk%dt_wat, 1.0d0 - 0.5d0 * model%tempwk%dt_wat * model%paramets%hydtim, &
+               1.0d0 + 0.5d0 * model%tempwk%dt_wat * model%paramets%hydtim, 0.0d0, 0.0d0, 0.0d0, 0.0d0, 0.0d0 /) 
+       case(1)
+          model%tempwk%watvel = model%paramets%hydtim * tim0 / (scyr * len0)
+          estimate = (0.2d0 * model%tempwk%watvel) / min(model%numerics%dew,model%numerics%dns)
+          call find_dt_wat(model%numerics%dttem,estimate,model%tempwk%dt_wat,model%tempwk%nwat) 
+          
+          print *, model%numerics%dttem*tim0/scyr, model%tempwk%dt_wat*tim0/scyr, model%tempwk%nwat
+
+          model%tempwk%c = (/ rhow * grav, rhoi * grav, 2.0d0 * model%numerics%dew, 2.0d0 * model%numerics%dns, &
+               0.25d0 * model%tempwk%dt_wat / model%numerics%dew, 0.25d0 * model%tempwk%dt_wat / model%numerics%dns, &
+               0.5d0 * model%tempwk%dt_wat / model%numerics%dew, 0.5d0 * model%tempwk%dt_wat / model%numerics%dns /)
+          
+       end select
+  end subroutine init_temp
+    
 
   subroutine timeevoltemp(model,which)
 
@@ -80,7 +188,6 @@ contains
     integer, parameter :: mxit = 100
     integer, parameter :: ewbc = 1, nsbc = 1 
 
-    logical, allocatable, dimension(:,:) :: floater
 
     !------------------------------------------------------------------------------------
     ! ewbc/nsbc set the type of boundary condition aplied at the end of
@@ -103,8 +210,8 @@ contains
 
        ! Work out where the ice is floating, and assign to mask array -------------------
 
-       allocate(floater(model%general%ewn,model%general%nsn))
-       floater = abs(model%geometry%topg-model%geometry%lsrf) > floatlim
+       
+       model%tempwk%floater = abs(model%geometry%topg-model%geometry%lsrf) > floatlim
 
        ! Calculate time-derivatives of thickness and upper surface elevation ------------
 
@@ -172,14 +279,9 @@ contains
                model%climate% acab)
        end select
 
-       ! Allocate some arrays and initialise ----------------------------------------------
-
-       allocate(model%tempwk%initadvt(model%general%upn,model%general%ewn,model%general%nsn))
-       allocate(model%tempwk%inittemp(model%general%upn,model%general%ewn,model%general%nsn))
-       allocate(model%tempwk%dissip(model%general%upn,model%general%ewn,model%general%nsn))
-
        model%tempwk%inittemp = 0.0d0
-
+       model%tempwk%initadvt = 0.0d0
+       model%tempwk%dissip   = 0.0d0
        ! ----------------------------------------------------------------------------------
 
        call finddisp(model, &
@@ -220,7 +322,7 @@ contains
                         model%velocity%wvel(:,ew,ns), &
                         model%geometry%thck(ew,ns), &
                         model%climate%artm(ew,ns), &
-                        floater(ew,ns))
+                        model%tempwk%floater(ew,ns))
 
                    prevtemp = model%temper%temp(:,ew,ns)
 
@@ -238,10 +340,6 @@ contains
                 endif
              end do
           end do
-
-          if (0 == iter) then
-             deallocate(model%tempwk%initadvt)
-          end if
 
           iter = iter + 1
 
@@ -263,34 +361,29 @@ contains
           end do
        end do
 
-       deallocate(model%tempwk%inittemp)
-
        call swapbndt(ewbc, &
             model%temper%temp(:,1,:), &
             model%temper%temp(:,2,:), &
             model%temper%temp(:,model%general%ewn,:), &
-            model%temper%temp(:,model%general%ewn-1,:), &
-            0)
+            model%temper%temp(:,model%general%ewn-1,:))
        call swapbndt(nsbc, &
             model%temper%temp(:,:,1), &
             model%temper%temp(:,:,2), &
             model%temper%temp(:,:,model%general%nsn), &
-            model%temper%temp(:,:,model%general%nsn-1), &
-            1)
+            model%temper%temp(:,:,model%general%nsn-1))
 
        ! Calculate basal melt rate --------------------------------------------------
 
        call calcbmlt(model, &
             model%temper%temp, &
             model%geometry%thck, &
-            model%temper%bwat, &
             model%geomderv%stagthck, &
             model%geomderv%dusrfdew, &
             model%geomderv%dusrfdns, &
             model%velocity%ubas, &
             model%velocity%vbas, &
             model%temper%bmlt, &
-            floater)
+            model%tempwk%floater)
 
        ! Calculate basal water depth ------------------------------------------------
 
@@ -301,11 +394,7 @@ contains
             model%geometry%thck, &
             model%geometry%topg, &
             model%temper%temp(model%general%upn,:,:), &
-            floater) 
-
-       ! Deallocate arrays ----------------------------------------------------------
-
-       deallocate(model%tempwk%dissip,floater)
+            model%tempwk%floater) 
 
     case(2) ! Do something else, unspecified ---------------------------------------
 
@@ -434,12 +523,6 @@ contains
 
     integer :: ew,ns
 
-    if (model%tempwk%first1) then
-       model%tempwk%advconst(1) = model%numerics%dttem / (16.0d0 * model%numerics%dew)
-       model%tempwk%advconst(2) = model%numerics%dttem / (16.0d0 * model%numerics%dns)
-       model%tempwk%first1 = .false.
-    end if
-
     model%tempwk%initadvt = 0.0d0
 
     do ns = 2,model%general%nsn-1
@@ -464,8 +547,6 @@ contains
   subroutine findvtri(model,iter,ew,ns,subd,diag,supd,rhsd,iteradvt,diagadvt,temp,wgrd,wvel,thck,artm,float)
 
     use glimmer_global, only : dp, sp 
-    use physcon, only : rhoi, shci, coni, scyr 
-    use paramets, only : tim0, thk0, acc0 !, geot
 
     implicit none
 
@@ -476,37 +557,9 @@ contains
     real(sp), intent(in) :: artm 
     real(dp), dimension(:), intent(out) :: subd, diag, supd, rhsd
     logical, intent(in) :: float
-    integer :: up
 
     real(dp) :: fact(3), dupnp1
     real(dp), dimension(size(model%numerics%sigma)) :: weff
-
-    if (model%tempwk%first2) then
-
-       allocate(model%tempwk%dups(model%general%upn,3))
-
-       model%tempwk%dups = 0.0d0
-
-       do up = 2, model%general%upn-1
-          model%tempwk%dups(up,1) = (model%numerics%sigma(up+1) - model%numerics%sigma(up-1)) * &
-               (model%numerics%sigma(up)   - model%numerics%sigma(up-1))
-          model%tempwk%dups(up,2) = (model%numerics%sigma(up+1) - model%numerics%sigma(up-1)) *  &
-               (model%numerics%sigma(up+1) - model%numerics%sigma(up))
-          model%tempwk%dups(up,3) = model%numerics%sigma(up+1)  - model%numerics%sigma(up-1)
-       end do
-
-       model%tempwk%zbed = 1.0d0 / thk0
-       model%tempwk%dupn = model%numerics%sigma(model%general%upn) - model%numerics%sigma(model%general%upn-1)
-       model%tempwk%wmax = 5.0d0 * tim0 / (scyr * thk0)
-
-       model%tempwk%cons = (/ 2.0d0 * tim0 * model%numerics%dttem * coni / (2.0d0 * rhoi * shci * thk0**2), &
-            model%numerics%dttem / 2.0d0, &
-            2.0d0 * tim0 * model%numerics%dttem * model%paramets%geot / (thk0 * rhoi * shci), &
-            tim0 * acc0 * model%numerics%dttem * model%paramets%geot / coni /)
-
-       model%tempwk%first2 = .false.
-
-    end if
 
     fact(1) = model%tempwk%cons(1) / thck**2
     fact(2) = model%tempwk%cons(2) / thck
@@ -607,8 +660,7 @@ contains
 
     use glimmer_global, only : dp
     use glimmer_utils, only : hsum, lsum
-    use physcon, only : rhoi, grav, shci, gn
-    use paramets, only : vis0, len0, thk0, tim0
+    use physcon, only : gn
 
     implicit none
 
@@ -621,85 +673,68 @@ contains
 
     real(dp) :: c2
 
-    integer :: iew, ins
-
     ! two methods of doing this. 
     ! 1. find dissipation at u-pts and then average
     ! 2. find dissipation at H-pts by averaging quantities from u-pts
     ! 2. works best for eismint divide (symmetry) but 1 likely to be better for full expts
 
-    if (.true.) then
+    !DEAD! if (.true.) then
 
-       if (model%tempwk%first3) then
-          allocate(model%tempwk%c1(model%general%upn))
-          model%tempwk%c1 = (model%numerics%sigma * rhoi * grav * thk0**2 / len0)**p1 * &
-               2.0d0 * vis0 * model%numerics%dttem * tim0 / (16.0d0 * rhoi * shci)
-          model%tempwk%first3 = .false.
-       end if
-
-       model%tempwk%dissip = 0.0d0
-
-       do ns = 2, model%general%nsn-1
-          do ew = 2, model%general%ewn-1
-             if (thck(ew,ns) > model%numerics%thklim) then
-
-                c2 = (sum(stagthck(ew-1:ew,ns-1:ns))/4.0d0 * dsqrt(sum((dusrfdew(ew-1:ew,ns-1:ns))/4.0d0)**2 &
-                     + sum((dusrfdns(ew-1:ew,ns-1:ns))/4.0d0)**2))**p1                      
-
-                model%tempwk%dissip(:,ew,ns) = c2 * model%tempwk%c1 * (hsum(flwa(:,ew-1:ew+1,ns-1:ns+1)) + flwa(:,ew,ns) &
-                     + lsum(flwa(:,ew-1:ew+1,ns)) + lsum(flwa(:,ew,ns-1:ns+1)))
-
-             end if
-          end do
+    model%tempwk%dissip = 0.0d0
+    
+    do ns = 2, model%general%nsn-1
+       do ew = 2, model%general%ewn-1
+          if (thck(ew,ns) > model%numerics%thklim) then
+             
+             c2 = (sum(stagthck(ew-1:ew,ns-1:ns))/4.0d0 * dsqrt(sum((dusrfdew(ew-1:ew,ns-1:ns))/4.0d0)**2 &
+                  + sum((dusrfdns(ew-1:ew,ns-1:ns))/4.0d0)**2))**p1                      
+             
+             model%tempwk%dissip(:,ew,ns) = c2 * model%tempwk%c1 * (hsum(flwa(:,ew-1:ew+1,ns-1:ns+1)) + flwa(:,ew,ns) &
+                  + lsum(flwa(:,ew-1:ew+1,ns)) + lsum(flwa(:,ew,ns-1:ns+1)))
+             
+          end if
        end do
+    end do
 
-    else
-
-       ! old method based on u pts
-
-       if (model%tempwk%first3) then
-          allocate(model%tempwk%c1(model%general%upn))
-          model%tempwk%c1 = (model%numerics%sigma * rhoi * grav * thk0**2 / len0)**p1 * &
-               2.0d0 * vis0 * model%numerics%dttem * tim0 / (16.0d0 * rhoi * shci)
-          model%tempwk%first3 = .false.
-       end if
-
-       model%tempwk%dissip = 0.0d0
-
-       do ns = 2, model%general%nsn-1
-          do ew = 2, model%general%ewn-1
-             if (thck(ew,ns) > model%numerics%thklim) then
-
-                do ins = ns-1,ns
-                   do iew = ew-1,ew
-                      c2 = (stagthck(iew,ins) * dsqrt(dusrfdew(iew,ins)**2 + dusrfdns(iew,ins)**2))**p1                        
-                      model%tempwk%dissip(:,ew,ns) = model%tempwk%dissip(:,ew,ns) + c2 * hsum(flwa(:,iew:iew+1,ins:ins+1))
-                   end do
-                end do
-
-                model%tempwk%dissip(:,ew,ns) = model%tempwk%c1 * model%tempwk%dissip(:,ew,ns)
-
-             end if
-          end do
-       end do
-
-    end if
+    !DEAD!else
+    !DEAD!
+    !DEAD!   ! old method based on u pts
+    !DEAD!
+    !DEAD!
+    !DEAD!   model%tempwk%dissip = 0.0d0
+    !DEAD!
+    !DEAD!   do ns = 2, model%general%nsn-1
+    !DEAD!      do ew = 2, model%general%ewn-1
+    !DEAD!         if (thck(ew,ns) > model%numerics%thklim) then
+    !DEAD!
+    !DEAD!            do ins = ns-1,ns
+    !DEAD!               do iew = ew-1,ew
+    !DEAD!                  c2 = (stagthck(iew,ins) * dsqrt(dusrfdew(iew,ins)**2 + dusrfdns(iew,ins)**2))**p1                        
+    !DEAD!                  model%tempwk%dissip(:,ew,ns) = model%tempwk%dissip(:,ew,ns) + c2 * hsum(flwa(:,iew:iew+1,ins:ins+1))
+    !DEAD!               end do
+    !DEAD!            end do
+    !DEAD!
+    !DEAD!           model%tempwk%dissip(:,ew,ns) = model%tempwk%c1 * model%tempwk%dissip(:,ew,ns)
+    !DEAD!
+    !DEAD!         end if
+    !DEAD!      end do
+    !DEAD!   end do
+    !DEAD!
+    !DEAD!end if
 
   end subroutine finddisp
 
   !-----------------------------------------------------------------------------------
 
-  subroutine calcbmlt(model,temp,thck,bwat,stagthck,dusrfdew,dusrfdns,ubas,vbas,bmlt,floater)
+  subroutine calcbmlt(model,temp,thck,stagthck,dusrfdew,dusrfdns,ubas,vbas,bmlt,floater)
 
     use glimmer_global, only : dp 
-    use physcon, only : rhoi, grav, lhci, coni, shci
-    use paramets, only : vel0, thk0, len0, tim0
 
     implicit none 
 
     type(glide_global_type) :: model
     real(dp), dimension(:,0:,0:), intent(in) :: temp
-    real(dp), dimension(:,:), intent(in) :: thck, bwat, stagthck, dusrfdew, dusrfdns, ubas, vbas  
+    real(dp), dimension(:,:), intent(in) :: thck,  stagthck, dusrfdew, dusrfdns, ubas, vbas  
     real(dp), dimension(:,:), intent(out) :: bmlt
     logical, dimension(:,:), intent(in) :: floater
 
@@ -708,43 +743,12 @@ contains
 
     integer :: ewp, nsp,up,ew,ns
 
-    if (model%tempwk%first4) then
-
-       allocate(model%tempwk%dupa(model%general%upn),model%tempwk%dupb(model%general%upn))
-       allocate(model%tempwk%dupc(model%general%upn))
-
-       model%tempwk%dupc = (/ (model%numerics%sigma(2) - model%numerics%sigma(1)) / 2.0d0, &
-            ((model%numerics%sigma(up+1) - model%numerics%sigma(up-1)) / 2.0d0, &
-            up=2,model%general%upn-1), (model%numerics%sigma(model%general%upn) - &
-            model%numerics%sigma(model%general%upn-1)) / 2.0d0  /)
-       model%tempwk%dupa = (/ 0.0d0, 0.0d0, &
-            ((model%numerics%sigma(up) - model%numerics%sigma(up-1)) / &
-            ((model%numerics%sigma(up-2) - model%numerics%sigma(up-1)) * &
-            (model%numerics%sigma(up-2) - model%numerics%sigma(up))), &
-            up=3,model%general%upn)  /)
-       model%tempwk%dupb = (/ 0.0d0, 0.0d0, &
-            ((model%numerics%sigma(up) - model%numerics%sigma(up-2)) / &
-            ((model%numerics%sigma(up-1) - model%numerics%sigma(up-2)) * &
-            (model%numerics%sigma(up-1) - model%numerics%sigma(up))), &
-            up=3,model%general%upn)  /)
-
-       model%tempwk%f = (/ tim0 * coni / (thk0**2 * lhci * rhoi), &
-            tim0 * model%paramets%geot / &
-            (thk0 * lhci * rhoi), &
-            tim0 * thk0 * rhoi * shci /  &
-            (thk0 * tim0 * model%numerics%dttem * lhci * rhoi), &
-            tim0 * thk0**2 * vel0 * grav * rhoi / &
-            (4.0d0 * thk0 * len0 * rhoi * lhci) /)
-
-       model%tempwk%first4 = .false.
-
-    end if
 
     do ns = 2, model%general%nsn-1
        do ew = 2, model%general%ewn-1
           if (thck(ew,ns) > model%numerics%thklim .and. .not. floater(ew,ns)) then
 
-             call calcpmpt(pmptemp,thck(ew,ns),model%numerics%sigma,model%general%upn)
+             call calcpmpt(pmptemp,thck(ew,ns),model%numerics%sigma)
 
              if (abs(temp(model%general%upn,ew,ns)-pmptemp(model%general%upn)) .lt. 0.001) then
 
@@ -807,8 +811,7 @@ contains
   subroutine calcbwat(model,which,bmlt,bwat,thck,topg,btem,floater)
 
     use glimmer_global, only : dp 
-    use physcon, only : rhoi, grav, rhow, scyr
-    use paramets, only : tim0, thk0, len0 
+    use paramets, only : thk0
 
     implicit none
 
@@ -823,26 +826,12 @@ contains
          blim = (/ 0.00001 / thk0, 0.001 / thk0 /)
 
     real(dp), parameter :: smthf = 0.01d0 
-    real(dp) :: estimate, dwphidew, dwphidns, dwphi, watvel, pmpt, bave
-    real(dp), dimension(:,:), allocatable :: wphi, bwatu, bwatv, fluxew, fluxns, bint, smth
+    real(dp) :: dwphidew, dwphidns, dwphi, pmpt, bave
 
     integer :: t_wat,ns,ew
 
     select case (which)
     case(0)
-
-       if (model%tempwk%first5) then
-          model%paramets%hydtim = tim0 / (model%paramets%hydtim * scyr)
-          estimate = 0.2d0 / model%paramets%hydtim
-          call find_dt_wat(model%numerics%dttem,estimate,model%tempwk%dt_wat,model%tempwk%nwat) 
-
-          ! ** print *, model%numerics%dttem*tim0/scyr, model%tempwk%dt_wat*tim0/scyr, model%tempwk%nwat
-
-          model%tempwk%c = (/ model%tempwk%dt_wat, 1.0d0 - 0.5d0 * model%tempwk%dt_wat * model%paramets%hydtim, &
-               1.0d0 + 0.5d0 * model%tempwk%dt_wat * model%paramets%hydtim, 0.0d0, 0.0d0, 0.0d0, 0.0d0, 0.0d0 /) 
-
-          model%tempwk%first5 = .false.
-       end if
 
        do t_wat = 1, model%tempwk%nwat
           do ns = 2,model%general%nsn-1
@@ -862,52 +851,35 @@ contains
           end do
        end do
 
-       allocate(smth(model%general%ewn,model%general%nsn))
-
+       model%tempwk%smth = 0.
        do ns = 2,model%general%nsn-1
           do ew = 2,model%general%ewn-1
 
              if (blim(2) < bwat(ew,ns)) then
-                smth(ew,ns) = bwat(ew,ns) + smthf * &
+                model%tempwk%smth(ew,ns) = bwat(ew,ns) + smthf * &
                      (bwat(ew-1,ns) + bwat(ew+1,ns) + bwat(ew,ns-1) + bwat(ew,ns+1) - 4.0d0 * bwat(ew,ns))
              else 
-                smth(ew,ns) = bwat(ew,ns)
+                model%tempwk%smth(ew,ns) = bwat(ew,ns)
              end if
 
           end do
        end do
 
-       bwat(2:model%general%ewn-1,2:model%general%nsn-1) = smth(2:model%general%ewn-1,2:model%general%nsn-1)
-       deallocate(smth)
+       bwat(2:model%general%ewn-1,2:model%general%nsn-1) = model%tempwk%smth(2:model%general%ewn-1,2:model%general%nsn-1)
 
     case(1)
-
-       if (model%tempwk%first5) then
-
-          watvel = model%paramets%hydtim * tim0 / (scyr * len0)
-          estimate = (0.2d0 * watvel) / min(model%numerics%dew,model%numerics%dns)
-          call find_dt_wat(model%numerics%dttem,estimate,model%tempwk%dt_wat,model%tempwk%nwat) 
-
-          print *, model%numerics%dttem*tim0/scyr, model%tempwk%dt_wat*tim0/scyr, model%tempwk%nwat
-
-          model%tempwk%c = (/ rhow * grav, rhoi * grav, 2.0d0 * model%numerics%dew, 2.0d0 * model%numerics%dns, &
-               0.25d0 * model%tempwk%dt_wat / model%numerics%dew, 0.25d0 * model%tempwk%dt_wat / model%numerics%dns, &
-               0.5d0 * model%tempwk%dt_wat / model%numerics%dew, 0.5d0 * model%tempwk%dt_wat / model%numerics%dns /)
-
-          model%tempwk%first5 = .false. 
-
-       end if
 
        ! ** add any melt_water
 
        bwat = max(0.0d0,bwat + model%numerics%dttem * bmlt)
 
-       allocate(wphi(model%general%ewn,model%general%nsn))
-       allocate(bwatu(model%general%ewn,model%general%nsn))
-       allocate(bwatv(model%general%ewn,model%general%nsn)) 
-       allocate(fluxew(model%general%ewn,model%general%nsn))
-       allocate(fluxns(model%general%ewn,model%general%nsn))
-       allocate(bint(model%general%ewn-1,model%general%nsn-1)) 
+       model%tempwk%wphi = 0.
+       model%tempwk%bwatu = 0.
+       model%tempwk%bwatv = 0.
+       model%tempwk%fluxew = 0.
+       model%tempwk%fluxns = 0.
+       model%tempwk%bint = 0.
+
 
        ! ** split time evolution into steps to avoid CFL problems
 
@@ -922,12 +894,12 @@ contains
                 if (model%numerics%thklim < thck(ew,ns) .and. .not. floater(ew,ns)) then
                    call calcpmptb(pmpt,thck(ew,ns))
                    if (btem(ew,ns) == pmpt) then
-                      wphi(ew,ns) = model%tempwk%c(1) * (topg(ew,ns) + bwat(ew,ns)) + model%tempwk%c(2) * thck(ew,ns)
+                      model%tempwk%wphi(ew,ns) = model%tempwk%c(1) * (topg(ew,ns) + bwat(ew,ns)) + model%tempwk%c(2) * thck(ew,ns)
                    else
-                      wphi(ew,ns) = model%tempwk%c(1) * (topg(ew,ns) + thck(ew,ns))
+                      model%tempwk%wphi(ew,ns) = model%tempwk%c(1) * (topg(ew,ns) + thck(ew,ns))
                    end if
                 else 
-                   wphi(ew,ns) = max(model%tempwk%c(1) * topg(ew,ns),0.0d0)
+                   model%tempwk%wphi(ew,ns) = max(model%tempwk%c(1) * topg(ew,ns),0.0d0)
                 end if
              end do
           end do
@@ -940,17 +912,17 @@ contains
              do ew = 2,model%general%ewn-1
                 if (thck(ew,ns) > model%numerics%thklim) then
 
-                   dwphidew = (wphi(ew+1,ns) - wphi(ew-1,ns)) / model%tempwk%c(3)       
-                   dwphidns = (wphi(ew,ns+1) - wphi(ew,ns-1)) / model%tempwk%c(4)  
+                   dwphidew = (model%tempwk%wphi(ew+1,ns) - model%tempwk%wphi(ew-1,ns)) / model%tempwk%c(3)       
+                   dwphidns = (model%tempwk%wphi(ew,ns+1) - model%tempwk%wphi(ew,ns-1)) / model%tempwk%c(4)  
 
-                   dwphi = - watvel / sqrt(dwphidew**2 + dwphidns**2)
+                   dwphi = - model%tempwk%watvel / sqrt(dwphidew**2 + dwphidns**2)
 
-                   bwatu(ew,ns) = dwphi * dwphidew  
-                   bwatv(ew,ns) = dwphi * dwphidns  
+                   model%tempwk%bwatu(ew,ns) = dwphi * dwphidew  
+                   model%tempwk%bwatv(ew,ns) = dwphi * dwphidns  
 
                 else
-                   bwatu(ew,ns) = 0.0d0
-                   bwatv(ew,ns) = 0.0d0
+                   model%tempwk%bwatu(ew,ns) = 0.0d0
+                   model%tempwk%bwatv(ew,ns) = 0.0d0
                 end if
              end do
           end do
@@ -959,8 +931,8 @@ contains
 
           ! ** 1. find fluxes F=uW
 
-          fluxew = bwat * bwatu
-          fluxns = bwat * bwatv
+          model%tempwk%fluxew = bwat * model%tempwk%bwatu
+          model%tempwk%fluxns = bwat * model%tempwk%bwatv
 
           ! ** 2. do 1st LW step on staggered grid for dt/2
 
@@ -971,28 +943,28 @@ contains
 
                 if (bave > 0.0d0) then
 
-                   bint(ew,ns) = bave - &
-                        model%tempwk%c(5) * (sum(fluxew(ew+1,ns:ns+1)) - sum(fluxew(ew,ns:ns+1))) - &
-                        model%tempwk%c(6) * (sum(fluxns(ew:ew+1,ns+1)) - sum(fluxns(ew:ew+1,ns)))
+                   model%tempwk%bint(ew,ns) = bave - &
+                        model%tempwk%c(5) * (sum(model%tempwk%fluxew(ew+1,ns:ns+1)) - sum(model%tempwk%fluxew(ew,ns:ns+1))) - &
+                        model%tempwk%c(6) * (sum(model%tempwk%fluxns(ew:ew+1,ns+1)) - sum(model%tempwk%fluxns(ew:ew+1,ns)))
 
                 else
-                   bint(ew,ns) = 0.0d0
+                   model%tempwk%bint(ew,ns) = 0.0d0
                 end if
              end do
           end do
 
           ! ** 3. find fluxes F=uW on staggered grid griven new Ws
 
-          fluxew(1:model%general%ewn-1,1:model%general%nsn-1) = bint * 0.25 * &
-               (bwatu(1:model%general%ewn-1,1:model%general%nsn-1) + &
-               bwatu(2:model%general%ewn,1:model%general%nsn-1) + &
-               bwatu(1:model%general%ewn-1,2:model%general%nsn) + &
-               bwatu(2:model%general%ewn,2:model%general%nsn))
-          fluxns(1:model%general%ewn-1,1:model%general%nsn-1) = bint * 0.25 * &
-               (bwatv(1:model%general%ewn-1,1:model%general%nsn-1) + &
-               bwatv(2:model%general%ewn,1:model%general%nsn-1) + &
-               bwatv(1:model%general%ewn-1,2:model%general%nsn) + &
-               bwatv(2:model%general%ewn,2:model%general%nsn))
+          model%tempwk%fluxew(1:model%general%ewn-1,1:model%general%nsn-1) = model%tempwk%bint * 0.25 * &
+               (model%tempwk%bwatu(1:model%general%ewn-1,1:model%general%nsn-1) + &
+               model%tempwk%bwatu(2:model%general%ewn,1:model%general%nsn-1) + &
+               model%tempwk%bwatu(1:model%general%ewn-1,2:model%general%nsn) + &
+               model%tempwk%bwatu(2:model%general%ewn,2:model%general%nsn))
+          model%tempwk%fluxns(1:model%general%ewn-1,1:model%general%nsn-1) = model%tempwk%bint * 0.25 * &
+               (model%tempwk%bwatv(1:model%general%ewn-1,1:model%general%nsn-1) + &
+               model%tempwk%bwatv(2:model%general%ewn,1:model%general%nsn-1) + &
+               model%tempwk%bwatv(1:model%general%ewn-1,2:model%general%nsn) + &
+               model%tempwk%bwatv(2:model%general%ewn,2:model%general%nsn))
 
           ! ** 4. finally do 2nd LW step to get back on to main grid
 
@@ -1001,8 +973,8 @@ contains
                 if (bwat(ew,ns) > 0.0d0) then
 
                    bwat(ew,ns) = bwat(ew,ns) - &
-                        model%tempwk%c(7) * (sum(fluxew(ew,ns-1:ns)) - sum(fluxew(ew-1,ns-1:ns))) - &
-                        model%tempwk%c(8) * (sum(fluxns(ew-1:ew,ns)) - sum(fluxns(ew-1:ew,ns-1)))
+                        model%tempwk%c(7) * (sum(model%tempwk%fluxew(ew,ns-1:ns)) - sum(model%tempwk%fluxew(ew-1,ns-1:ns))) - &
+                        model%tempwk%c(8) * (sum(model%tempwk%fluxns(ew-1:ew,ns)) - sum(model%tempwk%fluxns(ew-1:ew,ns-1)))
 
                 else
                    bwat(ew,ns) = 0.0d0
@@ -1015,8 +987,6 @@ contains
           bwat = 0.0d0
        end where
 
-       deallocate(bint,fluxew,fluxns,bwatu,bwatv,wphi)
-
     case default
 
        bwat = 0.0d0
@@ -1026,22 +996,21 @@ contains
     ! How to call the flow router.
     ! call advectflow(bwat,phi,bmlt,model%geometry%mask)
 
-  contains
-
-    subroutine find_dt_wat(dttem,estimate,dt_wat,nwat)
-
-      implicit none
-
-      real(dp), intent(out) :: dt_wat
-      integer, intent(out) :: nwat
-      real(dp), intent(in) :: dttem, estimate
-
-      nwat = int(dttem/estimate) + 1
-      dt_wat = dttem / nwat
-
-    end subroutine find_dt_wat
-
   end subroutine calcbwat
+  
+  subroutine find_dt_wat(dttem,estimate,dt_wat,nwat)
+    
+    implicit none
+    
+    real(dp), intent(out) :: dt_wat
+    integer, intent(out) :: nwat
+    real(dp), intent(in) :: dttem, estimate
+    
+    nwat = int(dttem/estimate) + 1
+    dt_wat = dttem / nwat
+
+  end subroutine find_dt_wat
+
 
   !-------------------------------------------------------------------
 
@@ -1094,7 +1063,7 @@ contains
     ! set temperature to pressure melting point 
     ! 2. if bed is wet set basal temperature to pressure melting point 
 
-    call calcpmpt(pmptemp,thck,sigma,upn)
+    call calcpmpt(pmptemp,thck,sigma)
 
     temp = dmin1(temp,pmptemp)
 
@@ -1104,7 +1073,7 @@ contains
 
   !-------------------------------------------------------------------
 
-  subroutine calcpmpt(pmptemp,thck,sigma,upn)
+  subroutine calcpmpt(pmptemp,thck,sigma)
 
     use glimmer_global, only : dp !, upn
     use physcon, only : rhoi, grav, pmlt 
@@ -1115,7 +1084,6 @@ contains
     real(dp), dimension(:), intent(out) :: pmptemp
     real(dp), intent(in) :: thck
     real(dp),intent(in),dimension(:) :: sigma
-    integer, intent(in) :: upn
 
     real(dp), parameter :: fact = - grav * rhoi * pmlt * thk0
 
@@ -1165,7 +1133,7 @@ contains
 
   !-------------------------------------------------------------------
 
-  subroutine swapbndt(bc,a,b,c,d,flag)
+  subroutine swapbndt(bc,a,b,c,d)
 
     use glimmer_global, only : dp
 
@@ -1173,7 +1141,7 @@ contains
 
     real(dp), intent(out), dimension(:,:) :: a, c
     real(dp), intent(in), dimension(:,:) :: b, d
-    integer, intent(in) :: bc, flag
+    integer, intent(in) :: bc
 
     if (bc == 0) then
        a = b
