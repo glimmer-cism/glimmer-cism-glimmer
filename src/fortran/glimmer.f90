@@ -364,7 +364,7 @@ contains
 
   subroutine glint(params,time,temp,precip,zonwind,merwind,orog, &
        output_flag,orog_out,albedo,ice_frac,water_in, &
-       water_out,elapsed_time,total_water_in,total_water_out, &
+       water_out,total_water_in,total_water_out, &
        ice_volume)
 
     !*FD Main Glimmer subroutine.
@@ -402,7 +402,6 @@ contains
     real(rk),dimension(:,:),optional,intent(inout) :: ice_frac        !*FD grid-box ice-fraction
     real(rk),dimension(:,:),optional,intent(inout) :: water_in        !*FD Input water flux          (mm)
     real(rk),dimension(:,:),optional,intent(inout) :: water_out       !*FD Output water flux         (mm)
-    real(rk),               optional,intent(inout) :: elapsed_time    !*FD Time over which output is valid (hours)
     real(rk),               optional,intent(inout) :: total_water_in  !*FD Area-integrated water flux in (kg)
     real(rk),               optional,intent(inout) :: total_water_out !*FD Area-integrated water flux out (kg)
     real(rk),               optional,intent(inout) :: ice_volume      !*FD Total ice volume (m$^3$)
@@ -546,8 +545,6 @@ contains
        do i=1,params%ninstances
           call glint_i_tstep(time,&
                params%instances(i),          &
-               params%g_grid%lats,           &
-               params%g_grid%lons,           &
                params%g_av_temp,             &
                params%g_temp_range,          &
                params%g_av_precip,           &

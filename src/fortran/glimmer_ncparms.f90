@@ -144,7 +144,6 @@ contains
     type(glimmer_nc_output), pointer :: output
     type(glimmer_nc_output), pointer :: handle_output
     real, intent(in) :: start_yr
-    character(len=100) :: message
 
     handle_output=>add(output)
     

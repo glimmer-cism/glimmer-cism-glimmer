@@ -108,13 +108,12 @@ contains
     call write_log('')
   end subroutine eis_temp_printconfig
 
-  subroutine eis_init_temp(temp,model)
+  subroutine eis_init_temp(temp)
     !*FD initialise temperature forcing
     use glide_types
     use paramets, only: thk0
     implicit none
     type(eis_temp_type)     :: temp  !*FD ela data
-    type(glide_global_type) :: model !*FD model instance
 
     call glimmer_read_ts(temp%temp_ts,temp%fname,temp%torder)
     allocate(temp%tvalue(temp%torder))

@@ -186,7 +186,7 @@ contains
     ! local variables
     character(len=valuelen) :: value
     real(kind=dp), dimension(:),allocatable :: tempval
-    integer ios,i,numv
+    integer i,numv
 
     if (present(numval)) then
        numv=numval
@@ -219,7 +219,7 @@ contains
     ! local variables
     character(len=valuelen) :: value
     real, dimension(:),allocatable :: tempval
-    integer ios,i,numv
+    integer i,numv
 
     if (present(numval)) then
        numv=numval
@@ -252,7 +252,7 @@ contains
     ! local variables
     character(len=valuelen) :: value
     integer, dimension(:),allocatable :: tempval
-    integer ios,i,numv
+    integer i,numv
 
     if (present(numval)) then
        numv=numval
@@ -286,7 +286,7 @@ contains
     ! local variables
     character(len=valuelen) :: value
     character(80), dimension(:),allocatable :: tempval
-    integer ios,i,numv
+    integer i,numv
 
     if (present(numval)) then
        numv=numval

@@ -50,7 +50,7 @@ module glint_timestep
 
 contains
 
-  subroutine glint_i_tstep(time,instance,lats,lons,g_temp,g_temp_range, &
+  subroutine glint_i_tstep(time,instance,g_temp,g_temp_range, &
                           g_precip,g_zonwind,g_merwind,g_orog,g_orog_out,g_albedo,g_ice_frac,&
                           g_water_in,g_water_out,t_win,t_wout,ice_vol,out_f)
 
@@ -76,8 +76,6 @@ contains
 
     integer,                intent(in)   :: time         !*FD Current time in hours
     type(glint_instance), intent(inout)  :: instance     !*FD Model instance
-    real(rk),dimension(:),  intent(in)   :: lats         !*FD Latitudes of global grid points (degrees north)
-    real(rk),dimension(:),  intent(in)   :: lons         !*FD Longitudes of global grid points (degrees east)
     real(rk),dimension(:,:),intent(in)   :: g_temp       !*FD Global mean surface temperature field ($^{\circ}$C)
     real(rk),dimension(:,:),intent(in)   :: g_temp_range !*FD Global surface temperature half-range field ($^{\circ}$C)
     real(rk),dimension(:,:),intent(in)   :: g_precip     !*FD Global precip field total (mm)
@@ -104,7 +102,6 @@ contains
     real(rk),dimension(:,:),allocatable :: ablat_temp    ! temporary array for ablation
     integer, dimension(:,:),allocatable :: fudge_mask    ! temporary array for fudging
     real(sp),dimension(:,:),allocatable :: thck_temp     ! temporary array for volume calcs
-    character(40) :: timetxt
     real(rk) :: start_volume,end_volume,flux_fudge
 
     ! Increment average count ------------------------------------------------
@@ -277,8 +274,7 @@ contains
         upscale_temp=0.0
       endwhere
 
-      call mean_to_global(instance%proj,  &
-                          instance%ups,   &
+      call mean_to_global(instance%ups,   &
                           upscale_temp,   &
                           g_water_in,     &
                           instance%out_mask)
@@ -303,8 +299,7 @@ contains
                        instance%proj%dx, &
                        instance%proj%dy)
 
-      call mean_to_global(instance%proj,  &
-                          instance%ups,   &
+      call mean_to_global(instance%ups,   &
                           routing_temp,   &
                           g_water_out,    &
                           instance%out_mask)
@@ -354,8 +349,7 @@ contains
 	  ! Calculate orography
 
     if (present(orog)) then
-      call mean_to_global(instance%proj, &
-                          instance%ups_orog, &
+      call mean_to_global(instance%ups_orog, &
                           instance%model%geometry%usrf, &
                           orog,    &
                           instance%out_mask)
@@ -381,8 +375,7 @@ contains
 
       ! Upscale it...
 
-      call mean_to_global(instance%proj, &
-                          instance%ups, &
+      call mean_to_global(instance%ups, &
                           upscale_temp, &
                           if_temp,    &
                           instance%out_mask)

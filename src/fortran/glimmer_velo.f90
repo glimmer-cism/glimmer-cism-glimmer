@@ -184,7 +184,7 @@ contains
     real(dp),dimension(:,:),  intent(in)    :: dusrfdns
     real(dp),dimension(:,:),  intent(out)   :: diffu
 
-    integer :: ew,ns,ewn,nsn
+    integer :: ewn,nsn
 
     ewn=size(stagthck,1) ; nsn=size(stagthck,2)
 

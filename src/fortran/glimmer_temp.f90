@@ -218,7 +218,7 @@ contains
     real(dp),dimension(size(model%numerics%sigma)) :: prevtemp, iteradvt, diagadvt
     real(dp) :: tempresid
 
-    integer :: iter, again
+    integer :: iter
     integer :: ew,ns
 
     real(dp),parameter :: tempthres = 0.001d0, floatlim = 10.0d0 / thk0
@@ -336,8 +336,6 @@ contains
 
        call hadvall(model, &
             model%temper%temp, &
-            model%velocity%uvel, &
-            model%velocity%vvel, &
             model%geometry%thck)
 
        ! zeroth iteration
@@ -352,18 +350,15 @@ contains
                    weff = 0.0d0
                 end if
 
-                call hadvpnt(model%tempwk,                           &
-                     iteradvt,                               &
+                call hadvpnt(iteradvt,                               &
                      diagadvt,                               &
                      model%temper%temp(:,ew-2:ew+2,ns),      &
                      model%temper%temp(:,ew,ns-2:ns+2),      &
                      model%tempwk%hadv_u(:,ew,ns), &
                      model%tempwk%hadv_v(:,ew,ns))
                
-                call findvtri(model,ew,ns,subd,diag,supd,iteradvt,diagadvt, &
-                     model%temper%temp(:,ew,ns), &
+                call findvtri(model,ew,ns,subd,diag,supd,diagadvt, &
                      weff, &
-                     model%geometry%thck(ew,ns), &
                      is_float(model%geometry%thkmask(ew,ns)))
 
                 call findvtri_init(model,ew,ns,subd,diag,supd,weff,model%temper%temp(:,ew,ns), &
@@ -401,18 +396,15 @@ contains
                       weff = 0.0d0
                    end if
 
-                   call hadvpnt(model%tempwk,                           &
-                        iteradvt,                               &
+                   call hadvpnt(iteradvt,                               &
                         diagadvt,                               &
                         model%temper%temp(:,ew-2:ew+2,ns),      &
                         model%temper%temp(:,ew,ns-2:ns+2),      &
                         model%tempwk%hadv_u(:,ew,ns), &
                         model%tempwk%hadv_v(:,ew,ns))
 
-                   call findvtri(model,ew,ns,subd,diag,supd,iteradvt,diagadvt, &
-                        model%temper%temp(:,ew,ns), &
+                   call findvtri(model,ew,ns,subd,diag,supd,diagadvt, &
                         weff, &
-                        model%geometry%thck(ew,ns), &
                         is_float(model%geometry%thkmask(ew,ns)))
 
                    call findvtri_rhs(model,ew,ns,model%climate%artm(ew,ns),iteradvt,rhsd, &
@@ -514,13 +506,12 @@ contains
 
   !-------------------------------------------------------------------------
 
-  subroutine hadvpnt(tempwk,iteradvt,diagadvt,tempx,tempy,u,v)
+  subroutine hadvpnt(iteradvt,diagadvt,tempx,tempy,u,v)
 
     use glimmer_global, only : dp
 
     implicit none
 
-    type(glide_tempwk) :: tempwk
     real(dp), dimension(:), intent(in) :: u,v
     real(dp), dimension(:,:), intent(in) :: tempx, tempy
     real(dp), dimension(:), intent(out) :: iteradvt, diagadvt
@@ -588,7 +579,7 @@ contains
 
   !-------------------------------------------------------------------------
 
-  subroutine hadvall(model,temp,uvel,vvel,thck)
+  subroutine hadvall(model,temp,thck)
 
     use glimmer_global, only : dp 
 
@@ -596,7 +587,6 @@ contains
 
     type(glide_global_type) :: model
     real(dp), dimension(:,0:,0:), intent(in) :: temp
-    real(dp), dimension(:,:,:), intent(in) :: uvel, vvel
     real(dp), dimension(:,:), intent(in) :: thck
 
     real(dp), dimension(size(temp,dim=1)) :: diagadvt
@@ -609,8 +599,7 @@ contains
        do ew = 2,model%general%ewn-1
           if (thck(ew,ns) > model%numerics%thklim) then
 
-             call hadvpnt(model%tempwk,                   &
-                  model%tempwk%initadvt(:,ew,ns), &
+             call hadvpnt(model%tempwk%initadvt(:,ew,ns), &
                   diagadvt,                       &
                   temp(:,ew-2:ew+2,ns),           &
                   temp(:,ew,ns-2:ns+2),           &
@@ -624,20 +613,19 @@ contains
 
   !-------------------------------------------------------------------------
 
-  subroutine findvtri(model,ew,ns,subd,diag,supd,iteradvt,diagadvt,temp,weff,thck,float)
+  subroutine findvtri(model,ew,ns,subd,diag,supd,diagadvt,weff,float)
 
-    use glimmer_global, only : dp, sp 
+    use glimmer_global, only : dp
 
     implicit none
 
     type(glide_global_type) :: model
     integer, intent(in) :: ew, ns
-    real(dp), dimension(:), intent(in) :: temp, weff, iteradvt, diagadvt
-    real(dp), intent(in) :: thck
+    real(dp), dimension(:), intent(in) :: weff,  diagadvt
     real(dp), dimension(:), intent(out) :: subd, diag, supd
     logical, intent(in) :: float
 
-    real(dp) :: dupnp1, fact(3)
+    real(dp) :: fact(3)
 
     fact(1) = VERT_DIFF*model%tempwk%cons(1) / model%geometry%thck(ew,ns)**2
     fact(2) = VERT_ADV*model%tempwk%cons(2) / model%geometry%thck(ew,ns)    
@@ -681,7 +669,7 @@ contains
 
   subroutine findvtri_init(model,ew,ns,subd,diag,supd,weff,temp,thck,float)
     !*FD called during first iteration to set inittemp
-    use glimmer_global, only : dp, sp 
+    use glimmer_global, only : dp
     implicit none
     type(glide_global_type) :: model
     integer, intent(in) :: ew, ns
@@ -760,7 +748,6 @@ contains
   subroutine finddisp(model,thck,stagthck,dusrfdew,dusrfdns,flwa)
 
     use glimmer_global, only : dp
-    use glimmer_utils, only : hsum, lsum
     use physcon, only : gn
 
     implicit none

@@ -266,7 +266,6 @@ contains
     !*FD this routine does not override the old thickness distribution
 
     use glimmer_global, only : dp
-    use paramets, only : thk0,vel0
     implicit none
     ! subroutine arguments
     type(glide_global_type) :: model
@@ -281,7 +280,6 @@ contains
     real(dp), dimension(5) :: sumd 
     real(dp) :: err
     real(dp), parameter :: tolbnd = 1.0d-6
-    integer :: thckflag = 0
 
     integer :: linit
     integer, parameter :: mxtbnd = 10, ewbc = 1, nsbc = 1
@@ -615,7 +613,7 @@ contains
 
       do ns = 2, model%general%nsn-2 
         if (stagthck(ew,ns) .gt. 0.0d0) then
-          opvrew(ew,ns) = boundyew(pt,ew,ns)
+          opvrew(ew,ns) = boundyew(pt,ns)
           opvrns(ew,ns) = centerns(ew,ns)
         else
           opvrew(ew,ns) = 0.0d0
@@ -632,7 +630,7 @@ contains
       do ew = 2, model%general%ewn-2  
         if (stagthck(ew,ns) .gt. 0.0d0) then
           opvrew(ew,ns) = centerew(ew,ns)
-          opvrns(ew,ns) = boundyns(pt,ew,ns)
+          opvrns(ew,ns) = boundyns(pt,ew)
         else
           opvrew(ew,ns) = 0.0d0
           opvrns(ew,ns) = 0.0d0
@@ -645,9 +643,9 @@ contains
       do ew = 1, model%general%ewn-1, model%general%ewn-2
         if (stagthck(ew,ns) .gt. 0.0d0) then
           pt = whichway(ew)
-          opvrew(ew,ns) = boundyew(pt,ew,ns)
+          opvrew(ew,ns) = boundyew(pt,ns)
           pt = whichway(ns)
-          opvrns(ew,ns) = boundyns(pt,ew,ns)
+          opvrns(ew,ns) = boundyns(pt,ew)
         else
           opvrew(ew,ns) = 0.0d0
           opvrns(ew,ns) = 0.0d0
@@ -681,26 +679,26 @@ contains
   
     end function centerns 
 
-    function boundyew(pt,ew,ns)
+    function boundyew(pt,ns)
 
       implicit none
 
       integer, intent(in) :: pt(2)
       real(dp) :: boundyew
-      integer ns,ew
+      integer ns
 
       boundyew = pt(1) * (3.0d0 * sum(ipvr(pt(2),ns:ns+1)) - 7.0d0 * sum(ipvr(pt(2)+pt(1),ns:ns+1)) + &
                  5.0d0 * sum(ipvr(pt(2)+2*pt(1),ns:ns+1)) - sum(ipvr(pt(2)+3*pt(1),ns:ns+1))) / dewsq4
 
     end function boundyew
 
-    function boundyns(pt,ew,ns)
+    function boundyns(pt,ew)
 
       implicit none
 
       integer, intent(in) :: pt(2)
       real(dp) :: boundyns
-      integer ns,ew
+      integer ew
 
       boundyns = pt(1) * (3.0d0 * sum(ipvr(ew:ew+1,pt(2))) - 7.0d0 * sum(ipvr(ew:ew+1,pt(2)+pt(1))) + &
                  5.0d0 * sum(ipvr(ew:ew+1,pt(2)+2*pt(1))) - sum(ipvr(ew:ew+1,pt(2)+3*pt(1)))) / dnssq4

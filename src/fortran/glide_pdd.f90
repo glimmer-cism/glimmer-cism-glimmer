@@ -332,9 +332,7 @@ contains
 
     real(sp)           :: tma,dtmj
     real(sp),parameter :: twopi = 3.1416 * 2.0 
-    real(sp)           :: fac
-    integer            :: mfin
-    integer  :: kx,ky
+    integer  :: kx,ky, i,j
 
     ! Initialise a couple of constants
 
@@ -350,11 +348,13 @@ contains
 
     call write_log('Calculating PDD table...',GM_DIAGNOSTIC)
 
-    do tma = params%iy, params%iy+(params%ny-1)*params%dy, params%dy
+    do j=0,params%ny-2
+       tma=params%iy + j*params%dy
 
        ky = findgrid(tma,real(params%iy),real(params%dy))
 
-       do dtmj = params%ix, params%ix+(params%nx-1)*params%dx, params%dx
+       do i=0,params%nx-2
+          dtmj = params%ix + i*params%dx
 
           mean_july_temp = tma + dtmj   
           kx  = findgrid(dtmj,real(params%ix),real(params%dx)) 
@@ -389,8 +389,7 @@ contains
 
     real(sp) :: day !*FD The `day', in radians, so that a year is $2\pi$ long.
 
-    real(sp) :: upper_limit,fac
-    integer  :: mfin
+    real(sp) :: upper_limit
 
     t_a_prime=mean_annual_temp+(mean_july_temp-mean_annual_temp)*cos(day)
 

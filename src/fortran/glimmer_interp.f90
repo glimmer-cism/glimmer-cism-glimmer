@@ -333,7 +333,7 @@ contains
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine pointwise_to_global(proj,local,lons,lats,global,mask)
+  subroutine pointwise_to_global(proj,local,lons,lats,global)
 
     !*FD Upscale to global domain by
     !*FD pointwise sampling.
@@ -348,7 +348,6 @@ contains
     real(rk),dimension(:,:),intent(out) :: global    !*FD Global field (output)
     real(rk),dimension(:),  intent(in)  :: lats      !*FD Latitudes of grid-points (degrees)
     real(rk),dimension(:),  intent(in)  :: lons      !*FD Longitudes of grid-points (degrees)
-    integer, dimension(:,:), intent(in),optional :: mask !*FD output mask for upscaling
 
     ! Internal variables
 
@@ -377,7 +376,7 @@ contains
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine mean_to_global_sp(proj,ups,local,global,mask)
+  subroutine mean_to_global_sp(ups,local,global,mask)
 
     !*FD Upscale to global domain by
     !*FD areal averaging.
@@ -392,7 +391,6 @@ contains
 
     ! Arguments
 
-    type(projection),       intent(in)  :: proj   !*FD Projection of local grid.
     type(upscale),          intent(in)  :: ups    !*FD Upscaling indexing data.
     real(sp),dimension(:,:),intent(in)  :: local  !*FD Data on projected grid (input).
     real(rk),dimension(:,:),intent(out) :: global !*FD Data on global grid (output).
@@ -432,7 +430,7 @@ contains
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine mean_to_global_dp(proj,ups,local,global,mask)
+  subroutine mean_to_global_dp(ups,local,global,mask)
 
     !*FD Upscale to global domain by
     !*FD areal averaging.
@@ -447,7 +445,6 @@ contains
 
     ! Arguments
 
-    type(projection),       intent(in)  :: proj   !*FD Projection of local grid.
     type(upscale),          intent(in)  :: ups    !*FD Upscaling indexing data.
     real(dp),dimension(:,:),intent(in)  :: local  !*FD Data on projected grid (input).
     real(rk),dimension(:,:),intent(out) :: global !*FD Data on global grid (output).
@@ -530,7 +527,6 @@ contains
     ! Internal variables
 
     integer :: nx,ny,i
-    integer,dimension(1) :: loc
 
     nx=size(lons) ; ny=size(lats)
 
@@ -661,63 +657,63 @@ contains
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine downs_write_restart(downs,unit)
-
-    !*FD Write the part of a
-    !*FD restart file relating to the downscaling.
-    !*FD Note that the logical file unit must already be open
-
-    ! Arguments
-
-    type(downscale),intent(in) :: downs  !*FD The downscaling parameters to be written
-    integer,        intent(in) :: unit   !*FD The logical file unit to use
-
-    ! temporary variable, this is need to fix an internal compiler error of the SUN WS f95 compiler.
-    logical :: temp
-
-    ! Beginning of code
-    
-!   temp = associated(downs%il)
-!   write(unit) temp
-!   if (temp)  write(unit) downs%il
-
-!   temp = associated(downs%ilp)
-!   write(unit) temp
-!   if (temp)  write(unit) downs%il
-
-!   temp = associated(downs%jl)
-!   write(unit) temp
-!   if (temp)  write(unit) downs%il
-
-!   temp = associated(downs%jlp)
-!   write(unit) temp
-!   if (temp)  write(unit) downs%il
-
-  end subroutine downs_write_restart
-
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-  subroutine downs_read_restart(downs,unit)
-
-    !*FD Read the part of a
-    !*FD restart file relating to the downscaling.
-    !*FD Note that the logical file unit must already be open.
-
-    type(downscale),intent(inout) :: downs !*FD The downscaling parameters to be read.
-    integer,        intent(in)    :: unit  !*FD The logical file unit to use.
-
-    logical :: tempflag
-
-!    read(unit) tempflag
-!    if(tempflag) read(unit) downs%il
-!    read(unit) tempflag
-!    if(tempflag) read(unit) downs%ilp
-!    read(unit) tempflag
-!    if(tempflag) read(unit) downs%jl
-!    read(unit) tempflag
-!    if(tempflag) read(unit) downs%jlp
-
-  end subroutine downs_read_restart
+!!$  subroutine downs_write_restart(downs,unit)
+!!$
+!!$    !*FD Write the part of a
+!!$    !*FD restart file relating to the downscaling.
+!!$    !*FD Note that the logical file unit must already be open
+!!$
+!!$    ! Arguments
+!!$
+!!$    type(downscale),intent(in) :: downs  !*FD The downscaling parameters to be written
+!!$    integer,        intent(in) :: unit   !*FD The logical file unit to use
+!!$
+!!$    ! temporary variable, this is need to fix an internal compiler error of the SUN WS f95 compiler.
+!!$    logical :: temp
+!!$
+!!$    ! Beginning of code
+!!$    
+!!$!   temp = associated(downs%il)
+!!$!   write(unit) temp
+!!$!   if (temp)  write(unit) downs%il
+!!$
+!!$!   temp = associated(downs%ilp)
+!!$!   write(unit) temp
+!!$!   if (temp)  write(unit) downs%il
+!!$
+!!$!   temp = associated(downs%jl)
+!!$!   write(unit) temp
+!!$!   if (temp)  write(unit) downs%il
+!!$
+!!$!   temp = associated(downs%jlp)
+!!$!   write(unit) temp
+!!$!   if (temp)  write(unit) downs%il
+!!$
+!!$  end subroutine downs_write_restart
+!!$
+!!$!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!!$
+!!$  subroutine downs_read_restart(downs,unit)
+!!$
+!!$    !*FD Read the part of a
+!!$    !*FD restart file relating to the downscaling.
+!!$    !*FD Note that the logical file unit must already be open.
+!!$
+!!$    type(downscale),intent(inout) :: downs !*FD The downscaling parameters to be read.
+!!$    integer,        intent(in)    :: unit  !*FD The logical file unit to use.
+!!$
+!!$    logical :: tempflag
+!!$
+!!$!    read(unit) tempflag
+!!$!    if(tempflag) read(unit) downs%il
+!!$!    read(unit) tempflag
+!!$!    if(tempflag) read(unit) downs%ilp
+!!$!    read(unit) tempflag
+!!$!    if(tempflag) read(unit) downs%jl
+!!$!    read(unit) tempflag
+!!$!    if(tempflag) read(unit) downs%jlp
+!!$
+!!$  end subroutine downs_read_restart
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

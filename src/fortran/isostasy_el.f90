@@ -55,7 +55,6 @@ contains
   
   subroutine init_elastic(rbel, deltax)
     !*FD initialise elastic lithosphere calculations
-    use paramets, only: len0
     use physcon, only : pi
     implicit none
     type(isostasy_elastic) :: rbel     !*FD structure holding elastic litho data    

@@ -343,8 +343,7 @@ contains
 	  ! Calculate orography
 
     if (present(orog)) then
-      call mean_to_global(instance%proj, &
-                          instance%ups_orog, &
+      call mean_to_global(instance%ups_orog, &
                           instance%model%geometry%usrf, &
                           orog,    &
                           instance%out_mask)
@@ -370,8 +369,7 @@ contains
 
       ! Upscale it...
 
-      call mean_to_global(instance%proj, &
-                          instance%ups, &
+      call mean_to_global(instance%ups, &
                           upscale_temp, &
                           if_temp,    &
                           instance%out_mask)

@@ -1,3 +1,6 @@
+2005-02-23 Magnus Hagdorn
+ * removed unused symbols and dummy arguments
+
 2005-02-23 Ian Rutt
  * More reorganisation and pruning
  * Set all times and timesteps in GLINT to be in *hours*, converted to

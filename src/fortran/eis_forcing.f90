@@ -67,7 +67,7 @@ contains
     ! initialise subsystems
     call eis_init_cony(climate%cony,model)
     call eis_init_ela(climate%ela,model)
-    call eis_init_temp(climate%temp,model)
+    call eis_init_temp(climate%temp)
     call eis_init_slc(climate%slc)
   end subroutine eis_initialise
 

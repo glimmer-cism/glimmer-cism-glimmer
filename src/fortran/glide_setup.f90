@@ -92,8 +92,6 @@ contains
     
     ! local variables
     type(ConfigSection), pointer :: section
-    type(glimmer_nc_output), pointer :: output => null()
-    type(glimmer_nc_input), pointer :: input => null()
 
     ! read grid size  parameters
     call GetSection(config,section,'grid')
@@ -299,14 +297,14 @@ contains
 
 !-------------------------------------------------------------------------
 
-  subroutine glide_marinlim(which,whicht,thck,relx,topg,lati,mask,mlimit,eus)
+  subroutine glide_marinlim(which,whicht,thck,relx,lati,mask,mlimit,eus)
 
     !*FD Removes non-grounded ice, according to one of two altenative
     !*FD criteria, and sets upper surface of non-ice-covered points 
     !*FD equal to the topographic height, or sea-level, whichever is higher.
 
     use glimmer_global, only : dp, sp
-    use physcon, only : rhoi, rhoo, f
+    use physcon, only : rhoi, rhoo
     use glide_mask
     implicit none
 
@@ -325,7 +323,6 @@ contains
                                                      !*FD if equals six.
     real(dp),dimension(:,:),intent(inout) :: thck    !*FD Ice thickness (scaled)
     real(dp),dimension(:,:),intent(in)    :: relx    !*FD Relaxed topography (scaled)
-    real(dp),dimension(:,:),intent(in)    :: topg    !*FD Actual topography (scaled)
     real(sp),dimension(:,:),intent(in)    :: lati    !*FD Array of latitudes (only used if 
                                                      !*FD $\mathtt{whicht}=6$).
     integer, dimension(:,:),pointer       :: mask    !*FD grid type mask
@@ -335,7 +332,6 @@ contains
     real, intent(inout) :: eus                       !*FD eustatic sea level
     
     integer ew,ns
-    real :: finv = 1./f
     real(dp), parameter :: con = - rhoi / rhoo
     !---------------------------------------------------------------------
 

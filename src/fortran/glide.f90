@@ -252,7 +252,6 @@ contains
   subroutine glide_tstep_p2(model)
     !*FD Performs second part of time-step of an ice model instance.
     !*FD write data and move ice
-    use glimmer_global, only : rk
     use glide_thck
     use glide_velo
     use glide_setup
@@ -317,7 +316,6 @@ contains
          0, &                                        !magi a hack, someone explain what whichthck=6 does
          model%geometry% thck,      &
          model%isos% relx,      &
-         model%geometry% topg,      &
          model%climate%  lati,      &
          model%geometry%thkmask,    &
          model%numerics%mlimit,     &
