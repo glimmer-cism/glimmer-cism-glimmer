@@ -1,10 +1,17 @@
+2004-07-18 Ian Rutt
+ * Added new coding of PDD routines, without any NR code,
+   (glide_pdd.f90), but not "plumbed in" yet.
+
 2004-07-01 Ian Rutt
  * Added documentation comments to glide_messages.f90
 
 2004-06-30 Ian Rutt
- * Completed standardisation of message system - six levels are provided, from     'diagnostics' to 'fatal errors'. The overall message level can be set by        calling glide_set_msg_level. Two output subroutines are provided: glide_msg  
-   and glide_stars; the latter prints a line of 70 stars across the screen.
-
+ * Completed standardisation of message system - six levels are provided,
+ from 'diagnostics' to 'fatal errors'. The overall message level can be
+ set by calling glide_set_msg_level. Two output subroutines are provided:
+ glide_msg and glide_stars; the latter prints a line of 70 stars across
+ the screen. 
+	
 2004-06-30 Ian Rutt
  * Fixed Linux build system after my changes yesterday (the problems of
  doing development under Windows...)

@@ -473,6 +473,7 @@ contains
   subroutine copy0d(unit,outfile)
     !*FD copy 2D data to netCDF file
     use glimmer_ncdf
+    use glide_messages
     implicit none
     integer, intent(in)   :: unit
     type(glimmer_nc_output), pointer :: outfile

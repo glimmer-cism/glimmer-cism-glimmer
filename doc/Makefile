@@ -32,7 +32,7 @@ code_doc.ps:	code_doc.dvi
 		dvips -o code_doc.ps code_doc.dvi
 
 code_doc.tex:	../src/fortran/*.f90
-		f90docp.py -t "GLIMMER Code Documentation" -a "Glimmer Developer Team" $^ > $@
+		f90doc.py -t "GLIMMER Code Documentation" -a "Glimmer Developer Team" $^ > $@
 
 install:	glimmer.ps glimmer.pdf
 		install -d $(GLIMMER_PREFIX)/share/docs/glimmer
