@@ -227,14 +227,14 @@ contains
 
     do i=1,params%ninstances
       call glimmer_i_initialise(params%file_unit,    &
-                             fnamelist(i),        &
-                             params%instances(i), &
-                             params%radea,        &
-                             params%glon,         &
-                             params%glat,         &
-                             params%glon_bound,   &
-                             params%glat_bound,   &
-                             params%tstep_main)
+                                fnamelist(i),        &
+                                params%instances(i), &
+                                params%radea,        &
+                                params%glon,         &
+                                params%glat,         &
+                                params%glon_bound,   &
+                                params%glat_bound,   &
+                                params%tstep_main)
       params%total_coverage = params%total_coverage &
                             + params%instances(i)%frac_coverage
     enddo
@@ -672,6 +672,47 @@ contains
     close(unit)
 
   end subroutine glimmer_read_restart
+
+  subroutine glimmer_set_orog_res(params,lons,lats,lonb,latb)
+
+    !*FD Sets the output resolution of the upscaled orography, which needs
+    !*FD to be different when using a spectral-transform atmosphere. If present, the boundary
+    !*FD arrays \texttt{lonb} and \texttt{latb} have one more element the corresponding
+    !*FD grid-point location array (\texttt{lons} and \texttt{lats}), and are indexed from 1.
+    !*FD The elements are arranged such that the boundarys of \texttt{lons(i)} are found in
+    !*FD \texttt{lonb(i)} and \texttt{lonb(i+1)}.
+
+    implicit none
+
+    type(glimmer_params),          intent(inout) :: params !*FD Ice model parameters.
+    real(dp),dimension(:),         intent(in)    :: lons   !*FD Global grid longitude locations (degrees)
+    real(dp),dimension(:),         intent(in)    :: lats   !*FD Global grid latitude locations (degrees)
+    real(dp),dimension(:),optional,intent(in)    :: lonb   !*FD Global grid-box boundaries in longitude (degrees)
+    real(dp),dimension(:),optional,intent(in)    :: latb   !*FD Global grid-box boundaries in latitude (degrees)
+
+    integer :: i
+    real(dp),dimension(size(lons)+1) :: lon_bound ! Temporary arrays
+    real(dp),dimension(size(lats)+1) :: lat_bound
+    
+    ! Calculate boundaries by 'halfway' method, if either boundary
+    ! array is absent
+
+    if (.not.present(lonb).or..not.present(latb)) then
+      call calc_bounds(lons,lats,lon_bound,lat_bound)
+    endif
+
+    ! Now copy in any boundary array that is present
+
+    if (present(lonb)) lon_bound=lonb
+    if (present(latb)) lat_bound=latb
+
+    do i=1,params%ninstances
+      call new_upscale(params%instances(i)%ups, &    ! Index global boxes
+                       lons,lats,lon_bound, &
+                       lat_bound,params%instances(i)%proj)
+    enddo
+
+  end subroutine glimmer_set_orog_res
 
 !----------------------------------------------------------------------
 ! PRIVATE INTERNAL GLIMMER SUBROUTINES FOLLOW.............

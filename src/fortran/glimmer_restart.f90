@@ -83,9 +83,6 @@ contains
     write(unit) instance% ywind
     write(unit) instance% global_orog
     write(unit) instance% local_orog
-    write(unit) instance% gboxx
-    write(unit) instance% gboxy
-    write(unit) instance% gboxn
     write(unit) instance% frac_coverage
     write(unit) instance% first
 
@@ -421,9 +418,6 @@ contains
     read(unit) instance% ywind
     read(unit) instance% global_orog
     read(unit) instance% local_orog
-    read(unit) instance% gboxx
-    read(unit) instance% gboxy
-    read(unit) instance% gboxn
     read(unit) instance% frac_coverage
     read(unit) instance% first
 

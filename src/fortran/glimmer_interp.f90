@@ -59,14 +59,28 @@ module glimmer_interp
     !*FD of the global grid-boxes within which the given
     !*FD local grid point lies.
 
-    integer, dimension(:,:),pointer :: il    !*FD (see above)
-    integer, dimension(:,:),pointer :: ilp   !*FD (see above)
-    integer, dimension(:,:),pointer :: jl    !*FD (see above)
-    integer, dimension(:,:),pointer :: jlp   !*FD (see above)
-    real(rk),dimension(:,:),pointer :: llats !*FD The latitude of each point in x-y space.
-    real(rk),dimension(:,:),pointer :: llons !*FD The longitude of each point in x-y space.
+    integer, dimension(:,:),pointer :: il    => null() !*FD (see above)
+    integer, dimension(:,:),pointer :: ilp   => null() !*FD (see above)
+    integer, dimension(:,:),pointer :: jl    => null() !*FD (see above)
+    integer, dimension(:,:),pointer :: jlp   => null() !*FD (see above)
+    real(rk),dimension(:,:),pointer :: llats => null() !*FD The latitude of each point in x-y space.
+    real(rk),dimension(:,:),pointer :: llons => null() !*FD The longitude of each point in x-y space.
 
   end type downscale
+
+  type upscale
+  
+    !*FD Derived type containing indexing information
+    !*FD for upscaling by areal averaging.
+
+    integer, dimension(:,:),pointer :: gboxx => null() !*FD $x$-indicies of global grid-box 
+                                                       !*FD containing given local grid-box.
+    integer, dimension(:,:),pointer :: gboxy => null() !*FD $y$-indicies of global grid-box 
+                                                       !*FD containing given local grid-box.
+    integer, dimension(:,:),pointer :: gboxn => null() !*FD Number of local grid-boxes 
+                                                       !*FD contained in each global box.
+    logical                         :: set = .false.   !*FD Set if the type has been initialised.
+  end type upscale
 
 contains
 
@@ -396,7 +410,7 @@ contains
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine mean_to_global(proj,local,gboxx,gboxy,gboxn,global)
+  subroutine mean_to_global(proj,ups,local,global)
 
     !*FD Upscale to global domain by
     !*FD areal averaging.
@@ -412,12 +426,8 @@ contains
     ! Arguments
 
     type(projection),       intent(in)  :: proj   !*FD Projection of local grid.
+    type(upscale),          intent(in)  :: ups    !*FD Upscaling indexing data.
     real(rk),dimension(:,:),intent(in)  :: local  !*FD Data on projected grid (input).
-    integer, dimension(:,:),intent(in)  :: gboxx  !*FD $x$-indicies of global grid-box 
-                                                  !*FD containing given local grid-box.
-    integer, dimension(:,:),intent(in)  :: gboxy  !*FD $y$-indicies of global grid-box 
-                                                  !*FD containing given local grid-box.
-    integer, dimension(:,:),intent(in)  :: gboxn  !*FD Number of local grid-boxes contained in each global box
     real(rk),dimension(:,:),intent(out) :: global !*FD Data on global grid (output).
 
     ! Internal variables
@@ -432,12 +442,12 @@ contains
 
     do i=1,nxl
       do j=1,nyl
-        global(gboxx(i,j),gboxy(i,j))=global(gboxx(i,j),gboxy(i,j))+local(i,j)
+        global(ups%gboxx(i,j),ups%gboxy(i,j))=global(ups%gboxx(i,j),ups%gboxy(i,j))+local(i,j)
        enddo
     enddo  
 
-    where (gboxn.ne.0)
-      global=global/gboxn
+    where (ups%gboxn.ne.0)
+      global=global/ups%gboxn
     elsewhere
       global=0.0
     endwhere  
@@ -641,5 +651,158 @@ contains
     if(tempflag) read(unit) downs%jlp
 
   end subroutine downs_read_restart
+
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  subroutine new_upscale(ups,glon,glat,glon_bound,glat_bound,proj)
+
+    !*FD Compiles an index of which global grid box contains a given
+    !*FD grid box on the projected grid, and sets derived type \texttt{ups}
+    !*FD accordingly.
+
+    ! Arguments
+
+    type(upscale),         intent(out) :: ups        !*FD Upscaling type to be set
+    real(rk),dimension(:), intent(in)  :: glon       !*FD Longitudinal location of global 
+                                                     !*FD grid points (degrees)
+    real(rk),dimension(:), intent(in)  :: glat       !*FD Latitudinal location of global 
+                                                     !*FD grid points (degrees)
+    real(rk),dimension(:), intent(in)  :: glon_bound !*FD Longitudinal boundaries of global 
+                                                     !*FD grid boxes (degrees)
+    real(rk),dimension(:), intent(in)  :: glat_bound !*FD Latitudinal boundaries of global 
+                                                     !*FD grid boxes (degrees)
+    type(projection),      intent(in)  :: proj       !*FD Projection being used
+    
+    ! Internal variables
+
+    integer :: i,j,ii,jj,nx,ny,gnx,gny
+    real(rk) :: plon,plat
+    integer,dimension(proj%nx,proj%ny) :: tempmask
+    
+    ! Beginning of code
+
+    if (associated(ups%gboxx)) deallocate(ups%gboxx)
+    if (associated(ups%gboxy)) deallocate(ups%gboxy)
+    if (associated(ups%gboxn)) deallocate(ups%gboxn)
+
+    allocate(ups%gboxx(proj%nx,proj%ny))
+    allocate(ups%gboxy(proj%nx,proj%ny))     
+    allocate(ups%gboxn(size(glon),size(glat)))
+
+    gnx=size(glon) ; gny=size(glat)
+    nx=proj%nx ; ny=proj%ny
+
+    ups%gboxx=0 ; ups%gboxy=0
+
+    do i=1,nx
+      do j=1,ny
+        call xy_to_ll(plon,plat,real(i,rk),real(j,rk),proj)
+        ii=1 ; jj=1
+        do
+          ups%gboxx(i,j)=ii
+          if (ii>gnx) then
+            print*,'global index failure'
+            stop
+          endif  
+          if (lon_between(glon_bound(ii),glon_bound(ii+1),plon)) exit
+          ii=ii+1
+        enddo
+
+        jj=1
+
+        do
+          ups%gboxy(i,j)=jj
+          if (jj>gny) then
+            print*,'global index failure'
+            stop
+          endif  
+          if ((glat_bound(jj)>=plat).and.(plat>glat_bound(jj+1))) exit
+          jj=jj+1
+        enddo
+
+      enddo
+    enddo
+
+    tempmask=0
+    ups%gboxn=0
+
+    do i=1,gnx
+      do j=1,gny
+        where (ups%gboxx==i.and.ups%gboxy==j) 
+          tempmask=1
+        elsewhere
+          tempmask=0
+        endwhere
+        ups%gboxn(i,j)=sum(tempmask)
+      enddo
+    enddo
+
+    ups%set=.true.
+
+  end subroutine new_upscale
+
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  subroutine copy_upscale(in,out)
+
+    type(upscale),intent(in)  :: in
+    type(upscale),intent(out) :: out
+
+    if (.not.in%set) then
+      print*,'Attempt to copy un-initialised upscale type'
+      stop
+    endif
+
+    if (associated(out%gboxx)) deallocate(out%gboxx)
+    if (associated(out%gboxy)) deallocate(out%gboxy)
+    if (associated(out%gboxn)) deallocate(out%gboxn)
+
+    allocate(out%gboxx(size(in%gboxx,1),size(in%gboxx,2)))
+    allocate(out%gboxy(size(in%gboxy,1),size(in%gboxy,2)))
+    allocate(out%gboxn(size(in%gboxn,1),size(in%gboxn,2)))
+
+    out%gboxx=in%gboxx
+    out%gboxy=in%gboxy
+    out%gboxn=in%gboxn
+
+    out%set=.true.
+
+  end subroutine copy_upscale
+
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  logical function lon_between(a,b,x)
+
+    !*FD Checks to see whether a 
+    !*FD longitudinal coordinate is between two bounds,
+    !*FD taking into account the periodic boundary conditions.
+    !*RV Returns \texttt{.true.} if $\mathtt{x}\geq \mathtt{a}$ and $\mathtt{x}<\mathtt{b}$.
+
+    ! Arguments
+
+    real(rk),intent(in) :: a  !*FD Lower bound on interval for checking
+    real(rk),intent(in) :: b  !*FD Upper bound on interval for checking
+    real(rk),intent(in) :: x  !*FD Test value (degrees)
+
+    ! Internal variables
+
+    real(rk) :: ta,tb
+
+    ! Beginning of code
+
+    if (a<b) then
+      lon_between=((x>=a).and.(x<b))
+    else
+      if (x<a) then
+        ta=a-360.0
+        tb=b
+      else 
+        ta=a
+        tb=b+360.0
+      endif
+      lon_between=((x>=ta).and.(x<tb))
+    endif
+
+  end function lon_between
 
 end module glimmer_interp

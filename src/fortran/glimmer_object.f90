@@ -55,22 +55,20 @@ module glimmer_object
 
   type glimmer_instance
 
-    !*FD Derived type holding information about 
-    !*FD ice model instance. Note that the arrays \texttt{gboxx}, \texttt{gboxy} and {\tt gboxn} 
-    !*FD should eventually be contained in a new derived type relating to upscaling.
+    !*FD Derived type holding information about ice model instance. 
 
     type(projection)                 :: proj          !*FD The projection definition of the instance.
     type(downscale)                  :: downs         !*FD Downscaling parameters.
+    type(upscale)                    :: ups           !*FD Upscaling parameters
+    type(upscale)                    :: ups_orog      !*FD Upscaling parameters for orography (to cope
+                                                      !*FD with need to convert to spectral form).
     character(fname_length)          :: paramfile     !*FD The name list file of parameters.
-    type(glimmer_global_type)           :: model         !*FD The instance and all its arrays.
+    type(glimmer_global_type)        :: model         !*FD The instance and all its arrays.
     logical                          :: newtemps      !*FD Flag to say we have new temperatures.
     real(dp), dimension(:,:),pointer :: xwind         !*FD $x$-component of surface winds on local grid.
     real(dp), dimension(:,:),pointer :: ywind         !*FD $y$-component of surface winds on local grid.
     real(dp), dimension(:,:),pointer :: global_orog   !*FD Global orography on local coordinates.
     real(dp), dimension(:,:),pointer :: local_orog    !*FD Local orography on local coordinates.
-    integer  ,dimension(:,:),pointer :: gboxx         !*FD $x$-indices of the global gridbox to which the point belongs.
-    integer  ,dimension(:,:),pointer :: gboxy         !*FD $y$-indices of the global gridbox to which the point belongs.
-    integer  ,dimension(:,:),pointer :: gboxn         !*FD Number of local grid-boxes in each global grid-box.
     real(rk) ,dimension(:,:),pointer :: frac_coverage !*FD Fractional coverage of each global gridbox by
                                                       !*FD the projected grid.
     logical                          :: first         !*FD Is this the first timestep?
@@ -102,18 +100,18 @@ contains
 
     ! Arguments
 
-    integer,              intent(in)    :: unit        !*FD Filename unit to use when opening namelist file.
-    character(*),         intent(in)    :: nmlfile     !*FD Name of namelist file.
-    type(glimmer_instance),  intent(inout) :: instance    !*FD The instance being initialised.
-    real(rk),             intent(in)    :: radea       !*FD Radius of the earth (m).
-    real(rk),dimension(:),intent(in)    :: lons        !*FD Longitudes of global grid-points (degrees east).
-    real(rk),dimension(:),intent(in)    :: lats        !*FD Latitudes of global grid-points (degrees north).
-    real(rk),dimension(:),intent(in)    :: lonb        !*FD Longitudinal edges of grid-boxes (degrees east)
-                                                       !*FD The number of elements must be one more than \texttt{lons}.
-    real(rk),dimension(:),intent(in)    :: latb        !*FD Latitudinal edges of grid-boxes (degrees north)
-                                                       !*FD The number of elements must be one more than \texttt{lats}.
-    real(rk),             intent(in)    :: time_step   !*FD Model time-step (years).
-    real(rk),optional,    intent(in)    :: start_time  !*FD Start time of model (years).
+    integer,               intent(in)    :: unit        !*FD Filename unit to use when opening namelist file.
+    character(*),          intent(in)    :: nmlfile     !*FD Name of namelist file.
+    type(glimmer_instance),intent(inout) :: instance    !*FD The instance being initialised.
+    real(rk),              intent(in)    :: radea       !*FD Radius of the earth (m).
+    real(rk),dimension(:), intent(in)    :: lons        !*FD Longitudes of global grid-points (degrees east).
+    real(rk),dimension(:), intent(in)    :: lats        !*FD Latitudes of global grid-points (degrees north).
+    real(rk),dimension(:), intent(in)    :: lonb        !*FD Longitudinal edges of grid-boxes (degrees east)
+                                                        !*FD The number of elements must be one more than \texttt{lons}.
+    real(rk),dimension(:), intent(in)    :: latb        !*FD Latitudinal edges of grid-boxes (degrees north)
+                                                        !*FD The number of elements must be one more than \texttt{lats}.
+    real(rk),              intent(in)    :: time_step   !*FD Model time-step (years).
+    real(rk),optional,     intent(in)    :: start_time  !*FD Start time of model (years).
 
     ! Internal variables
 
@@ -135,12 +133,15 @@ contains
     call calc_lats(instance%proj,instance%model%climate%lati)   ! Initialise the local latitude array. 
                                                                 ! This may be redundant, though.
 
-    call index_global_boxes(instance%gboxx,instance%gboxy, &    ! Index global boxes
-                            instance%gboxn,lons,lats,lonb, &
-                            latb,instance%proj)
+    call new_upscale(instance%ups, &                     ! Index global boxes
+                     lons,lats,lonb, &
+                     latb,instance%proj)
 
-    call calc_coverage(instance%proj,instance%gboxx,&           ! Calculate coverage map
-                       instance%gboxy,dlon,latb, &
+    call copy_upscale(instance%ups,instance%ups_orog)    ! Set upscaling for orog output to same as for 
+                                                         ! other fields
+
+    call calc_coverage(instance%proj,instance%ups,&           ! Calculate coverage map
+                       dlon,latb, &
                        instance%proj%dx,instance%proj%dy, &
                        radea,instance%frac_coverage)
 
@@ -179,9 +180,9 @@ contains
     use glimmer_setup
 
     type(glimmer_instance),intent(inout) :: instance    !*FD Instance whose elements are to be allocated.
-    integer,            intent(in)    :: nxg         !*FD Longitudinal size of global grid (grid-points).
-    integer,            intent(in)    :: nyg         !*FD Latitudinal size of global grid (grid-points).
-    logical,optional,   intent(in)    :: re_alloc    !*FD Set if we need to de-allocate first.
+    integer,               intent(in)    :: nxg         !*FD Longitudinal size of global grid (grid-points).
+    integer,               intent(in)    :: nyg         !*FD Latitudinal size of global grid (grid-points).
+    logical,optional,      intent(in)    :: re_alloc    !*FD Set if we need to de-allocate first.
 
     ! First deallocate if necessary
 
@@ -190,10 +191,7 @@ contains
         if (associated(instance%xwind))         deallocate(instance%xwind)
         if (associated(instance%ywind))         deallocate(instance%ywind)
         if (associated(instance%global_orog))   deallocate(instance%global_orog) 
-        if (associated(instance%local_orog))    deallocate(instance%local_orog) 
-        if (associated(instance%gboxx))         deallocate(instance%gboxx) 
-        if (associated(instance%gboxy))         deallocate(instance%gboxy) 
-        if (associated(instance%gboxn))         deallocate(instance%gboxn)  
+        if (associated(instance%local_orog))    deallocate(instance%local_orog)   
         if (associated(instance%frac_coverage)) deallocate(instance%frac_coverage)
       endif
     endif
@@ -213,10 +211,6 @@ contains
     allocate(instance%local_orog(instance%model%general%ewn,instance%model%general%nsn))
 
     ! Global box indices and number of points contained therein
-
-    allocate(instance%gboxx(instance%model%general%ewn,instance%model%general%nsn))
-    allocate(instance%gboxy(instance%model%general%ewn,instance%model%general%nsn))     
-    allocate(instance%gboxn(nxg,nyg))
 
     ! Fractional coverage map
 
@@ -547,10 +541,8 @@ contains
       endwhere
 
       call mean_to_global(instance%proj, &
+                          instance%ups, &
                           upscale_temp, &
-                          instance%gboxx, &
-                          instance%gboxy, &
-                          instance%gboxn, &
                           g_fw_flux)
 
     endif
@@ -671,10 +663,8 @@ contains
 
     if (out_f%orog) then
       call mean_to_global(instance%proj, &
+                          instance%ups_orog, &
                           instance%model%geometry%usrf, &
-                          instance%gboxx, &
-                          instance%gboxy, &
-                          instance%gboxn, &
                           g_orog_out)
       g_orog_out=thk0*g_orog_out
     endif
@@ -694,10 +684,8 @@ contains
       ! Upscale it...
 
       call mean_to_global(instance%proj, &
+                          instance%ups, &
                           upscale_temp, &
-                          instance%gboxx, &
-                          instance%gboxy, &
-                          instance%gboxn, &
                           g_albedo)
 
       ! Copy to ice fraction
@@ -795,91 +783,9 @@ contains
 
   end subroutine get_instance_params
 
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-  subroutine index_global_boxes(gbx,gby,gbn,glon,glat,glon_bound,glat_bound,proj)
-
-    !*FD Compiles an index of which global grid box contains a given
-    !*FD grid box on the projected grid.
-
-    ! Arguments
-
-    integer,dimension(:,:),intent(out) :: gbx        !*FD Longitudinal index of global 
-                                                     !*FD grid-box containing this point.
-    integer,dimension(:,:),intent(out) :: gby        !*FD Latitudinal index of global
-                                                     !*FD grid-box containing this point
-    integer,dimension(:,:),intent(out) :: gbn        !*FD Number of projected grid boxes in each global box
-    real(rk),dimension(:), intent(in)  :: glon       !*FD Longitudinal location of global 
-                                                     !*FD grid points (degrees)
-    real(rk),dimension(:), intent(in)  :: glat       !*FD Latitudinal location of global 
-                                                     !*FD grid points (degrees)
-    real(rk),dimension(:), intent(in)  :: glon_bound !*FD Longitudinal boundaries of global 
-                                                     !*FD grid boxes (degrees)
-    real(rk),dimension(:), intent(in)  :: glat_bound !*FD Latitudinal boundaries of global 
-                                                     !*FD grid boxes (degrees)
-    type(projection),      intent(in)  :: proj       !*FD Projection being used
-    
-    ! Internal variables
-
-    integer :: i,j,ii,jj,nx,ny,gnx,gny
-    real(rk) :: plon,plat
-    integer,dimension(size(gbx,1),size(gbx,2)) :: tempmask
-    
-    ! Beginning of code
-
-    gnx=size(glon) ; gny=size(glat)
-    nx=proj%nx ; ny=proj%ny
-
-    gbx=0 ; gby=0
-
-    do i=1,nx
-      do j=1,ny
-        call xy_to_ll(plon,plat,real(i,rk),real(j,rk),proj)
-        ii=1 ; jj=1
-        do
-          gbx(i,j)=ii
-          if (ii>gnx) then
-            print*,'global index failure'
-            stop
-          endif  
-          if (lon_between(glon_bound(ii),glon_bound(ii+1),plon)) exit
-          ii=ii+1
-        enddo
-
-        jj=1
-
-        do
-          gby(i,j)=jj
-          if (jj>gny) then
-            print*,'global index failure'
-            stop
-          endif  
-          if ((glat_bound(jj)>=plat).and.(plat>glat_bound(jj+1))) exit
-          jj=jj+1
-        enddo
-
-      enddo
-    enddo
-
-    tempmask=0
-    gbn=0
-
-    do i=1,gnx
-      do j=1,gny
-        where (gbx==i.and.gby==j) 
-          tempmask=1
-        elsewhere
-          tempmask=0
-        endwhere
-        gbn(i,j)=sum(tempmask)
-      enddo
-    enddo
-
-  end subroutine index_global_boxes
-
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine calc_coverage(proj,gboxx,gboxy,dlon,latb,dx,dy,radea,frac_coverage)
+  subroutine calc_coverage(proj,ups,dlon,latb,dx,dy,radea,frac_coverage)
 
     !*FD Calculates the fractional
     !*FD coverage of the global grid-boxes by the ice model
@@ -891,8 +797,7 @@ contains
     ! Arguments
 
     type(projection),       intent(in)  :: proj         !*FD Projection to be used
-    integer,dimension(:,:), intent(in)  :: gboxx        !*FD Local-to-global grid-box conversion indices ($x$)
-    integer,dimension(:,:), intent(in)  :: gboxy        !*FD Local-to-global grid-box conversion indices ($y$)
+    type(upscale),          intent(in)  :: ups          !*FD Upscaling used
     real(rk),dimension(:),  intent(in)  :: latb         !*FD Latitudinal boundaries of grid-boxes (degrees)
     real(rk),               intent(in)  :: dlon         !*FD Longitudinal grid-box size (degrees)
     real(rk),               intent(in)  :: dx           !*FD $x$-size of grid-boxes
@@ -902,7 +807,7 @@ contains
 
     ! Internal variables
 
-    integer,dimension(size(gboxx,1),size(gboxx,2)) :: tempmask
+    integer,dimension(size(ups%gboxx,1),size(ups%gboxx,2)) :: tempmask
     integer :: nxg,nyg,i,j
     real(rk) :: stm
 
@@ -914,7 +819,7 @@ contains
 
     do i=1,nxg
       do j=1,nyg
-        where (gboxx==i.and.gboxy==j)
+        where (ups%gboxx==i.and.ups%gboxy==j)
           tempmask=1
         elsewhere
           tempmask=0
@@ -1036,42 +941,6 @@ contains
     where (frac_coverage>1.0) frac_coverage=1.0
 
   end subroutine calc_coverage
-
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-  logical function lon_between(a,b,x)
-
-    !*FD Checks to see whether a 
-    !*FD longitudinal coordinate is between two bounds,
-    !*FD taking into account the periodic boundary conditions.
-    !*RV Returns \texttt{.true.} if $\mathtt{x}\geq \mathtt{a}$ and $\mathtt{x}<\mathtt{b}$.
-
-    ! Arguments
-
-    real(rk),intent(in) :: a  !*FD Lower bound on interval for checking
-    real(rk),intent(in) :: b  !*FD Upper bound on interval for checking
-    real(rk),intent(in) :: x  !*FD Test value (degrees)
-
-    ! Internal variables
-
-    real(rk) :: ta,tb
-
-    ! Beginning of code
-
-    if (a<b) then
-      lon_between=((x>=a).and.(x<b))
-    else
-      if (x<a) then
-        ta=a-360.0
-        tb=b
-      else 
-        ta=a
-        tb=b+360.0
-      endif
-      lon_between=((x>=ta).and.(x<tb))
-    endif
-
-  end function lon_between
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

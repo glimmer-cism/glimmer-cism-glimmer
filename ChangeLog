@@ -1,3 +1,13 @@
+2004-05--4 Ian Rutt
+ * Added upscale type to glimmer_interp.f90 and adjusted code 
+  	accodingly. This was to enable the output of orography 
+	at any resolution, as needed by the IGCM. 
+ * ***NB*** This hasn't been tested properly yet, and the
+	restarts have been broken by it, as there wasn't time
+ 	to add routine writing the upscaling to a restart file
+ * Other minor formating changes, and addition of null pointer
+	initialisation in some places
+
 2004-04-27 Ian Rutt
  * Added doc comments to gmt.f90
  * Updated return value documentation throughout to !*RV
