@@ -269,7 +269,7 @@ contains
   !*****************************************************************************
   ! old velo functions come here
   !*****************************************************************************
-  subroutine slipvelo(numerics,velowk,geomderv,flag,bwat,btrc,relx,ubas,vbas)
+  subroutine slipvelo(numerics,velowk,geomderv,flag1,flag2,bwat,btrc,relx,ubas,vbas)
 
     !*FD Calculate the basal slip velocity and the value of $B$, the free parameter
     !*FD in the basal velocity equation (though I'm not sure that $B$ is used anywhere 
@@ -286,10 +286,10 @@ contains
     type(glide_geomderv), intent(in)    :: geomderv !*FD Horizontal and temporal derivatives of 
                                                       !*FD ice model thickness and upper surface
                                                       !*FD elevation.
-    integer, dimension(2),  intent(in)    :: flag     !*FD \texttt{flag(1)} sets the calculation
+    integer, intent(in)                 :: flag1,flag2!*FD \texttt{flag1} sets the calculation
                                                       !*FD method to use for the basal velocity
                                                       !*FD (corresponds to \texttt{whichslip} elsewhere
-                                                      !*FD in the model. \texttt{flag(2)} controls the
+                                                      !*FD in the model. \texttt{flag2} controls the
                                                       !*FD calculation of the basal slip coefficient $B$,
                                                       !*FD which corresponds to \texttt{whichbtrc} elsewhere.
     real(dp),dimension(:,:),intent(in)    :: bwat     !*FD Basal melt rate.
@@ -313,12 +313,12 @@ contains
     ! Main calculation starts here
     !------------------------------------------------------------------------------------
 
-    select case(flag(1))
+    select case(flag1)
     case(0)  
     
       ! Linear function of gravitational driving stress ---------------------------------
 
-      call calcbtrc(velowk,flag(2),bwat,relx,btrc(1:ewn-1,1:nsn-1))
+      call calcbtrc(velowk,flag2,bwat,relx,btrc(1:ewn-1,1:nsn-1))
 
       where (numerics%thklim < geomderv%stagthck(1:ewn-1,1:nsn-1))
         ubas(1:ewn-1,1:nsn-1) = btrc(1:ewn-1,1:nsn-1) * rhograv * &
@@ -337,7 +337,7 @@ contains
       ! *tp* option to be used in picard iteration for thck
       ! *tp* start by find constants which dont vary in iteration
 
-      call calcbtrc(velowk,flag(2),bwat,relx,btrc(1:ewn-1,1:nsn-1))
+      call calcbtrc(velowk,flag2,bwat,relx,btrc(1:ewn-1,1:nsn-1))
 
       velowk%fslip(1:ewn-1,1:nsn-1) = rhograv * btrc(1:ewn-1,1:nsn-1)
 

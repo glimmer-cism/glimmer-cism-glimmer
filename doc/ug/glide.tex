@@ -126,6 +126,11 @@ Sections and keys are case sensitive and may contain white space. However, the c
       {\bf 0} & relaxed topography is read from a separate variable\\
       1 & first time slice of input topography is assumed to be relaxed\\
     \end{tabular}\\
+    \texttt{periodic\_ew} & 
+    \begin{tabular}[t]{cp{8cm}}
+      {\bf 0} & switched off\\
+      1 & periodic lateral EW boundary conditions (i.e. run model on torus)\\
+    \end{tabular}\\
     \texttt{hotstart} &
      Hotstart the model if set to 1. This option only affects the way the initial temperature and flow factor distribution is calculated.\\
     \hline

@@ -504,6 +504,7 @@ contains
     call GetValue(section,'vertical_integration',model%options%whichwvel)
     call GetValue(section,'topo_is_relaxed',model%options%whichrelaxed)
     call GetValue(section,'hotstart',model%options%hotstart)
+    call GetValue(section,'periodic_ew',model%options%periodic_ew)
   end subroutine handle_options
   
   subroutine print_options(model)
@@ -624,6 +625,10 @@ contains
     call write_log(message)
     if (model%options%whichrelaxed.eq.1) then
        call write_log('First topo time slice is relaxed')
+    end if
+    if (model%options%periodic_ew.eq.1) then
+       call write_log('Periodic EW lateral boundary condition')
+       call write_log('  Warning slightly cheated with how temperature is implemented.')
     end if
     if (model%options%hotstart.eq.1) then
        call write_log('Hotstarting model')

@@ -1,3 +1,12 @@
+2004-12-03 Magnus Hagdorn
+ * glimmer_velo.f90: changed interface to slipvelo to avoid creating a temporary array
+   everytime it is called.
+ * glide.f90: updated how slipvelo is called
+ * implemented periodic EW lateral boundary conditions (glide_setup.f90, glide_types.f90, glimmer_temp.f90, simple_forcing.f90)
+ * glimmer_thck.f90: implemented periodic BC, updated slipvelo interface, avoid if clauses in loop creating
+   sparse matrix
+ * glide.tex: updated doc to include periodic BC
+
 2004-12-02 Magnus Hagdorn
  * merged in eismint_1: this should fix all (most) EISMINT problems
    the GLINT-GLIDE_eismint should be considered stable, all interesting

@@ -232,10 +232,13 @@ contains
     ! local variables
     integer  :: ns,ew
     real :: dist, ewct, nsct, grid, rel
+    real :: periodic_bc = 1.
 
     ewct = real(model%general%ewn+1) / 2.0
     nsct = real(model%general%nsn+1) / 2.0
     grid = model%numerics%dew * len0
+
+    periodic_bc = real(1-model%options%periodic_ew)
 
     select case(climate%eismint_type)
     case(1)
@@ -254,7 +257,7 @@ contains
 
        do ns = 1,model%general%nsn
           do ew = 1,model%general%ewn
-             dist = grid * sqrt((real(ew) - ewct)**2 + (real(ns) - nsct)**2)
+             dist = grid * sqrt(periodic_bc*(real(ew) - ewct)**2 + (real(ns) - nsct)**2)
              model%climate%acab(ew,ns) = min(climate%nmsb(1), climate%nmsb(2) * (rel - dist))
           end do
        end do
@@ -264,7 +267,7 @@ contains
 
        do ns = 1,model%general%nsn
           do ew = 1,model%general%ewn
-             dist = grid * sqrt((real(ew) - ewct)**2 + (real(ns) - nsct)**2)
+             dist = grid * sqrt(periodic_bc*(real(ew) - ewct)**2 + (real(ns) - nsct)**2)
              model%climate%acab(ew,ns) = min(climate%nmsb(1), climate%nmsb(2) * (rel - dist))
           end do
        end do       
@@ -285,17 +288,20 @@ contains
     ! local variables
     integer  :: ns,ew
     real :: dist, ewct, nsct, grid
+    real :: periodic_bc = 1.
 
     ewct = real(model%general%ewn+1) / 2.0
     nsct = real(model%general%nsn+1) / 2.0
     grid = model%numerics%dew * len0
+
+    periodic_bc = real(1-model%options%periodic_ew)
 
     select case(climate%eismint_type)
     case(1)
        ! EISMINT-1 fixed margin
        do ns = 1,model%general%nsn
           do ew = 1,model%general%ewn
-             dist = grid * max(abs(real(ew) - ewct),abs(real(ns) - nsct))*1e-3
+             dist = grid * max(periodic_bc*abs(real(ew) - ewct),abs(real(ns) - nsct))*1e-3
              model%climate%artm(ew,ns) = climate%airt(1) + climate%airt(2) * dist*dist*dist
           end do
        end do
@@ -312,7 +318,7 @@ contains
        ! EISMINT-2
        do ns = 1,model%general%nsn
           do ew = 1,model%general%ewn
-             dist = grid * sqrt((real(ew) - ewct)**2 + (real(ns) - nsct)**2)
+             dist = grid * sqrt(periodic_bc*(real(ew) - ewct)**2 + (real(ns) - nsct)**2)
              model%climate%artm(ew,ns) = climate%airt(1)+climate%airt(2) * dist
           end do
        end do       

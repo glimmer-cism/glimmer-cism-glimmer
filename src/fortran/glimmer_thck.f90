@@ -95,7 +95,7 @@ contains
           call slipvelo(model%numerics,                &
                model%velowk,                  &
                model%geomderv,                &
-               (/1,model%options%whichbtrc/), &
+               1,model%options%whichbtrc,     &
                model%temper%   bwat,          &
                model%velocity% btrc,          &
                model%geometry% relx,          &
@@ -105,7 +105,7 @@ contains
        call slipvelo(model%numerics,                &
             model%velowk,                  &
             model%geomderv,                &
-            (/2,model%options%whichbtrc/), &
+            2,model%options%whichbtrc,     &
             model%temper%   bwat,          &
             model%velocity% btrc,          &
             model%geometry% relx,          &
@@ -127,7 +127,7 @@ contains
        call slipvelo(model%numerics,                &
             model%velowk,                  &
             model%geomderv,                &
-            (/3,model%options%whichbtrc/), &
+            3,model%options%whichbtrc,     &
             model%temper%bwat,             &
             model%velocity%btrc,           &
             model%geometry%relx,           &
@@ -174,7 +174,7 @@ contains
           call slipvelo(model%numerics,                &
                model%velowk,                  &
                model%geomderv,                &
-               (/1,model%options%whichbtrc/), &
+               1,model%options%whichbtrc,     &
                model%temper%   bwat,          &
                model%velocity% btrc,          &
                model%geometry% relx,          &
@@ -211,7 +211,7 @@ contains
           call slipvelo(model%numerics,                &
                model%velowk,                  &
                model%geomderv,                &
-               (/2,model%options%whichbtrc/), &
+               2,model%options%whichbtrc,     &
                model%temper%   bwat,          &
                model%velocity% btrc,          &
                model%geometry% relx,          &
@@ -248,7 +248,7 @@ contains
        call slipvelo(model%numerics,                &
             model%velowk,                  &
             model%geomderv,                &
-            (/3,model%options%whichbtrc/), &
+            3,model%options%whichbtrc,     &
             model%temper%bwat,             &
             model%velocity%btrc,           &
             model%geometry%relx,           &
@@ -297,70 +297,69 @@ contains
 
        model%pcgdwk%ct = 1
 
-       do ns = 1,model%general%nsn
-          do ew = 1,model%general%ewn 
+       ! Boundary Conditions
+       ! lower and upper BC
+       do ew = 1,model%general%ewn
+          ns=1
+          if (model%geometry%mask(ew,ns) /= 0) then
+             call putpcgc(model%pcgdwk,1.0d0, model%geometry%mask(ew,ns), model%geometry%mask(ew,ns))
+             if (calc_rhs) then
+                model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = old_thck(ew,ns) 
+             end if
+             model%pcgdwk%answ(model%geometry%mask(ew,ns)) = new_thck(ew,ns)
+          end if
+          ns=model%general%nsn
+          if (model%geometry%mask(ew,ns) /= 0) then
+             call putpcgc(model%pcgdwk,1.0d0, model%geometry%mask(ew,ns), model%geometry%mask(ew,ns))
+             if (calc_rhs) then
+                model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = old_thck(ew,ns) 
+             end if
+             model%pcgdwk%answ(model%geometry%mask(ew,ns)) = new_thck(ew,ns)
+          end if
+       end do          
+       !left and right BC
+       if (model%options%periodic_ew.eq.1) then
+          do ns=2,model%general%nsn-1
+             ew = 1
+             if (model%geometry%mask(ew,ns) /= 0) then
+                call findsums(model%general%ewn-1,ew,ns-1,ns)
+                call generate_row(model%general%ewn-1,ew,ew+1,ns-1,ns,ns+1)
+             end if
+             ew=model%general%ewn
+             if (model%geometry%mask(ew,ns) /= 0) then
+                call findsums(ew-1,1,ns-1,ns)
+                call generate_row(ew-1,ew,2,ns-1,ns,ns+1)
+             end if
+          end do
+       else
+          do ns=2,model%general%nsn-1
+             ew=1
+             if (model%geometry%mask(ew,ns) /= 0) then
+                call putpcgc(model%pcgdwk,1.0d0, model%geometry%mask(ew,ns), model%geometry%mask(ew,ns))
+                if (calc_rhs) then
+                   model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = old_thck(ew,ns) 
+                end if
+                model%pcgdwk%answ(model%geometry%mask(ew,ns)) = new_thck(ew,ns)
+             end if
+             ew=model%general%ewn
+             if (model%geometry%mask(ew,ns) /= 0) then
+                call putpcgc(model%pcgdwk,1.0d0, model%geometry%mask(ew,ns), model%geometry%mask(ew,ns))
+                if (calc_rhs) then
+                   model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = old_thck(ew,ns) 
+                end if
+                model%pcgdwk%answ(model%geometry%mask(ew,ns)) = new_thck(ew,ns)
+             end if
+          end do
+       end if
+       ! ice body
+       do ns = 2,model%general%nsn-1
+          do ew = 2,model%general%ewn-1
 
              if (model%geometry%mask(ew,ns) /= 0) then
+                
+                call findsums(ew-1,ew,ns-1,ns)
+                call generate_row(ew-1,ew,ew+1,ns-1,ns,ns+1)
 
-                if (ew == 1 .or. ew == model%general%ewn .or. &
-                     ns == 1 .or. &
-                     ns == model%general%nsn) then
-
-                   call putpcgc(model%pcgdwk,&
-                        1.0d0, &
-                        model%geometry%mask(ew,ns), &
-                        model%geometry%mask(ew,ns))           ! point (ew,ns)
-                   if (calc_rhs) then
-                      model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = old_thck(ew,ns) 
-                   end if
-                   model%pcgdwk%answ(model%geometry%mask(ew,ns)) = new_thck(ew,ns) 
-
-                else if (any((model%geometry%thck(ew-1:ew+1,ns-1:ns+1) == 0.0d0)) .and. thckflag == 5) then
-
-                   call putpcgc(model%pcgdwk, &
-                        1.0d0, &
-                        model%geometry%mask(ew,ns), &
-                        model%geometry%mask(ew,ns))           ! point (ew,ns)
-
-                   if (calc_rhs) then
-                      model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = old_thck(ew,ns) + &
-                           model%climate%acab(ew,ns) * model%pcgdwk%fc2(2) 
-                   end if
-                   model%pcgdwk%answ(model%geometry%mask(ew,ns)) = new_thck(ew,ns) 
-
-                else
-
-                   call findsums(ew,ns,model%pcgdwk%fc2)
-
-                   call putpcgc(model%pcgdwk,sumd(1), &
-                        model%geometry%mask(ew-1,ns), &
-                        model%geometry%mask(ew,ns))       ! point (ew-1,ns)
-                   call putpcgc(model%pcgdwk,sumd(2), &
-                        model%geometry%mask(ew+1,ns), &
-                        model%geometry%mask(ew,ns))       ! point (ew+1,ns)
-                   call putpcgc(model%pcgdwk,sumd(3), &
-                        model%geometry%mask(ew,ns-1), &
-                        model%geometry%mask(ew,ns))       ! point (ew,ns-1)
-                   call putpcgc(model%pcgdwk,sumd(4), &
-                        model%geometry%mask(ew,ns+1), &
-                        model%geometry%mask(ew,ns))       ! point (ew,ns+1)
-                   call putpcgc(model%pcgdwk,1.0d0 + sumd(5), &
-                        model%geometry%mask(ew,ns), &
-                        model%geometry%mask(ew,ns)) ! point (ew,ns)
-
-                   if (calc_rhs) then
-                      model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = old_thck(ew,ns) * &
-                           (1.0d0 - model%pcgdwk%fc2(3) * sumd(5)) - model%pcgdwk%fc2(3) * &
-                           (old_thck(ew-1,ns) * sumd(1) + old_thck(ew+1,ns) * sumd(2) + &
-                           old_thck(ew,ns-1) * sumd(3) + old_thck(ew,ns+1) * sumd(4)) - &
-                           model%pcgdwk%fc2(4) * (model%geometry%lsrf(ew,ns) * sumd(5) + &
-                           model%geometry%lsrf(ew-1,ns) * sumd(1) + model%geometry%lsrf(ew+1,ns) * sumd(2) + &
-                           model%geometry%lsrf(ew,ns-1) * sumd(3) + model%geometry%lsrf(ew,ns+1) * sumd(4)) +  &
-                           model%climate%acab(ew,ns) * model%pcgdwk%fc2(2)
-                   end if
-                   model%pcgdwk%answ(model%geometry%mask(ew,ns)) = new_thck(ew,ns) 
-
-                end if
              end if
           end do
        end do
@@ -381,13 +380,6 @@ contains
 
        ! *tp+* implement bcs
 
-       call swapbndh(ewbc, &
-            new_thck(1,:), new_thck(2,:), &
-            new_thck(model%general%ewn,:), new_thck(model%general%ewn-1,:))
-       call swapbndh(nsbc, &
-            new_thck(:,1), new_thck(:,2), &
-            new_thck(:,model%general%nsn), new_thck(:,model%general%nsn-1))
-
        model%pcgdwk%tlinit = model%pcgdwk%tlinit + linit
        model%pcgdwk%mlinit = max(linit,model%pcgdwk%mlinit)
 
@@ -399,24 +391,63 @@ contains
 #endif
 
   contains
-    
-    subroutine findsums(ew,ns,fc)
-
+    subroutine generate_row(ewm,ew,ewp,nsm,ns,nsp)
+      ! calculate row of sparse matrix equation
       implicit none
+      integer, intent(in) :: ewm,ew,ewp  ! ew index to left, central, right node
+      integer, intent(in) :: nsm,ns,nsp  ! ns index to lower, central, upper node
 
-      integer, intent(in) :: ew, ns
-      real(dp),intent(in),dimension(6) :: fc
+      ! fill sparse matrix
+      call putpcgc(model%pcgdwk,sumd(1), &
+           model%geometry%mask(ewm,ns), &
+           model%geometry%mask(ew,ns))       ! point (ew-1,ns)
+      call putpcgc(model%pcgdwk,sumd(2), &
+           model%geometry%mask(ewp,ns), &
+           model%geometry%mask(ew,ns))       ! point (ew+1,ns)
+      call putpcgc(model%pcgdwk,sumd(3), &
+           model%geometry%mask(ew,nsm), &
+           model%geometry%mask(ew,ns))       ! point (ew,ns-1)
+      call putpcgc(model%pcgdwk,sumd(4), &
+           model%geometry%mask(ew,nsp), &
+           model%geometry%mask(ew,ns))       ! point (ew,ns+1)
+      call putpcgc(model%pcgdwk,1.0d0 + sumd(5), &
+           model%geometry%mask(ew,ns), &
+           model%geometry%mask(ew,ns))       ! point (ew,ns)
 
-      sumd(1) = fc(1) * (sum(model%velocity%diffu(ew-1,ns-1:ns)) + &
-           sum(model%velocity%ubas(ew-1,ns-1:ns)))
-      sumd(2) = fc(1) * (sum(model%velocity%diffu(ew,ns-1:ns)) + &
-           sum(model%velocity%ubas(ew,ns-1:ns)))
-      sumd(3) = fc(5) * (sum(model%velocity%diffu(ew-1:ew,ns-1)) + &
-           sum(model%velocity%ubas(ew-1:ew,ns-1)))
-      sumd(4) = fc(5) * (sum(model%velocity%diffu(ew-1:ew,ns)) + &
-           sum(model%velocity%ubas(ew-1:ew,ns)))
-      sumd(5) = - sum(sumd(1:4))
+      ! calculate RHS
+      if (calc_rhs) then
+         model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = old_thck(ew,ns) * &
+              (1.0d0 - model%pcgdwk%fc2(3) * sumd(5)) - model%pcgdwk%fc2(3) * &
+              (old_thck(ewm,ns) * sumd(1) + old_thck(ewp,ns) * sumd(2) + &
+              old_thck(ew,nsm) * sumd(3) + old_thck(ew,nsp) * sumd(4)) - &
+              model%pcgdwk%fc2(4) * (model%geometry%lsrf(ew,ns) * sumd(5) + &
+              model%geometry%lsrf(ewm,ns) * sumd(1) + model%geometry%lsrf(ewp,ns) * sumd(2) + &
+              model%geometry%lsrf(ew,nsm) * sumd(3) + model%geometry%lsrf(ew,nsp) * sumd(4)) +  &
+              model%climate%acab(ew,ns) * model%pcgdwk%fc2(2)
+      end if
+      model%pcgdwk%answ(model%geometry%mask(ew,ns)) = new_thck(ew,ns)      
+    end subroutine generate_row
 
+    subroutine findsums(ewm,ew,nsm,ns)
+      ! calculate diffusivities
+      implicit none
+      integer, intent(in) :: ewm,ew  ! ew index to left, right
+      integer, intent(in) :: nsm,ns  ! ns index to lower, upper
+
+      ! calculate sparse matrix elements
+      sumd(1) = model%pcgdwk%fc2(1) * (&
+           (model%velocity%diffu(ewm,nsm) + model%velocity%diffu(ewm,ns)) + &
+           (model%velocity%ubas (ewm,nsm) + model%velocity%ubas (ewm,ns)))
+      sumd(2) = model%pcgdwk%fc2(1) * (&
+           (model%velocity%diffu(ew,nsm) + model%velocity%diffu(ew,ns)) + &
+           (model%velocity%ubas (ew,nsm) + model%velocity%ubas (ewm,ns)))
+      sumd(3) = model%pcgdwk%fc2(5) * (&
+           (model%velocity%diffu(ewm,nsm) + model%velocity%diffu(ew,nsm)) + &
+           (model%velocity%ubas (ewm,nsm) + model%velocity%ubas (ew,nsm)))
+      sumd(4) = model%pcgdwk%fc2(5) * (&
+           (model%velocity%diffu(ewm,ns) + model%velocity%diffu(ew,ns)) + &
+           (model%velocity%ubas (ewm,ns) + model%velocity%ubas (ew,ns)))
+      sumd(5) = - (sumd(1) + sumd(2) + sumd(3) + sumd(4))
     end subroutine findsums
   end subroutine thck_evolve
 

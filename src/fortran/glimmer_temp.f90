@@ -392,16 +392,13 @@ contains
           end do
        end do
 
-       call swapbndt(ewbc, &
-            model%temper%temp(:,1,:), &
-            model%temper%temp(:,2,:), &
-            model%temper%temp(:,model%general%ewn,:), &
-            model%temper%temp(:,model%general%ewn-1,:))
-       call swapbndt(nsbc, &
-            model%temper%temp(:,:,1), &
-            model%temper%temp(:,:,2), &
-            model%temper%temp(:,:,model%general%nsn), &
-            model%temper%temp(:,:,model%general%nsn-1))
+       ! apply periodic ew BC
+       if (model%options%periodic_ew.eq.1) then
+          model%temper%temp(:,0,:) = model%temper%temp(:,model%general%ewn-2,:)
+          model%temper%temp(:,1,:) = model%temper%temp(:,model%general%ewn-1,:)
+          model%temper%temp(:,model%general%ewn,:) = model%temper%temp(:,2,:)
+          model%temper%temp(:,model%general%ewn+1,:) = model%temper%temp(:,3,:)
+       end if
 
        ! Calculate basal melt rate --------------------------------------------------
 
@@ -810,6 +807,13 @@ contains
        end do
     end do
 
+    ! apply periodic BC
+    if (model%options%periodic_ew.eq.1) then
+       do ns = 2,model%general%nsn-1
+          bmlt(1,ns) = bmlt(model%general%ewn-1,ns)
+          bmlt(model%general%ewn,ns) = bmlt(2,ns)
+       end do
+    end if
   end subroutine calcbmlt
 
   !-------------------------------------------------------------------
@@ -840,8 +844,8 @@ contains
     case(0)
 
        do t_wat = 1, model%tempwk%nwat
-          do ns = 2,model%general%nsn-1
-             do ew = 2,model%general%ewn-1
+          do ns = 1,model%general%nsn
+             do ew = 1,model%general%ewn
 
                 if (model%numerics%thklim < thck(ew,ns) .and. .not. floater(ew,ns)) then
                    bwat(ew,ns) = (model%tempwk%c(1) * bmlt(ew,ns) + model%tempwk%c(2) * bwat(ew,ns)) / &
@@ -860,21 +864,24 @@ contains
        model%tempwk%smth = 0.
        do ns = 2,model%general%nsn-1
           do ew = 2,model%general%ewn-1
-
-             if (blim(2) < bwat(ew,ns)) then
-                model%tempwk%smth(ew,ns) = bwat(ew,ns) + smthf * &
-                     (bwat(ew-1,ns) + bwat(ew+1,ns) + bwat(ew,ns-1) + bwat(ew,ns+1) - 4.0d0 * bwat(ew,ns))
-             else 
-                model%tempwk%smth(ew,ns) = bwat(ew,ns)
-             end if
-
+             call smooth_bwat(ew-1,ew,ew+1,ns-1,ns,ns+1)
           end do
        end do
+       ! apply periodic BC
+       if (model%options%periodic_ew.eq.1) then
+          do ns = 2,model%general%nsn-1
+             call smooth_bwat(model%general%ewn-1,1,2,ns-1,ns,ns+1)
+             call smooth_bwat(model%general%ewn-1,model%general%ewn,2,ns-1,ns,ns+1)
+          end do
+       end if
 
-       bwat(2:model%general%ewn-1,2:model%general%nsn-1) = model%tempwk%smth(2:model%general%ewn-1,2:model%general%nsn-1)
+       bwat(1:model%general%ewn,1:model%general%nsn) = model%tempwk%smth(1:model%general%ewn,1:model%general%nsn)
 
     case(1)
-
+       ! apply periodic BC
+       if (model%options%periodic_ew.eq.1) then
+          write(*,*) 'Warning, periodic BC are not implement for this case yet'
+       end if
        ! ** add any melt_water
 
        bwat = max(0.0d0,bwat + model%numerics%dttem * bmlt)
@@ -1002,6 +1009,18 @@ contains
     ! How to call the flow router.
     ! call advectflow(bwat,phi,bmlt,model%geometry%mask)
 
+  contains
+    subroutine smooth_bwat(ewm,ew,ewp,nsm,ns,nsp)
+      ! smoothing basal water distrib
+      implicit none
+      integer, intent(in) :: ewm,ew,ewp,nsm,ns,nsp
+      if (blim(2) < bwat(ew,ns)) then
+         model%tempwk%smth(ew,ns) = bwat(ew,ns) + smthf * &
+              (bwat(ewm,ns) + bwat(ewp,ns) + bwat(ew,nsm) + bwat(ew,nsp) - 4.0d0 * bwat(ew,ns))
+      else 
+         model%tempwk%smth(ew,ns) = bwat(ew,ns)
+      end if   
+    end subroutine smooth_bwat
   end subroutine calcbwat
   
   subroutine find_dt_wat(dttem,estimate,dt_wat,nwat)

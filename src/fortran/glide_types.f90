@@ -187,6 +187,12 @@ module glide_types
     !*FD \item[1] hotstart model from previous run
     !*FD \end{description}
 
+    integer :: periodic_ew = 0
+    !*FD \begin{description}
+    !*FD \item[0] no periodic EW boundary conditions
+    !*FD \item[1] periodic EW boundary conditions
+    !*FD \end{description}
+
   end type glide_options
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

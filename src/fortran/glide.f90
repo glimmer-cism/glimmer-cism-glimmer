@@ -173,7 +173,7 @@ contains
           call slipvelo(model%numerics, &
                model%velowk,   &
                model%geomderv, &
-               (/model%options%whichslip,model%options%whichbtrc/), &
+               model%options%whichslip,model%options%whichbtrc, &
                model%temper%   bwat,     &
                model%velocity% btrc,     &
                model%geometry% relx,     &
