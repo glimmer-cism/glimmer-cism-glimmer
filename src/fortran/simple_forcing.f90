@@ -84,7 +84,11 @@ contains
        climate%airt(2) = climate%airt(2) * thk0
        climate%nmsb(1) = climate%nmsb(1) / (acc0 * scyr)
        climate%nmsb(2) = climate%nmsb(2) / (acc0 * scyr)
+    case(3)
+       climate%nmsb(1) = climate%nmsb(1) / (acc0 * scyr)
+       climate%nmsb(2) = climate%nmsb(2) / (acc0 * scyr)
     end select
+       
   end subroutine simple_initialise
 
   subroutine simple_readconfig(climate, config)
@@ -137,6 +141,26 @@ contains
        call GetValue(section,'period',climate%period)
        return
     end if
+    call GetSection(config,section,'EISMINT-2')
+    if (associated(section)) then
+       climate%eismint_type = 3
+       dummy=>NULL()
+       call GetValue(section,'temperature',dummy,2)
+       if (associated(dummy)) then
+          climate%airt = dummy
+          deallocate(dummy)
+          dummy=>NULL()
+       else
+          climate%airt = (/-35., 1.67e-5/)
+       end if
+       call GetValue(section,'massbalance',dummy,3)
+       if (associated(dummy)) then
+          climate%nmsb = dummy
+          deallocate(dummy)
+          dummy=>NULL()
+       end if
+       return
+    end if    
 
     call error_log('No EISMINT forcing selected')
     stop
@@ -176,6 +200,19 @@ contains
        write(message,*) '               ',climate%nmsb(3)
        call write_log(message)
        write(message,*) 'period       : ',climate%period
+       call write_log(message)
+    case(3)
+       call write_log('EISMINT-2')
+       call write_log('---------')
+       write(message,*) 'temperature  : ',climate%airt(1)
+       call write_log(message)
+       write(message,*) '               ',climate%airt(2)
+       call write_log(message)
+       write(message,*) 'massbalance  : ',climate%nmsb(1)
+       call write_log(message)
+       write(message,*) '               ',climate%nmsb(2)
+       call write_log(message)
+       write(message,*) '               ',climate%nmsb(3)
        call write_log(message)
     end select
     call write_log('')
@@ -221,6 +258,16 @@ contains
              model%climate%acab(ew,ns) = min(climate%nmsb(1), climate%nmsb(2) * (rel - dist))
           end do
        end do
+    case(3)
+       ! EISMINT-2
+       rel = climate%nmsb(3)
+
+       do ns = 1,model%general%nsn
+          do ew = 1,model%general%ewn
+             dist = grid * sqrt((real(ew) - ewct)**2 + (real(ns) - nsct)**2)
+             model%climate%acab(ew,ns) = min(climate%nmsb(1), climate%nmsb(2) * (rel - dist))
+          end do
+       end do       
     end select
   end subroutine simple_massbalance
 
@@ -261,6 +308,14 @@ contains
        if (climate%period.ne.0) then
           model%climate%artm(:,:) = model%climate%artm(:,:) + 10.*sin(2.*pi*time/climate%period)
        end if
+    case(3)
+       ! EISMINT-2
+       do ns = 1,model%general%nsn
+          do ew = 1,model%general%ewn
+             dist = grid * sqrt((real(ew) - ewct)**2 + (real(ns) - nsct)**2)
+             model%climate%artm(ew,ns) = climate%airt(1)+climate%airt(2) * dist
+          end do
+       end do       
     end select
   end subroutine simple_surftemp
 end module simple_forcing

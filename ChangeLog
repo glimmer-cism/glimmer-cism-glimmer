@@ -1,3 +1,10 @@
+2004-08-12 Magnus Hagdorn
+ * simple_forcing.f90: add EISMINT-2 forcing 
+ * added constant basal traction/basal traction where water exists
+   (glide_setup.f90, glide_types.f90, glimmer_velo.f90)
+ * updated docs accordingly (glide.tex)
+ * updated model config files accordingly (g_land.config, fennscan1.config)
+	
 2004-08-09 Magnus Hagdorn
  * glimmer_velo.f90: fix bug with staggered grid (vertical velo is 
    calculated on big grid), re-enabled normal gradient calc of ice

@@ -529,9 +529,11 @@ contains
          'threshold   ', &
          'no ice shelf', &
          'none        ' /)
-    character(len=*), dimension(0:1), parameter :: slip_coeff = (/ &
-         '~basal water', &
-         'zero        ' /)
+    character(len=*), dimension(0:3), parameter :: slip_coeff = (/ &
+         'zero        ', &
+         'const       ', &
+         'const if T>0', &
+         '~basal water' /)
     character(len=*), dimension(0:3), parameter :: stress = (/ &
          'zeroth-order                     ', &
          'first-order                      ', &
@@ -620,6 +622,7 @@ contains
   subroutine handle_parameters(section, model)
     use glimmer_config
     use glide_types
+    use glimmer_log
     implicit none
     type(ConfigSection), pointer :: section
     type(glide_global_type)  :: model
@@ -631,9 +634,16 @@ contains
     call GetValue(section,'flow_factor',model%paramets%fiddle)
     call GetValue(section,'hydro_time',model%paramets%hydtim)
     call GetValue(section,'isos_time',model%paramets%isotim)
-    call GetValue(section,'basal_tract',temp,5)
+    call GetValue(section,'basal_tract',temp)
     if (associated(temp)) then
-       model%paramets%bpar = temp
+       if (size(temp).eq.1) then
+          model%paramets%btrac_const=temp(1)
+       else if (size(temp).eq.5) then
+          model%paramets%bpar = temp
+       else
+          call error_log('Wrong number of basal traction parameters (should be 1 or 5)')
+          stop
+       end if         
        deallocate(temp)
     end if
   end subroutine handle_parameters
@@ -659,7 +669,9 @@ contains
     call write_log(message)
     write(message,*) 'isostasy time const   : ',model%paramets%isotim
     call write_log(message)
-    write(message,*) 'basal tractio factors : ',model%paramets%bpar(1)
+    write(message,*) 'basal traction param  : ',model%paramets%btrac_const
+    call write_log(message)
+    write(message,*) 'basal traction factors: ',model%paramets%bpar(1)
     call write_log(message)
     write(message,*) '                        ',model%paramets%bpar(2)
     call write_log(message)

@@ -135,12 +135,14 @@ module glide_types
     !*FD \item[2] No action 
     !*FD \end{description}
 
-    integer :: whichbtrc = 1
+    integer :: whichbtrc = 0
 
     !*FD Basal slip coefficient: 
     !*FD \begin{description}
-    !*FD \item[0] \texttt{tanh} function of basal water depth 
-    !*FD \item[1] Set equal to zero everywhere 
+    !*FD \item[0] Set equal to zero everywhere
+    !*FD \item[1] Set (non--zero) constant
+    !*FD \item[2] Set to (non--zero) constant where where temperature is at pressure melting point of ice, otherwise to zero
+    !*FD \item[3] \texttt{tanh} function of basal water depth 
     !*FD \end{description}
 
     integer :: whichstrs = 2
@@ -418,6 +420,7 @@ module glide_types
 
   type glide_paramets
     real(dp),dimension(5) :: bpar = (/ 2.0d0, 10.0d0, 10.0d0, 0.0d0, 1.0d0 /)
+    real(dp) :: btrac_const = 0.d0 ! m yr^{-1} Pa^{-1} (gets scaled during init)
     real(dp) :: geot   = -5.0d-2  ! W m^{-2}
     real(dp) :: fiddle = 3.0d0    ! -
     real(dp) :: hydtim = 1000.0d0 ! yr^{-1} converted to s^{-1} and scaled, 

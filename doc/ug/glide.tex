@@ -97,8 +97,10 @@ Sections and keys are case sensitive and may contain white space. However, the c
     \end{tabular}\\
     \texttt{slip\_coeff} & 
     \begin{tabular}[t]{cl}
+      {\bf 0} & zero \\
+      1 & set to a non--zero constant everywhere\\
+      2 & set to a non--zero constant where the ice base is at the melting point\\
       0 & $\propto$ basal water\\
-      {\bf 1} & zero\\
     \end{tabular}\\
     \texttt{stress\_calc} & 
     \begin{tabular}[t]{cl}
@@ -136,7 +138,7 @@ Sections and keys are case sensitive and may contain white space. However, the c
     \texttt{flow\_factor} & (real) the flow law is enhanced with this factor \\
     \texttt{hydro\_time} & (real) basal hydrology time constant \\
     \texttt{isos\_time} & (real) isostasy time constant \\
-    \texttt{basal\_tract} & (real(5)) basal traction factors \\
+    \texttt{basal\_tract} & (real(5) or real) basal traction factors \\
     \hline
     
   \end{supertabular}

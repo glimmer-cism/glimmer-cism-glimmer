@@ -889,7 +889,7 @@ contains
     use glimmer_global, only : dp 
     use paramets, only : thk0, vel0, len0
     use physcon, only : scyr
- 
+
     implicit none
 
     !------------------------------------------------------------------------------------
@@ -899,69 +899,81 @@ contains
     type(glide_velowk),   intent(inout) :: velowk   !*FD Work arrays for this module.
     type(glide_paramets), intent(in)    :: params   !*FD Model parameters.
     integer,                intent(in)    :: flag     !*FD Flag to select method of
-                                                      !*FD calculation. $\mathtt{flag}=0$ means
-                                                      !*FD use full calculation, otherwise set $B=0$.
+    !*FD calculation. $\mathtt{flag}=0$ means
+    !*FD use full calculation, otherwise set $B=0$.
     real(dp),dimension(:,:),intent(in)    :: bwat     !*FD Basal melt-rate (scaled?)
     real(dp),dimension(:,:),intent(in)    :: relx     !*FD Elevation of relaxed topography
-                                                      !*FD (scaled?)
+    !*FD (scaled?)
     real(dp),dimension(:,:),intent(out)   :: btrc     !*FD Array of values of $B$.
-                                                      !*FD {\bf N.B. This array is smaller
-                                                      !*FD in each dimension than the other two}
-                                                      !*FD (\texttt{bwat} and \texttt{relx}) {\bf by
-                                                      !*FD one.} So its dimensions are (ewn-1,nsn-1).
+    !*FD {\bf N.B. This array is smaller
+    !*FD in each dimension than the other two}
+    !*FD (\texttt{bwat} and \texttt{relx}) {\bf by
+    !*FD one.} So its dimensions are (ewn-1,nsn-1).
 
     !------------------------------------------------------------------------------------
     ! Internal variables
     !------------------------------------------------------------------------------------
- 
+
     real(dp) :: stagbwat 
     integer :: ew,ns,nsn,ewn
 
     !------------------------------------------------------------------------------------
-  
+
     ewn=size(bwat,1) ; nsn=size(bwat,2)
 
     !------------------------------------------------------------------------------------
 
     if (velowk%first6) then
-      velowk%watwd  = params%bpar(1) / params%bpar(2)
-      velowk%watct  = params%bpar(2) 
-      velowk%trcmin = params%bpar(3) / scyr
-      velowk%trcmax = params%bpar(4) / scyr
-      velowk%marine = params%bpar(5)
-      velowk%trc0   = vel0 * len0 / (thk0**2)
-      velowk%trcmax = velowk%trcmax / velowk%trc0
-      velowk%trcmin = velowk%trcmin / velowk%trc0
-      velowk%c(1)   = (velowk%trcmax - velowk%trcmin) / 2.0d0 + velowk%trcmin
-      velowk%c(2)   = (velowk%trcmax - velowk%trcmin) / 2.0d0
-      velowk%c(3)   = velowk%watwd * thk0 / 4.0d0
-      velowk%c(4)   = velowk%watct * 4.0d0 / thk0 
-      velowk%first6 = .false. 
+       velowk%watwd  = params%bpar(1) / params%bpar(2)
+       velowk%watct  = params%bpar(2) 
+       velowk%trcmin = params%bpar(3) / scyr
+       velowk%trcmax = params%bpar(4) / scyr
+       velowk%marine = params%bpar(5)
+       velowk%trc0   = vel0 * len0 / (thk0**2)
+       velowk%trcmax = velowk%trcmax / velowk%trc0
+       velowk%trcmin = velowk%trcmin / velowk%trc0
+       velowk%c(1)   = (velowk%trcmax - velowk%trcmin) / 2.0d0 + velowk%trcmin
+       velowk%c(2)   = (velowk%trcmax - velowk%trcmin) / 2.0d0
+       velowk%c(3)   = velowk%watwd * thk0 / 4.0d0
+       velowk%c(4)   = velowk%watct * 4.0d0 / thk0 
+       velowk%first6 = .false. 
     end if
 
     !------------------------------------------------------------------------------------
 
     select case(flag)
-    case(0)
+    case(1)
+       btrc = params%btrac_const
+    case(2)
+       do ns = 1,nsn-1
+          do ew = 1,ewn-1
+             stagbwat = sum(bwat(ew:ew+1,ns:ns+1))
+             if (0.0d0 < stagbwat) then
+                btrc(ew,ns) = params%btrac_const
+             else
+                btrc(ew,ns) = 0.0d0
+             end if
+          end do
+       end do
+    case(3)
+       do ns = 1,nsn-1
+          do ew = 1,ewn-1
+             stagbwat = sum(bwat(ew:ew+1,ns:ns+1))
 
-      do ns = 1,nsn-1
-        do ew = 1,ewn-1
-          stagbwat = sum(bwat(ew:ew+1,ns:ns+1))
-
-          if (0.0d0 < stagbwat) then
-            btrc(ew,ns) = velowk%c(2) * tanh(velowk%c(3) * &
-                          (stagbwat - velowk%c(4))) + velowk%c(1)
-            if (0.0d0 > sum(relx(ew:ew+1,ns:ns+1))) then
-              btrc(ew,ns) = btrc(ew,ns) * velowk%marine  
-            end if
-          else
-            btrc(ew,ns) = 0.0d0
-          end if
-        end do
-      end do
+             if (0.0d0 < stagbwat) then
+                btrc(ew,ns) = velowk%c(2) * tanh(velowk%c(3) * &
+                     (stagbwat - velowk%c(4))) + velowk%c(1)
+                if (0.0d0 > sum(relx(ew:ew+1,ns:ns+1))) then
+                   btrc(ew,ns) = btrc(ew,ns) * velowk%marine  
+                end if
+             else
+                btrc(ew,ns) = 0.0d0
+             end if
+          end do
+       end do
 
     case default
-      btrc = 0.0d0
+       btrc = 0.0d0
     end select
 
   end subroutine calcbtrc
