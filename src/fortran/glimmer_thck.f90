@@ -367,8 +367,8 @@ contains
     ! Obviously we don't need to do this every time,
     ! but will do so for the moment.
 
-    dew2 = 2.0d0 * numerics%dew
-    dns2 = 2.0d0 * numerics%dns
+    dew2 = 1.0d0/(2.0d0 * numerics%dew)
+    dns2 = 1.0d0/(2.0d0 * numerics%dns)
 
     ewn=size(ipvr,1)
     nsn=size(ipvr,2)

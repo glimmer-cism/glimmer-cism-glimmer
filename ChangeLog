@@ -1,3 +1,7 @@
+2004-08-18 Magnus Hagdorn
+ * Brown Paper Back: only applied half the patch to glimmer_thck.f90
+   derivatives should be devided by 2*grid_length rather than multiplied
+
 2004-08-18 Ian Rutt
  * Formatting and documentation of glimmer_thck.f90
  * Changes to g_land.gln to be compatible with changes to option handling
