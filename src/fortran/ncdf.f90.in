@@ -55,6 +55,8 @@ module glimmer_ncdf
   type glimmer_nc_stat
      !*FD Data structure holding netCDF file description
 
+     logical :: just_processed = .FALSE.
+     !*FD set to .TRUE. if the file was used during the last time step
      character(len=fname_length) :: filename = " "
      !*FD name of netCDF file
      logical, dimension(num_vars) :: do_var

@@ -40,7 +40,7 @@
 !
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-#define NC infile%nc
+#define NCI infile%nc
 
 module glimmer_ncinfile
   !*FD routines for GLIMMER netCDF file input
@@ -76,9 +76,7 @@ contains
 
     ic=>model%funits%in_first
     do while(associated(ic))
-       if (ic%current_time.le.ic%nt) then
-          call glimmer_nc_read(ic,model)
-       end if
+       call glimmer_nc_checkread(ic,model)
        ic=>ic%next
     end do
   end subroutine readall
@@ -120,70 +118,70 @@ contains
     character(len=100) message
     
     ! open netCDF file
-    status = nf90_open(NC%filename,NF90_NOWRITE,NC%id)
+    status = nf90_open(NCI%filename,NF90_NOWRITE,NCI%id)
     call nc_errorhandle(__FILE__,__LINE__,status)
     call write_log_div
-    call write_log('opening file '//trim(NC%filename)//' for input')
+    call write_log('opening file '//trim(NCI%filename)//' for input')
 
     ! getting projections
-    model%projection = CFproj_GetProj(NC%id)
+    model%projection = CFproj_GetProj(NCI%id)
 
     ! reading dimensions
     ! getting ids
-    status = nf90_inq_dimid(NC%id, 'x0', NC%x0dim)
+    status = nf90_inq_dimid(NCI%id, 'x0', NCI%x0dim)
     call nc_errorhandle(__FILE__,__LINE__,status)
-    status = nf90_inq_dimid(NC%id, 'y0', NC%y0dim)
+    status = nf90_inq_dimid(NCI%id, 'y0', NCI%y0dim)
     call nc_errorhandle(__FILE__,__LINE__,status)
-    status = nf90_inq_dimid(NC%id, 'x1', NC%x1dim)
+    status = nf90_inq_dimid(NCI%id, 'x1', NCI%x1dim)
     call nc_errorhandle(__FILE__,__LINE__,status)
-    status = nf90_inq_dimid(NC%id, 'y1', NC%y1dim)
+    status = nf90_inq_dimid(NCI%id, 'y1', NCI%y1dim)
     call nc_errorhandle(__FILE__,__LINE__,status)
-    status = nf90_inq_dimid(NC%id, 'level', NC%leveldim)
+    status = nf90_inq_dimid(NCI%id, 'level', NCI%leveldim)
     call nc_errorhandle(__FILE__,__LINE__,status)
-    status = nf90_inq_dimid(NC%id, 'time', NC%timedim)
+    status = nf90_inq_dimid(NCI%id, 'time', NCI%timedim)
     call nc_errorhandle(__FILE__,__LINE__,status)
 
     ! getting lengths of x, y and level dimensions
     ! bail out if they do not match
-    status = nf90_inquire_dimension(NC%id,NC%x0dim,len=dimsize)
+    status = nf90_inquire_dimension(NCI%id,NCI%x0dim,len=dimsize)
     call nc_errorhandle(__FILE__,__LINE__,status)
     if (dimsize.ne.model%general%ewn-1) then
-       write(message,*) 'Error, reading file ',trim(NC%filename),' size x0dim does not match: ',dimsize,model%general%ewn-1
+       write(message,*) 'Error, reading file ',trim(NCI%filename),' size x0dim does not match: ',dimsize,model%general%ewn-1
        call error_log(message)
        stop
     end if
-    status = nf90_inquire_dimension(NC%id,NC%y0dim,len=dimsize)
+    status = nf90_inquire_dimension(NCI%id,NCI%y0dim,len=dimsize)
     call nc_errorhandle(__FILE__,__LINE__,status)
     if (dimsize.ne.model%general%nsn-1) then
-       write(message,*) 'Error, reading file ',trim(NC%filename),' size y0dim does not match: ',dimsize,model%general%nsn-1
+       write(message,*) 'Error, reading file ',trim(NCI%filename),' size y0dim does not match: ',dimsize,model%general%nsn-1
        call error_log(message)
        stop
     end if
-    status = nf90_inquire_dimension(NC%id,NC%x1dim,len=dimsize)
+    status = nf90_inquire_dimension(NCI%id,NCI%x1dim,len=dimsize)
     call nc_errorhandle(__FILE__,__LINE__,status)
     if (dimsize.ne.model%general%ewn) then
-       write(message,*) 'Error, reading file ',trim(NC%filename),' size x1dim does not match: ',dimsize,model%general%ewn
+       write(message,*) 'Error, reading file ',trim(NCI%filename),' size x1dim does not match: ',dimsize,model%general%ewn
        call error_log(message)
        stop
     end if
-    status = nf90_inquire_dimension(NC%id,NC%y1dim,len=dimsize)
+    status = nf90_inquire_dimension(NCI%id,NCI%y1dim,len=dimsize)
     call nc_errorhandle(__FILE__,__LINE__,status)
     if (dimsize.ne.model%general%nsn) then
-       write(message,*) 'Error, reading file ',trim(NC%filename),' size y1dim does not match: ',dimsize,model%general%nsn
+       write(message,*) 'Error, reading file ',trim(NCI%filename),' size y1dim does not match: ',dimsize,model%general%nsn
        call error_log(message)
        stop
     end if  
 
     ! getting variables
-    status = nf90_inquire(NC%id,nvariables=nvars)
+    status = nf90_inquire(NCI%id,nvariables=nvars)
     call nc_errorhandle(__FILE__,__LINE__,status)
 
     ! get id of time variable
-    status = nf90_inq_varid(NC%id,'time',NC%timevar)
+    status = nf90_inq_varid(NCI%id,'time',NCI%timevar)
     call nc_errorhandle(__FILE__,__LINE__,status)
 
     do i=1,nvars
-       status = nf90_inquire_variable(NC%id,i,name=varname)
+       status = nf90_inquire_variable(NCI%id,i,name=varname)
        call nc_errorhandle(__FILE__,__LINE__,status)
        select case(varname)
        !GENVARS!   
@@ -191,12 +189,43 @@ contains
     end do
 
     ! getting length of time dimension and allocating memory for array containing times
-    status = nf90_inquire_dimension(NC%id,NC%timedim,len=dimsize)
+    status = nf90_inquire_dimension(NCI%id,NCI%timedim,len=dimsize)
     call nc_errorhandle(__FILE__,__LINE__,status)
     allocate(infile%times(dimsize))
     infile%nt=dimsize
-    status = nf90_get_var(NC%id,NC%timevar,infile%times)
+    status = nf90_get_var(NCI%id,NCI%timevar,infile%times)
   end subroutine glimmer_nc_openfile
+
+  subroutine glimmer_nc_checkread(infile,model)
+    !*FD check if we should read from file
+    use glimmer_log
+    use glimmer_ncdf
+    use glide_types
+    implicit none
+    type(glimmer_nc_input), pointer :: infile
+    !*FD structure containg output netCDF descriptor
+    type(glide_global_type) :: model
+    !*FD the model instance
+
+    character(len=100) :: message
+
+    if (infile%current_time.le.infile%nt) then
+       if (.not.NCI%just_processed) then
+          call write_log_div
+          write(message,*) 'Reading time slice ',infile%current_time,'(',infile%times(infile%current_time),') from file ', &
+               trim(NCI%filename), ' at time ', model%numerics%time
+          call write_log(message)
+          NCI%just_processed = .TRUE.
+          call glimmer_nc_read(infile,model)
+       end if
+    else
+       if (NCI%just_processed) then
+          ! finished reading during last time step, need to increase counter...
+          infile%current_time = infile%current_time + 1
+          NCI%just_processed = .FALSE.
+       end if
+    end if
+  end subroutine glimmer_nc_checkread
 
   subroutine glimmer_nc_read(infile,model,scale_vars)
     !*FD read variables from a netCDF file
@@ -220,7 +249,6 @@ contains
     real(dp):: f1, f2, f3, f4, f5, f6, f7, f8
     integer :: ewnv, nsnv
     logical :: scale=.true.
-    character(len=100) :: message
 
     ! Deal with optional argument
 
@@ -239,15 +267,9 @@ contains
     f6 = scyr * vel0 * len0 / (thk0**2)
     f7 = tau0
     f8 = tau0 * len0 / (scyr * vel0) 
-
-    call write_log_div
-    write(message,*) 'Reading time slice ',infile%current_time,'(',infile%times(infile%current_time),') from file ', &
-         trim(NC%filename), ' at time ', model%numerics%time
-    call write_log(message)
-    
+   
     ! read variables
     !GENVAR_READ!
-    infile%current_time = infile%current_time + 1
   end subroutine glimmer_nc_read
 
 end module glimmer_ncinfile

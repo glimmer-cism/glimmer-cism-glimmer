@@ -85,6 +85,51 @@ module glimmer_project
 
 contains
 
+  subroutine proj_readconfig(proj,config)
+    !*FD read projection configuration from file
+    use glimmer_config
+    implicit none
+    type(projection),intent(inout) :: proj !*FD The projection parameters to be initialised
+    type(ConfigSection), pointer :: config !*FD structure holding sections of configuration file   
+
+    ! local variables
+    type(ConfigSection), pointer :: section
+    
+    call GetSection(config,section,'projection')
+    if (associated(section)) then
+       call GetValue(section,'projection',proj%p_type)
+       call GetValue(section,'lonc',proj%lonc)
+       call GetValue(section,'latc',proj%latc)
+       call GetValue(section,'cpx',proj%cpx)
+       call GetValue(section,'cpx',proj%cpy)
+       call GetValue(section,'std parallel',proj%std_par)
+    end if
+  end subroutine proj_readconfig
+
+  subroutine proj_printconfig(proj)
+    !*FD print configuration to log
+    use glimmer_log
+    implicit none
+    type(projection),intent(inout) :: proj !*FD The projection parameters to be initialised
+
+    character(len=100) :: message
+    call write_log('GLINT projection')
+    call write_log('----------------')
+    write(message,*) 'Type         :',proj%p_type
+    call write_log(message)
+    write(message,*) 'lonc         :',proj%lonc
+    call write_log(message)
+    write(message,*) 'latc         :',proj%latc
+    call write_log(message)
+    write(message,*) 'cpx          :',proj%cpx
+    call write_log(message)
+    write(message,*) 'cpy          :',proj%cpy
+    call write_log(message)
+    write(message,*) 'std parallel : ',proj%std_par
+    call write_log(message)
+    call write_log('')
+  end subroutine proj_printconfig
+
   subroutine new_proj(proj,radea,p_type,nx,ny,dx,dy,cpx,cpy,latc,lonc,std_par)
 
     !*FD Initialise new map projection area. The subroutine may be used without the optional

@@ -49,10 +49,38 @@ module glimmer_degd
   !*FD code was originally specific to Greenland, but is in fact applied
   !*FD regardless of which region the ice model is covering.
 
-  use glimmer_types
-
   private pddtabgrn,qromb,qromb2,polint,trapzd
   private trapzd2,pdd1stint,pdd2ndint,findgrid
+
+  type glimmer_pddcalc
+
+    !*FD Holds parameters for positive-degree-day mass-balance
+    !*FD calculation. The table has two axes - the $x$ axis is the
+    !*FD difference between mean annual and July temps, while the
+    !*FD $y$- axis is the mean annual temp
+
+    integer  :: dx        = 1   !*FD Spacing of values in x-direction ($^{\circ}$C)
+    integer  :: dy        = 1   !*FD Spacing of values in y-direction ($^{\circ}$C)
+    integer  :: ix        = 0   !*FD Lower bound of $x$-axis ($^{\circ}$C)
+    integer  :: iy        = -50 !*FD Lower bound of $y$-axis ($^{\circ}$C)
+    integer  :: nx        = 31  !*FD Number of values in x-direction
+    integer  :: ny        = 71  !*FD Number of values in y-direction
+    real(sp) :: dailytemp = 0.0 
+    real(sp) :: tma       = 0.0
+    real(sp) :: tmj       = 0.0
+    real(sp) :: dtmj      = 0.0
+    real(sp) :: dd_sigma  = 5.0
+    logical  :: first     = .true.
+    logical  :: pt_alloc  = .false. !*FD set \texttt{.true.} if \texttt{pddtab}
+                                    !*FD has been allocated.
+ 
+    ! The actual PDD table ---------------------------------------------
+
+    real(sp),dimension(:,:),pointer :: pddtab  => null() 
+    
+    !*FD PDD table - must be allocated with dimensions nx,ny.
+
+ end type glimmer_pddcalc
 
 contains
 

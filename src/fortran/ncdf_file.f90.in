@@ -40,7 +40,7 @@
 !
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-#define NC outfile%nc
+#define NCO outfile%nc
 
 module glimmer_ncfile
   !*FD routines for GLIMMER netCDF file I/O
@@ -85,9 +85,7 @@ contains
 
     oc=>model%funits%out_first
     do while(associated(oc))
-       if (model%numerics%time.ge.oc%next_write .or. (forcewrite.and.model%numerics%time.gt.oc%next_write-oc%freq)) then
-          call glimmer_nc_write(oc,model)
-       end if
+       call glimmer_nc_checkwrite(oc,model,forcewrite)
        oc=>oc%next
     end do
   end subroutine writeall
@@ -128,44 +126,44 @@ contains
     character(len=100) message
     
     ! create new netCDF file
-    status = nf90_create(NC%filename,NF90_CLOBBER,NC%id)
+    status = nf90_create(NCO%filename,NF90_CLOBBER,NCO%id)
     call nc_errorhandle(__FILE__,__LINE__,status)
     call write_log_div
-    write(message,*) 'Opening file ',trim(NC%filename),' for output; write period every ',outfile%freq,' years'
+    write(message,*) 'Opening file ',trim(NCO%filename),' for output; write period every ',outfile%freq,' years'
     call write_log(trim(message))
 
     ! writing meta data
-    status = nf90_put_att(NC%id, NF90_GLOBAL, 'Conventions', "CF-1.0")
+    status = nf90_put_att(NCO%id, NF90_GLOBAL, 'Conventions', "CF-1.0")
     call nc_errorhandle(__FILE__,__LINE__,status)
-    status = nf90_put_att(NC%id, NF90_GLOBAL,'title',trim(outfile%metadata%title))
+    status = nf90_put_att(NCO%id, NF90_GLOBAL,'title',trim(outfile%metadata%title))
     call nc_errorhandle(__FILE__,__LINE__,status)
-    status = nf90_put_att(NC%id, NF90_GLOBAL,'institution',trim(outfile%metadata%institution))
+    status = nf90_put_att(NCO%id, NF90_GLOBAL,'institution',trim(outfile%metadata%institution))
     call nc_errorhandle(__FILE__,__LINE__,status)
-    status = nf90_put_att(NC%id, NF90_GLOBAL,'source',trim(outfile%metadata%source))
+    status = nf90_put_att(NCO%id, NF90_GLOBAL,'source',trim(outfile%metadata%source))
     call nc_errorhandle(__FILE__,__LINE__,status)
-    status = nf90_put_att(NC%id, NF90_GLOBAL,'history',trim(outfile%metadata%history))
+    status = nf90_put_att(NCO%id, NF90_GLOBAL,'history',trim(outfile%metadata%history))
     call nc_errorhandle(__FILE__,__LINE__,status)
-    status = nf90_put_att(NC%id, NF90_GLOBAL,'references',trim(outfile%metadata%references))
+    status = nf90_put_att(NCO%id, NF90_GLOBAL,'references',trim(outfile%metadata%references))
     call nc_errorhandle(__FILE__,__LINE__,status)
-    status = nf90_put_att(NC%id, NF90_GLOBAL,'comment',trim(outfile%metadata%comment))
+    status = nf90_put_att(NCO%id, NF90_GLOBAL,'comment',trim(outfile%metadata%comment))
     call nc_errorhandle(__FILE__,__LINE__,status)
 
     ! defining dimensions
-    status = nf90_def_dim(NC%id,'x0',model%general%ewn-1,NC%x0dim)
+    status = nf90_def_dim(NCO%id,'x0',model%general%ewn-1,NCO%x0dim)
     call nc_errorhandle(__FILE__,__LINE__,status)
-    status = nf90_def_dim(NC%id,'y0',model%general%nsn-1,NC%y0dim)
+    status = nf90_def_dim(NCO%id,'y0',model%general%nsn-1,NCO%y0dim)
     call nc_errorhandle(__FILE__,__LINE__,status)
-    status = nf90_def_dim(NC%id,'x1',model%general%ewn,NC%x1dim)
+    status = nf90_def_dim(NCO%id,'x1',model%general%ewn,NCO%x1dim)
     call nc_errorhandle(__FILE__,__LINE__,status)
-    status = nf90_def_dim(NC%id,'y1',model%general%nsn,NC%y1dim)
+    status = nf90_def_dim(NCO%id,'y1',model%general%nsn,NCO%y1dim)
     call nc_errorhandle(__FILE__,__LINE__,status)
-    status = nf90_def_dim(NC%id,'level',model%general%upn,NC%leveldim)
+    status = nf90_def_dim(NCO%id,'level',model%general%upn,NCO%leveldim)
     call nc_errorhandle(__FILE__,__LINE__,status)
-    if (NC%do_spot) then	 
-       status = nf90_def_dim(NC%id,'spot',size(outfile%spotx),NC%spotdim)	 
+    if (NCO%do_spot) then	 
+       status = nf90_def_dim(NCO%id,'spot',size(outfile%spotx),NCO%spotdim)	 
        call nc_errorhandle(__FILE__,__LINE__,status)	 
     end if
-    status = nf90_def_dim(NC%id,'time',NF90_UNLIMITED,NC%timedim)
+    status = nf90_def_dim(NCO%id,'time',NF90_UNLIMITED,NCO%timedim)
     call nc_errorhandle(__FILE__,__LINE__,status)
 
     ! defining variables
@@ -173,56 +171,95 @@ contains
 
     ! adding projection info
     if (CFproj_allocated(model%projection)) then
-       status = nf90_def_var(NC%id,mapvarname,NF90_CHAR,mapid)
+       status = nf90_def_var(NCO%id,mapvarname,NF90_CHAR,mapid)
        call nc_errorhandle(__FILE__,__LINE__,status)
-       call CFproj_PutProj(NC%id,mapid,model%projection)
+       call CFproj_PutProj(NCO%id,mapid,model%projection)
     end if
 
     ! leaving define mode
-    status = nf90_enddef(NC%id)
+    status = nf90_enddef(NCO%id)
     call nc_errorhandle(__FILE__,__LINE__,status)
     
     ! filling coordinate variables
     do i=1, model%general%ewn-1
-       status=nf90_put_var(NC%id,NC%x0var,((i-0.5)*model%numerics%dew*len0),(/i/))
+       status=nf90_put_var(NCO%id,NCO%x0var,((i-0.5)*model%numerics%dew*len0),(/i/))
        call nc_errorhandle(__FILE__,__LINE__,status)
     end do
     do i=1, model%general%nsn-1
-       status=nf90_put_var(NC%id,NC%y0var,(i-0.5)*model%numerics%dns*len0,(/i/))
+       status=nf90_put_var(NCO%id,NCO%y0var,(i-0.5)*model%numerics%dns*len0,(/i/))
        call nc_errorhandle(__FILE__,__LINE__,status)
     end do
     do i=1, model%general%ewn
-       status=nf90_put_var(NC%id,NC%x1var,(i-1.)*model%numerics%dew*len0,(/i/))
+       status=nf90_put_var(NCO%id,NCO%x1var,(i-1.)*model%numerics%dew*len0,(/i/))
        call nc_errorhandle(__FILE__,__LINE__,status)
     end do
     do i=1, model%general%nsn
-       status=nf90_put_var(NC%id,NC%y1var,(i-1.)*model%numerics%dns*len0,(/i/))
+       status=nf90_put_var(NCO%id,NCO%y1var,(i-1.)*model%numerics%dns*len0,(/i/))
        call nc_errorhandle(__FILE__,__LINE__,status)
     end do    
-    status=nf90_put_var(NC%id,NC%levelvar,model%numerics%sigma)
+    status=nf90_put_var(NCO%id,NCO%levelvar,model%numerics%sigma)
     call nc_errorhandle(__FILE__,__LINE__,status)
-    if (NC%do_spot) then
+    if (NCO%do_spot) then
        do i=1,size(outfile%spotx)
-          status=nf90_put_var(NC%id,NC%x0_spotvar, &
+          status=nf90_put_var(NCO%id,NCO%x0_spotvar, &
                (real(outfile%spotx(i))-0.5)*real(model%numerics%dew*len0),(/i/))
           call nc_errorhandle(__FILE__,__LINE__,status)
-          status=nf90_put_var(NC%id,NC%y0_spotvar, &
+          status=nf90_put_var(NCO%id,NCO%y0_spotvar, &
                (real(outfile%spoty(i))-0.5)*real(model%numerics%dns*len0),(/i/))
           call nc_errorhandle(__FILE__,__LINE__,status)
           
-          status=nf90_put_var(NC%id,NC%x1_spotvar, &
+          status=nf90_put_var(NCO%id,NCO%x1_spotvar, &
                (real(outfile%spotx(i))-1.0)*real(model%numerics%dew*len0),(/i/))
           call nc_errorhandle(__FILE__,__LINE__,status)
-          status=nf90_put_var(NC%id,NC%y1_spotvar, &
+          status=nf90_put_var(NCO%id,NCO%y1_spotvar, &
                (real(outfile%spoty(i))-1.0)*real(model%numerics%dns*len0),(/i/))
           call nc_errorhandle(__FILE__,__LINE__,status)    
        end do
     end if
   end subroutine glimmer_nc_createfile
 
+  subroutine glimmer_nc_checkwrite(outfile,model,forcewrite)
+    !*FD check if we should write to file
+    use glimmer_log
+    use glimmer_ncdf
+    use glide_types
+    implicit none
+    type(glimmer_nc_output), pointer :: outfile    
+    type(glide_global_type) :: model
+    logical forcewrite
+
+    character(len=100) :: message
+    integer status
+
+    if (model%numerics%time.ge.outfile%next_write .or. (forcewrite.and.model%numerics%time.gt.outfile%next_write-outfile%freq)) then
+       if (.not.NCO%just_processed) then
+          call write_log_div
+          write(message,*) 'Writing to file ', trim(NCO%filename), ' at time ', model%numerics%time
+          call write_log(trim(message))
+          
+          ! increase next_write 
+          outfile%next_write=outfile%next_write+outfile%freq
+          ! write time
+          status = nf90_put_var(NCO%id,NCO%timevar,model%numerics%time,(/outfile%timecounter/))
+          NCO%just_processed = .TRUE.
+          
+          ! write standard variables
+          call glimmer_nc_write(outfile,model)
+       end if
+    else
+       if (NCO%just_processed) then
+          ! finished writing during last time step, need to increase counter...
+          
+          outfile%timecounter = outfile%timecounter + 1
+
+          status = nf90_sync(NCO%id)
+          NCO%just_processed = .FALSE.
+       end if
+    end if
+  end subroutine glimmer_nc_checkwrite
+
   subroutine glimmer_nc_write(outfile,model)
     !*FD write variables to a netCDF file
-    use glimmer_log
     use glimmer_ncdf
     use glide_types
     use glimmer_global, only : dp
@@ -239,7 +276,7 @@ contains
     integer up, spot
     real(dp):: f1, f2, f3, f4, f5, f6, f7, f8
     integer :: ewnv, nsnv
-    character(len=100) :: message
+    
     ! Set up various constants. These were originally only
     ! done once, but are done each time now, for safety.
 
@@ -254,22 +291,8 @@ contains
     f7 = tau0
     f8 = tau0 * len0 / (scyr * vel0) 
 
-    call write_log_div
-    write(message,*) 'Writing to file ', trim(NC%filename), ' at time ', model%numerics%time
-    call write_log(trim(message))
-
-    ! increase next_write 
-    outfile%next_write=outfile%next_write+outfile%freq
-    ! write time
-    status = nf90_put_var(NC%id,NC%timevar,model%numerics%time,(/outfile%timecounter/))
-
     ! write variables
     !GENVAR_WRITE!
-
-    ! increase time counter
-    outfile%timecounter = outfile%timecounter + 1
-
-    status = nf90_sync(NC%id)
 
   end subroutine glimmer_nc_write
 end module glimmer_ncfile

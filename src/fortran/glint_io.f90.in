@@ -1,0 +1,127 @@
+! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+! +                                                           +
+! +  glint_io.f90 - part of the GLIMMER ice model             + 
+! +                                                           +
+! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+! 
+! Copyright (C) 2004 GLIMMER contributors - see COPYRIGHT file 
+! for list of contributors.
+!
+! This program is free software; you can redistribute it and/or 
+! modify it under the terms of the GNU General Public License as 
+! published by the Free Software Foundation; either version 2 of 
+! the License, or (at your option) any later version.
+!
+! This program is distributed in the hope that it will be useful, 
+! but WITHOUT ANY WARRANTY; without even the implied warranty of 
+! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+! GNU General Public License for more details.
+!
+! You should have received a copy of the GNU General Public License 
+! along with this program; if not, write to the Free Software 
+! Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 
+! 02111-1307 USA
+!
+! GLIMMER is maintained by:
+!
+! Ian Rutt
+! School of Geographical Sciences
+! University of Bristol
+! University Road
+! Bristol
+! BS8 1SS
+! UK
+!
+! email: <i.c.rutt@bristol.ac.uk> or <ian.rutt@physics.org>
+!
+! GLIMMER is hosted on NeSCForge:
+!
+! http://forge.nesc.ac.uk/projects/glimmer/
+!
+! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+#define NCO outfile%nc
+#define NCI infile%nc
+
+module glint_io
+
+  !*FD routines handling netCDF I/O for glint variables
+  
+contains
+
+  subroutine glint_nc_write(outfile,climate)
+    !*FD write GLINT data to netCDF file
+    use glimmer_ncdf
+    use glint_object, only : glint_climate
+    use glimmer_global, only : dp
+    use physcon, only : scyr
+    use paramets, only : thk0, tim0, vel0, vis0, len0, tau0, acc0
+    implicit none
+
+    type(glimmer_nc_output), pointer :: outfile !*FD structure containg output netCDF descriptor
+    type(glint_climate) :: climate              !*FD climate data
+
+    ! local variables
+    integer status
+    integer up, spot
+    real(dp):: f1, f2, f3, f4, f5, f6, f7, f8
+    ! Set up various constants. These were originally only
+    ! done once, but are done each time now, for safety.
+
+    f1 = scyr * thk0 / tim0
+    f2 = scyr * vel0 * thk0
+    f3 = vel0 / (vis0 * len0)
+    f4 = vel0 * scyr * len0
+    f5 = scyr * vel0
+    f6 = scyr * vel0 * len0 / (thk0**2)
+    f7 = tau0
+    f8 = tau0 * len0 / (scyr * vel0)    
+
+    ! write variables
+    !GENVAR_WRITE!
+
+  end subroutine glint_nc_write
+
+  subroutine glint_nc_read(infile,climate,scale_vars)
+    !*FD read variables from a netCDF file
+    use glimmer_ncdf
+    use glint_object, only : glint_climate
+    use glimmer_global, only : dp
+    use physcon, only : scyr
+    use paramets, only : thk0, tim0, vel0, vis0, len0, tau0, acc0
+    implicit none
+
+    type(glimmer_nc_input), pointer :: infile !*FD structure containg output netCDF descriptor
+    type(glint_climate) :: climate              !*FD climate data
+    
+    logical,optional :: scale_vars
+    !*FD Specifies whether fields should be scaled by factors when read in.
+
+    ! local variables
+    integer status
+    integer up
+    real(dp):: f1, f2, f3, f4, f5, f6, f7, f8
+    logical :: scale=.true.
+    character(len=100) :: message
+
+    ! Deal with optional argument
+
+    if (present(scale_vars)) scale=scale_vars
+
+    ! Set up various constants. These were originally only
+    ! done once, but are done each time now, for safety.
+
+    f1 = scyr * thk0 / tim0
+    f2 = scyr * vel0 * thk0
+    f3 = vel0 / (vis0 * len0)
+    f4 = vel0 * scyr * len0
+    f5 = scyr * vel0
+    f6 = scyr * vel0 * len0 / (thk0**2)
+    f7 = tau0
+    f8 = tau0 * len0 / (scyr * vel0) 
+    
+    ! read variables
+    !GENVAR_READ!
+    
+  end subroutine glint_nc_read
+end module glint_io

@@ -13,7 +13,7 @@ PROGS = glimmer_example bin2ncdf input2ncdf relaxed simple_glide eis_glide
 TESTS = test_config test_setup test_ts
 DATA = ncdf_vars.def
 
-AUTOGEN = ncdf.f90 ncdf_file.f90 ncdf_infile.f90 ncdf_params.f90
+AUTOGEN = ncdf.f90 ncdf_file.f90 ncdf_infile.f90 ncdf_params.f90 glint_io.f90
 
 OBJECTS = glimmer_degd.o glimmer_isot.o glimmer_setup.o \
           glimmer_modu.o glimmer_outp.o glimmer_paramets.o glimmer_physcon.o glimmer_restart.o \
@@ -124,5 +124,8 @@ ncdf_infile.f90:	ncdf_vars.def ncdf_infile.f90.in
 		python ../python/generate_ncvars.py $< $@.in	
 ncdf_params.f90:	ncdf_vars.def ncdf_params.f90.in
 		python ../python/generate_ncvars.py $< $@.in	
+
+glint_io.f90:	ncdf_vars.def glint_io.f90.in
+		python ../python/generate_ncvars.py $< $@.in
 
 include f90_dep.mak 
