@@ -839,9 +839,10 @@ contains
     allocate(params%total_cov_orog(params%g_grid_orog%nx,params%g_grid_orog%ny))
     allocate(params%cov_norm_orog (params%g_grid_orog%nx,params%g_grid_orog%ny))
 
-    ! Set total coverage to zero
+    ! Set total coverage and normalisation to zero
 
     params%total_cov_orog=0.0
+    params%cov_norm_orog=0.0
 
     ! Loop over instances
 
@@ -873,12 +874,13 @@ contains
 
       params%total_cov_orog = params%total_cov_orog &
                    + params%instances(i)%frac_cov_orog
+    
+      where (params%instances(i)%frac_cov_orog>0.0) params%cov_norm_orog=params%cov_norm_orog+1
 
     enddo
 
-    ! Copy to normalisation, and check not greater than 1
+    ! check coverage not greater than 1
 
-    params%cov_norm_orog=params%total_cov_orog
     where (params%total_cov_orog>1.0) params%total_cov_orog=1.0
 
   end subroutine glimmer_set_orog_res
