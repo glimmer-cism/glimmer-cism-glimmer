@@ -1,0 +1,33 @@
+#[]
+#dimensions:    time, level, y1, x1
+#units:         
+#long_name:     
+#data:          
+#factor:        
+
+# setup for code generator
+[VARSET]
+# prefix of the generated module
+name:     glint_mbal
+# f90 type containing all necessary data
+datatype: glint_mbc
+# module where type is defined
+datamod:  glint_mbal_coupling
+
+[snowd]
+dimensions:    time, y1, x1
+units:         meter
+long_name:     snow depth
+data:          data%snowd
+load:          1
+hot:           1
+coordinates:   lon lat
+
+[siced]
+dimensions:    time, y1, x1
+units:         meter
+long_name:     superimposed ice depth
+data:          data%siced
+load:          1
+hot:           1
+coordinates:   lon lat

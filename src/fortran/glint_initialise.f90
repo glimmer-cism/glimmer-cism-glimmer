@@ -58,6 +58,7 @@ contains
     use glimmer_config
     use glint_global_grid
     use glint_io
+    use glint_mbal_io
     use glide
     use glint_constants
     implicit none
@@ -77,6 +78,7 @@ contains
 
     ! create glint variables
     call glint_io_createall(instance%model)
+    call glint_mbal_io_createall(instance%model)
 
     ! fill dimension variables
     call glide_nc_fillall(instance%model)

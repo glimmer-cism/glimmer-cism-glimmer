@@ -65,6 +65,7 @@ contains
     use glide_io
     use paramets
     use glint_io
+    use glint_mbal_io
     use glint_climate
     use glint_routing
     use glimmer_log
@@ -135,6 +136,11 @@ contains
     call glint_accumulate(instance%mbal_accum,instance%artm,instance%arng,instance%prcp, &
          instance%snowd,instance%siced,instance%xwind,instance%ywind,instance%global_orog, &
          instance%local_orog)
+
+    ! Write output if necessary ----------------------------------------------
+
+    call set_time(instance%model,real(time)*real(hours2years))
+    call glint_mbal_io_writeall(instance%mbal_accum,instance%model)
 
     ! If it's not time for a dynamics/temp/velocity timestep, return ---------
 

@@ -718,6 +718,15 @@ contains
     get_nsn = model%general%nsn
   end function get_nsn
   
+  subroutine set_time(model,time)
+    !*FD Set the model time counter --- useful for
+    !*FD fractional year output
+    implicit none
+    type(glide_global_type) :: model
+    real :: time
+
+    model%numerics%time=time
+  end subroutine set_time
 
 end module glide_types
 

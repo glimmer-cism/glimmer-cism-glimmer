@@ -102,9 +102,9 @@ module glimmer_ncdf
 
      type(glimmer_nc_stat) :: nc
      !*FD structure containg file info
-     integer :: freq=1000
+     real :: freq=1000
      !*FD frequency at which data is written to file
-     integer :: next_write=0
+     real :: next_write=0
      !*FD next time step at which data is dumped
      integer :: timecounter=1
      !*FD time counter

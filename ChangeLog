@@ -1,3 +1,7 @@
+2005-03-14 Ian Rutt
+ * Adapted netcdf code to handle fractional year-lengths and added
+  handling in GLINT for writing mass-balance information at these times
+
 2005-03-11 Magnus Hagdorn
  * configure.in: bumped version to 0.5.0
  * moved test_config.conf to tests
