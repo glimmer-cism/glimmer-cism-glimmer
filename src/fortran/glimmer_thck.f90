@@ -159,9 +159,9 @@ contains
       thck = max(0.0d0, thck)
       usrf = thck + lsrf
 
-      write(outtxt,*)"* thck ", model%numerics%time, linit, model%pcgdwk%mlinit, model%pcgdwk%tlinit, totpts, &
+      write(outtxt,*)"thck ", model%numerics%time, linit, model%pcgdwk%mlinit, model%pcgdwk%tlinit, totpts, &
           real(thk0*thck(model%general%ewn/2+1,model%general%nsn/2+1))
-      call glide_msg(GM_TIMESTEP,__FILE__,__LINE__,trim(outtxt))
+      call glide_msg(GM_TIMESTEP,__FILE__,__LINE__,trim(adjustl(outtxt)))
 
       deallocate(model%pcgdwk%pcgrow,model%pcgdwk%pcgcol)
       deallocate(model%pcgdwk%pcgval,model%pcgdwk%rhsd,model%pcgdwk%answ)
@@ -896,11 +896,11 @@ contains
                     model%velocity%diffu)
 
         write(outtxt,*)"thck ", model%numerics%time, linit, model%pcgdwk%mlinit, model%pcgdwk%tlinit, model%geometry%totpts
-        call glide_msg(GM_TIMESTEP,__FILE__,__LINE__,trim(outtxt))
+        call glide_msg(GM_TIMESTEP,__FILE__,__LINE__,trim(adjustl(outtxt)))
         write(outtxt,*)real(thk0*model%geometry%thck(model%general%ewn/2+1,model%general%nsn/2+1))
-        call glide_msg(GM_TIMESTEP,__FILE__,__LINE__,trim(outtxt))
+        call glide_msg(GM_TIMESTEP,__FILE__,__LINE__,trim(adjustl(outtxt)))
         write(outtxt,*)real(vel0*maxval(abs(model%velocity%ubas))), real(vel0*maxval(abs(model%velocity%vbas))) 
-        call glide_msg(GM_TIMESTEP,__FILE__,__LINE__,trim(outtxt))
+        call glide_msg(GM_TIMESTEP,__FILE__,__LINE__,trim(adjustl(outtxt)))
 
       deallocate(model%pcgdwk%pcgrow,model%pcgdwk%pcgcol,model%pcgdwk%pcgval,model%pcgdwk%rhsd,model%pcgdwk%answ)
 

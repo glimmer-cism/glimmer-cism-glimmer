@@ -161,6 +161,10 @@ program glimmer_example
 
   time=24.0*360.0
 
+  ! Set the message level (6 is the default - all messages on)
+
+  call glide_set_msg_level(6)
+
   ! Initialise the ice model
 
   call initialise_glimmer(ice_sheet,lats,lons,paramfile)
@@ -183,7 +187,7 @@ program glimmer_example
                  orog_out=orog_out,albedo=albedo,output_flag=out, &
                  ice_frac=ice_frac,water_out=fw,water_in=fw_in, &
                  total_water_in=twin,total_water_out=twout,ice_volume=ice_vol) 
-	print*,'**********************************'
+	call glide_stars
   enddo
   call end_glimmer(ice_sheet)
 

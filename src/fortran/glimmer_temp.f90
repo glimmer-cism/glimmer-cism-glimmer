@@ -368,9 +368,9 @@ contains
 
       ! Output some information ----------------------------------------------------
 
-      write(outtxt,*)"* temp ", model%numerics%time, iter, model%temper%niter, &
+      write(outtxt,*)"temp ", model%numerics%time, iter, model%temper%niter, &
                           real(model%temper%temp(model%general%upn,model%general%ewn/2+1,model%general%nsn/2+1))
-      call glide_msg(GM_TIMESTEP,__FILE__,__LINE__,trim(outtxt))
+      call glide_msg(GM_TIMESTEP,__FILE__,__LINE__,trim(adjustl(outtxt)))
 
   end subroutine timeevoltemp
 
@@ -1126,7 +1126,7 @@ contains
         call find_dt_wat(model%numerics%dttem,estimate,model%tempwk%dt_wat,model%tempwk%nwat) 
 
         write(outtxt,*) model%numerics%dttem*tim0/scyr, model%tempwk%dt_wat*tim0/scyr, model%tempwk%nwat
-        call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,trim(outtxt))
+        call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,trim(adjustl(outtxt)))
 
         model%tempwk%c = (/ rhow * grav, rhoi * grav, 2.0d0 * model%numerics%dew, 2.0d0 * model%numerics%dns, &
                0.25d0 * model%tempwk%dt_wat / model%numerics%dew, 0.25d0 * model%tempwk%dt_wat / model%numerics%dns, &

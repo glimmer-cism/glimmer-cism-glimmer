@@ -717,7 +717,7 @@ contains
     instance%newtemps = .false.
 
     write(timetxt,*)instance%model%numerics%time
-    call glide_msg(GM_TIMESTEP,__FILE__,__LINE__,"completed time "//trim(timetxt))
+    call glide_msg(GM_TIMESTEP,__FILE__,__LINE__,"completed time "//trim(adjustl(timetxt)))
 
     ! ------------------------------------------------------------------------ 
     ! Upscaling of output

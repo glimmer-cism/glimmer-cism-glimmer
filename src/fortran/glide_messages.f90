@@ -53,13 +53,9 @@ module glide_messages
   integer,parameter :: GM_ERROR      = 5
   integer,parameter :: GM_FATAL      = 6
 
-  logical :: show_diagnostics = .true.
-  logical :: show_timesteps   = .true.
-  logical :: show_info        = .true.
-  logical :: show_warnings    = .true.
-  logical :: show_errors      = .true.
-  logical :: show_fatals      = .true.
-
+  integer,parameter            :: GM_levels = 6
+  logical,dimension(GM_levels) :: gm_show = .true.
+ 
 contains
 
   subroutine glide_msg(type,file,line,text)
@@ -75,25 +71,47 @@ contains
 
     select case(type)
     case(GM_DIAGNOSTIC)
-      if (show_diagnostics) write(*,*)'* ',text
+      if (gm_show(GM_DIAGNOSTIC)) write(*,*)'* ',text
     case(GM_TIMESTEP)
-      if (show_timesteps)   write(*,*)'* ',text
+      if (gm_show(GM_TIMESTEP))   write(*,*)'* ',text
     case(GM_INFO)
-      if (show_info)     write(*,*)'* MESSAGE: ',text
+      if (gm_show(GM_INFO))       write(*,*)'* MESSAGE: ',text
     case(GM_WARNING)
-      if (show_warnings) write(*,*)'* WARNING: ',text
+      if (gm_show(GM_WARNING))    write(*,*)'* WARNING: ',text
     case(GM_ERROR)
-      if (show_errors)   write(*,*)'* ERROR: ',text
+      if (gm_show(GM_ERROR))      write(*,*)'* ERROR: ',text
     case(GM_FATAL)
-      if (show_fatals) then
+      if (gm_show(GM_FATAL)) then
         write(*,*)'* FATAL ERROR (',trim(file),':',trim(linetxt),') ',text
-        stop
       end if
+      stop
     case default
       write(*,*)'* Error in call to GLIDE_MSG, in ',trim(file),', at line ',trim(linetxt),':'
       write(*,*)'* Type ',type,' is not recognised'
     end select
 
   end subroutine glide_msg
+
+  subroutine glide_stars
+
+      if (gm_show(GM_DIAGNOSTIC)) write(*,*)&
+        '**********************************************************************'
+
+  end subroutine glide_stars
+
+  subroutine glide_set_msg_level(level)
+
+    integer, intent(in) :: level
+    integer :: i
+
+    do i=1,GM_levels
+      if (i>(6-level)) then
+        gm_show(i)=.true.
+      else
+        gm_show(i)=.false.
+      endif
+    enddo
+
+  end subroutine glide_set_msg_level
 
 end module glide_messages

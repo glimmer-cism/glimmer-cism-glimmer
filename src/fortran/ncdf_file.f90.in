@@ -113,6 +113,7 @@ contains
     !*FD create a new netCDF file
     use glimmer_ncdf
     use glimmer_types
+	use glide_messages
     use glimmer_CFproj
     use paramets, only : len0
     implicit none
@@ -124,12 +125,15 @@ contains
     ! local variables
     integer status
     integer i,mapid
+	character(40) :: freqtxt
     
     ! create new netCDF file
     status = nf90_create(NC%filename,NF90_CLOBBER,NC%id)
     call nc_errorhandle(__FILE__,__LINE__,status)
-    write(*,*) '*******************************************************************************'
-    write(*,*) 'Opening file ', trim(NC%filename), ' for output; write period every',outfile%freq,' years'
+	call glide_stars
+	write(freqtxt,*)outfile%freq
+    call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,&
+		'Opening file '//trim(NC%filename)//' for output; write period every '//trim(adjustl(freqtxt))//' years')
 
     ! writing meta data
     status = nf90_put_att(NC%id, NF90_GLOBAL, 'Conventions', "CF-1.0")
@@ -220,6 +224,7 @@ contains
     use glimmer_ncdf
     use glimmer_types
     use glimmer_global, only : dp
+	use glide_messages
     use physcon, only : scyr
     use paramets, only : thk0, tim0, vel0, vis0, len0, tau0, acc0
     implicit none
@@ -233,6 +238,7 @@ contains
     integer up, spot
     real(dp):: f1, f2, f3, f4, f5, f6, f7, f8
     integer :: ewnv, nsnv
+	character(40) :: timetxt
 
     ! Set up various constants. These were originally only
     ! done once, but are done each time now, for safety.
@@ -248,8 +254,10 @@ contains
     f7 = tau0
     f8 = tau0 * len0 / (scyr * vel0) 
 
-    write(*,*) '*******************************************************************************'
-    write(*,*) 'Writing to file ', trim(NC%filename), ' at time ', model%numerics%time
+	call glide_stars
+	write(timetxt,*)model%numerics%time
+    call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__, &
+	    'Writing to file '//trim(NC%filename)//' at time '//trim(adjustl(timetxt)))
 
     ! increase next_write 
     outfile%next_write=outfile%next_write+outfile%freq

@@ -250,6 +250,7 @@ contains
   function map2d(id,index)
     !*FD map id and index to netCDF variable id
     use glimmer_ncdf
+    use glide_messages
     implicit none
     integer :: map2d
     integer, intent(in) :: id,index
@@ -318,12 +319,12 @@ contains
           return
        end select
     end if
-    write(*,*) 'some error occured, we should not be here'
-    stop
+    call glide_msg(GM_FATAL,__FILE__,__LINE__,'some error occured, we should not be here')
   end function map2d
 
   function map3d(id,index)
     !*FD map id and index to netCDF variable id
+    use glide_messages
     use glimmer_ncdf
     implicit none
     integer :: map3d
@@ -381,8 +382,7 @@ contains
           return
        end select
     end if
-    write(*,*) 'some error occured, we should not be here'
-    stop
+    call glide_msg(GM_FATAL,__FILE__,__LINE__,'some error occured, we should not be here')
   end function map3d
 
   subroutine scan0d(vars)
@@ -483,7 +483,7 @@ contains
     real(kind=sp) :: rdummy, time
 
     do while (ios == 0)
-       write(*,*) 'nlub'
+       call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,'nlub')
        read(unit,iostat=ios) time,rdummy,rdummy,rdummy, ((data0d(i,v),i=1,numspots),v=1,numvar0d)
        call timeslice(time,outfile)
        do v=1,numvar0d
@@ -557,6 +557,7 @@ program bin2ncdf
   use glimmer_ncdf
   use glimmer_ncfile
   use glimmer_types
+  use glide_messages
   use paramets, only : len0
   implicit none
 
@@ -576,21 +577,21 @@ program bin2ncdf
   ! first scan of input file to determine list of variables
   inquire (exist=do0d,file=trim(infile)//'.gl0')
   if (do0d) then
-     write(*,*) 'Doing 0d...'
+     call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,'Doing 0d...')
      call open0d(trim(infile)//'.gl0',unit0d)
      !call scan0d(NC%do_var)
      !NC%do_spot=.true.
   end if
   inquire (exist=do2d,file=trim(infile)//'.gl2')
   if (do0d) then
-     write(*,*) 'Doing 2d...'
+     call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,'Doing 2d...')
      call open2d(trim(infile)//'.gl2',unit2d)
      call scan2d(unit2d,NC%do_var)
      call close2d(unit2d)
   end if
   inquire (exist=do3d,file=trim(infile)//'.gl3')
   if (do3d) then
-     write(*,*) 'Doing 3d...'
+     call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,'Doing 3d...')
      call open3d(trim(infile)//'.gl3',unit3d)
      call scan3d(unit3d,NC%do_var)
      call close3d(unit3d)

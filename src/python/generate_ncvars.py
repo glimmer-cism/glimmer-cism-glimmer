@@ -274,7 +274,7 @@ class PrintNCDF_FILE(PrintVars):
                 spaces=3
                 self.stream.write("    if (NC%do_spot) then\n")
             id = 'NC%%%svar'%var['name']
-        self.stream.write("%s    write(*,*) 'Creating variable %s'\n"%(spaces*' ',var['name']))
+        self.stream.write("%s    call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,'Creating variable %s')\n"%(spaces*' ',var['name']))
         self.stream.write("%s    status = nf90_def_var(NC%%id,'%s',NF90_FLOAT,(/%s/),%s)\n"%(spaces*' ',
                                                                                              var['name'],
                                                                                              dimstring,
@@ -394,7 +394,7 @@ class PrintNCDF_INFILE(PrintVars):
                 for i in range(0,len(dims)):
                     dims[i] = dims[i].strip()
                 self.stream.write("    if (NC%%do_var(%s)) then\n"%(var_type(var)))
-                self.stream.write("       write(*,*) '  Loading %s'\n"%var['name'])
+                self.stream.write("      call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,'Loading %s')\n"%var['name'])
                 dimstring = ''
                 spaces = ''
                 for i in range(0,len(dims)):

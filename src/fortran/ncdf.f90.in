@@ -165,6 +165,7 @@ module glimmer_ncdf
 contains
   function delete_output(oc, cf)
     !*FD remove element from linked list
+	use glide_messages
     implicit none
     type(glimmer_nc_output), pointer :: delete_output
     type(glimmer_nc_output), pointer :: oc
@@ -191,7 +192,7 @@ contains
        end if
        if (closefile) then
           status = nf90_close(oc%nc%id)
-          write(*,*) 'Closing output file ', trim(oc%nc%filename)
+          call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,'Closing output file '//trim(oc%nc%filename))
        end if
        deallocate(oc)
     end if
@@ -199,6 +200,7 @@ contains
   
   function delete_input(ic,cf)
     !*FD remove element from linked list
+	use glide_messages
     implicit none
     type(glimmer_nc_input), pointer :: delete_input
     type(glimmer_nc_input), pointer :: ic
@@ -226,7 +228,7 @@ contains
        end if
        if (closefile) then
           status = nf90_close(ic%nc%id)
-          write(*,*) 'Closing input file ', trim(ic%nc%filename)
+          call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,'Closing input file '//trim(ic%nc%filename))
        end if
        deallocate(ic%times)
        deallocate(ic)
@@ -297,7 +299,7 @@ subroutine nc_errorhandle(file,line,status)
   !*FD netCDF return value
   
   if (status.ne.NF90_NOERR) then
-     write(*,*) 'Error (',file,line,'): ', nf90_strerror(status)
+     write(*,*) 'NETCDF Error (',file,line,'): ', nf90_strerror(status)
      stop
   end if
 end subroutine nc_errorhandle

@@ -1,4 +1,8 @@
 2004-06-30 Ian Rutt
+ * Completed standardisation of message system - six levels are provided, from     'diagnostics' to 'fatal errors'. The overall message level can be set by        calling glide_set_msg_level. Two output subroutines are provided: glide_msg  
+   and glide_stars; the latter prints a line of 70 stars across the screen.
+
+2004-06-30 Ian Rutt
  * Fixed Linux build system after my changes yesterday (the problems of
  doing development under Windows...)
 

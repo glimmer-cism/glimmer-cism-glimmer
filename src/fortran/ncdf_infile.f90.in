@@ -105,6 +105,7 @@ contains
     use glimmer_ncdf
     use glimmer_types
     use glimmer_cfproj
+	use glide_messages
     implicit none
     type(glimmer_nc_input), pointer :: infile
     !*FD structure containg input netCDF descriptor
@@ -115,13 +116,14 @@ contains
     character(len=50) varname
     integer nvars
     integer i, dimsize
-    integer status    
+    integer status
+	character(80) :: errtxt    
     
     ! open netCDF file
     status = nf90_open(NC%filename,NF90_NOWRITE,NC%id)
     call nc_errorhandle(__FILE__,__LINE__,status)
-    write(*,*) '*******************************************************************************'
-    write(*,*) 'opening file ',trim(NC%filename),' for input'
+	call glide_stars
+    call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,'opening file '//trim(NC%filename)//' for input')
 
     ! getting projections
     model%projection = CFproj_GetProj(NC%id)
@@ -146,26 +148,30 @@ contains
     status = nf90_inquire_dimension(NC%id,NC%x0dim,len=dimsize)
     call nc_errorhandle(__FILE__,__LINE__,status)
     if (dimsize.ne.model%general%ewn-1) then
-       write(*,*) 'Error, reading file ',trim(NC%filename),' size x0dim does not match: ',dimsize,model%general%ewn-1
-       stop
+	   write(errtxt,*)dimsize,model%general%ewn-1
+       call glide_msg(GM_FATAL,__FILE__,__LINE__,'reading file '//trim(NC%filename)//&
+	     ' size x0dim does not match: '//trim(errtxt))
     end if
     status = nf90_inquire_dimension(NC%id,NC%y0dim,len=dimsize)
     call nc_errorhandle(__FILE__,__LINE__,status)
     if (dimsize.ne.model%general%nsn-1) then
-       write(*,*) 'Error, reading file ',trim(NC%filename),' size y0dim does not match: ',dimsize,model%general%nsn-1
-       stop
+       write(errtxt,*)dimsize,model%general%nsn-1
+       call glide_msg(GM_FATAL,__FILE__,__LINE__,'reading file '//trim(NC%filename)//&
+         ' size y0dim does not match: '//trim(errtxt))
     end if
     status = nf90_inquire_dimension(NC%id,NC%x1dim,len=dimsize)
     call nc_errorhandle(__FILE__,__LINE__,status)
     if (dimsize.ne.model%general%ewn) then
-       write(*,*) 'Error, reading file ',trim(NC%filename),' size x1dim does not match: ',dimsize,model%general%ewn
-       stop
+       write(errtxt,*)dimsize,model%general%ewn
+       call glide_msg(GM_FATAL,__FILE__,__LINE__,'reading file '//trim(NC%filename)//&
+         ' size x1dim does not match: '//trim(errtxt))
     end if
     status = nf90_inquire_dimension(NC%id,NC%y1dim,len=dimsize)
     call nc_errorhandle(__FILE__,__LINE__,status)
     if (dimsize.ne.model%general%nsn) then
-       write(*,*) 'Error, reading file ',trim(NC%filename),' size y1dim does not match: ',dimsize,model%general%nsn
-       stop
+       write(errtxt,*)dimsize,model%general%nsn
+       call glide_msg(GM_FATAL,__FILE__,__LINE__,'reading file '//trim(NC%filename)//&
+         ' size y1dim does not match: '//trim(errtxt))
     end if  
 
     ! getting variables
@@ -196,6 +202,7 @@ contains
     !*FD read variables from a netCDF file
     use glimmer_ncdf
     use glimmer_types
+    use glide_messages
     use glimmer_global, only : dp
     use physcon, only : scyr
     use paramets, only : thk0, tim0, vel0, vis0, len0, tau0, acc0
@@ -213,6 +220,7 @@ contains
     real(dp):: f1, f2, f3, f4, f5, f6, f7, f8
     integer :: ewnv, nsnv
     logical :: scale=.true.
+    character(40) :: outtxt1,outtxt2,outtxt3
 
     ! Deal with optional argument
 
@@ -232,9 +240,12 @@ contains
     f7 = tau0
     f8 = tau0 * len0 / (scyr * vel0) 
 
-    write(*,*) '*******************************************************************************'
-    write(*,*) 'Reading time slice ',infile%current_time,'(',infile%times(infile%current_time),') from file ', &
-         trim(NC%filename), ' at time ', model%numerics%time
+	call glide_stars
+    write(outtxt1,*)infile%current_time
+    write(outtxt2,*)infile%times(infile%current_time)
+    write(outtxt3,*)model%numerics%time
+    call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,'Reading time slice '//trim(adjustl(outtxt1))//&
+        '('//trim(adjustl(outtxt2))//') from file '//trim(NC%filename)//' at time '//trim(adjustl(outtxt3)))
     
     ! read variables
     !GENVAR_READ!
