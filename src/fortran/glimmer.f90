@@ -304,8 +304,7 @@ contains
     ! Internal variables
 
     integer :: i
-    real(rk),dimension(size(orog,1),size(orog,2)) :: albedo_temp,if_temp,fw_temp
-    real(rk),dimension(size(orog_out,1),size(orog_out,2)) :: orog_out_temp
+    real(rk),dimension(:,:),allocatable :: albedo_temp,if_temp,fw_temp,orog_out_temp
     type(output_flags) :: out_f
 
     ! Reset output flag
@@ -346,6 +345,7 @@ contains
 
       if (present(orog_out)) then
         orog_out  = 0.0
+        allocate(orog_out_temp(size(orog_out,1),size(orog_out,2)))
         out_f%orog=.true.
       else
         out_f%orog=.false.
@@ -353,6 +353,7 @@ contains
 
       if (present(albedo)) then
         albedo    = 0.0
+        allocate(albedo_temp(size(orog,1),size(orog,2)))
         out_f%albedo=.true.
       else
         out_f%albedo=.false.
@@ -360,6 +361,7 @@ contains
 
       if (present(ice_frac)) then
         ice_frac  = 0.0
+        allocate(if_temp(size(orog,1),size(orog,2)))
         out_f%ice_frac=.true.
       else
         out_f%ice_frac=.false.
@@ -367,6 +369,7 @@ contains
 
       if (present(fw_flux)) then
         fw_flux = 0.0
+        allocate(fw_temp(size(orog,1),size(orog,2)))
         out_f%fresh_water=.true.
       else
         out_f%fresh_water=.false.
@@ -463,6 +466,13 @@ contains
       params%av_start_time = time
 
     endif
+
+    ! Deallocate temporary arrays if necessary
+
+    if (allocated(albedo_temp))   deallocate(albedo_temp)
+    if (allocated(if_temp))       deallocate(if_temp)
+    if (allocated(fw_temp))       deallocate(fw_temp)
+    if (allocated(orog_out_temp)) deallocate(orog_out_temp)
 
   end subroutine glimmer
 
