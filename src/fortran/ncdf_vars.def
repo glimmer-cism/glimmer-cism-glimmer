@@ -56,15 +56,16 @@ units:         1
 long_name:     sigma layers
 
 [lat]
-dimensions:    time, y1, x1
+dimensions:    y1, x1
 units:         degreeN
 long_name:     Latitude
 data:          model%climate%lati
 load:          1
+hot:           1
 standard_name: latitude
 
 [lon]
-dimensions:    time, y1, x1
+dimensions:    y1, x1
 units:         degreeE
 long_name:     Longitude
 data:          model%climate%loni
@@ -80,15 +81,16 @@ load:          1
 f90file:       glint_io.f90
 
 [relx]
-dimensions:    time, y1, x1
+dimensions:    y1, x1
 units:         meter
 long_name:     relaxed bedrock topography
 data:          model%geometry%relx
 factor:        thk0
 load:          1
+hot:           1
 
 [presprcp]
-dimensions:    time, y1, x1
+dimensions:    y1, x1
 units:         meter/year
 long_name:     present day precipitation
 data:          climate%presprcp
@@ -97,7 +99,7 @@ load:          1
 f90file:       glint_io.f90
 
 [presusrf]
-dimensions:    time, y1, x1
+dimensions:    y1, x1
 units:         meter
 long_name:     present day surface of the ice-sheet
 data:          climate%presusrf
@@ -172,6 +174,7 @@ long_name:     ice thickness
 data:          model%geometry%thck
 factor:        thk0
 standard_name: land_ice_thickness
+hot:           1
 
 [usurf]
 dimensions:    time, y1, x1
@@ -196,6 +199,7 @@ data:          model%geometry%topg
 factor:        thk0
 load:          1
 standard_name: bedrock_altitude
+hot:           1
 
 [acab]
 dimensions:    time, y1, x1
@@ -212,6 +216,7 @@ long_name:     basal melt rate
 data:          model%temper%bmlt
 factor:        f1
 standard_name: land_ice_basal_melt_rate
+hot:           1
 
 [bwat]
 dimensions:    time, y1, x1
@@ -219,6 +224,7 @@ units:         meter
 long_name:     basal water depth
 data:          model%temper%bwat
 factor:        thk0
+hot:           1
 
 [artm]
 dimensions:    time, y1, x1
@@ -302,6 +308,7 @@ units:         ??
 long_name:     ??
 data:          model%temper%flwa(up,:,:)
 factor:        vis0*scyr
+hot:           1
 
 [temp]
 dimensions:    time, level, y1, x1
@@ -309,3 +316,4 @@ units:         degree_Celcius
 long_name:     ice temperature
 data:          model%temper%temp(up,1:model%general%ewn,1:model%general%nsn)
 standard_name: land_ice_temperature
+hot:           1

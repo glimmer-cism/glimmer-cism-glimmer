@@ -99,7 +99,7 @@ Sections and keys are case sensitive and may contain white space. However, the c
     \begin{tabular}[t]{cl}
       {\bf 0} & zero \\
       1 & set to a non--zero constant everywhere\\
-      2 & set to a non--zero constant where the ice base is at the melting point\\
+      2 & set constant where the ice base is melting\\
       0 & $\propto$ basal water\\
     \end{tabular}\\
     \texttt{stress\_calc} & 
@@ -125,6 +125,8 @@ Sections and keys are case sensitive and may contain white space. However, the c
       {\bf 0} & relaxed topography is read from a separate variable\\
       1 & first time slice of input topography is assumed to be relaxed\\
     \end{tabular}\\
+    \texttt{hotstart} &
+     Hotstart the model if set to 1. This option only affects the way the initial temperature and flow factor distribution is calculated.\\
     \hline
 %%%%
     \hline
@@ -189,7 +191,7 @@ netCDF I/O can be configured in the main configuration file or in a separate fil
     \hline
     \texttt{name} & The name of the output netCDF file. Typically netCDF files end with \texttt{.nc}.\\
     \texttt{frequency} & The time interval in years, determining how often selected variables are written to file.\\
-    \texttt{variables} & List of variables to be written to file. See Appendix \ref{ug.sec.varlist} for a list of known variables. Names should be separated by at least one space. The variable names are case sensitive. Append \texttt{\_spot} to the variable name to store variable at specified locations.\\
+    \texttt{variables} & List of variables to be written to file. See Appendix \ref{ug.sec.varlist} for a list of known variables. Names should be separated by at least one space. The variable names are case sensitive. Append \texttt{\_spot} to the variable name to store variable at specified locations. Variable \texttt{hot} selects all variables necessary for a hotstart.\\
     \texttt{numspot} & The number of spot locations\\
     \texttt{spotx} & List of $x$--indecies specifying spot locations.\\
     \texttt{spoty} & List of $y$--indecies specifying spot locations.\\   

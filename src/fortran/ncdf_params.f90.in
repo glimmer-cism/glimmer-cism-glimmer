@@ -179,6 +179,7 @@ contains
     end if
 
     ! select which variables should be written
+    !GENVARS_HOT!
     !GENVARS!
   end function handle_output
   

@@ -179,6 +179,13 @@ module glide_types
     !*FD \item[1] first time slice of input topo is relaxed
     !*FD \end{description}
 
+    integer :: hotstart = 0
+    !*FD hotstart the model
+    !*FD \begin{description}
+    !*FD \item[0] normal start-up
+    !*FD \item[1] hotstart model from previous run
+    !*FD \end{description}
+
   end type glide_options
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

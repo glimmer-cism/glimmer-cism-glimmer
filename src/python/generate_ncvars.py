@@ -22,7 +22,9 @@
 
 import ConfigParser, sys, time, string,re, os.path
 
-NOATTRIB = ['name','dimensions','data','factor','load','f90file']
+NOATTRIB = ['name','dimensions','data','factor','load','f90file','hot']
+VAR1D = ['eus']
+hotvars = []
 
 def spotname(name):
     """Return name of spotvariable."""
@@ -38,10 +40,10 @@ def is_dimvar(var):
     this is assumed to be the case if no time dim is present
     """
 
-    if 'time' in var['dimensions'] and var['name'] != 'time':
-        return False
-    else:
+    if len(string.split(var['dimensions'],',')) == 1 and var['name'] not in VAR1D:
         return True
+    else:
+        return False
 
 class Variables(dict):
     """Dictionary containing variable definitions."""
@@ -62,6 +64,10 @@ class Variables(dict):
             vardef['name'] = v
             for (name, value) in vars.items(v):
                 vardef[name] = value
+            if 'hot' in vardef:
+                if vardef['hot'].lower() in ['1','true','t']:
+                    hotvars.append(v)
+                    vardef['load'] = '1'
             self.__setitem__(v,vardef)
             self.__add_spot(vardef)
 
@@ -227,6 +233,9 @@ class PrintNCDF_BASEIO(PrintVars):
 
                 if  'level' in dims:
                     self.stream.write("       end do\n")
+                # remove self since it's not time dependent
+                if 'time' not in dims:
+                    self.stream.write("       NCO%%do_var(%s) = .False.\n"%(var_type(var)))
             self.stream.write("    end if\n\n")    
 
     def print_var_read(self, var):
@@ -265,6 +274,9 @@ class PrintNCDF_BASEIO(PrintVars):
 
                 if  'level' in dims:
                     self.stream.write("       end do\n")
+                # remove self since it's not time dependent
+                if 'time' not in dims:
+                    self.stream.write("       NCI%%do_var(%s) = .False.\n"%(var_type(var)))
                 self.stream.write("    end if\n\n")
                 
 
@@ -346,6 +358,27 @@ class PrintNCDF(PrintVars):
 class PrintNCDF_PARAMS(PrintVars):
     """Process ncdf_params.f90"""
     canhandle = 'ncdf_params.f90'
+
+    def write(self,vars):
+        """Merge ncdf.F90.in with definitions."""
+
+        self.print_warning()
+        for l in self.infile.readlines():
+            for token in self.handletoken:
+                if string.find(l,token) is not -1:
+                    break
+            if string.find(l,token) is not -1:
+                for v in vars.keys():
+                    self.handletoken[token](vars[v])
+            elif string.find(l,'!GENVARS_HOT!') is not -1:
+                self.stream.write("    if (index(vars,' hot ').ne.0) then\n")
+                for v in hotvars:
+                    self.stream.write("       handle_output%%nc%%do_var(%s) = .true.\n"%var_type(vars[v]))
+                self.stream.write("    end if\n\n")
+            else:
+                self.stream.write("%s"%l)
+        self.infile.close()
+        self.stream.close()
 
     def print_var(self, var):
         """Write single variable block to stream for ncdf_params."""

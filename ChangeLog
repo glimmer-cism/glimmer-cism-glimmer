@@ -1,3 +1,12 @@
+2004-08-16 Magnus Hagdorn
+ * data_dep.dot: added plot of data dependency
+ * glide.f90: when hotstarting temp and flwa is read from file
+ * added hotstart option: glide_types.f90, glide_setup.f90
+ * ncdf_params.f90.in: select variables needed for hotstarting model
+ * ncdf_vars.def: selected variables needed for hotstart
+ * generate_ncvars.py: added hotstart, removed time-dep of some variables
+ * glide.tex: added hostart doc
+	
 2004-08-13 Magnus Hagdorn
  glide.f90, glide_types.f90, glimmer_isot.f90, glimmer_temp.f90, glimmer_thck.f90, glimmer_velo.f90
  * moved initialisation code to separate subroutines which have to be called at start-up

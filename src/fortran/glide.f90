@@ -102,8 +102,10 @@ contains
     call init_temp(model)
     call init_thck(model)
 
-    ! initialise Glen's flow parameter A using an isothermal temperature distribution
-    call timeevoltemp(model,0)
+    if (model%options%hotstart.ne.1) then
+       ! initialise Glen's flow parameter A using an isothermal temperature distribution
+       call timeevoltemp(model,0)
+    end if
     ! and calculate lower and upper ice surface
     call glide_calclsrf(model%geometry%thck, model%geometry%topg, model%geometry%lsrf)
     model%geometry%usrf = model%geometry%thck + model%geometry%lsrf
