@@ -488,10 +488,10 @@ contains
 
   integer function glimmer_main_funit(params)
 
-!*FD Returns the value of the 
-!*FD main logical file unit used by glimmer
-!*RV The value of the 
-!*RV main logical file unit used by glimmer.
+    !*FD Returns the value of the 
+    !*FD main logical file unit used by glimmer
+    !*RV The value of the 
+    !*RV main logical file unit used by glimmer.
 
     implicit none
 
@@ -505,8 +505,8 @@ contains
 
   subroutine glimmer_set_main_funit(params,unit)
 
-  !*FD sets the main logical 
-  !*FD file unit used by glimmer.
+    !*FD sets the main logical 
+    !*FD file unit used by glimmer.
 
     implicit none
 
