@@ -1,4 +1,7 @@
 2004-06-15 Magnus Hagdorn
+ * fixed doc Makefile
+
+2004-06-15 Magnus Hagdorn
  * input2ncdf.f90: work out node spacing 
  * new build system
 	

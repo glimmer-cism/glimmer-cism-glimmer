@@ -1,7 +1,14 @@
 ifndef GLIMMER_PREFIX
 GLIMMER_PREFIX=..
 endif
-all:	glimmer.pdf glimmer.ps
+
+SUBDIRS = ug
+
+all:	subdirs glimmer.pdf glimmer.ps
+
+subdirs:	$(SUBDIRS)
+$(SUBDIRS):
+		$(MAKE) -C $@
 
 dg.pdf:	dg_pdf.dvi
 	dvipdfm -o dg.pdf dg_pdf.dvi
@@ -9,10 +16,10 @@ dg.pdf:	dg_pdf.dvi
 dg.ps:	dg_ps.dvi
 	dvips -o dg.ps dg_ps.dvi
 
-ug.pdf:	ug_pdf.dvi
+ug.pdf:	ug ug_pdf.dvi
 	dvipdfm -o ug.pdf ug_pdf.dvi
 
-ug.ps:	ug_ps.dvi
+ug.ps:	ug ug_ps.dvi
 	dvips -o ug.ps ug_ps.dvi
 
 glimmer.pdf:	glimmer_pdf.dvi
@@ -25,18 +32,11 @@ install:	glimmer.ps glimmer.pdf
 		install -d $(GLIMMER_PREFIX)/share/docs/glimmer
 		cp $^ $(GLIMMER_PREFIX)/share/docs/glimmer
 
-ug_ps.dvi:	ug_ps.tex
-	cd ug; $(MAKE)
-	latex $<
-	latex $<
-ug_pdf.dvi:	ug_pdf.tex
-	cd ug; $(MAKE)
-	latex $<
-	latex $<
-
 .tex.dvi::
 	latex $<
 	latex $<
 
 clean:
 	rm -f *~ *.aux *.dvi *.log *.out *.toc
+
+.PHONY:		clean install subdirs $(SUBDIRS)
