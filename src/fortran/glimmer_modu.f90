@@ -182,16 +182,6 @@ module glimmer_types
     !*FD \item[2] Accumulation only 
     !*FD \end{description}
 
-    integer :: whichstrs = 2
-
-    !*FD Stress solution: 
-    !*FD \begin{description}
-    !*FD \item[0] Zeroth-order 
-    !*FD \item[1] First-order 
-    !*FD \item[2] Vertically-integrated first-order 
-    !*FD \item[3] No action (use when velocity found elsewhere) 
-    !*FD \end{description}
-
     integer :: whichevol = 0
 
     !*FD Thickness evolution method:

@@ -100,7 +100,6 @@ contains
     write(unit) instance%model%options% whichmarn
     write(unit) instance%model%options% whichbtrc
     write(unit) instance%model%options% whichacab
-    write(unit) instance%model%options% whichstrs
     write(unit) instance%model%options% whichevol
     write(unit) instance%model%options% whichwvel
     write(unit) instance%model%options% whichprecip
@@ -424,7 +423,6 @@ contains
     read(unit) instance%model%options% whichmarn
     read(unit) instance%model%options% whichbtrc
     read(unit) instance%model%options% whichacab
-    read(unit) instance%model%options% whichstrs
     read(unit) instance%model%options% whichevol
     read(unit) instance%model%options% whichwvel
     read(unit) instance%model%options% whichprecip

@@ -94,7 +94,7 @@ contains
 
     integer :: whichtemp, whichartm, whichthck, whichflwa, &
                whichisot, whichslip, whichbwat, whichmarn, &
-               whichbtrc, whichacab, whichstrs, & 
+               whichbtrc, whichacab, & 
                whichevol, whichwvel, whichprecip
 
     ! ...for numerics
@@ -135,7 +135,7 @@ contains
     namelist / prj  / p_type, cpx, cpy, latc, lonc, std_par
     namelist / opts / whichtemp, whichartm, whichthck, whichflwa, &
                       whichisot, whichslip, whichbwat, whichmarn, &
-                      whichbtrc, whichacab, whichstrs, & 
+                      whichbtrc, whichacab, & 
                       whichevol, whichwvel, whichprecip
     namelist / nums / ntem, nvel, niso, nout, nstr, thklim, mlimit, dew, dns 
     namelist / pars / geot, fiddle, airt, nmsb, hydtim, isotim, bpar
@@ -174,7 +174,6 @@ contains
     whichmarn   = model%options%whichmarn
     whichbtrc   = model%options%whichbtrc
     whichacab   = model%options%whichacab
-    whichstrs   = model%options%whichstrs
     whichevol   = model%options%whichevol
     whichwvel   = model%options%whichwvel
     whichprecip = model%options%whichprecip
@@ -269,7 +268,6 @@ contains
     model%options%whichmarn=whichmarn
     model%options%whichbtrc=whichbtrc
     model%options%whichacab=whichacab
-    model%options%whichstrs=whichstrs
     model%options%whichevol=whichevol
     model%options%whichwvel=whichwvel
     model%options%whichprecip=whichprecip
