@@ -1,3 +1,8 @@
+2005-01-31 Ian Rutt
+ * Reverted last change, since it was based on a misunderstanding. _No_ fields are spliced
+   into the input - the splicing takes place as the output fields are prepared from the outputs
+   of the individual instances.
+
 2005-01-26 Ian Rutt
  * Changed water flux fields so they replace the input rather than being spliced into it
 

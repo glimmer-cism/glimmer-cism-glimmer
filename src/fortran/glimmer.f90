@@ -539,9 +539,18 @@ contains
             if_temp, &
             params%instances(i)%frac_coverage, &
             params%cov_normalise)
-            
-        if (present(water_in))  water_in =win_temp
-        if (present(water_out)) water_out=wout_temp
+
+        if (present(water_in)) &
+             water_in=splice_field(water_in, &
+             win_temp, &
+             params%instances(i)%frac_coverage, &
+             params%cov_normalise)
+             
+         if (present(water_out)) &
+             water_out=splice_field(water_out, &
+             wout_temp, &
+             params%instances(i)%frac_coverage, &
+             params%cov_normalise)
 
         ! Add total water variables to running totals
 
