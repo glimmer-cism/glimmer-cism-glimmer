@@ -1,3 +1,7 @@
+2004-09-20 Ian Rutt
+ * Updated f90_dependencies.py to Magi's latest version - handles more
+ than one module per file.
+
 2004-09-16 Ian Rutt
  * Added Tony's physics documentation to main docs.
  * Patched netcdf I/O as per Magi's email

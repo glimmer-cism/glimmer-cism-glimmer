@@ -31,7 +31,7 @@ def search_file(name):
     result = {}
     result['name'] = string.replace(n,'.','_')
     result['realname'] = n
-    result['modname'] = ''
+    result['modname'] = []
     result['includes'] = []
     result['uses'] = []
     result['prog'] = 0
@@ -72,10 +72,10 @@ def search_file(name):
                 result['includes'].append(include)
             continue
         # finding module statement
-        pos = string.find(l,'module')
+        pos = string.find(l,'end module')
         if pos is not -1:
-            pos = pos + len('module')
-            result['modname'] = string.strip(l[pos:])
+            pos = pos + len('end module')
+            result['modname'].append(string.strip(l[pos:]))
             continue
         if string.find(l,'end program') is not -1:
             result['prog'] = 1
@@ -188,10 +188,10 @@ if __name__ == '__main__':
     for arg in args:
         r = search_file(arg)
         f90files.append(r)
-        if len(r['modname']) > 0:
-            if r['modname'] not in modnames.keys():
-                modnames[r['modname']] = r['name']
-                modrnames[r['modname']] = r['realname']
+        for m in r['modname']:
+            if m not in modnames.keys():
+                modnames[m] = r['name']
+                modrnames[m] = r['realname']
 
     if dot is 1:
         if len(process)>0:
