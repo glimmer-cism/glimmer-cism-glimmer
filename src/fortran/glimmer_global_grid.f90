@@ -103,6 +103,41 @@ contains
 
 !-----------------------------------------------------------------------------
 
+  subroutine copy_global_grid(in,out)
+
+    !*FD Copies a global grid type.
+
+    type(global_grid),intent(in)  :: in  !*FD Input grid
+    type(global_grid),intent(out) :: out !*FD Output grid
+
+    ! Copy dimensions
+
+    out%nx = in%nx ; out%ny = in%ny
+
+    ! Check to see if arrays are allocated, then deallocate and
+    ! reallocate accordingly.
+
+    if (associated(out%lats))      deallocate(out%lats)
+    if (associated(out%lons))      deallocate(out%lons)
+    if (associated(out%lat_bound)) deallocate(out%lat_bound)
+    if (associated(out%lon_bound)) deallocate(out%lon_bound)
+
+    allocate(out%lons(out%nx))
+    allocate(out%lats(out%ny))
+    allocate(out%lon_bound(out%nx+1))
+    allocate(out%lat_bound(out%ny+1))
+
+    ! Copy data
+
+    out%lons     =in%lons
+    out%lats     =in%lats
+    out%lat_bound=in%lat_bound
+    out%lon_bound=in%lon_bound
+
+  end subroutine copy_global_grid
+
+!-----------------------------------------------------------------------------
+
   subroutine calc_bounds_lon(lons,lonb)
   
     !*FD Calculates the longitudinal boundaries between

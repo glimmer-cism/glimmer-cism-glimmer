@@ -128,7 +128,7 @@ module glimmer_main
 
 contains
 
-  subroutine initialise_glimmer(params,lats,longs,paramfile)
+  subroutine initialise_glimmer(params,lats,longs,paramfile,latb,lonb)
 
     !*FD Initialises the model
 
@@ -138,16 +138,23 @@ contains
 
     ! Subroutine argument declarations
 
-    type(glimmer_params),   intent(inout) :: params      !*FD parameters to be set
-    real(rk),dimension(:),  intent(in)    :: lats,longs  !*FD location of gridpoints in global data
-    character(fname_length),intent(in)    :: paramfile   !*FD name of file containing parameters for all 
-                                                         !*FD required instances. Eventually, this will be
-                                                         !*FD defined in XML, but for the moment, it's a namelist
+    type(glimmer_params),          intent(inout) :: params      !*FD parameters to be set
+    real(rk),dimension(:),         intent(in)    :: lats,longs  !*FD location of gridpoints 
+                                                                !*FD in global data.
+    character(fname_length),       intent(in)    :: paramfile   !*FD name of file containing 
+                                                                !*FD parameters for all required 
+                                                                !*FD instances. Eventually, this
+                                                                !*FD will be defined in XML, but
+                                                                !*FD for the moment, it's a namelist.
+    real(rk),dimension(:),optional,intent(in)    :: latb        !*FD Locations of the latitudinal 
+                                                                !*FD boundaries of the grid-boxes.
+    real(rk),dimension(:),optional,intent(in)    :: lonb        !*FD Locations of the longitudinal
+                                                                !*FD boundaries of the grid-boxes.
 
     ! Internal variables
 
     character(fname_length),dimension(:),allocatable :: fnamelist   ! The parameter filenames for each instance
-    integer :: i
+    integer :: i,args
 
     ! ---------------------------------------------------------------
     ! Basic initialisation beginning with common initialisation
@@ -161,11 +168,25 @@ contains
  
     ! Initialise main global grid -----------------------------------
 
-    call new_global_grid(params%g_grid,longs,lats)
+    args=0
+
+    if (present(lonb)) args=args+1
+    if (present(latb)) args=args+2
+
+    select case(args)
+    case(0)
+      call new_global_grid(params%g_grid,longs,lats)
+    case(1)
+      call new_global_grid(params%g_grid,longs,lats,lonb=lonb)
+    case(2)
+      call new_global_grid(params%g_grid,longs,lats,latb=latb)
+    case(3)
+      call new_global_grid(params%g_grid,longs,lats,lonb=lonb,latb=latb)
+    end select
 
     ! Initialise orography grid identically at the moment -----------
 
-    call new_global_grid(params%g_grid_orog,longs,lats)
+    call copy_global_grid(params%g_grid,params%g_grid_orog)
 
     ! Allocate arrays -----------------------------------------------
 

@@ -1,3 +1,8 @@
+2004-05-17 Ian Rutt
+ * Added copy_global_grid subroutine to glimmer_global_grid.f90
+ * Added capability to specify grid-box boundaries when initialising model,
+ 	using optional arguments in initialise_glimmer().
+
 2004-05-14 Ian Rutt
  * Added output-masking capability to enable overlapping domains to be
 	more easily dealt with.
