@@ -11,7 +11,8 @@
  * Implemented new, better downscaling-interpolation scheme, which handles
 	the presence of a pole better, and take into account the irregular
 	shape of the interpolation domain.
-
+ * Added proper default initialisation of top-level glimmer type.
+	
 2004-05-12 Ian Rutt
  * Removed redundant re_alloc flag argument from proj_allocate subroutine
 	in glimmer_project.f90

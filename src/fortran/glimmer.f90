@@ -853,6 +853,9 @@ contains
     namelist /file_paras/ ninst
     namelist /timesteps/ tinc
 
+    ninst=params%ninstances
+    tinc=params%tstep_main
+
     read(params%file_unit,nml=timesteps)
     read(params%file_unit,nml=file_paras)
 
