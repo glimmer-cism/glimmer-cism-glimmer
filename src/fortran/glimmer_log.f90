@@ -78,8 +78,8 @@ module glimmer_log
   integer,parameter :: GM_ERROR      = 5 !*FD Numerical identifier for (non-fatal) error messages.
   integer,parameter :: GM_FATAL      = 6 !*FD Numerical identifier for fatal error messages.
 
-  integer, private, parameter            :: GM_levels = 6
-  logical, private, dimension(GM_levels) :: gm_show = .true.
+  integer, parameter            :: GM_levels = 6
+  logical, private, dimension(GM_levels) :: gm_show = .false.
 
   character(len=*), parameter, dimension(0:GM_levels), private :: msg_prefix = (/ &
        '* UNKNOWN      ', &
@@ -153,10 +153,10 @@ contains
        write(msg,*) trim(msg_prefix(local_type))//' '//message
     end if
     ! messages are always written to file log
-    write(glimmer_unit,*) msg
+    write(glimmer_unit,*) trim(msg)
     ! and maybe to std out
     if (local_type.ne.0) then
-       if (gm_show(type)) write(*,*) msg
+       if (gm_show(local_type)) write(*,*) trim(msg)
     end if
     ! stop logging if we encountered a fatal error
     if (local_type.eq.GM_FATAL) then
@@ -200,7 +200,7 @@ contains
     integer :: i
 
     do i=1,GM_levels
-       if (i>(6-level)) then
+       if (i>(GM_levels-level)) then
           gm_show(i)=.true.
        else
           gm_show(i)=.false.

@@ -650,7 +650,12 @@ contains
     type(ConfigSection), pointer :: section
     type(glide_global_type)  :: model
     real, pointer, dimension(:) :: temp => NULL()
+    integer :: loglevel
 
+    loglevel = GM_levels-GM_ERROR
+
+    call GetValue(section,'log_level',loglevel)
+    call glimmer_set_msg_level(loglevel)
     call GetValue(section,'ice_limit',model%numerics%thklim)
     call GetValue(section,'marine_limit',model%numerics%mlimit)
     call GetValue(section,'geothermal',model%paramets%geot)
