@@ -1,4 +1,7 @@
 2005-02-23 Magnus Hagdorn
+ * removed old tests in data
+
+2005-02-23 Magnus Hagdorn
  * removed unused symbols and dummy arguments
 
 2005-02-23 Ian Rutt
