@@ -105,17 +105,6 @@ contains
     real(sp),dimension(:,:),allocatable :: thck_temp     ! temporary array for volume calcs
     real(rk) :: start_volume,end_volume,flux_fudge
 
-    ! Increment average count ------------------------------------------------
-
-    instance%av_count=instance%av_count+1
-
-    ! Set mass-balance accumulation start if necessary -----------------------
-
-    if (instance%first_accum) then
-      instance%accum_start=time-instance%mbal_tstep
-      instance%first_accum=.false.
-    endif
-
     ! Downscale input fields -------------------------------------------------
 
     call glint_downscaling(instance,g_temp,g_temp_range,g_precip,g_orog,g_zonwind,g_merwind,orogflag)
@@ -141,31 +130,21 @@ contains
 
     call glint_calc_precip(instance)
 
-    ! ------------------------------------------------------------------------ 
-    ! Calculate ablation, and thus mass-balance
-    ! ------------------------------------------------------------------------ 
+    ! Do accumulation --------------------------------------------------------
 
-    call glint_mbal_calc(instance%mbal_params,instance%artm,instance%arng, &
-          instance%prcp,instance%snowd,instance%siced,instance%ablt,instance%acab) 
+    call glint_accumulate(instance%mbal_accum,instance%artm,instance%arng,instance%prcp, &
+         instance%snowd,instance%siced,instance%xwind,instance%ywind,instance%global_orog, &
+         instance%local_orog)
 
-    ! ------------------------------------------------------------------------ 
-    ! Accumulate mass-balance if necessary
-    ! ------------------------------------------------------------------------ 
+    ! If it's not time for a dynamics/temp/velocity timestep, return ---------
 
-    instance%prcp_save = instance%prcp_save + instance%prcp
-    instance%ablt_save = instance%ablt_save + instance%ablt
-    instance%acab_save = instance%acab_save + instance%acab
-    instance%artm_save = instance%artm_save + instance%artm
-
-    ! If it's not time for a dynamics/temp/velocity timestep, return
-
-    if (time-instance%accum_start.lt.instance%ice_tstep) return
+    if (time-instance%last_timestep.lt.instance%ice_tstep) return
 
     ! ------------------------------------------------------------------------  
     ! ICE TIMESTEP begins HERE ***********************************************
     ! ------------------------------------------------------------------------  
 
-    instance%accum_start=time
+    instance%last_timestep=time
 
     ! Allocate temporary upscaling array -------------------------------------
 
@@ -183,21 +162,26 @@ contains
     call glide_get_thk(instance%model,thck_temp)
     start_volume=sum(thck_temp)
 
+    ! Get the mass-balance ---------------------------------------------------
+
+    call glint_get_mbal(instance%mbal_accum,instance%artm,instance%prcp,instance%ablt, &
+         instance%acab,instance%snowd,instance%siced)
+
     ! Constrain accumulation according to topography and domain edges --------
 
-    call fix_acab(instance%ablt_save,instance%acab_save,instance%prcp_save,thck_temp,instance%local_orog)
+    call fix_acab(instance%ablt,instance%acab,instance%prcp,thck_temp,instance%local_orog)
 
     ! Do water budget accounting ---------------------------------------------
 
     if (out_f%water_out.or.out_f%total_wout.or.out_f%water_in .or.out_f%total_win) then
-      accum_temp=instance%prcp_save
-      ablat_temp=instance%ablt_save
+      accum_temp=instance%prcp
+      ablat_temp=instance%ablt
     endif
 
     ! Put climate inputs in the appropriate places
 
-    call glide_set_acab(instance%model,instance%acab_save)
-    call glide_set_artm(instance%model,instance%artm_save/real(instance%av_count))
+    call glide_set_acab(instance%model,instance%acab)
+    call glide_set_artm(instance%model,instance%artm)
 
     ! ------------------------------------------------------------------------
     ! do the different parts of the glint timestep
@@ -307,14 +291,6 @@ contains
     ! Write glint data to file -----------------------------------------------
 
     call glint_io_writeall(instance,instance%model)
-
-    ! Zero accumulations -----------------------------------------------------
- 
-    instance%prcp_save = 0.0
-    instance%ablt_save = 0.0
-    instance%acab_save = 0.0
-    instance%artm_save = 0.0
-    instance%av_count  = 0
 
     ! Tidy up ----------------------------------------------------------------
 

@@ -45,21 +45,21 @@ coordinates:   lon lat
 dimensions:    time, y1, x1
 units:         meter/year
 long_name:     mass-balance
-data:          data%acab_save
+data:          data%acab
 coordinates:   lon lat
 
 [glint_artm]
 dimensions:    time, y1, x1
 units:         degreeC
 long_name:     air temperture
-data:          data%artm_save
+data:          data%artm
 coordinates:   lon lat
 
 [glint_prcp]
 dimensions:    time, y1, x1
 units:         meter/year
 long_name:     precipitation
-data:          data%prcp_save
+data:          data%prcp
 standard_name: lwe_precipitation_rate
 coordinates:   lon lat
 
@@ -67,7 +67,7 @@ coordinates:   lon lat
 dimensions:    time, y1, x1
 units:         meter/year
 long_name:     ablation
-data:          data%ablt_save
+data:          data%ablt
 coordinates:   lon lat
 
 [global_orog]

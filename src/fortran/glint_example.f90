@@ -111,7 +111,6 @@ program glint_example
   logical :: out    ! Outputs set flag
   integer :: i,j    ! Array index counters
   integer :: time   ! Current time (hours)
-  logical :: orogflag=.true.
 
   ! -------------------------------------------------------------------------------------
   ! Executable code starts here - Basic initialisation
@@ -196,9 +195,7 @@ program glint_example
      call glint(ice_sheet,time,temp,precip,zonwind,merwind,orog, &
           orog_out=orog_out,   albedo=albedo,         output_flag=out, &
           ice_frac=ice_frac,   water_out=fw,          water_in=fw_in, &
-          total_water_in=twin, total_water_out=twout, ice_volume=ice_vol, &
-          new_orog=orogflag) 
-     orogflag=.false.
+          total_water_in=twin, total_water_out=twout, ice_volume=ice_vol) 
      call write_log_div ! Print a row of stars
   enddo
 

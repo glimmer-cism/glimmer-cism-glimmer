@@ -16,7 +16,6 @@ module glint_mbal_coupling
     real(sp),dimension(:,:),pointer :: siced     => null() !*FD Keeps track of superimposed ice depth 
     real(sp),dimension(:,:),pointer :: snowd_save => null() !*FD Saves snow depth
     real(sp),dimension(:,:),pointer :: siced_save => null() !*FD Saves superimposed ice depth 
-    integer :: whichprcp=1 !*FD Option for precip calculation
     integer :: av_count =0 !*FD Counter for averaging temperature input
     logical :: new_accum=.true.
     type(glint_mbal_params) :: mbal
@@ -24,7 +23,7 @@ module glint_mbal_coupling
 
 contains
 
-  subroutine glint_mbc_init(params,proj,config,whichacab,whichprcp)
+  subroutine glint_mbc_init(params,proj,config,whichacab)
 
     type(glint_mbc)  :: params
     type(projection) :: proj
@@ -57,7 +56,6 @@ contains
     ! Initialise the mass-balance scheme and other components
 
     call glint_mbal_init(params%mbal,config,whichacab)
-    params%whichprcp=whichprcp
 
   end subroutine glint_mbc_init
 

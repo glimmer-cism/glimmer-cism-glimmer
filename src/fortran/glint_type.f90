@@ -47,8 +47,8 @@ module glint_type
   use glimmer_global
   use glint_proj
   use glint_interp
-  use glint_mbal
   use glide_types
+  use glint_mbal_coupling
 
   implicit none
 
@@ -62,7 +62,6 @@ module glint_type
     type(upscale)                    :: ups_orog           !*FD Upscaling parameters for orography (to cope
                                                            !*FD with need to convert to spectral form).
     type(glide_global_type)          :: model              !*FD The instance and all its arrays.
-    type(glint_mbal_params)          :: mbal_params        !*FD mass balance scheme parameters
     character(fname_length)          :: paramfile          !*FD The name of the configuration file.
     integer                          :: ice_tstep          !*FD Ice timestep in hours
     integer                          :: mbal_tstep         !*FD Mass-balance timestep in hours
@@ -86,10 +85,7 @@ module glint_type
 
     ! Arrays to accumulate mass-balance quantities --------------
 
-    real(sp),dimension(:,:),pointer :: prcp_save => null() !*FD used to accumulate precip
-    real(sp),dimension(:,:),pointer :: ablt_save => null() !*FD used to accumulate ablation
-    real(sp),dimension(:,:),pointer :: acab_save => null() !*FD used to accumulate mass-balance
-    real(sp),dimension(:,:),pointer :: artm_save => null() !*FD used to average air-temperature
+    type(glint_mbc) :: mbal_accum
 
     ! Fractional coverage information ---------------------------
     
@@ -105,10 +101,7 @@ module glint_type
     !*FD Array indicating whether a point should be considered or ignored 
     !*FD when upscaling data for output. 1 means use, 0 means ignore.
 
-    ! Accumulation information ----------------------------------
-
-    real(rk) :: accum_start = 0.0    !*FD Time when mass-balance accumulation started
-    logical  :: first_accum = .true. !*FD First time accumulation flag
+    integer :: last_timestep=0
 
     ! Climate options -------------------------------------------
 
@@ -196,13 +189,6 @@ contains
     if (associated(instance%ablt))          deallocate(instance%ablt)
     if (associated(instance%acab))          deallocate(instance%acab)
 
-    ! Accumulation arrays
-
-    if (associated(instance%prcp_save))     deallocate(instance%prcp_save)
-    if (associated(instance%ablt_save))     deallocate(instance%ablt_save)
-    if (associated(instance%acab_save))     deallocate(instance%acab_save)
-    if (associated(instance%artm_save))     deallocate(instance%artm_save)
-
     ! Fractional coverage
 
     if (associated(instance%frac_coverage)) deallocate(instance%frac_coverage)
@@ -229,13 +215,6 @@ contains
 
     allocate(instance%ablt(ewn,nsn)); instance%ablt = 0.0
     allocate(instance%acab(ewn,nsn)); instance%acab = 0.0
-
-    ! Accumulation arrays
-
-    allocate(instance%prcp_save(ewn,nsn)); instance%prcp_save = 0.0
-    allocate(instance%ablt_save(ewn,nsn)); instance%ablt_save = 0.0
-    allocate(instance%acab_save(ewn,nsn)); instance%acab_save = 0.0
-    allocate(instance%artm_save(ewn,nsn)); instance%artm_save = 0.0
 
     ! Fractional coverage map
 

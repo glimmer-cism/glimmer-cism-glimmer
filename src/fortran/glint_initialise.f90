@@ -86,12 +86,6 @@ contains
     call glint_i_readconfig(instance,config)    
     call glint_i_printconfig(instance)    
 
-    ! initialise the mass-balance scheme
-
-    call glint_mbal_init(instance%mbal_params,config,instance%whichacab)
-    instance%mbal_tstep=instance%mbal_params%tstep
-    mbts=instance%mbal_tstep
-
     ! Check we've used all the config sections
 
     call CheckSections(config)
@@ -121,6 +115,12 @@ contains
                        grid_orog,     &
                        instance%out_mask, &
                        instance%frac_cov_orog)
+
+    ! initialise the mass-balance accumulation
+
+    call glint_mbc_init(instance%mbal_accum,instance%proj,config,instance%whichacab)
+    instance%mbal_tstep=instance%mbal_accum%mbal%tstep
+    mbts=instance%mbal_tstep
 
     if (instance%whichprecip==2) need_winds=.true.
 

@@ -1,5 +1,8 @@
 2005-03-10 Ian Rutt
  * Began preliminary work on objectifying mass-balance accumulation in GLINT
+ * Now plumbed in and working. Needs more work to enable asynchronous coupling
+ * Removed cabability of saving global orog input and avoiding downscaling at the moment
+   as it doesn't work.
 
 2005-03-09 Ian Rutt
  * Added glimmer_daily_pdd.f90 - fully plumbed in.
