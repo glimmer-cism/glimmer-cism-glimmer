@@ -56,7 +56,6 @@ contains
     use glimmer_ncparams
     use glimmer_ncio
     use glide_io
-    use glide_isot
     use glide_velo
     use glide_thck
     use glide_temp
@@ -65,6 +64,7 @@ contains
     use glide_mask
     use glimmer_scales
     use glide_mask
+    use isostasy
     implicit none
     type(glide_global_type) :: model        !*FD model instance
     type(ConfigSection), pointer :: config  !*FD structure holding sections of configuration file
@@ -76,6 +76,9 @@ contains
     ! read configuration file
     call glide_readconfig(model,config)
     call glide_printconfig(model)
+    ! read isostasy configuration file
+    call isos_readconfig(model%isos,config)
+    call isos_printconfig(model%isos)
     ! scale parameters
     call glide_scale_params(model)
     ! allocate arrays
@@ -98,7 +101,7 @@ contains
 
     ! handle relaxed topo
     if (model%options%whichrelaxed.eq.1) then
-       model%geometry%relx = model%geometry%topg
+       model%isos%relx = model%geometry%topg
     end if
 
     ! open all output files
@@ -130,7 +133,6 @@ contains
     !*FD Performs first part of time-step of an ice model instance.
     !*FD calculate velocity and temperature
     use glimmer_global, only : rk
-    use glide_isot
     use glide_thck
     use glide_velo
     use glide_setup
@@ -178,7 +180,7 @@ contains
                model%options%whichslip,model%options%whichbtrc, &
                model%temper%   bwat,     &
                model%velocity% btrc,     &
-               model%geometry% relx,     &
+               model%isos% relx,     &
                model%velocity% ubas,     &
                model%velocity% vbas)
 
@@ -223,12 +225,12 @@ contains
     !*FD write data and move ice
     use glimmer_global, only : rk
     use glide_io
-    use glide_isot
     use glide_thck
     use glide_velo
     use glide_setup
     use glide_temp
     use glide_mask
+    use isostasy
     implicit none
 
     type(glide_global_type) :: model        !*FD model instance
@@ -271,29 +273,45 @@ contains
     call glide_marinlim(model%options%  whichmarn, &
          0, &                                        !magi a hack, someone explain what whichthck=6 does
          model%geometry% thck,      &
-         model%geometry% relx,      &
+         model%isos% relx,      &
          model%geometry% topg,      &
          model%climate%  lati,      &
          model%geometry%thkmask,    &
          model%numerics%mlimit,     &
          model%climate%eus)
 
+    ! ------------------------------------------------------------------------
+    ! update ice/water load if necessary
+    ! ------------------------------------------------------------------------
+    if (model%isos%do_isos) then
+       if (model%numerics%tinc .gt. mod(model%numerics%time,model%isos%period)) then
+          call isos_icewaterload(model)
+          model%isos%new_load = .true.
+       end if
+    end if
+
+  end subroutine glide_tstep_p2
+
+  subroutine glide_tstep_p3(model)
+    !*FD Performs third part of time-step of an ice model instance:
+    !*FD calculate isostatic adjustment and upper and lower ice surface
+    use isostasy
+    use glide_setup
+    implicit none
+    type(glide_global_type) :: model        !*FD model instance
+    
     ! ------------------------------------------------------------------------ 
     ! Calculate isostasy
     ! ------------------------------------------------------------------------ 
-    call isosevol(model%numerics,   & 
-         model%isotwk,              &                                      
-         model%options%  whichisot, &
-         model%geometry% thck,      &
-         model%geometry% topg,      &
-         model%geometry% relx)
+    if (model%isos%do_isos) then
+       call isos_isostasy(model)
+    end if
 
     ! ------------------------------------------------------------------------
     ! calculate upper and lower ice surface
     ! ------------------------------------------------------------------------
     call glide_calclsrf(model%geometry%thck, model%geometry%topg, model%climate%eus, model%geometry%lsrf)
     model%geometry%usrf = max(0.d0,model%geometry%thck + model%geometry%lsrf)
-
-  end subroutine glide_tstep_p2
+  end subroutine glide_tstep_p3
 
 end module glide

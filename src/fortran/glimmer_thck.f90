@@ -98,7 +98,7 @@ contains
                1,model%options%whichbtrc,     &
                model%temper%   bwat,          &
                model%velocity% btrc,          &
-               model%geometry% relx,          &
+               model%isos% relx,          &
                model%velocity% ubas,          &
                model%velocity% vbas)
        end if
@@ -108,7 +108,7 @@ contains
             2,model%options%whichbtrc,     &
             model%temper%   bwat,          &
             model%velocity% btrc,          &
-            model%geometry% relx,          &
+            model%isos% relx,          &
             model%velocity% ubas,          &
             model%velocity% vbas)
 
@@ -130,7 +130,7 @@ contains
             3,model%options%whichbtrc,     &
             model%temper%bwat,             &
             model%velocity%btrc,           &
-            model%geometry%relx,           &
+            model%isos%relx,           &
             model%velocity%ubas,           &
             model%velocity%vbas)
        call velo_calc_velo(model%velowk,model%geomderv%stagthck,model%geomderv%dusrfdew, &
@@ -177,7 +177,7 @@ contains
                1,model%options%whichbtrc,     &
                model%temper%   bwat,          &
                model%velocity% btrc,          &
-               model%geometry% relx,          &
+               model%isos% relx,          &
                model%velocity% ubas,          &
                model%velocity% vbas)
           ! calculate Glen's A if necessary
@@ -214,7 +214,7 @@ contains
                2,model%options%whichbtrc,     &
                model%temper%   bwat,          &
                model%velocity% btrc,          &
-               model%geometry% relx,          &
+               model%isos% relx,          &
                model%velocity% ubas,          &
                model%velocity% vbas)
 
@@ -251,7 +251,7 @@ contains
             3,model%options%whichbtrc,     &
             model%temper%bwat,             &
             model%velocity%btrc,           &
-            model%geometry%relx,           &
+            model%isos%relx,           &
             model%velocity%ubas,           &
             model%velocity%vbas)
        call velo_calc_velo(model%velowk,model%geomderv%stagthck,model%geomderv%dusrfdew, &

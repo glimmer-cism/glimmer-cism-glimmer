@@ -22,6 +22,8 @@ EIS = eis_glide.o eis_forcing.o eis_ela.o eis_temp.o eis_slc.o eis_cony.o glimme
 
 SIMPLE = simple_forcing.o simple_glide.o
 
+ISOSTASY = isostasy.o isostasy_el.o isostasy_setup.o isostasy_types.o
+
 INCLUDE_FILES=
 
 all:	$(LIBS) $(TESTS) $(PROGS)
@@ -36,11 +38,11 @@ $(SUBDIRS):
 
 
 libglimmer.a: 	glimmer_CFproj.o glimmer_config.o glimmer_global.o glimmer_utils.o glimmer_log.o glimmer_ts.o\
-		glimmer_ncdf.o glimmer_ncio.o glimmer_ncparms.o glimmer_paramets.o glimmer_physcon.o glimmer_degd.o gmt.o
+		glimmer_ncdf.o glimmer_ncio.o glimmer_ncparms.o glimmer_paramets.o glimmer_physcon.o glimmer_degd.o gmt.o kelvin.o
 		ar rcv $@ $^
 		if [ "$(RANLIB)" != "" ] ; then $(RANLIB) $@ ; fi
 
-libglide.a:	glide.o glide_setup.o glide_types.o glimmer_temp.o glimmer_isot.o glimmer_thck.o glimmer_velo.o glide_mask.o glide_stop.o glide_io.o glide_nc_custom.o
+libglide.a:	glide.o glide_setup.o glide_types.o glimmer_temp.o glimmer_thck.o glimmer_velo.o glide_mask.o glide_stop.o glide_io.o glide_nc_custom.o $(ISOSTASY)
 		ar rcv $@ $^
 		if [ "$(RANLIB)" != "" ] ; then $(RANLIB) $@ ; fi
 
@@ -58,10 +60,10 @@ simple_glide:	$(SIMPLE) libglide.a libglimmer.a SLAP_library
 glimmer_example :  glimmer_example.o libglide.a libglimmer.a libglint.a SLAP_library
 	$(F77) $(GLIMMERFLAGS) -o $@ $< libglint.a libglide.a libglimmer.a SLAP_library/libslap.a $(LD_FLAGS)
 
-bin2ncdf: bin2ncdf.o glimmer_global.o  ncdf.o ncdf_file.o glide_types.o glimmer_physcon.o glimmer_paramets.o  glimmer_CFproj.o glimmer_log.o glide_mask.o
+bin2ncdf: bin2ncdf.o libglide.a libglimmer.a
 	$(F77) -o $@ $^ $(LD_FLAGS) 
 
-input2ncdf:	input2ncdf.o glimmer_global.o  ncdf.o ncdf_file.o glide_types.o glimmer_paramets.o  glimmer_CFproj.o glimmer_log.o
+input2ncdf:	input2ncdf.o libglide.a libglimmer.a
 	$(F77) -o $@ $^ $(LD_FLAGS)
 
 relaxed: relaxed.o glimmer_global.o ncdf.o ncdf_file.o ncdf_infile.o glide_types.o glide_setup.o glimmer_physcon.o glimmer_paramets.o \
@@ -71,8 +73,8 @@ relaxed: relaxed.o glimmer_global.o ncdf.o ncdf_file.o ncdf_infile.o glide_types
 test_config:	test_config.o glimmer_config.o glimmer_log.o
 	$(F77) -o $@ $^ $(LD_FLAGS)
 
-test_setup:	glimmer_config.o glide_types.o glide_setup.o test_setup.o glimmer_log.o glimmer_paramets.o glide_mask.o
-		$(F77) -o $@ $^ $(LD_FLAGS)
+test_setup:	test_setup.o libglide.a libglimmer.a
+		$(F77) -o $@ $^ $(LD_FLAGS) 
 
 test_ts:	glimmer_ts.o glimmer_log.o test_ts.o
 		$(F77) -o $@ $^ $(LD_FLAGS)

@@ -76,6 +76,7 @@ program simple_glide
      call simple_surftemp(climate,model,time)     
      call glide_tstep_p1(model,time)
      call glide_tstep_p2(model)
+     call glide_tstep_p3(model)
      ! override masking stuff for now
      time = time + model%numerics%tinc
   end do

@@ -58,7 +58,7 @@ module physcon
   real(dp),parameter :: pi = 3.1415926535897d0   !*FD Value of $\pi$.
 
   real(dp),parameter :: rhoi = 917.0             !*FD The density of ice (kg m$^{-3}$)
-  real(dp),parameter :: rhom = 3300.0d0          !*FD The density of magma(?) (kg m$^{-3}$)
+  real(dp),parameter :: rhom = 3300.0d0          !*FD The density of the mantle (kg m$^{-3}$)
   real(dp),parameter :: rhoo = 1028.0d0          !*FD The density of the ocean (kg m$^{-3}$)
   real(dp),parameter :: rhow = 1000.0d0          !*FD The density of fresh water (kg m$^{-3}$)
 

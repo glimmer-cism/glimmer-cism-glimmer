@@ -57,6 +57,7 @@ module glide_types
  
   use glimmer_global
   use glimmer_ncdf
+  use isostasy_types
   use glimmer_cfproj, only : CFproj_projection
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -96,15 +97,6 @@ module glide_types
     !*FD with temperature set to $-10^{\circ}\mathrm{C}$ 
     !*FD \item[2] Set equal to $1\times 10^{-16}\,\mathrm{yr}^{-1}
     !*FD \,\mathrm{Pa}^{-n}$
-    !*FD \end{description}
-
-    integer :: whichisot = 1
-
-    !*FD Bedrock elevation: 
-    !*FD \begin{description} 
-    !*FD \item[0] Fixed at input values
-    !*FD \item[1] Local function of ice loading history (ODE)
-    !*FD \item[2] Local function of ice loading history (ODE) with flexure
     !*FD \end{description}
 
     integer :: whichslip = 4
@@ -219,9 +211,6 @@ module glide_types
     real(dp),dimension(:,:),pointer :: topg => null() 
     !*FD The elevation of the topography, divided by \texttt{thck0}.
 
-    real(dp),dimension(:,:),pointer :: relx => null()
-    !*FD The elevation of the relaxed topography, by \texttt{thck0}.
-
     integer, dimension(:,:),pointer :: mask => null()
     !*FD Set to zero for all points where $\mathtt{thck}=0$, otherwise non-zero.
     !*FD the non-zero points are numbered in sequence from the bottom left to the 
@@ -321,7 +310,6 @@ module glide_types
     real(sp) :: tinc   =   20.0   !*FD time step of main loop in years 
     real(sp) :: ntem   =    1.0   !*FD temperature time step (multiplier of main time step)
     real(sp) :: nvel   =    1.0   !*FD velocity time step (multiplier of main time step)
-    real(sp) :: niso   =    1.0   !*FD flexure time step (multiplier of main time step)
     real(dp) :: alpha  =    0.5d0 !*FD richard suggests 1.5 - was a parameter in original
     real(dp) :: alphas =    0.5d0 !*FD was a parameter in the original
     real(dp) :: thklim =  100.0   
@@ -340,14 +328,6 @@ module glide_types
 
   end type glide_numerics
 
-  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-  type glide_isotwk
-    real(dp),dimension(:,:),pointer :: load  => null()
-    real(sp),dimension(:,:),pointer :: dflct => null()
-    real(dp),dimension(4)           :: fact  =  0.0
-    integer :: nflx   = 0
-  end type glide_isotwk
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -443,7 +423,6 @@ module glide_types
     real(dp) :: fiddle = 3.0d0    ! -
     real(dp) :: hydtim = 1000.0d0 ! yr^{-1} converted to s^{-1} and scaled, 
                                   ! 0 if no drainage = 0.0d0 * tim0 / scyr
-    real(dp) :: isotim = 3000.0d0
   end type glide_paramets
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -458,13 +437,13 @@ module glide_types
     type(glide_temper)   :: temper
     type(glide_funits)   :: funits
     type(glide_numerics) :: numerics
-    type(glide_isotwk)   :: isotwk
     type(glide_velowk)   :: velowk
     type(glide_pcgdwk)   :: pcgdwk
     type(glide_thckwk)   :: thckwk
     type(glide_tempwk)   :: tempwk
     type(glide_paramets) :: paramets
     type(CFproj_projection) :: projection
+    type(isos_type)      :: isos
   end type glide_global_type
 
 contains
@@ -521,18 +500,12 @@ contains
     !*FD \item \texttt{usrf(ewn,nsn))}
     !*FD \item \texttt{lsrf(ewn,nsn))}
     !*FD \item \texttt{topg(ewn,nsn))}
-    !*FD \item \texttt{relx(ewn,nsn))}
     !*FD \item \texttt{mask(ewn,nsn))}
     !*FD \end{itemize}
 
     !*FD In \texttt{model\%thckwk}:
     !*FD \begin{itemize}
     !*FD \item \texttt{olds(ewn,nsn,thckwk\%nwhich))}
-    !*FD \end{itemize}
-
-    !*FD In \texttt{model\%isotwk}:
-    !*FD \begin{itemize}
-    !*FD \item \texttt{load(ewn,nsn))}
     !*FD \end{itemize}
 
     !*FD In \texttt{model\%numerics}:
@@ -589,7 +562,6 @@ contains
     allocate(model%geometry%usrf(ewn,nsn));           model%geometry%usrf = 0.0d0
     allocate(model%geometry%lsrf(ewn,nsn));           model%geometry%lsrf = 0.0d0
     allocate(model%geometry%topg(ewn,nsn));           model%geometry%topg = 0.0d0
-    allocate(model%geometry%relx(ewn,nsn));           model%geometry%relx = 0.0d0
     allocate(model%geometry%mask(ewn,nsn));           model%geometry%mask = 0
     allocate(model%geometry%thkmask(ewn,nsn));        model%geometry%thkmask = 0
 
@@ -598,7 +570,6 @@ contains
     allocate(model%thckwk%oldthck(ewn,nsn));          model%thckwk%oldthck = 0.0d0
     allocate(model%thckwk%oldthck2(ewn,nsn));         model%thckwk%oldthck2 = 0.0d0
     allocate(model%thckwk%basestate(ewn,nsn));        model%thckwk%basestate = 0.0d0
-    allocate(model%isotwk%load(ewn,nsn));             model%isotwk%load = 0.0d0 
     allocate(model%numerics%sigma(upn))
     
     ! allocate memory for sparse matrix
@@ -607,6 +578,9 @@ contains
     allocate (model%pcgdwk%pcgval(ewn*nsn*5))
     allocate (model%pcgdwk%rhsd(ewn*nsn))
     allocate (model%pcgdwk%answ(ewn*nsn))
+
+    ! allocate isostasy grids
+    call isos_allocate(model%isos,ewn,nsn)
 
   end subroutine glide_allocarr
 
@@ -650,7 +624,6 @@ contains
     deallocate(model%geometry%usrf)
     deallocate(model%geometry%lsrf)
     deallocate(model%geometry%topg)
-    deallocate(model%geometry%relx)
     deallocate(model%geometry%mask)
     deallocate(model%geometry%thkmask)
 
@@ -658,10 +631,12 @@ contains
     deallocate(model%thckwk%oldthck)
     deallocate(model%thckwk%oldthck2)
     deallocate(model%thckwk%basestate)
-    deallocate(model%isotwk%load)
     deallocate(model%numerics%sigma)
     
     deallocate(model%pcgdwk%pcgrow,model%pcgdwk%pcgcol,model%pcgdwk%pcgval,model%pcgdwk%rhsd,model%pcgdwk%answ)
+
+    ! allocate isostasy grids
+    call isos_deallocate(model%isos)
 
   end subroutine glide_deallocarr
 end module glide_types

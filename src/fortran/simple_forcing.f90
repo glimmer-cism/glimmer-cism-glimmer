@@ -61,6 +61,8 @@ module simple_forcing
      !*FD mass balance parameterisation m yr$^{-1}$, yr$^{-1}$, m
      real(kind=sp) :: period = 0.
      !*FD EISMINT time-dep climate forcing period, switched off when set to 0
+     real(kind=sp) :: mb_amplitude = 0.2
+     !*FD EISMINT amplitude of mass balance time-dep climate forcing
   end type simple_climate
 
 contains
@@ -120,6 +122,7 @@ contains
           climate%nmsb(1) = dummy(1)
        end if
        call GetValue(section,'period',climate%period)
+       call GetValue(section,'mb_amplitude',climate%mb_amplitude)
        return       
     end if
     call GetSection(config,section,'EISMINT-1 moving margin')
@@ -139,6 +142,8 @@ contains
           dummy=>NULL()
        end if
        call GetValue(section,'period',climate%period)
+       climate%mb_amplitude = 100000.
+       call GetValue(section,'mb_amplitude',climate%mb_amplitude)
        return
     end if
     call GetSection(config,section,'EISMINT-2')
@@ -186,6 +191,10 @@ contains
        call write_log(message)
        write(message,*) 'period       : ',climate%period
        call write_log(message)
+       if (climate%period .gt.0) then
+          write(message,*) 'mb amplitude : ',climate%mb_amplitude
+          call write_log(message)
+       end if
     case(2)
        call write_log('EISMINT-1 moving margin configuration')
        call write_log('-------------------------------------')
@@ -201,6 +210,10 @@ contains
        call write_log(message)
        write(message,*) 'period       : ',climate%period
        call write_log(message)
+       if (climate%period .gt.0) then
+          write(message,*) 'mb amplitude : ',climate%mb_amplitude
+          call write_log(message)
+       end if
     case(3)
        call write_log('EISMINT-2')
        call write_log('---------')
@@ -245,12 +258,12 @@ contains
        ! EISMINT-1 fixed margin
        model%climate%acab(:,:) = climate%nmsb(1)
        if (climate%period.ne.0) then
-          model%climate%acab(:,:) = model%climate%acab(:,:) + 0.2 * sin(2.*pi*time/climate%period)/ (acc0 * scyr)
+          model%climate%acab(:,:) = model%climate%acab(:,:) + climate%mb_amplitude * sin(2.*pi*time/climate%period)/ (acc0 * scyr)
        end if
     case(2)
        ! EISMINT-1 moving margin       
        if (climate%period.ne.0) then
-          rel = climate%nmsb(3) + 100000.*sin(2.*pi*time/climate%period)
+          rel = climate%nmsb(3) + climate%mb_amplitude*sin(2.*pi*time/climate%period)
        else
           rel = climate%nmsb(3)
        end if

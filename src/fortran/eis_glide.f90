@@ -79,6 +79,7 @@ program eis_glide
      call glide_tstep_p1(model,time)
      call eis_io_writeall(climate,model)
      call glide_tstep_p2(model)
+     call glide_tstep_p3(model)
      ! override masking stuff for now
      time = time + model%numerics%tinc
   end do

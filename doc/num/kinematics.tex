@@ -2,9 +2,9 @@
 The evolution of the ice thickness, $H$, stems from the continuity equation and can be expressed as
 \begin{equation}
   \label{kin.eq.ice_thickness}
-  \frac{\pd H}{\pd t} = -\vec\nabla\cdot(\overline{\vec{u}} H) + b,
+  \frac{\pd H}{\pd t} = -\vec\nabla\cdot(\overline{\vec{u}} H) + B,
 \end{equation}
-where $\overline{\vec{u}}$ is the vertically averaged ice velocity, $b$ is the surface mass balance and $\vec\nabla$ is the horizontal gradient operator. 
+where $\overline{\vec{u}}$ is the vertically averaged ice velocity, $B$ is the surface mass balance and $\vec\nabla$ is the horizontal gradient operator. 
 
 For large--scale ice sheet models, the \emph{shallow ice approximation} is generally used. This approximation states that bedrock and ice surface slopes are assumed sufficiently small so that the normal stress components can be neglected. The horizontal shear stresses ($\tau_{xz}$ and $\tau_{yz}$) can thus be approximated by
 \begin{equation}
@@ -51,12 +51,12 @@ Integrating \eqref{kin.eq.incompress} with respect to $z$ gives the vertical vel
 \end{equation}
 with lower, kinematic boundary condition
 \begin{equation}
-  w(h)=\frac{\pd h}{\pd t}+\vec u(h)\cdot\vec\nabla h+m,
+  w(h)=\frac{\pd h}{\pd t}+\vec u(h)\cdot\vec\nabla h+S,
 \end{equation}
-where $m$ is the melt rate at the ice base. The upper kinematic boundary is given by the surface mass balance and must satisfy:
+where $S$ is the melt rate at the ice base given by Equation \eqref{temp.eq.meltrate}. The upper kinematic boundary is given by the surface mass balance and must satisfy:
 \begin{equation}
   \label{kin.eq.upper_bc}
-  w(s)=\frac{\pd s}{\pd t}+\vec u(s)\cdot\vec\nabla s+b.
+  w(s)=\frac{\pd s}{\pd t}+\vec u(s)\cdot\vec\nabla s+B.
 \end{equation}
 
 \input{\dir/grid.tex}
@@ -79,7 +79,7 @@ The vertical velocity, Equation \eqref{kin.eq.vert_velo}, becomes
 \end{equation}
 and lower boundary condition
 \begin{equation}
-  w(1)=\frac{\pd h}{\pd t}+\vec u(1)\cdot\vec\nabla h+m.
+  w(1)=\frac{\pd h}{\pd t}+\vec u(1)\cdot\vec\nabla h+S.
 \end{equation}
 
 \subsection{Calculating the Horizontal Velocity and the Diffusivity}
@@ -114,7 +114,7 @@ Expressions for $\vec{u}_{i,j,k}$ and $\vec{q}_{i,j}$ are straight forward.
 Equation \eqref{kin.eq.ice_thickness} can be rewritten as a diffusion equation, with non--linear diffusion coefficient $D$:
 \begin{equation}
   \label{kin.eq.ice_evo}
-  \frac{\pd H}{\pd t}=-\vec\nabla\cdot D\vec\nabla s+b=\vec\nabla\cdot\vec q+a
+  \frac{\pd H}{\pd t}=-\vec\nabla\cdot D\vec\nabla s+B=\vec\nabla\cdot\vec q+B
 \end{equation}
 This non--linear partial differential equation can be linearised by using the diffusion coefficient from the previous time step. The diffusion coefficient is calculated on the $(r,s)$--grid, i.e. staggered in both $x$ and $y$ direction. Using finite differences, the fluxes in $x$ direction, $q^x$ become
 \begin{subequations}
@@ -131,7 +131,7 @@ Using the Crank--Nicolson scheme, the semi--implicit temporal discretisation of 
 \begin{multline}
 \label{kin.eq.ice_evo_disc1}
   \frac{H^{t+1}_{i,j}-H^t_{i,j}}{\Delta t}=\frac{q^{x,t+1}_{i+\frac12,j}-q^{x,t+1}_{i-\frac12,j}}{2\Delta x}+\frac{q^{y,t+1}_{i,j+\frac12}-q^{y,t+1}_{i,j-\frac12}}{2\Delta y} \\
-  +\frac{q^{x,t}_{i+\frac12,j}-q^{x,t}_{i-\frac12,j}}{2\Delta x}+\frac{q^{y,t}_{i,j+\frac12}-q^{y,t}_{i,j-\frac12}}{2\Delta y}+ a_{i,j}
+  +\frac{q^{x,t}_{i+\frac12,j}-q^{x,t}_{i-\frac12,j}}{2\Delta x}+\frac{q^{y,t}_{i,j+\frac12}-q^{y,t}_{i,j-\frac12}}{2\Delta y}+ B_{i,j}
 \end{multline}
 The superscripts $^t$ and $^{t+1}$ indicate at what time the ice thickness $H$ is evaluated. Collecting all $H^{t+1}$ terms of \eqref{kin.eq.ice_evo_disc1} on the LHS and moving all other terms to the RHS we can rewrite \eqref{kin.eq.ice_evo_disc1} as
 \begin{equation}
@@ -141,7 +141,7 @@ The superscripts $^t$ and $^{t+1}$ indicate at what time the ice thickness $H$ i
 with the RHS,
 \begin{multline}
   \zeta_{i,j} = \alpha_{i,j}H^{t}_{i-1,j} + \beta_{i,j}H^{t}_{i+1,j} + \gamma_{i,j}H^{t}_{i,j-1} + \delta_{i,j}H^{t}_{i,j+1} + (1+\epsilon_{i,j})H^{t}_{i,j} \\
-  + 2(\alpha_{i,j}h_{i-1,j} + \beta_{i,j}h_{i+1,j} + \gamma_{i,j}h_{i,j-1} + \delta_{i,j}h_{i,j+1}+ \epsilon_{i,j}h_{i,j}) + a_{i,j}\Delta t
+  + 2(\alpha_{i,j}h_{i-1,j} + \beta_{i,j}h_{i+1,j} + \gamma_{i,j}h_{i,j-1} + \delta_{i,j}h_{i,j+1}+ \epsilon_{i,j}h_{i,j}) + B_{i,j}\Delta t
 \end{multline}
 with the elements of the sparse matrix
 \begin{subequations}

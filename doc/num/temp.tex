@@ -115,16 +115,24 @@ The vertical advection term, $\pd T/\pd\sigma$ is solved using the central diffe
 \end{equation}
 
 \subsection{Boundary Conditions}
-At the upper boundary, ice temperatures are set to the surface temperature, $T_{\text{surf}}$. At the ice base, the boundary condition depends on whether the base is melting or not:
-\begin{subequations}
-  \begin{align}
-    T(1) &= T_{\text{pmp}} \quad\text{if $T(1)\ge T_{\text{pmp}}$}\\
-    \left.\frac{\pd T}{\pd\sigma}\right|_{\sigma=1}&=-\frac{GH}k \quad\text{if $T(1)<T_{\text{pmp}}$}\\
-    \intertext{If the ice is floating, basal temperatures are kept constant, i.e. }
-    \frac{\pd T(1)}{\pd t} & = 0
-  \end{align}
-\end{subequations}
-When the ice is floating, basal temperatures are hold constant.
+At the upper boundary, ice temperatures are set to the surface temperature, $T_{\text{surf}}$. The ice at the base is heated by the geothermal heat flux and sliding friction:
+\begin{equation}
+  \left.\frac{\pd T}{\pd\sigma}\right|_{\sigma=1}=-\frac{GH}k-\frac{H\vec{\tau}_b\cdot\vec{u}(1)}k,
+\end{equation}
+where $\vec{\tau}_b=-\rho gH\vec\nabla s$ is the basal shear stress and $\vec{u}(1)$ is the basal ice velocity. Ice temperatures are held constant if they reach the pressure melting point of ice, i.e.
+\begin{equation}
+  T^\ast=T_{\text{pmp}} \quad\text{if $T\ge T_{\text{pmp}}$}.
+\end{equation}
+Excess heat is then used to formulate a melt rate, $S$:
+\begin{equation}
+  \label{temp.eq.meltrate}
+  S=\frac{k}{\rho L}\left(\frac{\pd T^\ast}{\pd z}-\frac{\pd T}{\pd z}\right),
+\end{equation}
+where $L$ is the specific latent heat of fusion. Finally, basal temperatures are held constant, if the ice is floating:
+\begin{equation}
+  \frac{\pd T(1)}{\pd t}  = 0.
+\end{equation}
+
 
 \subsection{Putting it all together}
 Equation \eqref{temp.eq.temp} is solved for each ice column. The horizontal dependency of the horizontal advection term, \eqref{temp.eq.hadv}, is resolved by iterating the vertical solution. Putting the individual terms together using a fully explicit finite differences scheme, Equation \eqref{temp.eq.temp2} becomes

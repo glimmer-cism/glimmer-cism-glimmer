@@ -112,7 +112,6 @@ contains
 
     model%numerics%ntem = model%numerics%ntem * model%numerics%tinc
     model%numerics%nvel = model%numerics%nvel * model%numerics%tinc
-    model%numerics%niso = model%numerics%niso * model%numerics%tinc
 
     model%numerics%dt     = model%numerics%tinc * scyr / tim0
     model%numerics%dttem  = model%numerics%ntem * scyr / tim0 
@@ -121,7 +120,6 @@ contains
     model%numerics%dew = model%numerics%dew / len0
     model%numerics%dns = model%numerics%dns / len0
 
-    model%paramets%isotim = model%paramets%isotim * scyr / tim0         
     model%numerics%mlimit = model%numerics%mlimit / thk0
   end subroutine glide_scale_params
 
@@ -457,7 +455,6 @@ contains
     call GetValue(section,'dt',model%numerics%tinc)
     call GetValue(section,'ntem',model%numerics%ntem)
     call GetValue(section,'nvel',model%numerics%nvel)
-    call GetValue(section,'niso',model%numerics%niso)
   end subroutine handle_time
   
   subroutine print_time(model)
@@ -479,7 +476,6 @@ contains
     call write_log(message)
     write(message,*) 'velo dt factor    : ',model%numerics%nvel
     call write_log(message)
-    write(message,*) 'isostasy dt factor: ',model%numerics%niso
     call write_log('')
   end subroutine print_time
 
@@ -494,7 +490,6 @@ contains
     call GetValue(section,'ioparams',model%funits%ncfile)
     call GetValue(section,'temperature',model%options%whichtemp)
     call GetValue(section,'flow_law',model%options%whichflwa)
-    call GetValue(section,'isostasy',model%options%whichisot)
     call GetValue(section,'sliding_law',model%options%whichslip)
     call GetValue(section,'basal_water',model%options%whichbwat)
     call GetValue(section,'marine_margin',model%options%whichmarn)
@@ -522,10 +517,6 @@ contains
          'Patterson and Budd               ', &
          'Patterson and Budd (temp=-10degC)', &
          'const 1e-16a^-1Pa^-n             ' /)
-    character(len=*), dimension(0:2), parameter :: isostasy = (/ &
-         'none   ', &
-         'local  ', &
-         'elastic' /)
     character(len=*), dimension(0:4), parameter :: sliding = (/ &
          'gravity', &
          'unknown', &
@@ -574,12 +565,6 @@ contains
        stop
     end if
     write(message,*) 'flow law                : ',model%options%whichflwa,flow_law(model%options%whichflwa)
-    call write_log(message)
-    if (model%options%whichisot.lt.0 .or. model%options%whichisot.ge.size(isostasy)) then
-       call error_log('Error, isostasy out of range')
-       stop
-    end if
-    write(message,*) 'isostasy                : ',model%options%whichisot,isostasy(model%options%whichisot)
     call write_log(message)
     if (model%options%whichslip.lt.0 .or. model%options%whichslip.ge.size(sliding)) then
        call error_log('Error, sliding_law out of range')
@@ -651,7 +636,6 @@ contains
     call GetValue(section,'geothermal',model%paramets%geot)
     call GetValue(section,'flow_factor',model%paramets%fiddle)
     call GetValue(section,'hydro_time',model%paramets%hydtim)
-    call GetValue(section,'isos_time',model%paramets%isotim)
     call GetValue(section,'basal_tract',temp,5)
     if (associated(temp)) then
        model%paramets%btrac_const=temp(1)
@@ -678,8 +662,6 @@ contains
     write(message,*) 'flow enhancement      : ',model%paramets%fiddle
     call write_log(message)
     write(message,*) 'basal hydro time const: ',model%paramets%hydtim
-    call write_log(message)
-    write(message,*) 'isostasy time const   : ',model%paramets%isotim
     call write_log(message)
     write(message,*) 'basal traction param  : ',model%paramets%btrac_const
     call write_log(message)
