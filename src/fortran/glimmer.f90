@@ -280,6 +280,11 @@ contains
     !*FD
     !*FD Input fields should be taken as means over the period since the last call.
     !*FD See the user documentation for more information.
+    !*FD
+    !*FD Note that the total ice volume returned is the total at the end of the time-step;
+    !*FD the water fluxes are valid over the duration of the timestep. Thus the difference
+    !*FD between \texttt{total\_water\_in} and \texttt{total\_water\_out} should be equal
+    !*FD to the change in \texttt{ice\_volume}, after conversion between m$^3$ and kg.
 
     use glimmer_utils
     use glimmer_mbal
