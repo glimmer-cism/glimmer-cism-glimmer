@@ -233,6 +233,9 @@ contains
     params%total_coverage=0.0
     params%total_cov_orog=0.0
 
+    params%cov_normalise=0.0
+    params%cov_norm_orog=0.0
+
     do i=1,params%ninstances
       call glimmer_i_initialise(params%file_unit,    &
                                 fnamelist(i),        &
@@ -245,12 +248,11 @@ contains
                             + params%instances(i)%frac_coverage
       params%total_cov_orog = params%total_cov_orog &
                             + params%instances(i)%frac_cov_orog
+
+      where (params%total_coverage>0.0) params%cov_normalise=params%cov_normalise+1.0
+      where (params%total_cov_orog>0.0) params%cov_norm_orog=params%cov_norm_orog+1.0
+
     enddo
-
-    ! Normalisation array set to the sum of all coverage
-
-    params%cov_normalise=params%total_coverage
-    params%cov_norm_orog=params%total_cov_orog
 
     ! Check we don't have coverage greater than one at any point.
 

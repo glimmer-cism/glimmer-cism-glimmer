@@ -1,3 +1,6 @@
+2004-10-14 Ian Rutt
+ * Fixed problem with coverage map normalisation
+
 2004-10-13 Ian Rutt
  * Reorganised upscaling and field splicing to enable easy output of 
    initial fields to global model at initialisation time.
