@@ -1,4 +1,7 @@
 2005-03-03 Magnus Hagdorn
+ * added glide launcher utility
+
+2005-03-03 Magnus Hagdorn
  * glide_thck.f90: move flwa calcs up in lin solver
  * glide_types.f90: make size of arrays on velo grid 1 less than
    size of arrays on temp grid
