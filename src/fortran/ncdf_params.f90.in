@@ -57,8 +57,8 @@ contains
     ! local variables
     type(ConfigSection), pointer :: config
     type(ConfigSection), pointer :: section
-    type(glimmer_nc_output), pointer :: output
-    type(glimmer_nc_input), pointer :: input
+    type(glimmer_nc_output), pointer :: output => null()
+    type(glimmer_nc_input), pointer :: input => null()
 
     ! read configuration
     model%funits%ncfile  = trim(model%funits%output_stem) // '.glw'

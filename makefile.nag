@@ -29,7 +29,8 @@ CCFLAGS= -DIFC -g -DLINUX
 # 
 # compilation flags for fortran compiler
 #
-F77FLAGS=-fpp -C -gline -I$(NETCDF_PREFIX)/lib/modules
+#F77FLAGS=-fpp -gline -C -I$(NETCDF_PREFIX)/lib/modules
+F77FLAGS=-fpp -I$(NETCDF_PREFIX)/lib/modules
 # for SLAP
 GLIMMERFLAGS=-dusty
 #
