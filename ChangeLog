@@ -1,3 +1,6 @@
+2004-07-30 Magnus Hagdorn
+ * started work on updated docs
+
 2004-07-15 Magnus Hagdorn
  * glint_timestep.f90: read the source, magi! ah well, temperature calculations seem to work...
 
