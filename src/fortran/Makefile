@@ -109,10 +109,10 @@ f90_dep.mak: *.f90 $(AUTOGEN)
 
 #some special rules for automatically generating ncdf src code
 glide_io.f90:	glide_vars.def ncdf_template.f90.in
-		python ../python/generate_ncvars2.py $^
+		python ../python/generate_ncvars.py $^
 eis_io.f90:	eis_vars.def ncdf_template.f90.in
-		python ../python/generate_ncvars2.py $^
+		python ../python/generate_ncvars.py $^
 glint_io.f90:	glint_vars.def ncdf_template.f90.in
-		python ../python/generate_ncvars2.py $^
+		python ../python/generate_ncvars.py $^
 
 include f90_dep.mak 

@@ -1,4 +1,7 @@
 2004-12-09 Magnus Hagdorn
+ * fixed bug in Makefile
+
+2004-12-09 Magnus Hagdorn
  new netCDF I/O subsystem
  * Makfile: updated to use new files
  * glimmer_ncdf.f90, glimmer_ncio.f90, glimmer_ncparms.f90: basic netCDF I/O system handling opening and closing of
