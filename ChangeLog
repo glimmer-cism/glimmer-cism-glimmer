@@ -1,0 +1,529 @@
+2004-12-02 Magnus Hagdorn
+ * merged in eismint_1: this should fix all (most) EISMINT problems
+   the GLINT-GLIDE_eismint should be considered stable, all interesting
+   stuff will go on on the GLINT-GLIDE branch
+ * removed lwe from standard names since mass balance and meltrate are
+   measured in ice rather than liquid-water-equiv.
+ 
+2004-11-28 Magnus Hagdorn
+ * added description of non-linear solver
+
+2004-11-25 Magnus Hagdorn
+ * expanded section on vertical velos and added some figures
+
+2004-11-18 Magnus Hagdorn
+ * updated numercs documentation to include mechanics
+
+2004-11-15 Magnus Hagdorn
+ * added temperature solver documentation
+
+2004-11-10 Magnus Hagdorn
+ * ncdf_vars.def: make nc files conformant with CF standard (conformance was check with the CF
+   checker http://titania.badc.rl.ac.uk/cgi-bin/cf-checker.pl, and passed except for the new
+   standard names which are not yet part of CF but will be from 2004-11-15)
+
+2004-09-27 Magnus Hagdorn
+ * removed masking of netCDF variables. This causes more pain than it is worth it. The two 
+   files are tagged (generate_ncvars.py, ncdf_vars.def)
+
+2004-09-27 Magnus Hagdorn
+ * glimmer_temp.f90: applied Tony's fix for floating ice temperature problem
+   see http://forge.nesc.ac.uk/pipermail/glimmer-discuss/2004-September/000041.html
+	
+2004-09-27 Magnus Hagdorn
+ * split up main time step into two parts so that we can write data before
+   ice thicknesses are updated (glint_timestep.f90, glide_types.f90, simple_glide.f90, eis_glide.f90, glint_timestep.f90)
+ * updated doc (glide.dia, glide.eps)
+	
+2004-09-22 Magnus Hagdorn
+ * new continentality calculations (eis_cony.f90, glimmer_searchcircle.f90, eis_forcing.f90
+ * eis_ela.f90: distinguish between maritime and continental mass balance
+ * eis specific netCDF I/O (eis_io.f90.in, eis_glide.f90, ncdf_vars.def)
+ * eis_types.f90: split out type definition to avoid circular dependency
+ * Makefile: updated accordingly
+	
+2004-09-21 Magnus Hagdorn
+ * add eus to lower ice boundary calculations (glide_setup.f90, glide.f90, glint_initialise.f90, glint_timestep.f90)
+ * glide_mask.f90: eustatic sea level change is considered when calculating mask
+ * use glide_mask for finding ice shelf (glide_types.f90, glimmer_temp.f90)
+ * glimmer_velo.f90: minor rearrangements which might speed-up code
+
+2004-09-21 Magnus Hagdorn
+ * glint_io.f90.in: fix scaling bug of netCDF variables
+ * Makefile: added glide_mask.o to test_setup
+
+2004-09-20 Magnus Hagdorn
+ * generate_ncvars.py: need to set NF90_FILL_REAL to 0 when reading netCDF files.
+	
+2004-09-10 Magnus Hagdorn
+ * data_dep.dot: removed initialisation from graph and moved bedrock adjustment and surface calcs to end of 
+   time step
+ * data_dep-legend.fig: legend for data dependency plot
+ * glide.tex: updated documentation for new calving code
+ * glide.f90: moved upper and lower ice surface and bed rock adjustment calculations to end of time step
+ * glide_setup.f90: new calving mode uses glide_mask to find floating ice. this routine is a bit of a hack 
+   at the moment.
+ * glide_types.f90: moved marine margin options around
+ * glimmer_temp.f90: changed hsum to hsum4 which makes hadvpt twice as fast :-)
+ * glimmer_thck.f90: removed lower ice surface calculations
+ * f90_dependencies.py: fixed a bug where only the last module in a file was picked up. The fix is somewhat fragile
+   and depends on 'end module' with a single space, we should use regular expressions or normalise the source code
+	
+2004-09-06 Magnus Hagdorn
+ * glide_types.f90: add temporary arrays for both U and T grids
+ * netCDF output can start at later time (ncdf_file.f90.in, ncdf_params.f90.in)
+ * generate_ncvars.py: variables can be masked using ice thickness
+ * ncdf_vars.def: enable mask for some variables
+
+2004-09-03 Magnus Hagdorn
+ * glide_types.f90, ncdf_vars.def: new mask variable
+ * glide.f90: calculating mask
+ * glide_types.f90: fixed a bug where we didn't make sure that ice is present
+ * generate_ncvars.py: variables can now have different types
+	
+2004-09-01 Magnus Hagdorn
+ * glide_mask.f90: added module describing model cell content, it's not hooked up yet
+
+2004-08-27 Magnus Hagdorn
+ * simple_forcing.f90: fixed another bug introduced by previous fix
+
+2004-08-24 Magnus Hagdorn
+ * the automatic detection of the length of an array in glimmer_config does not work
+   so we need a separate variable for the constant basal traction case (glide_setup.f90, glide.tex)
+ * glide_types.f90: some arrays for the staggered leap frog were not initialised, it still doesn't work
+   though
+ * glimmer_paramets.f90: adjust vis0 to match EISMINT cases
+ * simple_forcing.f90: surface temperature distribution of EISMINT-1 case was not scaled propperly
+ * some tidying up of unused symbols (glimmer_velo.f90, ncdf_file.f90.in, ncdf_infile.f90.in)
+	
+2004-08-20 Magnus Hagdorn
+ * changed vis0 scale to match EISMINT-1 cases (glimmer_velo.f90)
+ * added module holding variable scales (ncdf.f90.in)
+ * initialise and use new scales (glide.f90, ncdf_file.f90.in, ncdf_infile.f90.in, ncdf_vars.def)
+
+2004-08-18 Magnus Hagdorn
+ * some variables are time-dep again which makes visualisation easier (ncdf_vars.def)
+
+2004-08-18 Magnus Hagdorn
+ * optimised hsum, execution of hsum improved by a factor of 2.3
+   this leads to an overall improvement by a factor of 1.27 for an EISMINT-2 run
+   (glimmer_utils.f90, glimmer_velo.f90)
+	
+2004-08-16 Magnus Hagdorn
+ * data_dep.dot: added plot of data dependency
+ * glide.f90: when hotstarting temp and flwa is read from file
+ * added hotstart option: glide_types.f90, glide_setup.f90
+ * ncdf_params.f90.in: select variables needed for hotstarting model
+ * ncdf_vars.def: selected variables needed for hotstart
+ * generate_ncvars.py: added hotstart, removed time-dep of some variables
+ * glide.tex: added hostart doc
+	
+2004-08-13 Magnus Hagdorn
+ glide.f90, glide_types.f90, glimmer_isot.f90, glimmer_temp.f90, glimmer_thck.f90, glimmer_velo.f90
+ * moved initialisation code to separate subroutines which have to be called at start-up
+ * also avoid repeated allocate/deallocate of arrays
+
+2004-08-12 Magnus Hagdorn
+ * forgot to scale basal traction constant (glide_types.f90, glimmer_velo.f90)
+
+2004-08-12 Magnus Hagdorn
+ * simple_forcing.f90: add EISMINT-2 forcing 
+ * added constant basal traction/basal traction where water exists
+   (glide_setup.f90, glide_types.f90, glimmer_velo.f90)
+ * updated docs accordingly (glide.tex)
+ * updated model config files accordingly (g_land.config, fennscan1.config)
+	
+2004-08-09 Magnus Hagdorn
+ * glimmer_velo.f90: fix bug with staggered grid (vertical velo is 
+   calculated on big grid), re-enabled normal gradient calc of ice
+   thicknesses (not sure about this...)
+ * fix bug in calculation of horizontal gradients (glimmer_thck.f90, glide.f90 )
+
+2004-08-09 Magnus Hagdorn
+ * fennscan1.config: saner switches
+ * simple[1-3].config: forcing section renamed to 'EISMINT-1 moving margin'
+ * marine margin handles sea-level change (glide.f90, glide_setup.f90 )
+ * glimmer_config.f90: increased section name length to 50 characters
+ * glimmer_velo.f90: adjust const flow parameter for EISMINT scenarios
+ * simple_glide.f90: EISMINT climate is updated every time step
+ * simple_forcing.f90: full set of EISMINT-1 forcing scenarios
+ * updated docs (drivers.tex, glide.tex )
+	
+2004-08-03 Magnus Hagdorn
+ * more doc stuff
+
+2004-08-02 Magnus Hagdorn
+ * more doc work
+
+2004-07-30 Magnus Hagdorn
+ * started work on updated docs
+
+2004-07-15 Magnus Hagdorn
+ * glint_timestep.f90: read the source, magi! ah well, temperature calculations seem to work...
+
+2004-07-15 Magnus Hagdorn
+ * glint_timestep.f90: must apply climate forcing every time step
+
+2004-07-15 Magnus Hagdorn
+ * glide_setup.f90: initialise tau0 which somehow escaped initialisation
+ * fixed check when netCDF should be read from/written to(ncdf.f90.in, ncdf_file.f90.in, ncdf_infile.f90.in)
+ * glimmer_proj.f90: fixed minor bug and renamed config file section
+ * glint_climate.f90: renamed glimmer_lapserate to glint_lapserate
+ * glint_initialise.f90: fixed api and added some proj initialisation
+ * glint_io.f90.in: minor compile fixes
+ * glint_timestep.f90: renamed some subroutines from glimmer_ to glint_
+ * updated to use new glint stuff (glimmer.f90, bin2ncdf.f90, input2ncdf.f90, glimmer_example.f90, test_setup.f90)
+ * updated greenland input file
+	
+2004-07-14 Magnus Hagdorn
+ * glint_timestep.f90: timestep of glint instance
+
+2004-07-13 Magnus Hagdorn
+ * glimmer_degd.f90: load sp from glimmer_global
+ * renamed module glimmer_ to glint_ (glimmer_global_grid.f90, glimmer_interp.f90, 
+	glimmer_mbal.f90, glimmer_proj.f90)
+ * removed old glimmer modules (glimmer_modu.f90, glimmer_object.f90, glimmer_outp.f90, 
+	glimmer_setup.f90, glint_object.f90)
+ * glint_type.f90: derived type definition of GLINT instance
+ * glint_climate.f90: climate driver for GLINT 
+ * initialise/finalise GLINT: glint_initialise.f90
+ * glint_io.f90.in: added read/write_all functions
+ * moved where netCDF file I/O happens (ncdf_file.f90.in, ncdf_infile.f90.in)
+	
+2004-07-09 Magnus Hagdorn
+ * glimmer_proj.f90: added configuration read/print routines
+ * glimmer_degd.f90: moved derived type definition into module
+ * moved read/write new time slice logic to new procedure glimmer_nc_check[read|write]
+   (ncdf.f90.in, ncdf_file.f90.in, ncdf_infile.f90.in)
+ * glint_object.f90: first bits of setting up glint
+ * custom netCDF I/O for GLINT related variables (glint_io.f90.in, ncdf_vars.def)
+ * generate_ncvars.py: generate I/O functions for custom I/O
+	
+2004-07-08 Magnus Hagdorn
+ * changed where configuration file is read in so it's only read once
+   (eis_ela.f90, eis_forcing.f90, eis_glide.f90, eis_slc.f90, eis_temp.f90, glide.f90, 
+    glide_setup.f90, ncdf_params.f90.in, simple_forcing.f90, simple_glide.f90)
+
+2004-07-01 Magnus Hagdorn
+ * handle input relaxed topo (glide.f90, glide_setup.f90, glide_types.f90)
+ * ncdf_vars.def: fixed sign of isostatic sea level 
+	
+2004-06-30 Magnus Hagdorn
+ * glimmer_ts.f90: added scalar variations of interpolation routines and
+   corresponding module interface
+ * eis_ela.f90: fixed a bug, use new scalar glimmer_ts, change topo and thck to 
+   double precision
+ * added sea-level forcing (eis_slc.f90, eis_forcing.f90)
+ * ncdf_vars.def: new output variables for global sea level and isostatic sea level
+ * eis_glide.f90: single function call to update climate
+ * simple3.config: change time step size
+ * added sea-level forcing (fennscan1.config, specmap.data)
+	
+2004-06-28 Magnus Hagdorn
+ * added time series support (glimmer_ts.f90) and a test program (test_ts.f90)
+ * added eustatic sea level (glide_types.f90)
+ * output starts at start time (ncdf_file.f90.in)
+ * Edinburgh Ice Sheet model ELA forcing (eis_ela.f90)
+ * Edinburgh Ice Sheet model temperature forcing (eis_temp.f90)
+ * Edinburgh Ice Sheet model driver (eis_forcing.f90, eis_glide.f90)
+ * example Fennoscandian ice sheet setup (fennscan1.config, europe.20km.nc, mb.data, s10.data)
+	
+2004-06-25 Magnus Hagdorn
+ * added some more simple experiments
+ * glide_setup.f90: calculate sigma if no sigma file given
+
+2004-06-25 Magnus Hagdorn
+ * added start and end time (glide_setup.f90, glide_types.f90, simple_glide.f90)
+ * added and used logging
+	
+2004-06-24 Magnus Hagdorn
+ * fixed problem with time derivative, where we divide by zero at the first time step
+   now we set the derivative to zero (glimmer_thck.f90)
+ * fixed problem with gradient where the mask array was of a different size than the
+   array of which the derivatives are taken. We now just calculate the gradient for
+   every point (glimmer_thck.f90)
+ * glide.f90: reflects these changes
+	
+2004-06-24 Magnus Hagdorn
+ * glimmer_CFproj.f90: renamed scale_factor_at_projection_origin to scale_at_orig in order to
+   avoid problems with the SUN compiler
+ * glimmer_isot.f90: renamed glimmer_ to glide_ 
+ * glimmer_temp.f90: renamed glimmer_ to glide_,  sorted indentation, removed surface temp calculations, 
+   moved flow law factor calculations around
+ * glimmer_thck.f90: renamed glimmer_ to glide_, removed mass balance calculation
+ * glimmer_velo.f90: renamed glimmer_ to glide_
+ * ncdf_vars.def: re-enabled lat/lon
+ * simple_glide.f90: add time loop
+ * glide_types.f90: add lat/lon
+ * glide_setup.f90: add masking function from glimmer_setup, fix option checking bug
+ * glide.f90: add time step
+
+2004-06-23 Magnus Hagdorn
+ * make mapping variable optional (glimmer_CFproj.f90, generate_ncvars.py, ncdf_file.f90.in, ncdf_file.f90.in)
+ * rename glimmer -> glide (ncdf_file.f90.in, ncdf_infile.f90.in, ncdf_params.f90.in)
+ * ncdf_vars.def: disabled some variables for now
+ * ncdf.f90.in: cosmetics
+ * glide_setup.f90: added some functions from glimmer_setup.f90
+ * glide_types.f90: added massbalance and surface temperature fields, added allocation/deallocation procedures
+ * glide.f90: the main ice sheet model procedures, so far: initialisation and finalisation routines
+ * added simple EISMINT type model (simple_glide.f90, simple_forcing.f90)
+ * added data for simple EISMINT runs (sigma.data, simple1.config)
+ * Makefile: handle new files
+	
+2004-06-22 Magnus Hagdorn
+ * glimmer_config.f90: added double precision versions
+ * glide_types.f90: contains model instance of the GLIDE core
+ * glide_setup.f90: read GLIDE configuration from file
+ * test_setup.f90: test glide_setup
+ * g_land.config: sample configuration file
+
+2004-06-18 Ian Rutt
+ * Added possibility of reading in fields from netcdf file scaled or
+   unscaled
+ * Added code to calculate relaxed bedrock and add it to netcdf input file
+   (relaxed.f90)
+
+2004-06-18 Magnus Hagdorn
+ * glimmer_CFproj.f90: make a distinction between polar_stereographic and 
+   general stereographic projections. Add a standard parallel to 
+   polar_stereographic
+
+2004-06-16 Magnus Hagdorn
+ * minor documentation fixes
+
+2004-06-15 Magnus Hagdorn
+ * fixed doc Makefile
+
+2004-06-15 Magnus Hagdorn
+ * input2ncdf.f90: work out node spacing 
+ * new build system
+	
+2004-06-14 Magnus Hagdorn
+ * fixed problems in input CF file (g_land.input.nc)
+ * work out node spacing and removed unused tensor quantities (bin2ncdf.f90)
+ * fixed dependencies of bin2ncdf.f90 (Makefile)
+
+2004-06-13 Magnus Hagdorn
+ * add mapping info (g_land.input.nc)
+ * added files to doc which I had forgotton before (Makefile, varlist.tex.in)
+ * added longitudes (glimmer_modu.f90, glimmer_setup.f90, ncdf_vars.def)
+ * added CF projections (Makefile, glimmer_CFproj.f90, ncdf_file.f90.in, ncdf_infile.f90.in, generate_ncvars.py)
+ * glimmer_object.f90: initialise output later so it gets projections from input
+ * ncdf.f90.in: moved error handle out of module
+	
+2004-06-11 Ian Rutt
+ * Extended GMT projections code to allow the specification of a
+   standard parallel when using the polar stereographic projection
+
+2004-06-09 Ian Rutt
+ * Added up/downscaling mask to netcdf IO, and removed redundent code
+ * Added this to input2ncdf.f90
+ * Changed allocatable arrays to pointers in input2ncdf.f90, as the Compaq compiler
+   has problems passing arrays arguments with the allocatable attribute out of
+   subroutines
+ * Re-distributed initialisation code to avoid trying to calculate temperatures when
+   the model has no information about them.
+
+2004-06-09 Magnus Hagdorn
+ * initialised pointers in glimmer_proj.f90 with NULL()
+   (fixes bug)
+	
+2004-06-08 Ian Rutt
+ * Merged netCDF_IO branch into main trunk - seems to work OK. 
+   *** NB *** The new capability to mask out some parts of the domain
+   was developed in parallel with the netCDF stuff, and hasn't yet
+   been fully integrated into the netcdf structure. That's the next step -
+   I thought it wise not to attempt too much at once!
+ * The previous unmerged version of the HEAD is tagged as PRE_NETCDF_IO
+ * Added informative comment to glimmer_thck.f90
+	
+2004-06-04 Magnus Hagdorn
+ * made variable names case sensitive (g_land.glw, generate_ncvars.py)
+ * split up user guide into individual sections
+ * added netCDF and config file documentation
+	
+2004-06-03 Magnus Hagdorn
+ * found some more unused filenames and removed out_stem with ncfile
+
+2004-06-03 Magnus Hagdorn
+ * removed unused filenames for namelists and structures
+   usrffile, topgfile, relxfile, prcpfile, presusrffile, latifile
+
+2004-06-03 Ian Rutt
+ * Added dependency of f90_dep.mak on the Makefile and makefile.arc
+ * Cancelled implicit rule that tries to make .o files out of .mod files
+ using the MODULA-2 compiler (m2c), which sometimes causes build problems.
+
+2004-06-01 Magnus Hagdorn
+ * new documentation structure
+	
+2004-05-27 Ian Rutt
+ * Fixed problems with polar stereographic projection and interpolation routines.
+
+2004-05-25 Ian Rutt
+ * Added comment to main glimmer subroutine
+
+2004-05-24 Magnus Hagdorn
+ * added some standard name attributes (ncdf_file.f90.in, ncdf_vars.def)
+	
+2004-05-24 Magnus Hagdorn
+ * g_land.gln: removed outs namelist
+ * glimmer_global.f90: added version string
+ * ncdf_file.f90.in, generate_ncvars.py: renamed loop index sp to spot
+ * glimmer_config.f90: fixed silly bug
+ * added global meta data to netCDF output (g_land.glw, ncdf.f90.in, ncdf_file.f90.in, ncdf_params.f90.in)
+
+2004-05-24 Ian Rutt
+ * Sorted out input and output arrays of water flux, and added diagnostic
+	outputs of total water fluxes and ice sheet volume.
+ * Fixed ice model so that ice thickness isn't accumulated twice on first time-step.
+
+2004-05-19 Ian Rutt
+ * Fixed problem with array sizes in glimmer.f90. Here, the size of
+	temporary arrays was based on the size of optional arguments,
+	which isn't allowed. Replaced them will allocatable arrays.
+ * Fixed problem with build system - added glimmer_global_grid.f90
+	
+2004-05-18 Magnus Hagdorn
+ * added integer and real array parameters (test_config.conf, glimmer_config.f90, test_config.f90)
+ * removed indices0dx and indices0dy (glimmer_setup.f90, glimmer_restart.f90, glimmer_modu.f90)
+ * fully implemented spot variables (ncdf.f90.in, ncdf_file.f90.in, ncdf_params.f90.in, ncdf_vars.def, generate_ncvars.py)
+	
+2004-05-18 Magnus Hagdorn
+ * initialised pointers to NULL() to fix segfault with NAG compiler (ncdf_params.f90.in)
+ * added debug flags to makefile.nag
+
+2004-05-17 Magnus Hagdorn
+ * working around silly problem with Intel compiler. I am still not quite sure what the problem is,
+   but config reader API had to be changed from functions to subroutines
+   (glimmer_config.f90, test_config.f90, ncdf_params.f90.in)
+ * makefile.ifc: added DEBUG flags, renamed compiler to ifort
+ * replaced binary input files g20lati, g20prcp, g20relx, g20surf, g20thck, g20topg with netCDF input
+   file g_land.input.nc. This is also reflected in netCDF control file (g_land.glw)
+
+2004-05-17 Ian Rutt
+ * Added copy_global_grid subroutine to glimmer_global_grid.f90
+ * Added capability to specify grid-box boundaries when initialising model,
+ 	using optional arguments in initialise_glimmer().
+ * Updated documentation.
+ * Corrected instance namelist read - forc was absent.
+
+2004-05-14 Magnus Hagdorn
+ netCDF input, Round 1
+ * add netCDF input capabilities, removed old I/O bits
+	
+2004-05-14 Magnus Hagdorn
+ netCDF output, Round 1
+ * glimmer/data: output file configuration format changed to something similar to Windows .ini files (g_land.glw)
+                 added a new directory containg test data files (test/test_config.conf)
+ * new configuration file parser (glimmer_config.f90/test_config.f90)
+ * glimmer_interp.f90: SUN compiler complains about a functions passed as dummy arguments which are not declared external
+ * ncdf_params.f90.in, generate_ncvars.py: netCDF output file configuration reader
+ * ncdf.f90.in: initialise variables to sensible defaults
+ * ncdf_file.f90.in: added subroutines openall_out and writeall
+ * glimmer_modu.f90, glimmer_object.f90: hooked up netCDF output
+
+2004-05-14 Ian Rutt
+ * Added output-masking capability to enable overlapping domains to be
+	more easily dealt with.
+ * Fixed polar stereographic projection. However, the stereographic
+	projections still fail if the pole is in the domain - not sure why.
+ * Implemented new, better downscaling-interpolation scheme, which handles
+	the presence of a pole better, and take into account the irregular
+	shape of the interpolation domain.
+ * Added proper default initialisation of top-level glimmer type.
+	
+2004-05-12 Ian Rutt
+ * Removed redundant re_alloc flag argument from proj_allocate subroutine
+	in glimmer_project.f90
+
+2004-05-11 Ian Rutt
+ * Removed redundant xscale and yscale components from projection type, 
+	which were originally set equal to dx and dy. All references to
+	them have been changed accordingly.
+
+2004-05-10 Magnus Hagdorn
+ * input2ncdf.f90: actually does what it is supposed to
+ * ncdf_vars.def: added presusrf, present day surface of the ice-sheet
+ * generate_ncvars.py: don't write variables associated with spots if no spots are selected
+
+2004-05-10 Magnus Hagdorn
+ * added spot variables (generate_ncvars.py, ncdf_vars.def, ncdf.f90.in, ncdf_file.f90.in)
+ * bin2ncdf.f90: does 3D now as well, there is a bug with the 0D time series.
+ * input2ncdf.f90: start of a tool to convert glimmer input files to netCDF file
+
+2004-05-08 Magnus Hagdorn
+ * first round of netCDF stuff
+   generate_ncvars.py: code generator taking netCDF file description
+	(ncdf_vars.def) to produce f90 files from inputfiles .f90.in
+	ncdf.f90.in basic data structures
+	ncdf_file.f90.in file I/O operations
+ * bin2ncdf.f90: testing netCDF stuff and converting old datafiles 
+	(2D only at the moment) to new netCDF
+
+2004-05-06 Ian Rutt
+ * Rationalisation of calc_coverage (glimmer_object.f90), with 
+	global grid objects.
+ * Minor formatting changes.
+ * Completed adding initialisation to derived types and rejigging
+	namelist reads to avoid confusion about default values.
+ * Coded alternative, hopefully faster calc_coverage routine.
+ * Made efficiency alterations to new_upscale code.
+ * Duplicated mean_to_global (glimmer_interp.f90) in single and
+	double precision copies (in terms of array local) and
+	added appropriate aliasing interface block. This was to
+	allow the addition of a compile flag to invoke a single-precision
+	interface (compile with GLIMMER_SP defined).
+ * Corrected error in GMT code - sines and cosines being taken without 
+	converting from degrees to radians!
+
+2004-05-05 Ian Rutt
+ * Realised several crucial aspects of the orography output were
+	missing, so added them. Produces orography as expected now,
+	but some structural changes are needed, I think.
+ * Restructured code so that global grid definitions have their own 
+	derived type, which simplifies things. However, more rationalisation 
+	and simplification still possible
+ * Minor formatting, and removal of redundant stress arrays
+
+2004-05-04 Ian Rutt
+ * Added upscale type to glimmer_interp.f90 and adjusted code 
+  	accodingly. This was to enable the output of orography 
+	at any resolution, as needed by the IGCM. 
+ * ***NB*** This hasn't been tested properly yet, and the
+	restarts have been broken by it, as there wasn't time
+ 	to add routine writing the upscaling to a restart file
+ * Other minor formating changes, and addition of null pointer
+	initialisation in some places
+
+2004-04-27 Ian Rutt
+ * Added doc comments to gmt.f90
+ * Updated return value documentation throughout to !*RV
+ * Other minor documentation and formatting changes
+ * Moved glimmer_params initialisation to type definition
+	in line with move to f95, and added null 
+	initialisation for pointer arrays. (glimmer.f90)
+ * Checked all elements of glimmer_params correctly
+	included in restart routines and in consistent
+	order. This should work OK, but hasn't been tested...
+
+2004-04-26 Ian Rutt
+ * Merged port_to_nag branch into HEAD
+ * Extended interpolation routines (glimmer_interp.f90) to include 
+	averaging high-resolution global field onto local
+	grid. Also generalised find_ll_index somewhat to cope 
+	with longitudes that have limits other than 0->360 
+	(e.g. 180->360, 0->180). This may need more work, though.
+ * Added matlab visualisation routines to the repository.
+
+2004-04-19 Magnus Hagdorn
+ * added ChangeLog
+ * added NAG f95 makros
+ * new build system (using Python script to work out module dependencies)
+ * reduced number of time slices in example code to 10000yrs
+ * made kind rk=dp (rather than 8)
+ * (glimmer_outp.f90) integer array index
+ * added SUN WS f95 makros
+ * (glimmer_restart.f90, glimmer_interp.f90) workaround for SUN WS compiler bug
+ * (glimmer.f90, glimmer_velo.f90) avoid division by zero
+ * removed unused symbols and unused module symbols
