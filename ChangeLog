@@ -1,3 +1,6 @@
+2004-11-15 Magnus Hagdorn
+ * added temperature solver documentation
+
 2004-11-10 Magnus Hagdorn
  * ncdf_vars.def: make nc files conformant with CF standard (conformance was check with the CF
    checker http://titania.badc.rl.ac.uk/cgi-bin/cf-checker.pl, and passed except for the new

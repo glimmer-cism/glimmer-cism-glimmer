@@ -4,7 +4,7 @@ endif
 
 SUBDIRS = ug
 
-all:	subdirs glimmer.pdf glimmer.ps
+all:	subdirs glimmer.pdf glimmer.ps num.ps
 
 subdirs:	$(SUBDIRS)
 $(SUBDIRS):
@@ -15,6 +15,12 @@ dg.pdf:	dg_pdf.dvi
 
 dg.ps:	dg_ps.dvi
 	dvips -o dg.ps dg_ps.dvi
+
+num.pdf:	num_pdf.dvi
+	dvipdfm -o num.pdf num_pdf.dvi
+
+num.ps:	num_ps.dvi
+	dvips -o num.ps num_ps.dvi
 
 ug.pdf:	ug ug_pdf.dvi
 	dvipdfm -o ug.pdf ug_pdf.dvi
