@@ -277,4 +277,85 @@ contains
 
   end function lsum
 
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!
+! The following two subroutines perform an index-sort of an array. 
+! They are a GPL-licenced replacement for the Numerical Recipes routine indexx. 
+! They are not derived from any NR code, but are based on a quicksort routine by
+! Michael Lamont (http://linux.wku.edu/~lamonml/kb.html), originally written
+! in C, and issued under the GNU General Public License. The conversion to 
+! Fortran 90, and modification to do an index sort was done by Ian Rutt.
+!
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  subroutine indexx(array,index)
+
+    real(sp),dimension(:) :: array
+    integer,dimension(:) :: index
+    integer :: i
+
+    if (size(array).ne.size(index)) then
+      print*,'ERROR: INDEXX size mismatch.'
+      stop
+    endif
+
+    do i=1,size(index)
+      index(i)=i
+    enddo 
+
+    call q_sort_index(array,index,1,size(array))
+
+  end subroutine indexx
+
+  recursive subroutine q_sort_index(numbers,index,left,right)
+
+    implicit none
+
+    real(sp),dimension(:) :: numbers
+    integer, dimension(:) :: index
+    integer :: left, right,ll,rr
+    integer :: pv_int,l_hold, r_hold,pivpos
+    real(sp) :: pivot
+
+    ll=left
+    rr=right
+
+    l_hold = ll
+    r_hold = rr
+    pivot = numbers(index(ll))
+    pivpos=index(ll)
+
+    do
+      if (.not.(ll < rr)) exit
+  
+      do 
+        if  (.not.((numbers(index(rr)) >= pivot) .and. (ll < rr))) exit
+        rr=rr-1
+      enddo
+
+      if (ll.ne.rr) then
+        index(ll) = index(rr)
+        ll=ll+1
+      endif
+
+      do
+        if (.not.((numbers(index(ll)) <= pivot) .and. (ll < rr))) exit
+        ll=ll+1
+      enddo
+
+      if (ll.ne.rr) then
+        index(rr) = index(ll)
+        rr=rr-1
+      endif
+    enddo
+
+    index(ll) = pivpos
+    pv_int = ll
+    ll = l_hold
+    rr = r_hold
+    if (ll < pv_int)  call q_sort_index(numbers, index,ll, pv_int-1)
+    if (rr > pv_int)  call q_sort_index(numbers, index,pv_int+1, rr)
+
+  end subroutine q_sort_index
+
 end module glimmer_utils

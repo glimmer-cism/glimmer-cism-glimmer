@@ -1258,9 +1258,7 @@ contains
     end select
 
     ! How to call the flow router.
-    ! However, the flow router doesn't work at the moment,
-    ! due to lack of index routine.
-    !* call advectflow(bwat,phi,bmlt,model%geometry%mask)
+    ! call advectflow(bwat,phi,bmlt,model%geometry%mask)
 
   contains
   
@@ -1549,7 +1547,7 @@ contains
 
     subroutine sorttp
   
- !     use gpl_indexx
+      use glimmer_utils
 
       implicit none
 
@@ -1558,11 +1556,7 @@ contains
 
       allocate(index(size(r(:,1))))
 
-!      call indexx(-real(r(:,1)),index)
-
-      Print*,'Index code not available. Need to supply it'
-      Print*,'and uncomment relevant code...'
-      Stop
+      call indexx(-real(r(:,1),sp),index)
 
       do i = 2,3
         r(:,i) = r(index,i)
