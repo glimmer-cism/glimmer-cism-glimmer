@@ -4,14 +4,13 @@ lib_LIBRARIES = libglimmer.a libglide.a libglint.a libclimate.a
 bin_PROGRAMS  =  simple_glide eis_glide glimmer_example
 check_PROGRAMS = test_config test_setup test_ts
 
-variable_DATA = glide_vars.def eis_vars.def glint_vars.def ncdf_template.f90.in
+variable_DATA = glide_vars.def eis_vars.def glint_vars.def time_vars.def ncdf_template.f90.in
 variabledir = $(pkgdatadir)
 dist_variable_DATA = $(variable_DATA)
 
 nodist_include_HEADERS = *.mod
-
+EXTRA_DIST = f90_dep.mak
 BUILT_SOURCES = glide_io.f90 eis_io.f90 glint_io.f90
-dist_data_DATA= f90_dep.mak
 CLEANFILES = $(BUILT_SOURCES) f90_dep.mak
 
 libglimmer_a_SOURCES = glimmer_CFproj.f90 glimmer_config.f90 glimmer_global.f90 glimmer_utils.f90 glimmer_log.f90 glimmer_ts.f90 \
