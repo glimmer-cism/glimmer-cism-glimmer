@@ -1,3 +1,8 @@
+2004-06-03 Ian Rutt
+ * Added dependency of f90_dep.mak on the Makefile and makefile.arc
+ * Cancelled implicit rule that tries to make .o files out of .mod files
+ using the MODULA-2 compiler (m2c), which sometimes causes build problems.
+
 2004-05-27 Ian Rutt
  * Fixed problems with polar stereographic projection and interpolation routines.
 

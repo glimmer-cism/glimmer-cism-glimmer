@@ -76,5 +76,6 @@ NETCDF=-lnetcdf
 .f90.o:
 	$(F77) -c $(F77FLAGS) $< -o $@
 
+%.o : %.mod
 
 .SUFFIXES:      .f .f90 .o

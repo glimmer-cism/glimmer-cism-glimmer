@@ -39,7 +39,7 @@ example :  $(LIBNAME).a glimmer_example.o
 clean : 
 	\rm -f *.o *.a *.mod f90_dep.mak
 
-f90_dep.mak: $(SOURCES)
+f90_dep.mak: $(SOURCES) $(OTHER_FILES)
 	python ../python/f90_dependencies.py -o $@ $(SOURCES)
 
 code_doc: $(SOURCES) $(OTHER_FILES)
