@@ -1,0 +1,233 @@
+! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+! +                                                           +
+! +  ncdf_file.f90 - part of the GLIMMER ice model            + 
+! +                                                           +
+! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+! 
+! Copyright (C) 2004 GLIMMER contributors - see COPYRIGHT file 
+! for list of contributors.
+!
+! This program is free software; you can redistribute it and/or 
+! modify it under the terms of the GNU General Public License as 
+! published by the Free Software Foundation; either version 2 of 
+! the License, or (at your option) any later version.
+!
+! This program is distributed in the hope that it will be useful, 
+! but WITHOUT ANY WARRANTY; without even the implied warranty of 
+! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+! GNU General Public License for more details.
+!
+! You should have received a copy of the GNU General Public License 
+! along with this program; if not, write to the Free Software 
+! Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 
+! 02111-1307 USA
+!
+! GLIMMER is maintained by:
+!
+! Ian Rutt
+! School of Geographical Sciences
+! University of Bristol
+! University Road
+! Bristol
+! BS8 1SS
+! UK
+!
+! email: <i.c.rutt@bristol.ac.uk> or <ian.rutt@physics.org>
+!
+! GLIMMER is hosted on NeSCForge:
+!
+! http://forge.nesc.ac.uk/projects/glimmer/
+!
+! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+#define NC infile%nc
+
+module glimmer_ncinfile
+  !*FD routines for GLIMMER netCDF file input
+  !*FD written by Magnus Hagdorn, 2004
+
+contains
+  subroutine openall_in(model)
+    !*FD open all netCDF files for input
+    use glimmer_types
+    use glimmer_ncdf
+    implicit none
+    type(glimmer_global_type) :: model
+    
+    ! local variables
+    type(glimmer_nc_input), pointer :: ic
+
+    ic=>model%funits%in_first
+    do while(associated(ic))
+       call glimmer_nc_openfile(ic,model)
+       ic=>ic%next
+    end do
+  end subroutine openall_in
+
+  subroutine readall(model)
+    !*FD read from netCDF file
+    use glimmer_types
+    use glimmer_ncdf
+    implicit none
+    type(glimmer_global_type) :: model
+
+    ! local variables
+    type(glimmer_nc_input), pointer :: ic    
+
+    ic=>model%funits%in_first
+    do while(associated(ic))
+       if (ic%current_time.le.ic%nt) then
+          call glimmer_nc_read(ic,model)
+       end if
+       ic=>ic%next
+    end do
+  end subroutine readall
+
+  subroutine closeall_in(model)
+    !*FD close all netCDF files for input
+    use glimmer_types
+    use glimmer_ncdf
+    implicit none
+    type(glimmer_global_type) :: model
+    
+    ! local variables
+    type(glimmer_nc_input), pointer :: ic
+
+    ic=>model%funits%in_first
+    do while(associated(ic))
+       ic=>delete(ic)
+    end do
+    model%funits%in_first=>NULL()
+  end subroutine closeall_in
+
+  subroutine glimmer_nc_openfile(infile,model)
+    !*FD open an existing netCDF file
+    use glimmer_ncdf
+    use glimmer_types
+    implicit none
+    type(glimmer_nc_input), pointer :: infile
+    !*FD structure containg input netCDF descriptor
+    type(glimmer_global_type) :: model
+    !*FD the model instance
+
+    ! local variables
+    character(len=50) varname
+    integer nvars
+    integer i, dimsize
+    integer status    
+    
+    ! open netCDF file
+    status = nf90_open(NC%filename,NF90_NOWRITE,NC%id)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    write(*,*) '*******************************************************************************'
+    write(*,*) 'opening file ',trim(NC%filename),' for input'
+
+    ! reading dimensions
+    ! getting ids
+    status = nf90_inq_dimid(NC%id, 'x0', NC%x0dim)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    status = nf90_inq_dimid(NC%id, 'y0', NC%y0dim)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    status = nf90_inq_dimid(NC%id, 'x1', NC%x1dim)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    status = nf90_inq_dimid(NC%id, 'y1', NC%y1dim)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    status = nf90_inq_dimid(NC%id, 'level', NC%leveldim)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    status = nf90_inq_dimid(NC%id, 'time', NC%timedim)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+
+    ! getting lengths of x, y and level dimensions
+    ! bail out if they do not match
+    status = nf90_inquire_dimension(NC%id,NC%x0dim,len=dimsize)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    if (dimsize.ne.model%general%ewn-1) then
+       write(*,*) 'Error, reading file ',trim(NC%filename),' size x0dim does not match: ',dimsize,model%general%ewn-1
+       stop
+    end if
+    status = nf90_inquire_dimension(NC%id,NC%y0dim,len=dimsize)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    if (dimsize.ne.model%general%nsn-1) then
+       write(*,*) 'Error, reading file ',trim(NC%filename),' size y0dim does not match: ',dimsize,model%general%nsn-1
+       stop
+    end if
+    status = nf90_inquire_dimension(NC%id,NC%x1dim,len=dimsize)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    if (dimsize.ne.model%general%ewn) then
+       write(*,*) 'Error, reading file ',trim(NC%filename),' size x1dim does not match: ',dimsize,model%general%ewn
+       stop
+    end if
+    status = nf90_inquire_dimension(NC%id,NC%y1dim,len=dimsize)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    if (dimsize.ne.model%general%nsn) then
+       write(*,*) 'Error, reading file ',trim(NC%filename),' size y1dim does not match: ',dimsize,model%general%nsn
+       stop
+    end if  
+
+    ! getting variables
+    status = nf90_inquire(NC%id,nvariables=nvars)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+
+    ! get id of time variable
+    status = nf90_inq_varid(NC%id,'time',NC%timevar)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+
+    do i=1,nvars
+       status = nf90_inquire_variable(NC%id,i,name=varname)
+       call nc_errorhandle(__FILE__,__LINE__,status)
+       select case(varname)
+       !GENVARS!   
+       end select
+    end do
+
+    ! getting length of time dimension and allocating memory for array containing times
+    status = nf90_inquire_dimension(NC%id,NC%timedim,len=dimsize)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    allocate(infile%times(dimsize))
+    infile%nt=dimsize
+    status = nf90_get_var(NC%id,NC%timevar,infile%times)
+  end subroutine glimmer_nc_openfile
+
+  subroutine glimmer_nc_read(infile,model)
+    !*FD read variables from a netCDF file
+    use glimmer_ncdf
+    use glimmer_types
+    use glimmer_global, only : dp
+    use physcon, only : scyr
+    use paramets, only : thk0, tim0, vel0, vis0, len0, tau0, acc0
+    implicit none
+    type(glimmer_nc_input), pointer :: infile
+    !*FD structure containg output netCDF descriptor
+    type(glimmer_global_type) :: model
+    !*FD the model instance
+
+    ! local variables
+    integer status
+    integer up
+    real(dp):: f1, f2, f3, f4, f5, f6, f7, f8
+    integer :: ewnv, nsnv
+
+    ! Set up various constants. These were originally only
+    ! done once, but are done each time now, for safety.
+
+    ewnv = model%general%ewn - 1
+    nsnv = model%general%nsn - 1
+    f1 = scyr * thk0 / tim0
+    f2 = scyr * vel0 * thk0
+    f3 = vel0 / (vis0 * len0)
+    f4 = vel0 * scyr * len0
+    f5 = scyr * vel0
+    f6 = scyr * vel0 * len0 / (thk0**2)
+    f7 = tau0
+    f8 = tau0 * len0 / (scyr * vel0) 
+
+    write(*,*) '*******************************************************************************'
+    write(*,*) 'Reading time slice ',infile%current_time,'(',infile%times(infile%current_time),') from file ', &
+         trim(NC%filename), ' at time ', model%numerics%time
+    
+    ! read variables
+    !GENVAR_READ!
+    infile%current_time = infile%current_time + 1
+  end subroutine glimmer_nc_read
+
+end module glimmer_ncinfile

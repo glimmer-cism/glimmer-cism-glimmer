@@ -1,0 +1,63 @@
+\section{Configuring netCDF I/O}\label{ug.sec.ncconf}
+netCDF is a programming language and platform independent library used for managing multi--dimensional gridded data. There are many programs which can be used to processes and visualise netCDF data files.
+
+GLIMMER netCDF output is controlled by a parameter file. Any number of input and output files can be specified. Metadata describing the numerical experiment can be attached. Empty lines and lines beginning with a \texttt{\#}, \texttt{;} or \texttt{!} are ignored.
+
+\subsection{Metadata}
+The metadata section \texttt{[default]} contains descriptions of the numerical experiment. The following parameter names are recognised:
+\begin{center}
+\begin{tabular}{|c|p{10cm}|}
+\hline
+Name & Description \\
+\hline
+\hline
+\texttt{title}& Title of the experiment\\
+\hline
+\texttt{institution} & Institution at which the experiment was run\\
+\hline
+\texttt{references} & References that might be useful\\
+\hline
+\texttt{comment} & A comment, further describing the experiment\\
+\hline
+\end{tabular}
+\end{center}
+Any of these parameters can be modified in the \texttt{[output]} section (see \ref{ug.sec.nc_out}). The model automatically attaches a time stamp and the model version to the netCDF output file.
+
+\subsection{Input}
+The section controlling netCDF input is called \texttt{[input]}. Any number of input files can be specified. They are processed in the order they occur in the configuration file, potentially overriding previously loaded variables. The following parameter are recognised:
+\begin{center}
+\begin{tabular}{|c|p{10cm}|}
+\hline
+Name & Description \\
+\hline
+\hline
+\texttt{name}& The name of the netCDF file to be read. Typically netCDF files end with \texttt{.nc}.\\
+\hline
+\texttt{time}& The time slice to be read from the netCDF file. The first time slice is read by default.\\
+\hline
+\end{tabular}
+\end{center}
+Only variables marked with $^\ast$ in Appendix \ref{ug.sec.varlist} are loaded.
+
+\subsection{Output}\label{ug.sec.nc_out}
+The \texttt{[output]} section of the netCDF parameter file controls how often selected  variables are written to file. The following parameter are recognised:
+\begin{center}
+\begin{tabular}{|c|p{10cm}|}
+\hline
+Name & Description \\
+\hline
+\hline
+\texttt{name} & The name of the output netCDF file. Typically netCDF files end with \texttt{.nc}.\\
+\hline
+\texttt{frequency} & The time interval in years, determining how often selected variables are written to file.\\
+\hline
+\texttt{variables} & List of variables to be written to file. See Appendix \ref{ug.sec.varlist} for a list of known variables. Names should be separated by at least one space. The variable names are case sensitive. Append \texttt{\_spot} to the variable name to store variable at specified locations.\\
+\hline
+\texttt{numspot} & The number of spot locations\\
+\hline
+\texttt{spotx} & List of $x$--indecies specifying spot locations.\\
+\hline
+\texttt{spoty} & List of $y$--indecies specifying spot locations.\\
+\hline
+\end{tabular}
+\end{center}

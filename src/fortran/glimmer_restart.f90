@@ -174,19 +174,8 @@ contains
 
     ! funits
 
-    write(unit) instance%model%funits% indices0dx
-    write(unit) instance%model%funits% indices0dy
-    write(unit) instance%model%funits% which2d
-    write(unit) instance%model%funits% which3d
-    write(unit) instance%model%funits% usrffile
-    write(unit) instance%model%funits% topgfile
-    write(unit) instance%model%funits% relxfile
     write(unit) instance%model%funits% sigfile
-    write(unit) instance%model%funits% output_stem
-    write(unit) instance%model%funits% b0dfile
-    write(unit) instance%model%funits% b2dfile
-    write(unit) instance%model%funits% b3dfile
-    write(unit) instance%model%funits% outfile
+    write(unit) instance%model%funits% ncfile
 
     ! numerics
 
@@ -512,19 +501,8 @@ contains
 
     ! funits
 
-    read(unit) instance%model%funits% indices0dx
-    read(unit) instance%model%funits% indices0dy
-    read(unit) instance%model%funits% which2d
-    read(unit) instance%model%funits% which3d
-    read(unit) instance%model%funits% usrffile
-    read(unit) instance%model%funits% topgfile
-    read(unit) instance%model%funits% relxfile
     read(unit) instance%model%funits% sigfile
-    read(unit) instance%model%funits% output_stem
-    read(unit) instance%model%funits% b0dfile
-    read(unit) instance%model%funits% b2dfile
-    read(unit) instance%model%funits% b3dfile
-    read(unit) instance%model%funits% outfile
+    read(unit) instance%model%funits% ncfile
 
     ! numerics
 

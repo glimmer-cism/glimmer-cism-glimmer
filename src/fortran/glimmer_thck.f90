@@ -589,11 +589,11 @@ contains
     ! ablation and mass-balance to zero. This is to prevent accumulation of ice below
     ! sea-level.
 
-    where (usrf<=0.0)
-      ablt=0.0
-      acab=0.0
-      prcp=0.0
-    end where
+    !where (usrf<=0.0)
+    !  ablt=0.0
+    !  acab=0.0
+    !  prcp=0.0
+    !end where
 
   end subroutine calcacab
 

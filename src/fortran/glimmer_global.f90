@@ -46,6 +46,9 @@ module glimmer_global
   !*FD Module holding global variables for Glimmer. Holds real-type
   !*FD kind values, and other global code parameters.
 
+  character(len=*), parameter :: glimmer_version = 'GLIMMER v. 0.1'
+  !*FD Glimmer version string
+
   integer,parameter :: sp = kind(1.0) 
   
   !*FD Single precision --- Fortran single-precision real-type kind 

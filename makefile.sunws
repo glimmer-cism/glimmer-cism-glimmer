@@ -12,6 +12,13 @@ CC=gcc
 #
 F77=f95
 #
+# netcdf library
+# This may have to be installed from:
+# http://www.unidata.ucar.edu/packages/netcdf/index.html
+#
+NETCDF_LIB=-lnetcdf
+NETCDF_PREFIX=/home/mhagdorn/gnu-SunOS
+#
 # Compiler to use for final linkage stage
 #
 F77_LD=f95
@@ -22,13 +29,13 @@ CCFLAGS=
 # 
 # compilation flags for fortran compiler
 #
-F77FLAGS=-fpp
+F77FLAGS=-fpp -M$(NETCDF_PREFIX)/lib/modules
 # for SLAP
 GLIMMERFLAGS=
 #
 # final stage loader flags
 #
-LD_FLAGS=
+LD_FLAGS=-L$(NETCDF_PREFIX)/lib $(NETCDF_LIB)
 #
 # locations of wishx and xqplot.tcl
 # they are in fact just empty files

@@ -126,6 +126,7 @@ contains
     use glimmer_velo
     use glimmer_outp
     use glimmer_global_grid
+    use glimmer_ncfile
 
     ! Arguments
 
@@ -147,7 +148,7 @@ contains
     call new_downscale(instance%downs,instance%proj,grid)       ! Initialise the downscaling
     call glimmer_i_allocate(instance,grid%nx,grid%ny)           ! Allocate arrays appropriately
     call glimmer_load_sigma(instance%model,unit)                ! Load the sigma file
-    call initout(instance%model,unit)                           ! Initialise output files
+    call openall_out(instance%model)                            ! Initialise output files
     call calc_lats(instance%proj,instance%model%climate%lati)   ! Initialise the local latitude array. 
                                                                 ! This may be redundant, though.
     call testinisthk(instance%model,unit,instance%first)        ! Load in initial surfaces, and other 2d fields
@@ -181,9 +182,7 @@ contains
       instance%model%numerics%time = 0.0              ! each instance has a copy of the counter
     endif                                             ! for simplicity.
 
-    call writ0dvr(instance%model,unit)                ! Output initial fields - time series...
-    call writ2dvr(instance%model,unit)                ! ...2d
-    call writ3dvr(instance%model,unit)                ! ...3d
+    call writeall(instance%model)
 
   end subroutine glimmer_i_initialise
 
@@ -253,7 +252,7 @@ contains
     use glimmer_velo
     use glimmer_temp
     use glimmer_setup
-    use glimmer_outp
+    use glimmer_ncfile
     use glimmer_interp
     use glimmer_mbal
     use paramets
@@ -710,25 +709,7 @@ contains
     ! Do outputs if necessary
     ! ------------------------------------------------------------------------ 
 
-    if ( instance%model%numerics%tinc > &
-         mod(instance%model%numerics%time,instance%model%numerics%nout(1)) ) then
-      call writ0dvr(instance%model,unit)
-      print *, "* 0d output ", instance%model%numerics%time
-    end if
-
-    if ( (instance%model%numerics%time >= instance%model%numerics%nstr) .and.  &
-         (instance%model%numerics%tinc >  &
-          mod(instance%model%numerics%time,instance%model%numerics%nout(2))) ) then
-      call writ2dvr(instance%model,unit)
-      print *, "* 2d output ", instance%model%numerics%time
-    end if
- 
-    if ( (instance%model%numerics%time >= instance%model%numerics%nstr) .and. &
-         (instance%model%numerics%tinc > &
-          mod(instance%model%numerics%time,instance%model%numerics%nout(3))) ) then
-      call writ3dvr(instance%model,unit)
-      print *, "* 3d output ", instance%model%numerics%time
-    end if
+    call writeall(instance%model)
 
     instance%newtemps = .false.
 
@@ -807,7 +788,8 @@ contains
     !*FD input, rather than {\tt glimmer\_global\_type}, but it doesn't!
 
     use glimmer_setup
-    use glimmer_outp
+    use glimmer_ncfile
+    use glimmer_ncinfile
 
     ! Arguments
 
@@ -816,15 +798,9 @@ contains
 
     ! Beginning of code
 
-    if ( mod(model%numerics%time,model%numerics%nout(2)) /= 0.0 ) then
-      call writ2dvr(model,unit)
-      print *, "* 2d output ", model%numerics%time
-    end if
-
-    if ( mod(model%numerics%time,model%numerics%nout(3)) /= 0.0 ) then
-      call writ3dvr(model,unit)
-      print *, "* 3d output ", model%numerics%time
-    end if
+    call writeall(model,.true.)
+    call closeall_out(model)
+    call closeall_in(model)
 
   end subroutine glimmer_i_end
 

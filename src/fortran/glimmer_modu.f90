@@ -57,6 +57,7 @@ module glimmer_types
   !*FD variables.
  
   use glimmer_global
+  use glimmer_ncdf
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -356,35 +357,12 @@ module glimmer_types
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   type glimmer_funits
-
-    !*FD Contains information relating to file handling by GLIMMER.
-
-    ! Binary 2d field input files ------------------------------------
-
-    character(fname_length) :: usrffile     = 'none' !*FD Upper-surface elevation file
-    character(fname_length) :: topgfile     = 'none' !*FD Starting topography filename
-    character(fname_length) :: relxfile     = 'none' !*FD Relaxed topography filename
-    character(fname_length) :: prcpfile     = 'none' !*FD Precipitation file
-    character(fname_length) :: presusrffile = 'none' !*FD Present-day surface file
-    character(fname_length) :: latifile     = 'none' !*FD File containing latitudes of all points
     character(fname_length) :: outmaskfile  = 'none' !*FD File containing output mask
-
-    ! Other input filenames ------------------------------------------
-
-    character(fname_length) :: sigfile      = 'none' !*FD sigma coordinates file
-    character(fname_length) :: forcfile     = 'none' !*FD Temperature forcing file
-
-    ! Filenames and other info for data output -----------------------
-
-    character(fname_length) :: output_stem  = 'glimmer_output' !*FD output filename stem
-    character(fname_length) :: b0dfile      = ''     !*FD Time-series output filename, constructed internally.
-    character(fname_length) :: b2dfile      = ''     !*FD 2d output filename, constructed internally.
-    character(fname_length) :: b3dfile      = ''     !*FD 3d output filename, constructed internally.
-    character(fname_length) :: outfile      = 'none' !*FD configuration file for outputs
-    integer, dimension(8)   :: indices0dx   = (/1,1,1,1,1,1,1,1/)
-    integer, dimension(8)   :: indices0dy   = (/1,1,1,1,1,1,1,1/)
-    integer, dimension(n2d) :: which2d      = 1
-    integer, dimension(n3d) :: which3d      = 1
+    character(fname_length) :: sigfile                         !*FD sigma coordinates file
+    character(fname_length) :: forcfile                        !*FD Temperature forcing file
+    character(fname_length) :: ncfile                          !*FD configuration file for netCDF I/O
+    type(glimmer_nc_output),pointer :: out_first=>NULL()       !*FD first element of linked list defining netCDF outputs
+    type(glimmer_nc_input), pointer :: in_first=>NULL()        !*FD first element of linked list defining netCDF inputs
   end type glimmer_funits
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
