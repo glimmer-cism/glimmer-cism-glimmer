@@ -1,5 +1,9 @@
 2005-02-29 Ian Rutt
  * Changed documentation to match renamed I/O sections
+ * Added relevant output sections to gint_vars.def
+ * Moved glint output to end of timestep, and consolidated glide timstep calls
+ * Moved output orography grid definition to initalise_glint call as
+   optional arguments, and removed glint_set_orog_res subroutine
 
 2005-02-28 Magnus Hagdorn
  * g_land.config: renamed I/O section

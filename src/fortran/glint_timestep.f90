@@ -199,26 +199,13 @@ contains
     call glide_set_artm(instance%model,instance%artm_save/real(instance%av_count))
 
     ! ------------------------------------------------------------------------
-    ! do the first part of the glide time step
+    ! do the different parts of the glint timestep
     ! ------------------------------------------------------------------------
 
     call glide_tstep_p1(instance%model,real(time,rk)*hours2years)
-    
-    ! write glint data to file
-    call glint_io_writeall(instance,instance%model)
-
-    ! ------------------------------------------------------------------------
-    ! do the second part of the glide time step
-    ! ------------------------------------------------------------------------
-
     call glide_tstep_p2(instance%model)
-
-    ! ------------------------------------------------------------------------
-    ! do the final part of the glide time step (isostasy)
-    ! ------------------------------------------------------------------------
-
     call glide_tstep_p3(instance%model)
-
+ 
     ! Calculate flux fudge factor --------------------------------------------
 
     if (out_f%water_out.or.out_f%total_wout.or.out_f%water_in .or.out_f%total_win) then
@@ -323,6 +310,10 @@ contains
     instance%acab_save = 0.0
     instance%artm_save = 0.0
     instance%av_count  = 0
+
+    ! Write glint data to file -----------------------------------------------
+
+    call glint_io_writeall(instance,instance%model)
 
     ! Tidy up ----------------------------------------------------------------
 

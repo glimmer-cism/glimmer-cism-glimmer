@@ -127,7 +127,7 @@ module glint_main
 contains
 
   subroutine initialise_glint(params,lats,longs,paramfile,latb,lonb,orog,albedo, &
-       ice_frac,output_flag)
+       ice_frac,orog_lats,orog_longs,orog_latb,orog_lonb,output_flag)
 
     !*FD Initialises the model
 
@@ -152,6 +152,14 @@ contains
     real(rk),dimension(:,:),optional,intent(out)   :: orog        !*FD Initial global orography
     real(rk),dimension(:,:),optional,intent(out)   :: albedo      !*FD Initial albedo
     real(rk),dimension(:,:),optional,intent(out)   :: ice_frac    !*FD Initial ice fraction 
+    real(rk),dimension(:),  optional,intent(in)    :: orog_lats   !*FD Latitudinal location of gridpoints 
+                                                                  !*FD for global orography output.
+    real(rk),dimension(:),  optional,intent(in)    :: orog_longs  !*FD Latitudinal location of gridpoints 
+                                                                  !*FD for global orography output.
+    real(rk),dimension(:),  optional,intent(in)    :: orog_latb   !*FD Locations of the latitudinal 
+                                                                  !*FD boundaries of the grid-boxes (orography).
+    real(rk),dimension(:),  optional,intent(in)    :: orog_lonb   !*FD Locations of the longitudinal
+                                                                  !*FD boundaries of the grid-boxes (orography).
     logical,                optional,intent(out)   :: output_flag !*FD Flag to show output set (provided for
                                                                   !*FD consistency
 
@@ -160,7 +168,7 @@ contains
     type(ConfigSection), pointer :: global_config, instance_config, section  ! configuration stuff
     character(len=100) :: message                 ! For log-writing
     character(fname_length):: instance_fname      ! name of instance specific configuration file
-    integer :: i,args
+    integer :: i,args,o_args
     real(rk),dimension(:,:),allocatable :: orog_temp,if_temp,alb_temp ! Temporary output arrays
     integer,dimension(:),allocatable :: mbts ! Array of mass-balance timesteps
 
@@ -182,9 +190,35 @@ contains
        call new_global_grid(params%g_grid,longs,lats,lonb=lonb,latb=latb)
     end select
 
-    ! Initialise orography grid identically at the moment -----------
+    ! Initialise orography grid ------------------------- -----------
 
-    call copy_global_grid(params%g_grid,params%g_grid_orog)
+    o_args=0
+
+    if (present(orog_longs)) o_args=o_args+1
+    if (present(orog_lats)) o_args=o_args+2
+    if (present(orog_lonb)) o_args=o_args+4
+    if (present(orog_latb)) o_args=o_args+8
+
+    select case(o_args)
+    case(0)
+       ! Copy the main grid
+       call copy_global_grid(params%g_grid,params%g_grid_orog)
+    case(3)
+       ! Initialise with grid points only
+       call new_global_grid(params%g_grid_orog,orog_longs,orog_lats)
+    case(7)
+       ! Initialise with grid points and longitudinal boundaries
+       call new_global_grid(params%g_grid_orog,orog_longs,orog_lats,lonb=orog_lonb)
+    case(11)
+       ! Initialise with grid points and latitudinal boundaries
+       call new_global_grid(params%g_grid_orog,orog_longs,orog_lats,latb=orog_latb)
+    case(15)
+       ! Initialise with grid points and both sets of boundaries
+       call new_global_grid(params%g_grid_orog,orog_longs,orog_lats,lonb=orog_lonb,latb=orog_latb)
+    case default
+       ! Unexpected combination
+       call write_log('Unexpected combination of arguments to initialise_glint',GM_FATAL,__FILE__,__LINE__)
+    end select
 
     ! Allocate arrays -----------------------------------------------
 
@@ -694,100 +728,6 @@ contains
     cov_orog=params%total_cov_orog
 
   end function glint_coverage_map
-
-  !=============================================================================
-
-  subroutine glint_set_orog_res(params,lons,lats,lonb,latb)
-
-    !*FD Sets the output resolution of the upscaled orography, which needs
-    !*FD to be different when using a spectral-transform atmosphere. If present, the boundary
-    !*FD arrays \texttt{lonb} and \texttt{latb} have one more element the corresponding
-    !*FD grid-point location array (\texttt{lons} and \texttt{lats}), and are indexed from 1.
-    !*FD The elements are arranged such that the boundarys of \texttt{lons(i)} are found in
-    !*FD \texttt{lonb(i)} and \texttt{lonb(i+1)}.
-
-    use glint_initialise
-
-    implicit none
-
-    type(glint_params),          intent(inout) :: params !*FD Ice model parameters.
-    real(rk),dimension(:),         intent(in)    :: lons   !*FD Global grid longitude locations (degrees)
-    real(rk),dimension(:),         intent(in)    :: lats   !*FD Global grid latitude locations (degrees)
-    real(rk),dimension(:),optional,intent(in)    :: lonb   !*FD Global grid-box boundaries in longitude (degrees)
-    real(rk),dimension(:),optional,intent(in)    :: latb   !*FD Global grid-box boundaries in latitude (degrees)
-
-    integer :: i, args
-
-    ! Reset grid variable - the call varies according to the optional arguments
-
-    args=0
-
-    if (present(lonb)) args=args+1
-    if (present(latb)) args=args+2
-
-    select case(args)
-    case(0)
-       call new_global_grid(params%g_grid_orog,lons,lats)
-    case(1)
-       call new_global_grid(params%g_grid_orog,lons,lats,lonb=lonb)
-    case(2)
-       call new_global_grid(params%g_grid_orog,lons,lats,latb=latb)
-    case(3)
-       call new_global_grid(params%g_grid_orog,lons,lats,lonb=lonb,latb=latb)
-    end select
-
-    ! Deallocate and reallocate coverage maps
-
-    if (associated(params%total_cov_orog)) deallocate(params%total_cov_orog)
-    if (associated(params%cov_norm_orog))  deallocate(params%cov_norm_orog)
-
-    allocate(params%total_cov_orog(params%g_grid_orog%nx,params%g_grid_orog%ny))
-    allocate(params%cov_norm_orog (params%g_grid_orog%nx,params%g_grid_orog%ny))
-
-    ! Set total coverage and normalisation to zero
-
-    params%total_cov_orog=0.0
-    params%cov_norm_orog=0.0
-
-    ! Loop over instances
-
-    do i=1,params%ninstances
-
-       ! Initialise upscaling
-
-       call new_upscale(params%instances(i)%ups_orog, &
-            params%g_grid_orog, &
-            params%instances(i)%proj, &
-            params%instances(i)%out_mask)
-
-       ! Deallocate fractional coverage if necessary, and reallocate
-
-       if (associated(params%instances(i)%frac_cov_orog)) &
-            deallocate(params%instances(i)%frac_cov_orog)
-       allocate(params%instances(i)%frac_cov_orog(params%g_grid_orog%nx,params%g_grid_orog%ny))
-
-       ! Calculate fractional coverage
-
-       call calc_coverage(params%instances(i)%proj, &
-            params%instances(i)%ups_orog,&             ! Calculate coverage map
-            params%g_grid_orog, &
-            params%instances(i)%out_mask, &
-            params%instances(i)%frac_cov_orog)
-
-       ! Add to total
-
-       params%total_cov_orog = params%total_cov_orog &
-            + params%instances(i)%frac_cov_orog
-
-       where (params%instances(i)%frac_cov_orog>0.0) params%cov_norm_orog=params%cov_norm_orog+1
-
-    enddo
-
-    ! check coverage not greater than 1
-
-    where (params%total_cov_orog>1.0) params%total_cov_orog=1.0
-
-  end subroutine glint_set_orog_res
 
   !----------------------------------------------------------------------
   ! PRIVATE INTERNAL GLIMMER SUBROUTINES FOLLOW.............

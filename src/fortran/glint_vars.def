@@ -43,3 +43,25 @@ units:         meter/year
 long_name:     ablation
 data:          data%ablt
 coordinates:   lon lat
+
+[xwind]
+dimensions:    time, y1, x1
+units:	       meter/second
+long_name:     westerly surface wind component
+data:	       data%xwind
+coordinates:   lon lat
+
+[ywind]
+dimensions:    time, y1, x1
+units:	       meter/second
+long_name:     southerly surface wind component
+data:	       data%ywind
+coordinates:   lon lat
+
+[global_orog]
+dimensions:    time, y1, x1
+units:	       meter
+long_name:     orographic elevation provided by global model
+data:	       data%global_orog
+coordinates:   lon lat
+

@@ -229,11 +229,8 @@ program glimmer_example
 
   ! Initialise the ice model
 
-  call initialise_glint(ice_sheet,lats,lons,paramfile,orog=orog,ice_frac=ice_frac,albedo=albedo)
-
-  ! Set alternative output grid for orography
-
-  call glint_set_orog_res(ice_sheet,lons_orog,lats_orog)
+  call initialise_glint(ice_sheet,lats,lons,paramfile,orog=orog,ice_frac=ice_frac, &
+       albedo=albedo,orog_longs=lons_orog,orog_lats=lats_orog)
 
   ! Get coverage maps for the ice model instances
 
