@@ -288,14 +288,14 @@ contains
 
     ewct = real(model%general%ewn+1) / 2.0
     nsct = real(model%general%nsn+1) / 2.0
-    grid = model%numerics%dew * len0 * 1e-3
+    grid = model%numerics%dew * len0
 
     select case(climate%eismint_type)
     case(1)
        ! EISMINT-1 fixed margin
        do ns = 1,model%general%nsn
           do ew = 1,model%general%ewn
-             dist = grid * max(abs(real(ew) - ewct),abs(real(ns) - nsct))
+             dist = grid * max(abs(real(ew) - ewct),abs(real(ns) - nsct))*1e-3
              model%climate%artm(ew,ns) = climate%airt(1) + climate%airt(2) * dist*dist*dist
           end do
        end do

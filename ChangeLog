@@ -1,3 +1,6 @@
+2004-08-27 Magnus Hagdorn
+ * simple_forcing.f90: fixed another bug introduced by previous fix
+
 2004-08-24 Magnus Hagdorn
  * the automatic detection of the length of an array in glimmer_config does not work
    so we need a separate variable for the constant basal traction case (glide_setup.f90, glide.tex)
