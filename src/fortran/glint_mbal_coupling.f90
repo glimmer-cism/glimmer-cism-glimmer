@@ -101,7 +101,8 @@ contains
 
     ! Call mass-balance
 
-    call glint_mbal_calc(params%mbal,artm,arng,prcp,params%snowd,params%siced,ablt,acab) 
+    call glint_mbal_calc(params%mbal,artm,arng,prcp,(local_orog>0.0),params%snowd, &
+         params%siced,ablt,acab) 
 
     ! Accumulate
 

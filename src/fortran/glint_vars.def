@@ -65,3 +65,21 @@ units:	       meter
 long_name:     orographic elevation provided by global model
 data:	       data%local_orog
 coordinates:   lon lat
+
+[glint_snowd]
+dimensions:    time, y1, x1
+units:         meter
+long_name:     snow depth
+data:          data%snowd
+load:          1
+hot:           1
+coordinates:   lon lat
+
+[glint_siced]
+dimensions:    time, y1, x1
+units:         meter
+long_name:     superimposed ice depth
+data:          data%siced
+load:          1
+hot:           1
+coordinates:   lon lat

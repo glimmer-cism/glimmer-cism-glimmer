@@ -108,7 +108,7 @@ contains
 
   ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine glint_mbal_calc(params,artm,arng,prcp,snowd,siced,ablt,acab)
+  subroutine glint_mbal_calc(params,artm,arng,prcp,landsea,snowd,siced,ablt,acab)
 
     use glimmer_log
 
@@ -117,6 +117,7 @@ contains
                                                        !*FD ($^{\circ}$C)
     real(sp), dimension(:,:), intent(in)    :: arng    !*FD Temperature half-range ($^{\circ}$C)
     real(sp), dimension(:,:), intent(in)    :: prcp    !*FD Accumulated precipitation (m)
+    logical,  dimension(:,:), intent(in)    :: landsea !*FD Land-sea mask (land is TRUE)
     real(sp), dimension(:,:), intent(inout) :: snowd   !*FD Snow depth (m)
     real(sp), dimension(:,:), intent(inout) :: siced   !*FD Superimposed ice depth (m)
     real(sp), dimension(:,:), intent(out)   :: ablt    !*FD Ablation (m)
@@ -134,6 +135,15 @@ contains
     case(4)
        call glimmer_daily_pdd_mbal(params%daily_pdd,artm,arng,prcp,snowd,siced,ablt,acab)
     end select
+
+    ! Fix according to land-sea mask
+
+    where (.not.landsea)
+       ablt=prcp
+       acab=0.0
+       snowd=0.0
+       siced=0.0
+    end where
 
   end subroutine glint_mbal_calc
 

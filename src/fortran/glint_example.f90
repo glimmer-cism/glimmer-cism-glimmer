@@ -190,7 +190,7 @@ program glint_example
 
   ! Do timesteps ---------------------------------------------------------------------------
 
-  do time=0,total_years*24*360,6
+  do time=0,total_years*24*365+6,6
      call example_climate(precip_clim,surftemp_clim,precip,temp,real(time,rk))
      call glint(ice_sheet,time,temp,precip,zonwind,merwind,orog, &
           orog_out=orog_out,   albedo=albedo,         output_flag=out, &

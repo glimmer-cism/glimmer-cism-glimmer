@@ -124,6 +124,10 @@ contains
     instance%mbal_tstep=instance%mbal_accum%mbal%tstep
     mbts=instance%mbal_tstep
 
+    call glint_mbal_io_writeall(instance%mbal_accum,instance%model)
+    call glide_io_writeall(instance%model,instance%model)
+    call glint_io_writeall(instance,instance%model)
+
     if (instance%whichprecip==2) need_winds=.true.
 
   end subroutine glint_i_initialise
