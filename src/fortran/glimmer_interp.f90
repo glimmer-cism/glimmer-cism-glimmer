@@ -156,7 +156,7 @@ contains
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine interp_to_local(proj,global,lats,lons,downs,localsp,localdp)
+  subroutine interp_to_local(proj,global,lats,lons,downs,localsp,localdp,global_fn)
 
     !*FD Interpolate a global scalar field
     !*FD onto a projected grid. 
@@ -177,8 +177,14 @@ contains
     real(rk), dimension(:),  intent(in)           :: lats      !*FD Latitudes of global gridpoints 
     real(rk), dimension(:),  intent(in)           :: lons      !*FD Longitudes of global gridpoints 
     type(downscale),         intent(in)           :: downs     !*FD Downscaling parameters
-    real(sp),dimension(:,:),intent(out),optional :: localsp   !*FD Local field on projected grid (output) sp
-    real(dp),dimension(:,:),intent(out),optional :: localdp   !*FD Local field on projected grid (output) dp
+    real(sp),dimension(:,:),intent(out),optional :: localsp    !*FD Local field on projected grid (output) sp
+    real(dp),dimension(:,:),intent(out),optional :: localdp    !*FD Local field on projected grid (output) dp
+    real(sp),optional :: global_fn                             !*FD Function returning values in global field. This  
+                                                               !*FD may be used as an alternative to passing the
+                                                               !*FD whole array in \texttt{global} if, for instance the
+                                                               !*FD data-set is in a large file, being accessed point by point.
+                                                               !*FD In these circumstances, \texttt{global}
+                                                               !*FD may be of any size, and its contents are irrelevant.
 
     ! Local variable declarations
 
@@ -190,14 +196,16 @@ contains
 
     ! Retrieve the dimensions of the global domain
 
-    nxg=size(global,1) ; nyg=size(global,2)
+    nxg=size(lons) ; nyg=size(lats)
 
     ! Check to see that we have the right number of lats and lons
 
-    if ((nxg/=size(lons)).or.(nyg/=size(lats))) then
-      print*,'size mismatch in interp_to_local'
-      stop
-    endif
+    if (.not.present(global_fn)) then 
+       if ((nxg/=size(global,1)).or.(nyg/=size(global,2))) then
+          print*,'size mismatch in interp_to_local'
+          stop
+       end if
+    end if
 
     ! check we have one output at least...
 
@@ -217,10 +225,17 @@ contains
 
         ! Compile the temporary array f from adjacent points 
 
-        f(1,1)=global(downs%il(i,j),downs%jl(i,j))
-        f(1,2)=global(downs%il(i,j),downs%jlp(i,j))
-        f(2,1)=global(downs%ilp(i,j),downs%jl(i,j))
-        f(2,2)=global(downs%ilp(i,j),downs%jlp(i,j))
+        if (present(global_fn)) then
+          f(1,1)=global_fn(downs%il(i,j),downs%jl(i,j))
+          f(1,2)=global_fn(downs%il(i,j),downs%jlp(i,j))
+          f(2,1)=global_fn(downs%ilp(i,j),downs%jl(i,j))
+          f(2,2)=global_fn(downs%ilp(i,j),downs%jlp(i,j))
+        else
+           f(1,1)=global(downs%il(i,j),downs%jl(i,j))
+           f(1,2)=global(downs%il(i,j),downs%jlp(i,j))
+           f(2,1)=global(downs%ilp(i,j),downs%jl(i,j))
+           f(2,2)=global(downs%ilp(i,j),downs%jlp(i,j))
+        end if
 
         ! Calculate dx of interpolation domain and correct for boundary effects
 
@@ -246,6 +261,97 @@ contains
     enddo
 
   end subroutine interp_to_local
+
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  subroutine mean_to_local(proj,global,lats,lons,localsp,localdp,global_fn)
+
+    !*FD Average a high-resolution global field onto the projected grid
+    !*FD This assumes that the global field is sufficiently high-resolution 
+    !*FD compared with the local grid - it just averages the points contained 
+    !*FD in each local grid-box.
+ 
+    use glimmer_project
+    use glimmer_utils
+
+    ! Argument declarations
+
+    type(projection),intent(in)         :: proj                !*FD Target map projection
+    real(rk),dimension(:,:),intent(in)  :: global              !*FD Global field (input)
+    real(rk),dimension(:),intent(in)    :: lats                !*FD Latitudes of global gridpoints 
+    real(rk),dimension(:),intent(in)    :: lons                !*FD Longitudes of global gridpoints 
+    real(sp),dimension(:,:),intent(out),optional :: localsp   !*FD Local field on projected grid (output) sp
+    real(dp),dimension(:,:),intent(out),optional :: localdp   !*FD Local field on projected grid (output) dp
+    real(sp),optional :: global_fn                            !*FD Function returning values in global field. This  
+                                                               !*FD may be used as an alternative to passing the
+                                                               !*FD whole array in \texttt{global} if, for instance the
+                                                               !*FD data-set is in a large file, being accessed point by point.
+                                                               !*FD In these circumstances, \texttt{global}
+                                                               !*FD may be of any size, and its contents are irrelevant.
+
+    integer :: nxg,nyg,i,j,xbox,ybox
+    real(rk) :: lat,lon,x,y
+    real(dp),dimension(proj%nx,proj%ny) :: temp_out
+    integer,dimension(proj%nx,proj%ny) :: mean_count
+
+    ! Find size of input field
+
+    nxg=size(lons) ; nyg=size(lats)
+
+    if (.not.present(global_fn)) then 
+       if ((nxg/=size(lons)).or.(nyg/=size(lats))) then
+          print*,'size mismatch in interp_to_local'
+          stop
+       end if
+    end if
+
+    ! check we have one output at least...
+
+    if (.not.(present(localsp).or.present(localdp))) then
+      print*, 'WARNING mean_to_local has no output'
+    endif
+
+    ! Zero some things
+
+    mean_count=0
+    temp_out=0.0
+
+    ! Loop over all global points
+
+    do i=1,nxg
+
+       lon=lons(i)
+
+       do j=1,nyg
+
+          ! Find location in local coordinates
+
+          lat=lats(j)  ! (Have already found lat above)
+          call ll_to_xy(lon,lat,x,y,proj)
+          xbox=nint(x)
+          ybox=nint(y)
+          
+          ! Add to appropriate location and update count
+
+          if (xbox.ge.1.and.xbox.le.proj%nx.and. &
+              ybox.ge.1.and.ybox.le.proj%ny) then
+             if (present(global_fn)) then
+                temp_out(xbox,ybox)=temp_out(xbox,ybox)+global_fn(i,j)
+             else
+                temp_out(xbox,ybox)=temp_out(xbox,ybox)+global(i,j)
+             end if
+             mean_count(xbox,ybox)=mean_count(xbox,ybox)+1
+          end if
+
+       end do
+    end do
+
+    ! Divide by number of contributing points and copy to output
+
+    if (present(localsp)) localsp=temp_out/real(mean_count,gdp)
+    if (present(localdp)) localdp=temp_out/real(mean_count,gdp)
+ 
+  end subroutine mean_to_local
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -407,14 +513,15 @@ contains
 
     nx=size(lons) ; ny=size(lats)
 
-    if ((lon>lons(nx)).and.(lon<360.0)) then
-      il=nx
+    if ((lon>maxval(lons)).and.(lon<360.0)) then
+      loc=maxloc(lons)
+      il=loc(1)
     else
       il=1
-      do while (lon>=array_bcs(lons,il))
+      do
+        if (lon>=array_bcs(lons,il).and.lon<=array_bcs(lons,il+1)) exit
         il=il+1
       enddo
-      il=il-1
     endif
 
     if ((lat<lats(ny)).and.(lat>-90.0)) then

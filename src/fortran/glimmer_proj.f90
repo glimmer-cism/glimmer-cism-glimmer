@@ -339,6 +339,28 @@ contains
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+  subroutine print_corners(proj)
+
+    type(projection),intent(in) :: proj
+
+    real(rk) :: clat,clon
+
+    call xy_to_ll(clon,clat,real(1,rk),real(1,rk),proj)
+    print*,'SW: lon=',clon,' lat=',clat
+
+    call xy_to_ll(clon,clat,real(proj%nx,rk),real(1,rk),proj)
+    print*,'SE: lon=',clon,' lat=',clat
+
+    call xy_to_ll(clon,clat,real(1,rk),real(proj%ny,rk),proj)
+    print*,'NW: lon=',clon,' lat=',clat
+
+    call xy_to_ll(clon,clat,real(proj%nx,rk),real(proj%ny,rk),proj)
+    print*,'NE: lon=',clon,' lat=',clat
+
+  end subroutine print_corners
+
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
   real(rk) function loncorrect(lon)
 
     !*FD Normalises a value of longitude to the range 0 to 360 degrees.
