@@ -7,38 +7,44 @@
 
 [time]
 dimensions:    time
-units:         year
+units:         year since 1-1-1 0:0:0
 long_name:     Model time
+standard_name: time
+calendar:      none
 
 [x0]
 dimensions:    x0
 units:         meter
-long_name:     Cartisian x-coordinate, midpoint
+long_name:     Cartisian x-coordinate, velocity grid
+standard_name: projection_x_coordinate
 
 [y0]
 dimensions:    y0
 units:         meter
-long_name:     Cartisian y-coordinate, midpoint
+long_name:     Cartisian y-coordinate, velocity grid
+standard_name: projection_y_coordinate
 
 [x1]
 dimensions:    x1
 units:         meter
 long_name:     Cartisian x-coordinate
+standard_name: projection_x_coordinate
 
 [y1]
 dimensions:    y1
 units:         meter
 long_name:     Cartisian y-coordinate
+standard_name: projection_y_coordinate
 
 [x0_spot]
 dimensions:    spot
 units:         meter
-long_name:     Cartisian x-coordinate, midpoint
+long_name:     Cartisian x-coordinate, velocity grid
 
 [y0_spot]
 dimensions:    spot
 units:         meter
-long_name:     Cartisian y-coordinate, midpoint
+long_name:     Cartisian y-coordinate, velocity grid
 
 [x1_spot]
 dimensions:    spot
@@ -54,6 +60,8 @@ long_name:     Cartisian y-coordinate
 dimensions:    level
 units:         1
 long_name:     sigma layers
+standard_name: land_ice_sigma_coordinate
+formula_terms: sigma: level topo: topg thick: thk
 
 [lat]
 dimensions:    time, y1, x1
@@ -79,6 +87,7 @@ long_name:     upscaling and downscaling mask
 data:          climate%out_mask
 load:          1
 f90file:       glint_io.f90
+coordinates:   lon lat
 
 [relx]
 dimensions:    time, y1, x1
@@ -88,6 +97,7 @@ data:          model%geometry%relx
 factor:        thk0
 load:          1
 hot:           1
+coordinates:   lon lat
 
 [presprcp]
 dimensions:    time, y1, x1
@@ -97,6 +107,7 @@ data:          climate%presprcp
 factor:        scyr * acc0
 load:          1
 f90file:       glint_io.f90
+coordinates:   lon lat
 
 [presusrf]
 dimensions:    time, y1, x1
@@ -106,6 +117,7 @@ data:          climate%presusrf
 factor:        thk0
 load:          1
 f90file:       glint_io.f90
+coordinates:   lon lat
 
 [eus]
 dimensions:    time
@@ -113,7 +125,7 @@ units:         meter
 long_name:     global average sea level
 data:          model%climate%eus
 factor:        thk0
-standard_name: global_average_sea_level
+standard_name: global_average_sea_level_change
 
 [slc]
 dimensions:    time, y1, x1
@@ -121,7 +133,8 @@ units:         meter
 long_name:     isostatic adjustment
 data:          model%geometry%relx-model%geometry%topg
 factor:        thk0
-standard_name: isostatic_adjustment
+standard_name: bedrock_altitude_change_due_to_isostatic_adjustment
+coordinates:   lon lat
 
 [uflx]
 dimensions:    time, y0, x0
@@ -175,6 +188,7 @@ data:          model%geometry%thck
 factor:        thk0
 standard_name: land_ice_thickness
 hot:           1
+coordinates:   lon lat
 
 [thkmask]
 dimensions:    time, y1, x1
@@ -182,13 +196,7 @@ long_name:     mask
 units:         1
 data:          model%geometry%thkmask
 type:          int
-
-[thkmask]
-dimensions:    time, y1, x1
-long_name:     mask
-units:         1
-data:          model%geometry%thkmask
-type:          int
+coordinates:   lon lat
 
 [usurf]
 dimensions:    time, y1, x1
@@ -197,6 +205,8 @@ long_name:     ice upper surface elevation
 data:          model%geometry%usrf
 factor:        thk0
 load:          1
+standard_name: surface_altitude
+coordinates:   lon lat
 
 [lsurf]
 dimensions:    time, y1, x1
@@ -204,6 +214,7 @@ units:         meter
 long_name:     ice lower surface elevation
 data:          model%geometry%lsrf
 factor:        thk0
+coordinates:   lon lat
 
 [topg]
 dimensions:    time, y1, x1
@@ -214,6 +225,7 @@ factor:        thk0
 load:          1
 standard_name: bedrock_altitude
 hot:           1
+coordinates:   lon lat
 
 [acab]
 dimensions:    time, y1, x1
@@ -221,7 +233,8 @@ units:         meter/year
 long_name:     accumulation, ablation rate
 data:          model%climate%acab
 factor:        scale2d_f1
-standard_name: land_ice_surface_mass_balance
+standard_name: land_ice_lwe_surface_specific_mass_balance
+coordinates:   lon lat
 
 [bmlt]
 dimensions:    time, y1, x1
@@ -229,8 +242,9 @@ units:         meter/year
 long_name:     basal melt rate
 data:          model%temper%bmlt
 factor:        scale2d_f1
-standard_name: land_ice_basal_melt_rate
+standard_name: land_ice_lwe_basal_melt_rate
 hot:           1
+coordinates:   lon lat
 
 [bwat]
 dimensions:    time, y1, x1
@@ -239,27 +253,32 @@ long_name:     basal water depth
 data:          model%temper%bwat
 factor:        thk0
 hot:           1
+coordinates:   lon lat
 
 [artm]
 dimensions:    time, y1, x1
-units:         degree_Celcius
+units:         degree_Celsius
 long_name:     annual mean air temperature
 data:          model%climate%artm
 standard_name: surface_temperature
 cell_methods:  time: mean
+coordinates:   lon lat
 
 [btemp]
 dimensions:    time, y1, x1
-units:         degree_Celcius
+units:         degree_Celsius
 long_name:     basal ice temperature
 data:          model%temper%temp(model%general%upn,1:model%general%ewn,1:model%general%nsn)
+standard_name: land_ice_temperature
+coordinates:   lon lat
 
 [arng]
 dimensions:    time, y1, x1
-units:         degree_Celcius
+units:         degree_Celsius
 long_name:     annual temperature range
 data:          climate%arng
 f90file:       glint_io.f90
+coordinates:   lon lat
 
 [prcp]
 dimensions:    time, y1, x1
@@ -269,6 +288,7 @@ data:          climate%prcp
 factor:        scale2d_f1
 standard_name: lwe_precipitation_rate
 f90file:       glint_io.f90
+coordinates:   lon lat
 
 [ablt]
 dimensions:    time, y1, x1
@@ -277,6 +297,7 @@ long_name:     ablation
 data:          climate%ablt
 factor:        scale2d_f1
 f90file:       glint_io.f90
+coordinates:   lon lat
 
 [dusrfdtm]
 dimensions:    time, y1, x1
@@ -284,6 +305,7 @@ units:         meter/year
 long_name:     rate of upper ice surface elevation change
 data:          model%geomderv%dusrfdtm
 factor:        scale2d_f1
+coordinates:   lon lat
 
 [uvel]
 dimensions:    time, level, y0, x0
@@ -308,6 +330,7 @@ long_name:     vertical ice velocity
 data:          model%velocity%wvel(up,:,:)
 factor:        scale3d_f7
 standard_name: land_ice_z_velocity
+coordinates:   lon lat
 
 [wgrd]
 dimensions:    time, level, y1, x1
@@ -315,22 +338,25 @@ units:         meter/year
 long_name:     ?? some velo ??
 data:          model%velocity%wgrd(up,:,:)
 factor:        scale3d_f7
+coordinates:   lon lat
 
 [flwa]
 dimensions:    time, level, y1, x1
-units:         Pascal/year
+units:         pascal/year
 long_name:     Pre-exponential flow law parameter
 data:          model%temper%flwa(up,:,:)
 factor:        scale3d_f8
 hot:           1
+coordinates:   lon lat
 
 [temp]
 dimensions:    time, level, y1, x1
-units:         degree_Celcius
+units:         degree_Celsius
 long_name:     ice temperature
 data:          model%temper%temp(up,1:model%general%ewn,1:model%general%nsn)
 standard_name: land_ice_temperature
 hot:           1
+coordinates:   lon lat
 
 [ela]
 dimensions:    time, y1, x1
@@ -339,6 +365,8 @@ long_name:     equilibrium line altitude
 data:          climate%ela%ela
 f90file:       eis_io.f90
 factor:        thk0
+standard_name: equilibrium_line_altitude
+coordinates:   lon lat
 
 [cony]
 dimensions:    time, y1, x1
@@ -346,3 +374,4 @@ units:         1
 long_name:     continentality
 data:          climate%cony%cony
 f90file:       eis_io.f90
+coordinates:   lon lat

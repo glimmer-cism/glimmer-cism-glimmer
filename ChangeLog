@@ -1,3 +1,8 @@
+2004-11-10 Magnus Hagdorn
+ * ncdf_vars.def: make nc files conformant with CF standard (conformance was check with the CF
+   checker http://titania.badc.rl.ac.uk/cgi-bin/cf-checker.pl, and passed except for the new
+   standard names which are not yet part of CF but will be from 2004-11-15)
+
 2004-09-27 Magnus Hagdorn
  * removed masking of netCDF variables. This causes more pain than it is worth it. The two 
    files are tagged (generate_ncvars.py, ncdf_vars.def)
