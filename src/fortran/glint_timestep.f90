@@ -57,15 +57,17 @@ contains
     !*FD code will need to be altered to take account of the 
     !*FD energy-balance mass-balance model when it is completed.
     !*FD
-    !*FD Note also that input quantities here are accumulated totals since the
+    !*FD Note also that input quantities here are accumulated/average totals since the
     !*FD last call.
     use glide
     use glide_setup
+    use glide_io
     use glint_mbal
     use paramets
     use glint_io
     use glint_climate
     use glint_routing
+    use glimmer_log
     implicit none
 
     ! ------------------------------------------------------------------------  
@@ -101,55 +103,43 @@ contains
     real(rk),dimension(:,:),allocatable :: accum_temp    ! temporary array for accumulation
     real(rk),dimension(:,:),allocatable :: ablat_temp    ! temporary array for ablation
     integer, dimension(:,:),allocatable :: fudge_mask    ! temporary array for fudging
-    real(rk) :: f1 ! Scaling factor for converting precip and run-off amounts.
+    real(sp),dimension(:,:),allocatable :: thck_temp     ! temporary array for volume calcs
     character(40) :: timetxt
     real(rk) :: start_volume,end_volume,flux_fudge
 
-    ! Set scaling factor for water flux calculations -------------------------
+    ! Increment average count ------------------------------------------------
 
-    f1 = scyr * thk0 / tim0
-
-    ! ------------------------------------------------------------------------  
-    ! Update internal clock
-    ! ------------------------------------------------------------------------  
-
-    instance%model%numerics%time=time  
+    instance%av_count=instance%av_count+1
 
     ! Set mass-balance accumulation start if necessary -----------------------
 
     if (instance%first_accum) then
-      instance%accum_start=nint(time-instance%climate%tinc_mbal)
+      instance%accum_start=nint(time-instance%tinc_mbal)
       instance%first_accum=.false.
     endif
 
     ! ------------------------------------------------------------------------  
-    ! Downscale input fields, but only if required by options selected
+    ! Downscale input fields
     ! ------------------------------------------------------------------------  
 
     ! Temperature downscaling ------------------------------------------------
 
-    select case(instance%climate%whichartm)
-    case(7)
-      call interp_to_local(instance%proj,  &
-                           g_temp,         &
-                           instance%downs, &
-                           localsp=instance%climate%g_artm)
+    call interp_to_local(instance%proj,  &
+                         g_temp,         &
+                         instance%downs, &
+                         localsp=instance%g_artm)
 
-      call interp_to_local(instance%proj,  &
-                           g_temp_range,   &
-                           instance%downs, &
-                           localsp=instance%climate%g_arng)
-    end select
+    call interp_to_local(instance%proj,  &
+                         g_temp_range,   &
+                         instance%downs, &
+                         localsp=instance%g_arng)
 
     ! Precip downscaling -----------------------------------------------------
 
-    select case(instance%climate%whichprecip)
-    case(1,2)
-      call interp_to_local(instance%proj,  &
-                           g_precip,       &
-                           instance%downs, &
-                           localsp=instance%climate%prcp)
-    end select
+    call interp_to_local(instance%proj,  &
+                         g_precip,       &
+                         instance%downs, &
+                         localsp=instance%prcp)
 
     ! Orography downscaling --------------------------------------------------
 
@@ -160,20 +150,17 @@ contains
 
     ! Wind downscaling -------------------------------------------------------
 
-    select case(instance%climate%whichprecip)
-    case(2)
-      call interp_wind_to_local(instance%proj,    &
-                                g_zonwind,        &
-                                g_merwind,        &
-                                instance%downs,   &
-                                instance%xwind,instance%ywind)
-    end select
+    call interp_wind_to_local(instance%proj,    &
+                              g_zonwind,        &
+                              g_merwind,        &
+                              instance%downs,   &
+                              instance%xwind,instance%ywind)
 
     ! ------------------------------------------------------------------------  
     ! Sort out some local orography - scale orography by correct amount
     ! ------------------------------------------------------------------------  
 
-    instance%local_orog=instance%model%geometry%usrf*thk0
+    call glide_get_usurf(instance%model,instance%local_orog)
 
     ! Remove bathymetry. This relies on the point 1,1 being underwater.
     ! However, it's a better method than just setting all points < 0.0 to zero
@@ -184,56 +171,65 @@ contains
     ! Calculate or process the surface temperature and half-range
     ! ------------------------------------------------------------------------  
 
-    call calcartm(instance,                       &
-                  instance%climate%whichartm,     &
-                  instance%model%geometry%usrf,         &
-                  instance%model%climate%lati,          &
-                  instance%model%climate%artm,          &
-                  instance%climate%arng,          &
-                  g_orog=instance%global_orog,          &
-                  g_artm=instance%climate%g_artm, &
-                  g_arng=instance%climate%g_arng)
+    call calcartm(instance%local_orog,         &
+                  instance%artm,          &
+                  instance%arng,          &
+                  instance%global_orog,          &
+                  instance%g_artm, &
+                  instance%g_arng, &
+                  instance%ulapse_rate)
 
     ! ------------------------------------------------------------------------  
-    ! Calculate or process the precipitation field 
+    ! Process the precipitation field if necessary
     ! ------------------------------------------------------------------------  
 
-    call calcprcp(instance%climate%whichprecip, &
-                  instance%climate%prcp, &
-                  instance%climate%uprecip_rate, &
-                  f1, &
-                  instance%xwind, &
-                  instance%ywind, &
-                  instance%model%climate%artm, &
-                  instance%local_orog, &
-                  instance%proj%dx, &
-                  instance%proj%dy, &
-                  instance%climate%presprcp, &
-                  instance%climate%presartm, &
-                  instance%climate%pfac)
+    select case (instance%whichprecip)
+    case(1)
+       ! Do nothing to the precip field
+    case(2)
+       ! Use the Roe/Lindzen parameterisation
+       call glint_precip(instance%prcp, &
+            instance%xwind, &
+            instance%ywind, &
+            instance%artm, &
+            instance%local_orog, &
+            instance%proj%dx, &
+            instance%proj%dy, &
+            fixed_a=.true.)
+    case default
+       call write_log('Invalid value of whichprecip',GM_FATAL,__FILE__,__LINE__)
+    end select
 
     ! ------------------------------------------------------------------------ 
     ! Calculate ablation, and thus mass-balance
     ! ------------------------------------------------------------------------ 
 
-    call calcacab(instance%model%numerics, &
-         instance%climate, &
-         instance%pddcalc,  &
-         instance%climate%whichacab, &
-         instance%model%geometry% usrf,      &
-         instance%model%climate%  artm,      &
-         instance%climate%  arng,      &
-         instance%climate%  prcp,      &
-         instance%climate%  ablt,      &
-         instance%model%climate%  lati,      &
-         instance%model%climate%  acab,      &
-         instance%model%geometry%  thck)
+    select case(instance%whichacab)
+    case(1)
+       call glint_pdd_mbal(instance%pddcalc, &
+            instance%artm, &
+            instance%arng, &
+            instance%prcp, &
+            instance%proj%latitudes, &
+            instance%ablt, &
+            instance%acab) 
+    case(2) 
+       instance%acab = instance%prcp
+    case(3)
+       ! The energy-balance model will go here...
+       call write_log('Energy-balance mass-balance model not implemented yet',GM_FATAL,__FILE__,__LINE__)
+    case default
+       call write_log('Invalid value of whichacab',GM_FATAL,__FILE__,__LINE__)
+    end select
 
+    ! ------------------------------------------------------------------------ 
     ! Accumulate mass-balance if necessary
+    ! ------------------------------------------------------------------------ 
 
-    instance%climate%prcp_save = instance%climate%prcp_save + instance%climate%prcp
-    instance%climate%ablt_save = instance%climate%ablt_save + instance%climate%ablt
-    instance%climate%acab_save = instance%climate%acab_save + instance%model%climate%acab
+    instance%prcp_save = instance%prcp_save + instance%prcp
+    instance%ablt_save = instance%ablt_save + instance%ablt
+    instance%acab_save = instance%acab_save + instance%acab
+    instance%artm_save = instance%artm_save + instance%artm
 
     ! If it's not time for a dynamics/temp/velocity timestep, return
 
@@ -242,66 +238,62 @@ contains
     ! ------------------------------------------------------------------------  
     ! ICE TIMESTEP begins HERE ***********************************************
     ! ------------------------------------------------------------------------  
- 
-    ! Copy and zero accumulated totals ---------------------------------------
-
-    instance%climate%prcp = instance%climate%prcp_save
-    instance%climate%ablt = instance%climate%ablt_save
-    instance%model%climate%acab = instance%climate%acab_save
-
-    instance%climate%prcp_save = 0.0
-    instance%climate%ablt_save = 0.0
-    instance%climate%acab_save = 0.0
 
     instance%accum_start=time
 
-    ! Calculate the initial ice volume (scaled) ------------------------------
-
-    start_volume=sum(instance%model%geometry%thck)
-
     ! Allocate temporary upscaling array -------------------------------------
 
-    allocate(upscale_temp(instance%model%general%ewn,instance%model%general%nsn))
-    allocate(routing_temp(instance%model%general%ewn,instance%model%general%nsn))
-    allocate(accum_temp(instance%model%general%ewn,instance%model%general%nsn))
-    allocate(ablat_temp(instance%model%general%ewn,instance%model%general%nsn))
-    allocate(fudge_mask(instance%model%general%ewn,instance%model%general%nsn))
+    allocate(upscale_temp(instance%proj%nx,instance%proj%ny))
+    allocate(routing_temp(instance%proj%nx,instance%proj%ny))
+    allocate(accum_temp(instance%proj%nx,instance%proj%ny))
+    allocate(ablat_temp(instance%proj%nx,instance%proj%ny))
+    allocate(fudge_mask(instance%proj%nx,instance%proj%ny))
+    allocate(thck_temp(instance%proj%nx,instance%proj%ny))
 
     accum_temp=0.0 ; ablat_temp=0.0
+
+    ! Calculate the initial ice volume (scaled) ------------------------------
+
+    call glide_get_thk(instance%model,thck_temp)
+    start_volume=sum(thck_temp)
 
     ! Do water budget accounting ---------------------------------------------
 
     if (out_f%water_out.or.out_f%total_wout.or.out_f%water_in .or.out_f%total_win) then
-      accum_temp=instance%climate%prcp*instance%model%numerics%dt
-      ablat_temp=instance%climate%ablt*instance%model%numerics%dt
+      accum_temp=instance%prcp_save
+      ablat_temp=instance%ablt_save
     endif
 
+    ! Put climate inputs in the appropriate places
+
+    call glide_set_acab(instance%model,instance%acab_save)
+    call glide_set_artm(instance%model,instance%artm_save/real(instance%av_count))
 
     ! ------------------------------------------------------------------------  
     ! If first step, use as seed...
     ! ------------------------------------------------------------------------  
-
-    if (instance%first) then
-      where (instance%local_orog>0.0)
-        instance%model%geometry%thck = max(0.0d0, &
-                                         instance%model%climate%acab* &
-                                         instance%model%numerics%dt)
-      endwhere
-
-      call glide_calclsrf(instance%model%geometry%thck, &
-                    instance%model%geometry%topg, &
-                    instance%model%climate%eus, &
-                    instance%model%geometry%lsrf)
-      instance%model%geometry%usrf = instance%model%geometry%thck + &
-                                     instance%model%geometry%lsrf
-
-      ! Reset mass-balance variables to zero, as we've already used these
-
-      instance%climate%prcp = 0.0
-      instance%climate%ablt = 0.0
-      instance%model%climate%acab = 0.0
-
-    end if
+!!$
+!!$    if (instance%first) then
+!!$      where (instance%local_orog>0.0)
+!!$        instance%model%geometry%thck = max(0.0d0, &
+!!$                                         instance%acab* &
+!!$                                         instance%model%numerics%dt)
+!!$      endwhere
+!!$
+!!$      call glide_calclsrf(instance%model%geometry%thck, &
+!!$                    instance%model%geometry%topg, &
+!!$                    instance%model%climate%eus, &
+!!$                    instance%model%geometry%lsrf)
+!!$      instance%model%geometry%usrf = instance%model%geometry%thck + &
+!!$                                     instance%model%geometry%lsrf
+!!$
+!!$      ! Reset mass-balance variables to zero, as we've already used these
+!!$
+!!$      instance%prcp = 0.0
+!!$      instance%ablt = 0.0
+!!$      instance%acab = 0.0
+!!$
+!!$    end if
 
     ! ------------------------------------------------------------------------
     ! do the first part of the glide time step
@@ -328,9 +320,10 @@ contains
 
     if (out_f%water_out.or.out_f%total_wout.or.out_f%water_in .or.out_f%total_win) then
 
-      end_volume=sum(instance%model%geometry%thck)
+      call glide_get_thk(instance%model,thck_temp)
+      end_volume=sum(thck_temp)
 
-      where (instance%model%geometry%thck>0.0)
+      where (thck_temp>0.0)
         fudge_mask=1
       elsewhere
         fudge_mask=0
@@ -340,7 +333,7 @@ contains
 
       ! Apply fudge_factor
 
-      where(instance%model%geometry%thck>0.0)
+      where(thck_temp>0.0)
         ablat_temp=ablat_temp+flux_fudge
       endwhere
 
@@ -363,7 +356,8 @@ contains
     ! Calculate ice volume ---------------------------------------------------
 
     if (out_f%ice_vol) then
-      ice_vol=f1*1000.0*sum(instance%model%geometry%thck)*instance%proj%dx*instance%proj%dy
+       call glide_get_thk(instance%model,thck_temp)
+       ice_vol=sum(thck_temp)*instance%proj%dx*instance%proj%dy
     endif
 
     ! Upscale water flux fields ----------------------------------------------
@@ -371,8 +365,8 @@ contains
 
     if (out_f%water_in) then
 
-      where (instance%model%geometry%thck>0.0)
-        upscale_temp=f1*1000.0*accum_temp
+      where (thck_temp>0.0)
+        upscale_temp=accum_temp
       elsewhere
         upscale_temp=0.0
       endwhere
@@ -381,7 +375,7 @@ contains
                           instance%ups,   &
                           upscale_temp,   &
                           g_water_in,     &
-                          instance%climate%out_mask)
+                          instance%out_mask)
 
     endif
 
@@ -389,16 +383,17 @@ contains
 
     if (out_f%water_out) then
 
-      where (instance%model%geometry%thck>0.0)
-        upscale_temp=f1*1000.0*ablat_temp
+      where (thck_temp>0.0)
+        upscale_temp=ablat_temp
       elsewhere
         upscale_temp=0.0
       endwhere
 
-      call flow_router(instance%model%geometry%usrf, &
+      call glide_get_usurf(instance%model,instance%local_orog)
+      call flow_router(instance%local_orog, &
                        upscale_temp, &
                        routing_temp, &
-                       instance%climate%out_mask, &
+                       instance%out_mask, &
                        instance%proj%dx, &
                        instance%proj%dy)
 
@@ -406,23 +401,31 @@ contains
                           instance%ups,   &
                           routing_temp,   &
                           g_water_out,    &
-                          instance%climate%out_mask)
+                          instance%out_mask)
 
     endif
 
     ! Sum water fluxes and convert if necessary ------------------------------
 
     if (out_f%total_win) then
-      t_win  = sum(accum_temp)*f1*1000.0*instance%proj%dx*instance%proj%dy
+      t_win  = sum(accum_temp)*instance%proj%dx*instance%proj%dy
     endif
 
     if (out_f%total_wout) then
-      t_wout = sum(ablat_temp)*f1*1000.0*instance%proj%dx*instance%proj%dy
+      t_wout = sum(ablat_temp)*instance%proj%dx*instance%proj%dy
     endif
+
+    ! Zero accumulations -----------------------------------------------------
+ 
+    instance%prcp_save = 0.0
+    instance%ablt_save = 0.0
+    instance%acab_save = 0.0
+    instance%artm_save = 0.0
+    instance%av_count  = 0
 
     ! Tidy up ----------------------------------------------------------------
 
-    deallocate(upscale_temp,accum_temp,ablat_temp,fudge_mask,routing_temp)
+    deallocate(upscale_temp,accum_temp,ablat_temp,fudge_mask,routing_temp,thck_temp)
     instance%first=.false.
  
   end subroutine glint_i_tstep
@@ -450,7 +453,7 @@ contains
                           instance%ups_orog, &
                           instance%model%geometry%usrf, &
                           orog,    &
-                          instance%climate%out_mask)
+                          instance%out_mask)
       orog=thk0*orog
     endif
 
@@ -461,7 +464,7 @@ contains
       else
         allocate(if_temp(size(ice_frac,1),size(ice_frac,2)))
       endif
-      allocate(upscale_temp(instance%model%general%ewn,instance%model%general%nsn))
+      allocate(upscale_temp(instance%proj%nx,instance%proj%ny))
 
       ! First, ice coverage on local grid 
   
@@ -477,7 +480,7 @@ contains
                           instance%ups, &
                           upscale_temp, &
                           if_temp,    &
-                          instance%climate%out_mask)
+                          instance%out_mask)
 
       if (present(ice_frac)) ice_frac=if_temp
 
@@ -487,7 +490,7 @@ contains
 
     if (present(albedo)) then 
       where (if_temp>0.0)
-        albedo=instance%climate%ice_albedo
+        albedo=instance%ice_albedo
       elsewhere
         albedo=0.0
       endwhere
@@ -505,7 +508,7 @@ contains
     !*FD Sets ocean areas to zero height, working recursively from
     !*FD a known ocean point.
 
-    real(rk),dimension(:,:),intent(inout) :: orog !*FD Orography --- used for input and output
+    real(sp),dimension(:,:),intent(inout) :: orog !*FD Orography --- used for input and output
     integer,                intent(in)    :: x,y  !*FD Location of starting point (index)
 
     integer :: nx,ny
@@ -523,7 +526,7 @@ contains
 
     !*FD Recursive subroutine called by {\tt glimmer\_remove\_bath}.
 
-    real(rk),dimension(:,:),intent(inout) :: orog  !*FD Orography --- used for input and output
+    real(sp),dimension(:,:),intent(inout) :: orog  !*FD Orography --- used for input and output
     integer,                intent(in)    :: x,y   !*FD Starting point
     integer,                intent(in)    :: nx,ny !*FD Size of array {\tt orography}
 

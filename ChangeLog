@@ -1,6 +1,8 @@
 2005-02-17 Ian Rutt
  * Tidied up GLINT pdd scheme and added config file handling
-
+ * Major pruning of redundant forcing code in GLINT, and general
+   reorganisation. Not fully functional yet.
+	
 2005-02-16 Ian Rutt
  * First stage of making sure GLINT does what it should. Build
    successfully, but as yet untested.

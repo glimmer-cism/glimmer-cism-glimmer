@@ -50,6 +50,8 @@ module glint_pdd
   !*FD message passing, to make the integration of the PDD table look more 
   !*FD comprehensible, and avoid the need to have two customised copies of 
   !*FD the integration code.
+  !*FD
+  !*FD Note also that this code now deals in {\it unscaled} variables.
 
   use glimmer_global
 
@@ -82,19 +84,16 @@ module glint_pdd
 
     ! Parameters for the PDD calculation
 
-    real(sp) :: pddfs               !*FD Later set to \texttt{(rhow / rhoi) * pddfac\_snow / (acc0 * scyr)}
-    real(sp) :: pddfi               !*FD Later set to \texttt{(rhow / rhoi) * pddfac\_ice  / (acc0 * scyr)}
+    real(sp) :: pddfs               !*FD Later set to \texttt{(rhow / rhoi) * pddfac\_snow}
+    real(sp) :: pddfi               !*FD Later set to \texttt{(rhow / rhoi) * pddfac\_ice}
     real(sp) :: wmax        = 0.6   !*FD Fraction of melted snow that refreezes
     real(dp) :: pddfac_ice  = 0.008 !*FD PDD factor for ice (m day$^{-1}$ $^{\circ}C$^{-1}$)
     real(dp) :: pddfac_snow = 0.003 !*FD PDD factor for snow (m day$^{-1}$ $^{\circ}C$^{-1}$)
 
-    ! andreas values for pdd coeffs
-    ! pddfs 0.005 and pddfi 0.016
-    ! eismint pddfs 0.003 and pddfi 0.008
-    ! ritz et al 1997 pddfs 0.005 and pddfi 0.016
-
   end type glint_pdd_params
  	 
+  ! Module parameters use for back-door message-passing
+
   real(sp) :: dd_sigma            !*FD The value of $\sigma$ in the PDD integral
   real(sp) :: t_a_prime           !*FD The value of $T'_{a}$ in the PDD integral
   real(sp) :: mean_annual_temp    !*FD Mean annual temperature
@@ -141,13 +140,13 @@ contains
 
     implicit none 
  
-    type(glint_pdd_params),   intent(inout) :: params !*FD The positive-degree-day parameters
+    type(glint_pdd_params),   intent(inout) :: params  !*FD The positive-degree-day parameters
     real(sp), dimension(:,:), intent(in)    :: artm    !*FD Annual mean air-temperature 
                                                        !*FD ($^{\circ}$C)
     real(sp), dimension(:,:), intent(in)    :: arng    !*FD Annual temerature half-range ($^{\circ}$C)
     real(sp), dimension(:,:), intent(in)    :: prcp    !*FD Annual accumulated precipitation 
                                                        !*FD (mm water equivalent)
-    real(sp), dimension(:,:), intent(in)    :: lati    !*FD Latitudes of each point in the 
+    real(rk), dimension(:,:), intent(in)    :: lati    !*FD Latitudes of each point in the 
                                                        !*FD domain ($^{\circ}$N)
     real(sp), dimension(:,:), intent(out)   :: ablt    !*FD Annual ablation (mm water equivalent)
     real(sp), dimension(:,:), intent(out)   :: acab    !*FD Annual mass-balance (mm water equivalent)
@@ -212,20 +211,12 @@ contains
                 params%pddtab(jx,jy) * tx * ty +         &
                 params%pddtab(kx,jy) * (1.0 - tx) * ty
 
-          ! now start to find the actual net annual accumulation
-          ! correct prcpitation for changes in air temperature
-          ! REMOVED as we are taking precip as an input
-
-          ! prcp(ew,ns) = climate%presprcp(ew,ns) * &
-          !              pfac ** (artm(ew,ns) - climate%presartm(ew,ns))
- 
           ! this is the depth of superimposed ice that would need to be
-          ! melted before runoff can occur (prcp is already scaled)
+          ! melted before runoff can occur
 
           wfrac = params%wmax * prcp(ew,ns)
 
           ! this is the total potential ablation of SNOW
-          ! note we convert to scaled ablation
     
           pablt = pdd * params%pddfs
 
@@ -338,7 +329,6 @@ contains
     !*FD Initialises the positive-degree-day-table.
 
     use glimmer_global, only: sp
-    use paramets, only: scyr, acc0
     use physcon, only: rhoi,rhow
     use glimmer_log
 
@@ -356,8 +346,8 @@ contains
 
     ! Initialise a couple of constants
 
-    params%pddfs = (rhow / rhoi) * params%pddfac_snow / (acc0 * scyr)
-    params%pddfi = (rhow / rhoi) * params%pddfac_ice  / (acc0 * scyr)
+    params%pddfs = (rhow / rhoi) * params%pddfac_snow
+    params%pddfi = (rhow / rhoi) * params%pddfac_ice
 
     !--------------------------------------------------------------------
     ! Main loops:

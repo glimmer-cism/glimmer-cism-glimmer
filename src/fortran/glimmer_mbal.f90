@@ -142,7 +142,7 @@ contains
                                                       !*FD this subroutine and used for the mass-balance.
     real(rk), dimension(:,:),intent(in)    :: xwind   !*FD Annual mean wind field: $x$-component (m/s)
     real(rk), dimension(:,:),intent(in)    :: ywind   !*FD Annual mean wind field: $y$-component (m/s)
-    real(rk), dimension(:,:),intent(in)    :: topo    !*FD Surface topography (m)
+    real(sp), dimension(:,:),intent(in)    :: topo    !*FD Surface topography (m)
     real(sp),dimension(:,:), intent(in)    :: temp    !*FD Mean annual surface temperature field,
                                                       !*FD corrected for height ($^{\circ}$C)
     real(rk),                intent(in)    :: dx      !*FD $x$ grid spacing (m)
@@ -267,7 +267,7 @@ contains
 
     real(rk),dimension(:,:),intent(in) :: u   !*FD The $x$ component of the mean wind field (m/s)
     real(rk),dimension(:,:),intent(in) :: v   !*FD The $y$ component of the mean wind field (m/s)
-    real(rk),dimension(:,:),intent(in) :: h0  !*FD The topography (m)
+    real(sp),dimension(:,:),intent(in) :: h0  !*FD The topography (m)
     real(rk),               intent(in) :: dx  !*FD The $x$ grid-spacing (m)
     real(rk),               intent(in) :: dy  !*FD The $y$ grid-spacing (m)
 

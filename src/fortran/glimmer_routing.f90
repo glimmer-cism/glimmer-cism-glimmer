@@ -1,7 +1,7 @@
 
 module glint_routing
 
-  use glimmer_global,only: rk
+  use glimmer_global,only: rk,sp
 
   private
   public flow_router
@@ -14,7 +14,7 @@ contains
     !*FD according to a surface elevation field. The method used 
     !*FD is by Quinn et. al. (1991)
 
-    real(rk),dimension(:,:),intent(in)  :: surface !*FD Surface elevation
+    real(sp),dimension(:,:),intent(in)  :: surface !*FD Surface elevation
     real(rk),dimension(:,:),intent(in)  :: input   !*FD Input water field
     real(rk),dimension(:,:),intent(out) :: output  !*FD Output water field
     integer, dimension(:,:),intent(in)  :: mask    !*FD Masked points

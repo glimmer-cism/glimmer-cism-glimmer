@@ -101,13 +101,13 @@ contains
     call glint_i_readdata(instance)
 
     call new_upscale(instance%ups,grid,instance%proj, &
-                     instance%climate%out_mask)           ! Initialise upscaling parameters
+                     instance%out_mask)           ! Initialise upscaling parameters
 
     call calc_coverage(instance%proj, &                         ! Calculate coverage map
                        instance%ups,  &             
                        grid,          &
                        radea,         &
-                       instance%climate%out_mask, &
+                       instance%out_mask, &
                        instance%frac_coverage)
 
     call copy_upscale(instance%ups,instance%ups_orog)    ! Set upscaling for orog output to same as for 
@@ -156,22 +156,16 @@ contains
     
     call GetSection(config,section,'GLINT climate')
     if (associated(section)) then
-       call GetValue(section,'temperature_file',instance%forcdata%forcfile)
-       call GetValue(section,'artm_mode',instance%climate%whichartm)
-       call GetValue(section,'precip_mode',instance%climate%whichprecip)
-       call GetValue(section,'acab_mode',instance%climate%whichacab)
+       call GetValue(section,'precip_mode',instance%whichprecip)
+       call GetValue(section,'acab_mode',instance%whichacab)
     end if
 
     ! Print some configuration
     call write_log('GLINT climate')
     call write_log('-------------')
-    write(message,*) 'external temperature file ', trim(instance%forcdata%forcfile)
+    write(message,*) 'precip_mode ',instance%whichprecip
     call write_log(message)
-    write(message,*) 'artm_mode   ',instance%climate%whichartm
-    call write_log(message)
-    write(message,*) 'precip_mode ',instance%climate%whichprecip
-    call write_log(message)
-    write(message,*) 'acab_mode   ',instance%climate%whichacab
+    write(message,*) 'acab_mode   ',instance%whichacab
     call write_log(message)
     call write_log('')
   end subroutine glint_i_readconfig
@@ -189,151 +183,15 @@ contains
     implicit none
 
     type(glint_instance),intent(inout)   :: instance    !*FD Instance whose elements are to be allocated.
-    
-    real(sp),dimension(:,:),allocatable :: arng
-    type(glimmer_nc_input), pointer :: ic
-    logical found_precip,found_presurf,found_usurf
-    
+     
     ! read data
     call glint_io_readall(instance,instance%model)
-
-    if (instance%forcdata%forcfile .ne. '') then
-      call redtsout(instance%forcdata%forcfile,50,instance%forcdata)
-    else
-      allocate(instance%forcdata%forcing(1,2))
-      instance%forcdata%forcing(1,:) = (/ 2 * instance%forcdata%trun, 0.0 /)
-      instance%forcdata%flines = 1
-    end if
-
-    ! -------------------------------------------------------------------
-    ! Read present-day surface elevation, if required, and calculate
-    ! the present-day surface temperature from it.
-    ! -------------------------------------------------------------------
-
-    if (found_presurf) then
-
-       ! Allocate arng array, passed to calcartm for air temperature range
-       
-       allocate(arng(size(instance%climate%presartm,1),size(instance%climate%presartm,2)))
-
-       !----------------------------------------------------------------------
-       ! Calculate the present-day mean air temperature and range, based on
-       ! surface elevation and latitude
-       !----------------------------------------------------------------------
-       
-       call calcartm(instance, 3, &
-            instance%climate%presusrf, &
-            instance%model%climate%lati,     &
-            instance%climate%presartm, &  !** OUTPUT
-            arng)                      !** OUTPUT
-       
-       !----------------------------------------------------------------------
-       ! Calculate present-day mass-balance based on present-day elevation,
-       ! temperature, temperature range, and PDD method.
-       !----------------------------------------------------------------------
-       
-       call calcacab(instance%model%numerics,         &
-            instance%climate,         &
-            instance%pddcalc,          &
-            1,                      &
-            instance%model%geometry%usrf,  &
-            instance%climate%presartm, &
-            arng,                   &
-            instance%climate%presprcp, &
-            instance%climate%ablt,     &
-            instance%model%climate%lati,     &
-            instance%model%climate%acab,     &
-            instance%model%geometry%thck)     
-       
-       ! Set ice thickness to be mass-balance*time-step, where positive
-       
-       instance%model%geometry%thck = max(0.0d0,instance%model%climate%acab*instance%model%numerics%dt)
-       
-       ! Calculate the elevation of the lower ice surface
-       
-       call glide_calclsrf(instance%model%geometry%thck,instance%model%geometry%topg, &
-            instance%model%climate%eus,instance%model%geometry%lsrf)
-       
-       ! Calculate the elevation of the upper ice surface by adding thickness
-       ! onto the lower surface elevation.
-       
-       instance%model%geometry%usrf = instance%model%geometry%thck + instance%model%geometry%lsrf
-       
-       call timeevoltemp(instance%model,0)     ! calculate initial temperature distribution
-
-       deallocate(arng) 
-       
-    else    
-       
-       ! -----------------------------------------------------------------
-       ! Calculate the lower and upper surfaces of the ice-sheet 
-       ! -----------------------------------------------------------------
-       
-       call glide_calclsrf(instance%model%geometry%thck,instance%model%geometry%topg, &
-            instance%model%climate%eus,instance%model%geometry%lsrf)
-       instance%model%geometry%usrf = instance%model%geometry%thck + instance%model%geometry%lsrf
-       
-    endif
-
+      
+    call glide_calclsrf(instance%model%geometry%thck,instance%model%geometry%topg, &
+         instance%model%climate%eus,instance%model%geometry%lsrf)
+    instance%model%geometry%usrf = instance%model%geometry%thck + instance%model%geometry%lsrf
+ 
   end subroutine glint_i_readdata
-
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-  subroutine redtsout(fname,unit,forcdata)
-
-    !*FD Sets up forcing data from time-series file (e.g. GRIP data)
-    implicit none
-
-    character(*), intent(in)          :: fname     !*FD filename to use
-    integer,      intent(in)          :: unit      !*FD File unit to use
-    type(glint_forcdata),intent(inout) :: forcdata  !*FD Parameters to be set
-
-    ! Internal variables
-
-    integer :: count, ios = 0
-    logical :: there
-
-    ! ---------------------------------------------------------------
-    ! Check to see whether file exists
-    ! ---------------------------------------------------------------
-
-    inquire(file=fname,exist=there)    
-
-    if ( .not. there ) then
-       print*,'ERROR: Time series file not found'
-       stop
-    endif
-
-    ! ---------------------------------------------------------------
-    ! Read in the whole file so we know how many lines there are
-    ! ---------------------------------------------------------------
-
-    open(unit,file=fname,form='formatted')
-
-    forcdata%flines = 0
-
-    do while (ios == 0)
-       forcdata%flines = forcdata%flines + 1
-       read(unit,*,iostat=ios)  
-    end do
-
-    forcdata%flines = forcdata%flines - 1
-
-    ! ---------------------------------------------------------------
-    ! Allocate array appropriately, then read in data
-    ! ---------------------------------------------------------------
-
-    allocate(forcdata%forcing(forcdata%flines,2))
-
-    rewind(unit)
-
-    do count = 1, forcdata%flines
-       read(unit,*) forcdata%forcing(count,:)
-    end do
-
-    close(unit)
-
-  end subroutine redtsout
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -532,7 +390,7 @@ contains
                           instance%ups_orog, &
                           instance%model%geometry%usrf, &
                           orog,    &
-                          instance%climate%out_mask)
+                          instance%out_mask)
       orog=thk0*orog
     endif
 
@@ -559,7 +417,7 @@ contains
                           instance%ups, &
                           upscale_temp, &
                           if_temp,    &
-                          instance%climate%out_mask)
+                          instance%out_mask)
 
       if (present(ice_frac)) ice_frac=if_temp
 
@@ -569,7 +427,7 @@ contains
 
     if (present(albedo)) then 
       where (if_temp>0.0)
-        albedo=instance%climate%ice_albedo
+        albedo=instance%ice_albedo
       elsewhere
         albedo=0.0
       endwhere

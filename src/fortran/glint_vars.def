@@ -18,25 +18,7 @@ datamod:  glint_type
 dimensions:    time, y1, x1
 units:         1
 long_name:     upscaling and downscaling mask
-data:          data%climate%out_mask
-load:          1
-coordinates:   lon lat
-
-[presprcp]
-dimensions:    time, y1, x1
-units:         meter/year
-long_name:     present day precipitation
-data:          data%climate%presprcp
-factor:        scale2d_f9
-load:          1
-coordinates:   lon lat
-
-[presusrf]
-dimensions:    time, y1, x1
-units:         meter
-long_name:     present day surface of the ice-sheet
-data:          data%climate%presusrf
-factor:        thk0
+data:          data%out_mask
 load:          1
 coordinates:   lon lat
 
@@ -44,14 +26,14 @@ coordinates:   lon lat
 dimensions:    time, y1, x1
 units:         degree_Celsius
 long_name:     annual temperature range
-data:          data%climate%arng
+data:          data%arng
 coordinates:   lon lat
 
 [prcp]
 dimensions:    time, y1, x1
 units:         meter/year
 long_name:     precipitation
-data:          data%climate%prcp
+data:          data%prcp
 factor:        scale2d_f1
 standard_name: lwe_precipitation_rate
 coordinates:   lon lat
@@ -60,6 +42,6 @@ coordinates:   lon lat
 dimensions:    time, y1, x1
 units:         meter/year
 long_name:     ablation
-data:          data%climate%ablt
+data:          data%ablt
 factor:        scale2d_f1
 coordinates:   lon lat
