@@ -532,21 +532,19 @@ contains
   
     ! Internal variables
 
-    integer :: nx,ny
+    integer :: nx,ny,i
     integer,dimension(1) :: loc
 
     nx=size(lons) ; ny=size(lats)
 
-    if ((lon>maxval(lons)).and.(lon<360.0)) then
-      loc=maxloc(lons)
-      il=loc(1)
-    else
-      il=1
-      do
-        if (lon>=array_bcs(lons,il).and.lon<=array_bcs(lons,il+1)) exit
-        il=il+1
-      enddo
-    endif
+    il=nx
+
+    do i=1,nx-1
+      if (lon_between(lons(i),lons(i+1),lon)) then
+        il=i
+        exit
+      endif
+    enddo
 
     if ((lat<lats(ny)).and.(lat>-90.0)) then
       jl=ny
@@ -563,7 +561,7 @@ contains
       if (lat>lats(jl)) exit
       jl=jl+1
     enddo
-    
+
   end subroutine find_ll_index
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -602,7 +600,6 @@ contains
         xloc(i,j,1)=il  ! This is the starting point - we now need to find
         yloc(i,j,1)=jl  ! three other points that enclose the interpolation target
         
- 
         if (jlat>grid%lats(grid%ny)) then
           
           ! For all points except on the bottom row
@@ -882,6 +879,7 @@ contains
     real(rk),intent(in)  :: xp,yp,xa,ya,xb,yb,xc,yc,xd,yd
 
     real(rk) :: a,b,c
+    real(rk),parameter :: small=1d-8
 
     a=(yb-ya)*(xc-xd)-(yc-yd)*(xb-xa)
 
@@ -892,7 +890,7 @@ contains
          
     c=xp*(yd-ya)+yp*(xa-xd)+ya*xd-xa*yd
 
-    if (a/=0.0) then
+    if (abs(a)>small) then
       x=(-b-sqrt(b**2-4*a*c))/(2*a)
     else
       x=-c/b

@@ -433,7 +433,7 @@ contains
     enddo  
 
     dlon = dlon*D2R
-    call sincos (lon,slon,clon)
+    call sincos (dlon,slon,clon)
 
      if (project_info%north_pole) then
       rho = project_info%s_c * tan (M_PI_4 - 0.5 * D2R * dlat)
