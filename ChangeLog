@@ -1,3 +1,6 @@
+2005-03-10 Ian Rutt
+ * Began preliminary work on objectifying mass-balance accumulation in GLINT
+
 2005-03-09 Ian Rutt
  * Added glimmer_daily_pdd.f90 - fully plumbed in.
  * Updated glint to have configureable number of days in year
