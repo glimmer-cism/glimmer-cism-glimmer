@@ -48,6 +48,56 @@ module glimmer_setup
 
 contains
 
+  subroutine read_config_file(unit,filename,model,proj)
+
+    use glide_messages
+    use glimmer_types
+    use glimmer_project
+    use glimmer_config
+    implicit none
+
+    !*FD Reads in configuration file for an individual ice model instance. 
+
+    integer,                  intent(in)    :: unit     !*FD Logical file unit to use for reading.
+    character(*),             intent(in)    :: filename !*FD Filename to read.
+    type(glimmer_global_type),intent(inout) :: model    !*FD Model parameters to set.
+    type(projection),         intent(inout) :: proj     !*FD Projection parameters to set.
+
+    ! Internal variables/pointers
+
+    type(ConfigSection), pointer :: config,section
+    character(80) :: outtxt
+
+    ! Lists of allowed section/value names
+
+    character(20),dimension(11) :: allowed_sections = (/ &
+         'output',            &
+         'domain size',       &
+         'projection',        &
+         'sigma coordinates', &
+         'options',           &
+         'timesteps',         &
+         'grid-lengths',      &
+         'parameters',        &
+         'forcing',           &
+         'constants',         &
+         'PDD scheme'/)
+
+    ! Open and read the configuration structure
+
+    call ConfigRead(filename,config)
+
+    ! Verify we have allowed section names
+
+    if (ValidateSections(config,allowed_sections)/=0) then
+       write(outtxt,*)'Unexpected sections in configuration file: ',trim(filename)
+       call glide_msg(GM_FATAL,__FILE__,__LINE__,trim(outtxt))
+    end if
+     
+    ! *****THIS IS UNFINISHED*****
+
+  end subroutine read_config_file
+
   subroutine initial(unit,nmlfile,model,proj)
 
     !*FD Reads in namelists for an individual ice model instance. This
@@ -100,8 +150,6 @@ contains
     ! ...for numerics
 
     real(sp) :: ntem, nvel, niso
-    real(sp),dimension(3) :: nout
-    real(sp) :: nstr
     real(dp) :: thklim, mlimit, dew, dns
 
     ! ...for funits
@@ -144,7 +192,7 @@ contains
                       whichisot, whichslip, whichbwat, whichmarn, &
                       whichbtrc, whichacab, & 
                       whichevol, whichwvel, whichprecip
-    namelist / nums / ntem, nvel, niso, nout, nstr, thklim, mlimit, dew, dns 
+    namelist / nums / ntem, nvel, niso, thklim, mlimit, dew, dns 
     namelist / pars / geot, fiddle, airt, nmsb, hydtim, isotim, bpar
     namelist / dats / forcfile
     namelist / cons / lapse_rate,precip_rate,air_temp,albedo
@@ -191,8 +239,6 @@ contains
     ntem   = model%numerics%ntem
     nvel   = model%numerics%nvel
     niso   = model%numerics%niso
-    nout   = model%numerics%nout
-    nstr   = model%numerics%nstr
     thklim = model%numerics%thklim
     mlimit = model%numerics%mlimit
     dew    = model%numerics%dew
@@ -299,8 +345,6 @@ contains
     model%numerics%ntem   = ntem
     model%numerics%nvel   = nvel
     model%numerics%niso   = niso
-    model%numerics%nout   = nout
-    model%numerics%nstr   = nstr
     model%numerics%thklim = thklim
     model%numerics%mlimit = mlimit
     model%numerics%dew    = dew

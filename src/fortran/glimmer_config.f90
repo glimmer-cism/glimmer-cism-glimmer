@@ -166,6 +166,68 @@ contains
 
   !--------------------------------------------------------------------------
 
+  integer function ValidateSections(config,section_list)
+
+    !*FD Checks to see that all the sections in a config file are also
+    !*FD present in a supplied list. Prints a message returns 1 if not.
+    !*FDRV 0: No errors, 1: unexpected section name found.
+
+    use glide_messages
+    implicit none
+
+    type(ConfigSection), pointer :: config    !*FD Pointer to list to be checked
+    character(*),dimension(:) :: section_list !*FD List of allowed section names
+
+    type(ConfigSection), pointer :: sec ! Keeps track of where we are
+    character(80) :: outtxt
+
+    ValidateSections=0
+    sec=>config
+    do 
+       if (.not.any(sec%name==section_list)) then
+          write(outtxt,*)'Unrecognised section name: ',trim(sec%name)
+          call glide_msg(GM_ERROR,__FILE__,__LINE__,trim(outtxt))
+          ValidateSections=1
+       end if
+       sec=>sec%next
+       if (.not.associated(sec)) exit
+    end do
+
+  end function ValidateSections
+
+  !--------------------------------------------------------------------------
+
+  integer function ValidateValueNames(config,section_list)
+
+    !*FD Checks to see that all the sections in a config file are also
+    !*FD present in a supplied list. Prints a message returns 1 if not.
+    !*FDRV 0: No errors, 1: unexpected section name found.
+
+    use glide_messages
+    implicit none
+
+    type(ConfigSection), pointer :: config    !*FD Pointer to list to be checked
+    character(*),dimension(:) :: section_list !*FD List of allowed section names
+
+    type(ConfigValue), pointer :: val ! Keeps track of where we are
+    character(80) :: outtxt
+
+    ValidateValueNames=0
+    val=>config%values
+    do 
+       if (.not.any(val%name==section_list)) then
+          write(outtxt,*)'Unrecognised value name: ',trim(val%name)
+          call glide_msg(GM_ERROR,__FILE__,__LINE__,trim(outtxt))
+          ValidateValueNames=1
+       end if
+       val=>val%next
+       if (.not.associated(val)) exit
+    end do
+
+  end function ValidateValueNames
+
+  !--------------------------------------------------------------------------
+
   subroutine GetSection(config,found,name)
 
     !*FD Find and return section with name. The found section is

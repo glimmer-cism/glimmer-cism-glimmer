@@ -9,7 +9,7 @@ GLIMMERFLAGS=$(F77FLAGS) $(GLIMMERPRECOPT)
 #
 SUBDIRS = SLAP_library
 LIBS = libglimmer.a
-PROGS = glimmer_example bin2ncdf input2ncdf relaxed
+PROGS = glimmer_example bin2ncdf input2ncdf relaxed test_config
 DATA = ncdf_vars.def
 
 AUTOGEN = ncdf.f90 ncdf_file.f90 ncdf_infile.f90 ncdf_params.f90
@@ -59,7 +59,7 @@ input2ncdf:	input2ncdf.o glimmer_global.o  ncdf.o ncdf_file.o glimmer_modu.o gli
 relaxed: relaxed.o  SLAP_library libglimmer.a
 	$(F77) -o $@ $< libglimmer.a SLAP_library/libslap.a $(LD_FLAGS) 
 
-test_config:	test_config.o glimmer_config.o
+test_config:	test_config.o glimmer_config.o glide_messages.o
 	$(F77) -o $@ $^ $(LD_FLAGS)
 
 # install glimmer

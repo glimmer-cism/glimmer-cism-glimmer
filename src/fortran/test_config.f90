@@ -43,10 +43,11 @@
 program testconfig
   !*FD testing config module
   !*FD written by Magnus Hagdorn, May 2004
+  !*FD extended by Ian Rutt, August 2004
   use glimmer_config
   implicit none
 
-  character(len=30) fname
+  character(len=30) fname,sname,vname,vtype
   type(ConfigSection), pointer :: config,section
 
   character(len=100) :: charval
@@ -61,25 +62,40 @@ program testconfig
 
   call PrintConfig(config)
 
-  call GetSection(config,section,'a section')
+  do
 
-  write(*,*) associated(section)
-  if (.not.associated(section)) then
-     write(*,*) 'Huh?1'
-     stop
-  end if
+     write(*,*)'Choose a section:'
+     read(*,'(A)') sname
+     if (trim(sname)=='*') exit
+     call GetSection(config,section,sname)
+     if (.not.associated(section)) then
+        write(*,*) 'No such section'
+        cycle
+     end if
 
-  call GetValue(section,'an_int',intval)
-  call GetValue(section,'a_float',realval)
-  call GetValue(section,'a_char',charval)
-  call GetValue(section,'an_array',realarray)
-  write(*,*) intval,realval,trim(charval)
-  write(*,*) realarray
+     do
 
-  intval = -1
-  realval = -10.
-  call GetValue(section,'an_int',realval)
-  call GetValue(section,'a_float',charval)
-  call GetValue(section,'a_char',intval)
-  write(*,*) intval,realval,trim(charval)
+        write(*,*)'Choose a value name:'
+        read(*,*) vname
+        if (trim(vname)=="*") exit
+        write(*,*) 'Real(r), Integer(i), character(c) or real array (a)?'
+        read(*,*) vtype
+     
+        select case(trim(vtype))
+        case('i')
+           call GetValue(section,trim(vname),intval)
+           write(*,*)intval
+        case('r')
+           call GetValue(section,trim(vname),realval)
+           write(*,*)realval
+        case('c')
+           call GetValue(section,trim(vname),charval)
+           write(*,*)charval
+        case('a')
+           call GetValue(section,trim(vname),realarray)
+           write(*,*) realarray
+        end select
+     end do
+  end do
+
 end program testconfig

@@ -143,7 +143,7 @@ contains
     instance%model%numerics%tinc=time_step             ! Initialise the model time step
 
     call initial(unit,nmlfile,instance%model,instance%proj)     ! Read namelists and initialise variables
-
+!    call  read_config_file(unit,nmlfile,instance%model,instance%proj) !***THIS IS WHERE THE NEW CONFIG READ GOES***
     call new_proj(instance%proj,radea)                          ! Initialise the projection
     call new_downscale(instance%downs,instance%proj,grid)       ! Initialise the downscaling
     call glimmer_i_allocate(instance,grid%nx,grid%ny)           ! Allocate arrays appropriately

@@ -376,7 +376,6 @@ module glimmer_types
     real(sp) :: ntem   =    1.0   !*FD temperature time step in years
     real(sp) :: nvel   =    1.0   !*FD velocity time step in years
     real(sp) :: niso   =    1.0   !*FD flexure time step in years
-    real(sp) :: nstr   =    0.0   !*FD output start time in years
     real(dp) :: alpha  =    0.5d0 !*FD richard suggests 1.5 - was a parameter in original
     real(dp) :: alphas =    0.5d0 !*FD was a parameter in the original
     real(dp) :: thklim =  100.0   
@@ -387,13 +386,7 @@ module glimmer_types
     real(dp) :: dttem  =    0.0
     real(sp) :: nshlf  =    0.0
 
-    ! Data output frequency -------------------------------------------------
-
-    real(sp),dimension(3)         :: nout = (/1.0,10.0,10.0/)
-    
-    !*FD output time step in years for time series, horiz. and full data 
-                                          
-    ! Vertical coordinate ---------------------------------------------------
+   ! Vertical coordinate ---------------------------------------------------
                                                                
     real(dp),dimension(:),pointer :: sigma => null() !*FD Sigma values for 
                                                      !*FD vertical spacing of 

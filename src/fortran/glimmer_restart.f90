@@ -183,8 +183,6 @@ contains
     write(unit) instance%model%numerics% ntem
     write(unit) instance%model%numerics% nvel
     write(unit) instance%model%numerics% niso
-    write(unit) instance%model%numerics% nout
-    write(unit) instance%model%numerics% nstr
     write(unit) instance%model%numerics% alpha
     write(unit) instance%model%numerics% alphas
     write(unit) instance%model%numerics% thklim
@@ -509,8 +507,6 @@ contains
     read(unit) instance%model%numerics% ntem
     read(unit) instance%model%numerics% nvel
     read(unit) instance%model%numerics% niso
-    read(unit) instance%model%numerics% nout
-    read(unit) instance%model%numerics% nstr
     read(unit) instance%model%numerics% alpha
     read(unit) instance%model%numerics% alphas
     read(unit) instance%model%numerics% thklim

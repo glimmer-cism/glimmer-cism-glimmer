@@ -2,7 +2,12 @@
  * Moved PDD and precip forcing parameters into the namelist, and slightly
    reorganized glimmer_paramets.f90 and glimmer_physcon.f90. Would like to
    get rid of both these files eventually.
-
+ * Removed redundant nout and nstr parameters from model
+ * Expanded test_config, and added it to build/install in makefile
+ * Began work to replace namelist input with Magi's config-type file
+ * Added functions to glimmer_config.f90 to check whether section/value
+   names are in a prescribed list or not.
+	
 2004-08-18 Magnus Hagdorn
  * Brown Paper Back: only applied half the patch to glimmer_thck.f90
    derivatives should be devided by 2*grid_length rather than multiplied
