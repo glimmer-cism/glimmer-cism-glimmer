@@ -5,3 +5,6 @@
  * reduced number of time slices in example code to 10000yrs
  * made kind rk=dp (rather than 8)
  * (glimmer_outp.f90) integer array index
+ * added SUN WS f95 makros
+ * (glimmer_restart.f90, glimmer_interp.f90) workaround for SUN WS compiler bug
+ * (glimmer.f90, glimmer_velo.f90) avoid division by zero

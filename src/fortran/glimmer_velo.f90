@@ -341,9 +341,13 @@ contains
 
             hrzflwa = hsum(flwa(:,ew:ew+1,ns:ns+1))  
 
-            const(2) = c * diffu(ew,ns) / velowk%dintflwa(ew,ns)
-            const(3) = const(2) * dusrfdns(ew,ns)  
-            const(2) = const(2) * dusrfdew(ew,ns) 
+            if (velowk%dintflwa(ew,ns) /= 0.0d0) then
+               const(2) = c * diffu(ew,ns) / velowk%dintflwa(ew,ns)
+               const(3) = const(2) * dusrfdns(ew,ns)  
+               const(2) = const(2) * dusrfdew(ew,ns) 
+            else
+               const(2:3) = 0.0d0
+            end if
 
             do up = upn-1, 1, -1
               const(1) = velowk%depth(up) * sum(hrzflwa(up:up+1)) 

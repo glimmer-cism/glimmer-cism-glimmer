@@ -369,31 +369,43 @@ contains
         ! Add this contribution to the output orography
   
         if (present(orog_out)) then
-          orog_out=orog_out+(orog_out_temp* &
-              params%instances(i)%frac_coverage/ &
-              params%cov_normalise)
-          where (params%cov_normalise==0.0) orog_out=0.0
+           where (params%cov_normalise==0.0)
+              orog_out=0.0
+           elsewhere
+              orog_out=orog_out+(orog_out_temp* &
+                   params%instances(i)%frac_coverage/ &
+                   params%cov_normalise)
+           end where
         endif
 
         if (present(albedo)) then
-          albedo=albedo+(albedo_temp* &
-              params%instances(i)%frac_coverage/ &
-              params%cov_normalise)
-          where (params%cov_normalise==0.0) albedo=0.0
+           where (params%cov_normalise==0.0) 
+              albedo=0.0
+           elsewhere
+              albedo=albedo+(albedo_temp* &
+                   params%instances(i)%frac_coverage/ &
+                   params%cov_normalise)
+           end where
         endif
 
         if (present(ice_frac)) then
-          ice_frac=ice_frac+(if_temp* &
-              params%instances(i)%frac_coverage/ &
-              params%cov_normalise)
-          where (params%cov_normalise==0.0) ice_frac=0.0
+           where (params%cov_normalise==0.0) 
+              ice_frac=0.0
+           elsewhere
+              ice_frac=ice_frac+(if_temp* &
+                   params%instances(i)%frac_coverage/ &
+                   params%cov_normalise)
+           end where
         endif
 
         if (present(fw_flux)) then
-          fw_flux=fw_flux+(fw_temp* &
-              params%instances(i)%frac_coverage/ &
-              params%cov_normalise)
-          where (params%cov_normalise==0.0) fw_flux=0.0
+           where (params%cov_normalise==0.0) 
+              fw_flux=0.0
+           elsewhere
+              fw_flux=fw_flux+(fw_temp* &
+                   params%instances(i)%frac_coverage/ &
+                   params%cov_normalise)
+           end where
         endif
       enddo
 
