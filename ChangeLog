@@ -1,3 +1,7 @@
+2004-08-10 Ian Rutt
+ * Updated top-level information files
+ * Cleared out unneccessary variables and things from makefile.arc files
+
 2004-08-04 Ian Rutt
  * Completed new PDD code, with Romberg integration from a
    ACM public domain routine (Algorithm 60). This has been tested, and

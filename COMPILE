@@ -8,43 +8,31 @@ on Linux and SUN WS 6.0 on Sun Solaris systems.
 
 Prerequisites:
 =============
+
 * The netCDF library
   get it from here: http://www.unidata.ucar.edu/packages/netcdf/
   you need to make sure that the f90 bindings are also installed
 
-Compiling under Windows:
-=======================
-
-Compilation using Compaq Visual Fortran can be achieved in the usual way,
-setting up a workspace and importing the appropriate files. Remember to import
-the SLAP library files as well as the files in the top-level directory. 
-
-Before compilation, the following must be done:
-
-1) Enable preprocessor
-2) Define preprocessor symbol CVF
-
-This will automatically compile the example file (example_glimmer.f90) and
-link appropriately. However, for the model to run, the input files need to be
-copied from the data directory into the working directory.
-
-
 Compiling under Unix/Linux:
 ==========================
 
-You can control where glimmer is installed by setting the GLIMMER_PREFIX variable.
+You can control where glimmer is installed by setting the GLIMMER_PREFIX
+variable.
+
 Files will be installed in the usual places:
+
 $GLIMMER_PREFIX/bin   for executables
 $GLIMMER_PREFIX/lib   for libraries
 $GLIMMER_PREFIX/mod   for modules
 $GLIMMER_PREFIX/share for data files
+
 If GLIMMER_PREFIX is not set, install paths will default to the checked out directory, 
 ./glimmer
 
 Makefiles are provided for both the SLAP library and the Glimmer code. The
 general sequence of commands to compile and link under Unix/Linux is as
-follows, assuming you start in the glimmer/src/fortran directory (the one with
-the model code in). The Makefile will resolve dependencies automatically.
+follows, assuming you start in the top-level glimmer directory. The Makefile
+will resolve dependencies automatically.
 
 make
    will compile all libraries and programs
@@ -53,11 +41,24 @@ make install
 make clean
    will delete unneeded files
 
+Compiling/running glimmer_example
+=================================
+
+All that should be necessary for this is:
+
+make
+make install
+cd data
+../bin/glimmer_example
+
+The example runs for 50,000 years, in a 20km resolution domain covering Greenland.
+
 Compilation Options:
 ====================
+
 Parameters required by make are contained in makefile.arc (in the same manner
 currently used by Genie). There are a number of architecture dependent parameter 
-files. Find the one (create a new one) most suited and create a symbolic link to
+files. Find the one (or create a new one) most suited and create a symbolic link to
 makefile.arc. The relevant variables for Glimmer are F77 and
 F77FLAGS, which specify the compiler command and flags to use,
 respectively. Note that although F77 is indicated, a FORTRAN 90 compiler is
@@ -66,7 +67,7 @@ is as follows:
 
 1) Intel Fortran Compiler:
 
-   F77      = ifc
+   F77      = ifort (for v.8 of the compiler, otherwise ifc)
    F77FLAGS = -fpp
 
    In addition, the environment variable F_UFMTENDIAN must be set before
@@ -79,7 +80,7 @@ is as follows:
 
       > setenv F_UFMTENDIAN big
 
-2) Portman Group Compiler:
+2) Portland Group Compiler:
 
    F77	    = pgf90
    F77FLAGS = -Mpreprocess -byteswapio
@@ -105,3 +106,33 @@ glimmer/mod directory.
 Remember that if you want to move the library files (libslap.a and
 libglimmer.a), the .mod files need to be moved as well (or the compiler told
 where to find them)
+
+Compiling Glimmer under Windows:
+===============================
+
+Compilation using Compaq Visual Fortran is not entirely straightforward,
+since there is the need for custom build steps to generate .f90 files from the
+.f90.in files. However, if you are willing to delve into the Unix/Linux
+makefiles to discover how this is accomplished, it is possible. 
+
+Using the netcdf library under Windows raises its own problems, since the
+pre-built netcdf files distributed by Unidata don't include the f90 interface
+(this is because there is no standardisation to .mod files, so each compiler
+uses its own format). The best course of action is to download the source, and
+build solely the f90 interface, linking to the pre-built f77/C library. This
+will generate a .mod file appropriate to your compiler which can then be
+placed into the include search path.
+
+When compiling under Windows, remember to import the SLAP library files as
+well as the files in the top-level directory into the visual studio
+environment. Note also that not all the files in the main src/fortran
+directory are part of the glimmer library - the following are not:
+
+bin2ncdf.f90
+glimmer_example.f90
+input2ncdf.f90
+relaxed.f90
+test_config.f90
+
+Nevertheless, glimmer_example.f90 is just that - an example utilisation of the
+glimmer library.
