@@ -43,8 +43,8 @@
 module glide_velo
 
   !*FD Contains routines which handle various aspects of velocity in the model,
-  !*FD not only the bulk ice velocity, but also basal sliding, and vertical grid velocities,
-  !*FD etc.
+  !*FD not only the bulk ice velocity, but also basal sliding, and vertical grid 
+  !*FD velocities, etc.
 
   use glide_types
 
@@ -539,8 +539,8 @@ contains
 
     ! Multiply grid-spacings by 16 -----------------------------------------------------
 
-    dew16 = 16.0d0 * numerics%dew
-    dns16 = 16.0d0 * numerics%dns
+    dew16 = 1d0/(16.0d0 * numerics%dew)
+    dns16 = 1d0/(16.0d0 * numerics%dns)
 
     ! ----------------------------------------------------------------------------------
     ! Main loop over each grid-box
@@ -561,11 +561,12 @@ contains
           cons(2) = sum(geomderv%dthckdew(ew-1:ew,ns-1:ns)) / 16.0d0
           cons(3) = sum(geomderv%dusrfdns(ew-1:ew,ns-1:ns)) / 16.0d0
           cons(4) = sum(geomderv%dthckdns(ew-1:ew,ns-1:ns)) / 16.0d0
-          ! cons(5) = sum(geomderv%stagthck(ew-1:ew,ns-1:ns)) / dew16
-          ! cons(6) = sum(geomderv%stagthck(ew-1:ew,ns-1:ns)) / dns16
+          cons(5) = sum(geomderv%stagthck(ew-1:ew,ns-1:ns))
+          cons(6) = cons(5)*dns16
+          cons(5) = cons(5)*dew16
           ! * better? (an alternative from TP's original code)
-          cons(5) = (thck(ew-1,ns)+2.0d0*thck(ew,ns)+thck(ew+1,ns)) / dew16
-          cons(6) = (thck(ew,ns-1)+2.0d0*thck(ew,ns)+thck(ew,ns+1)) / dns16
+          !cons(5) = (thck(ew-1,ns)+2.0d0*thck(ew,ns)+thck(ew+1,ns)) * dew16
+          !cons(6) = (thck(ew,ns-1)+2.0d0*thck(ew,ns)+thck(ew,ns+1)) * dns16
 
           velowk%suvel = hsum4(uvel(:,ew-1:ew,ns-1:ns))
           velowk%svvel = hsum4(vvel(:,ew-1:ew,ns-1:ns))
@@ -574,16 +575,10 @@ contains
 
           do up = upn-1, 1, -1
             wvel(up,ew,ns) = wvel(up+1,ew,ns) &
-                       - velowk%dupsw(up) * cons(5) * (sum(uvel(up:up+1,ew,ns-1:ns)) &
-                       - sum(uvel(up:up+1,ew-1,ns-1:ns))) &
-                       - velowk%dupsw(up) * cons(6) * (sum(vvel(up:up+1,ew-1:ew,ns)) &
-                       - sum(vvel(up:up+1,ew-1:ew,ns-1))) &
-                       - (velowk%suvel(up+1) &
-                        - velowk%suvel(up)) * (cons(1) &
-                        - velowk%depthw(up) * cons(2)) &
-                       - (velowk%svvel(up+1) &
-                        - velowk%svvel(up)) * (cons(3) &
-                        - velowk%depthw(up) * cons(4)) 
+                       - velowk%dupsw(up) * cons(5) * (sum(uvel(up:up+1,ew,ns-1:ns))  - sum(uvel(up:up+1,ew-1,ns-1:ns))) &
+                       - velowk%dupsw(up) * cons(6) * (sum(vvel(up:up+1,ew-1:ew,ns))  - sum(vvel(up:up+1,ew-1:ew,ns-1))) &
+                       - (velowk%suvel(up+1) - velowk%suvel(up)) * (cons(1) - velowk%depthw(up) * cons(2)) &
+                       - (velowk%svvel(up+1) - velowk%svvel(up)) * (cons(3) - velowk%depthw(up) * cons(4)) 
           end do
         else 
 
@@ -750,23 +745,24 @@ contains
 
     do ns = 2,nsn
       do ew = 2,ewn
-        if (thck(ew,ns) > numerics%thklim) then
+         if (thck(ew,ns) > numerics%thklim .and. wvel(1,ew,ns).ne.0) then
 
-          ! Why are these results stored in wchk? The resulting array is not used
-          ! later on!
+            ! Why are these results stored in wchk? The resulting array is not used
+            ! later on!
 
-          wchk(ew,ns) = geomderv%dusrfdtm(ew,ns) &
-                      - acab(ew,ns) &
-                      + (sum(uvel(ew-1:ew,ns-1:ns)) * sum(geomderv%dusrfdew(ew-1:ew,ns-1:ns)) &
-                       + sum(vvel(ew-1:ew,ns-1:ns)) * sum(geomderv%dusrfdns(ew-1:ew,ns-1:ns))) &
-                      / 16.0d0
+            wchk(ew,ns) = geomderv%dusrfdtm(ew,ns) &
+                 - acab(ew,ns) &
+                 + (sum(uvel(ew-1:ew,ns-1:ns)) * sum(geomderv%dusrfdew(ew-1:ew,ns-1:ns)) &
+                 + sum(vvel(ew-1:ew,ns-1:ns)) * sum(geomderv%dusrfdns(ew-1:ew,ns-1:ns))) &
+                 / 16.0d0
 
-          tempcoef = wchk(ew,ns) / wvel(1,ew,ns)
+            
+            tempcoef = wchk(ew,ns) - wvel(1,ew,ns)
 
-          wvel(:,ew,ns) = wvel(:,ew,ns) * tempcoef * (1.0d0 - numerics%sigma) 
-        else
-          wchk(ew,ns) = 0.0d0
-        end if
+            wvel(:,ew,ns) = wvel(:,ew,ns) + tempcoef * (1.0d0 - numerics%sigma) 
+         else
+            wchk(ew,ns) = 0.0d0
+         end if
       end do
     end do
 

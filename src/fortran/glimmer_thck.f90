@@ -55,9 +55,10 @@ contains
     
     select case(model%options%whichevol)
     case(0)
-       model%pcgdwk%fc = (/ model%numerics%alpha * model%numerics%dt / (2.0d0 * model%numerics%dew), &
-            model%numerics%alpha * model%numerics%dt / (2.0d0 * model%numerics%dew), model%numerics%dt, &
-            (1.0d0-model%numerics%alpha) / model%numerics%alpha/)       
+       model%pcgdwk%fc = (/ &
+            -model%numerics%dt / (2.0d0 * model%numerics%dew*model%numerics%dew), &
+            -model%numerics%dt / (2.0d0 * model%numerics%dns*model%numerics%dns), &
+            model%numerics%dt, 1.d0 /)       
     case(2)
        model%pcgdwk%fc2 = (/ model%numerics%alpha * model%numerics%dt / (2.0d0 * model%numerics%dew * model%numerics%dew), &
             model%numerics%dt, (1.0d0-model%numerics%alpha) / model%numerics%alpha, &
@@ -66,14 +67,14 @@ contains
     end select
   end subroutine init_thck
 
-  subroutine timeevolthck(model,thckflag,usrf,thck,acab,mask,uflx,vflx,dusrfdew,dusrfdns,totpts,logunit)
+  subroutine timeevolthck(model,thckflag,lsrf,thck,acab,mask,uflx,vflx,dusrfdew,dusrfdns,totpts,logunit)
 
     use glimmer_global, only : dp, sp 
 
     implicit none
 
     type(glide_global_type) :: model
-    real(dp), intent(in), dimension(:,:) :: uflx, vflx, dusrfdew, dusrfdns, usrf
+    real(dp), intent(in), dimension(:,:) :: uflx, vflx, dusrfdew, dusrfdns, lsrf
     real(sp), intent(in), dimension(:,:) :: acab 
     integer, intent(in), dimension(:,:) :: mask
     integer, intent(in) :: totpts, thckflag
@@ -129,9 +130,9 @@ contains
               call putpcgc(model%pcgdwk,1.0d0 + sumd(5),mask(ew,ns),mask(ew,ns)) ! point (ew,ns)
 
               model%pcgdwk%rhsd(mask(ew,ns)) = thck(ew,ns) + acab(ew,ns) * model%pcgdwk%fc(3) - &
-                            model%pcgdwk%fc(4) * (usrf(ew,ns) * sumd(5) + &
-                            usrf(ew-1,ns) * sumd(1) + usrf(ew+1,ns) * sumd(2) + &
-                            usrf(ew,ns-1) * sumd(3) + usrf(ew,ns+1) * sumd(4))  
+                            model%pcgdwk%fc(4) * (lsrf(ew,ns) * sumd(5) + &
+                            lsrf(ew-1,ns) * sumd(1) + lsrf(ew+1,ns) * sumd(2) + &
+                            lsrf(ew,ns-1) * sumd(3) + lsrf(ew,ns+1) * sumd(4))  
 
               model%pcgdwk%answ(mask(ew,ns)) = thck(ew,ns) 
 
@@ -187,10 +188,10 @@ contains
       real(dp), dimension(5) :: findsums
       real(dp),dimension(4),intent(in) :: fc
      
-      findsums(1) = (divider(uf(1,1),dsx(1,1)) + divider(uf(1,2),dsx(1,2))) / fc(1)
-      findsums(2) = (divider(uf(2,1),dsx(2,1)) + divider(uf(2,2),dsx(2,2))) / fc(1)
-      findsums(3) = (divider(vf(1,1),dsy(1,1)) + divider(vf(2,1),dsy(2,1))) / fc(2)
-      findsums(4) = (divider(vf(1,2),dsy(1,2)) + divider(vf(2,2),dsy(2,2))) / fc(2)
+      findsums(1) = (divider(uf(1,1),dsx(1,1)) + divider(uf(1,2),dsx(1,2))) * fc(1)
+      findsums(2) = (divider(uf(2,1),dsx(2,1)) + divider(uf(2,2),dsx(2,2))) * fc(1)
+      findsums(3) = (divider(vf(1,1),dsy(1,1)) + divider(vf(2,1),dsy(2,1))) * fc(2)
+      findsums(4) = (divider(vf(1,2),dsy(1,2)) + divider(vf(2,2),dsy(2,2))) * fc(2)
 
       findsums(5) = - sum(findsums(1:4))
 
@@ -220,6 +221,7 @@ contains
   subroutine slapsolv(model,first,iter,err,lunit)
 
     use glimmer_global, only : dp 
+    use glide_stop
   !use pcgdwk 
   !use funits, only : ulog
 
@@ -278,6 +280,7 @@ contains
       call dcpplt(model%pcgdwk%pcgsize(1),model%pcgdwk%pcgsize(2),model%pcgdwk%pcgrow, &
                 model%pcgdwk%pcgcol,model%pcgdwk%pcgval,isym,lunit)
       print *, model%pcgdwk%pcgval
+      call glide_finalise(model,.true.)
       stop
     end if
 

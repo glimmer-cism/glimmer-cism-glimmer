@@ -1,0 +1,16 @@
+2004-11-18 Magnus Hagdorn
+ started temporary ChangeLog for GLINT-GLIDE_eismint branch
+ this is the first round of changes to make EISMINT work
+ * glide_stop.f90: new module containing glide_finalise to avoid 
+   circular dependencies
+ * glide.f90: removed glide_finalise so it can be called by other modules
+     in case of crash; velocities are not calculated when non-linear
+     evolution is used since they are calculated then; linear ice evo code
+     is called with lower surface instead of upper surface
+ * glimmer_temp.f90: implement improved basal BC; can now switch various
+     parts of temp calculations on/off at compile time
+ * glimmer_thck.f90: fixed linear evo code; glide_finalise is called when
+     solver crashes
+ * glimmer_velo.f90: reformated some lines in subroutine wvelintg to make
+     it easier to read, changed chckwvel to use difference rather than
+     ratio for correcting vertical velos

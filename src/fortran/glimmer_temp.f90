@@ -40,6 +40,32 @@
 !
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+! some macros used to disable parts of the temperature equation
+! vertical diffusion
+#ifdef NO_VERTICAL_DIFFUSION
+#define VERT_DIFF 0.
+#else
+#define VERT_DIFF 1.
+#endif
+! horizontal advection
+#ifdef NO_HORIZONTAL_ADVECTION
+#define HORIZ_ADV 0.
+#else
+#define HORIZ_ADV 1.
+#endif
+! vertical advection
+#ifdef NO_VERICAL_ADVECTION
+#define VERT_ADV 0.
+#else
+#define VERT_ADV 1.
+#endif
+! strain heating
+#ifdef NO_STRAIN_HEAT
+#define STRAIN_HEAT 0.
+#else
+#define STRAIN_HEAT 1.
+#endif
+
 module glide_temp
 
   use glide_types
@@ -53,12 +79,18 @@ contains
     use physcon, only : rhoi, shci, coni, scyr, grav, gn, lhci, rhow
     use paramets, only : tim0, thk0, acc0, len0, vis0, vel0
     use glimmer_global, only : dp 
+    use glimmer_log
     implicit none
     type(glide_global_type),intent(inout) :: model       !*FD Ice model parameters.
 
     integer, parameter :: p1 = gn + 1  
     integer up
     real(dp) :: estimate
+
+    if (VERT_DIFF.eq.0.) call write_log('Vertical diffusion is switched off')
+    if (HORIZ_ADV.eq.0.) call write_log('Horizontal advection is switched off')
+    if (VERT_ADV.eq.0.) call write_log('Vertical advection is switched off')
+    if (STRAIN_HEAT.eq.0.) call write_log('Strain heating is switched off')
 
     allocate(model%tempwk%initadvt(model%general%upn,model%general%ewn,model%general%nsn))
     allocate(model%tempwk%inittemp(model%general%upn,model%general%ewn,model%general%nsn))
@@ -79,8 +111,8 @@ contains
     allocate(model%tempwk%fluxns(model%general%ewn,model%general%nsn))
     allocate(model%tempwk%bint(model%general%ewn-1,model%general%nsn-1))
 
-    model%tempwk%advconst(1) = model%numerics%dttem / (16.0d0 * model%numerics%dew)
-    model%tempwk%advconst(2) = model%numerics%dttem / (16.0d0 * model%numerics%dns)
+    model%tempwk%advconst(1) = HORIZ_ADV*model%numerics%dttem / (16.0d0 * model%numerics%dew)
+    model%tempwk%advconst(2) = HORIZ_ADV*model%numerics%dttem / (16.0d0 * model%numerics%dns)
 
     model%tempwk%dups = 0.0d0
 
@@ -98,10 +130,10 @@ contains
 
     model%tempwk%cons = (/ 2.0d0 * tim0 * model%numerics%dttem * coni / (2.0d0 * rhoi * shci * thk0**2), &
          model%numerics%dttem / 2.0d0, &
-         2.0d0 * tim0 * model%numerics%dttem * model%paramets%geot / (thk0 * rhoi * shci), &
-         tim0 * acc0 * model%numerics%dttem * model%paramets%geot / coni /)
+         VERT_DIFF*2.0d0 * tim0 * model%numerics%dttem * model%paramets%geot / (thk0 * rhoi * shci), &
+         VERT_ADV*tim0 * acc0 * model%numerics%dttem * model%paramets%geot / coni /)
 
-    model%tempwk%c1 = (model%numerics%sigma * rhoi * grav * thk0**2 / len0)**p1 * &
+    model%tempwk%c1 = STRAIN_HEAT *(model%numerics%sigma * rhoi * grav * thk0**2 / len0)**p1 * &
          2.0d0 * vis0 * model%numerics%dttem * tim0 / (16.0d0 * rhoi * shci)
 
     model%tempwk%dupc = (/ (model%numerics%sigma(2) - model%numerics%sigma(1)) / 2.0d0, &
@@ -556,8 +588,8 @@ contains
     real(dp) :: fact(3), dupnp1
     real(dp), dimension(size(model%numerics%sigma)) :: weff
 
-    fact(1) = model%tempwk%cons(1) / thck**2
-    fact(2) = model%tempwk%cons(2) / thck
+    fact(1) = VERT_DIFF*model%tempwk%cons(1) / thck**2
+    fact(2) = VERT_ADV*model%tempwk%cons(2) / thck
 
     weff = wvel - wgrd
 
@@ -578,17 +610,6 @@ contains
          - supd(2:model%general%upn-1) &
          + diagadvt(2:model%general%upn-1)
 
-    rhsd(1) = artm
-    supd(1) = 0.0d0
-    subd(1) = 0.0d0
-    diag(1) = 1.0d0
-
-    dupnp1 = model%tempwk%zbed / thck  
-
-    supd(model%general%upn) = 0.0d0 
-    subd(model%general%upn) = - model%tempwk%cons(1) / (thck**2 * model%tempwk%dupn * dupnp1)
-    diag(model%general%upn) = 1.0d0 - subd(model%general%upn) + diagadvt(model%general%upn)
-
     if (iter == 0) then
 
        model%tempwk%inittemp(2:model%general%upn-1,ew,ns) = temp(2:model%general%upn-1) * &
@@ -597,14 +618,6 @@ contains
             - temp(3:model%general%upn) * supd(2:model%general%upn-1) & 
             - model%tempwk%initadvt(2:model%general%upn-1,ew,ns) &
             + model%tempwk%dissip(2:model%general%upn-1,ew,ns)
-
-       model%tempwk%inittemp(model%general%upn,ew,ns) = temp(model%general%upn) * &
-            (2.0d0 - diag(model%general%upn)) &
-            - temp(model%general%upn-1) * subd(model%general%upn) &
-            - model%tempwk%cons(3) / (thck * dupnp1) &
-            + model%tempwk%cons(4) * weff(model%general%upn) & 
-            - model%tempwk%initadvt(model%general%upn,ew,ns)  &
-            + model%tempwk%dissip(model%general%upn,ew,ns)
 
        ! *tp* model%tempwk%inittemp(2:model%general%upn-1,ew,ns) = temp(2:model%general%upn-1) &
        ! *tp*                           - model%tempwk%initadvt(2:model%general%upn-1,ew,ns) + model%tempwk%dissip(2:model%general%upn-1,ew,ns)  
@@ -616,13 +629,21 @@ contains
 
     end if
 
+    ! upper boundary condition
+    rhsd(1) = artm
+    supd(1) = 0.0d0
+    subd(1) = 0.0d0
+    diag(1) = 1.0d0
+
     ! now do the basal boundary
     ! for grounded ice, a heat flux is applied
     ! for floating ice, temperature held constant
 
     if (float) then
 
-       diag(model%general%upn) = 1.0d0  
+       supd(model%general%upn) = 0.0d0
+       subd(model%general%upn) = 0.0d0
+       diag(model%general%upn) = 1.0d0
 
        if (iter == 0) then
 
@@ -632,16 +653,28 @@ contains
        rhsd(model%general%upn) = model%tempwk%inittemp(model%general%upn,ew,ns)
     else 
 
+       !*MH dupnp1 = model%tempwk%zbed / thck  
+       supd(model%general%upn) = 0.0d0 
+       !*MH subd(model%general%upn) = - model%tempwk%cons(1) / (thck**2 * model%tempwk%dupn * dupnp1)
+       subd(model%general%upn) = -0.5*fact(1)/(model%tempwk%dupn**2)
        diag(model%general%upn) = 1.0d0 - subd(model%general%upn) + diagadvt(model%general%upn)
 
        if (iter == 0) then
+!*MH        model%tempwk%inittemp(model%general%upn,ew,ns) = temp(model%general%upn) * &
+!*MH             (2.0d0 - diag(model%general%upn)) &
+!*MH             - temp(model%general%upn-1) * subd(model%general%upn) &
+!*MH             - model%tempwk%cons(3) / (thck * dupnp1) &
+!*MH             + model%tempwk%cons(4) * weff(model%general%upn) & 
+!*MH             - model%tempwk%initadvt(model%general%upn,ew,ns)  &
+!*MH             + model%tempwk%dissip(model%general%upn,ew,ns)
 
-          model%tempwk%inittemp(model%general%upn,ew,ns) = temp(model%general%upn) * (2.0d0 - diag(model%general%upn)) &
+          model%tempwk%inittemp(model%general%upn,ew,ns) = temp(model%general%upn) * &
+               (2.0d0 - diag(model%general%upn)) &
                - temp(model%general%upn-1) * subd(model%general%upn) &
-               - model%tempwk%cons(3) / (thck * dupnp1) &
-               + model%tempwk%cons(4) * weff(model%general%upn) & 
-               - model%tempwk%initadvt(model%general%upn,ew,ns) + model%tempwk%dissip(model%general%upn,ew,ns)
-
+               - 0.5*model%tempwk%cons(3) / (thck * model%tempwk%dupn) &
+               - model%tempwk%cons(4) * weff(model%general%upn) &
+               - model%tempwk%initadvt(model%general%upn,ew,ns)  &
+               + model%tempwk%dissip(model%general%upn,ew,ns)
        end if
        rhsd(model%general%upn) = model%tempwk%inittemp(model%general%upn,ew,ns) - iteradvt(model%general%upn)
     end if

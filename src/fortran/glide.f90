@@ -44,6 +44,7 @@ module glide
   !*FD the top-level GLIDE module
 
   use glide_types
+  use glide_stop
 
   integer, private, parameter :: dummyunit=99
 
@@ -165,8 +166,8 @@ contains
     ! ------------------------------------------------------------------------ 
     ! Do velocity calculation if necessary
     ! ------------------------------------------------------------------------ 
-    if (model%numerics%tinc > mod(model%numerics%time,model%numerics%nvel) .or. &
-         model%numerics%time == model%numerics%tinc ) then
+    if ((model%numerics%tinc > mod(model%numerics%time,model%numerics%nvel) .or. &
+         model%numerics%time == model%numerics%tinc) .and. model%options%whichevol.ne.2) then
 
        call slipvelo(model%numerics, &
             model%velowk,   &
@@ -241,7 +242,7 @@ contains
 
        call timeevolthck(model, &
             0, &                                        !magi a hack, someone explain what whichthck=5 does
-            model%geometry% usrf,      &
+            model%geometry% lsrf,      &
             model%geometry% thck,      &
             model%climate%  acab,      &
             model%geometry% mask,      &
@@ -302,19 +303,4 @@ contains
 
   end subroutine glide_tstep_p2
 
-  subroutine glide_finalise(model)
-    !*FD finalise GLIDE model instance
-    use glimmer_ncfile
-    use glimmer_ncinfile
-    use glimmer_log
-    implicit none
-    type(glide_global_type) :: model        !*FD model instance
-    
-    call closeall_in(model)
-    call closeall_out(model)
-    
-    call glide_deallocarr(model)
-
-    call close_log
-  end subroutine glide_finalise
 end module glide
