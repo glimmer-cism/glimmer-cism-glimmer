@@ -1,5 +1,52 @@
 #! /bin/sh
 
-aclocal \
-&& automake --gnu --add-missing \
+# configuring glimmer for a CVS build. If you compile from a released tar-ball 
+# you don't need to run this script. Just run ./configure directly.
+
+# this script originates from the GIMP project.
+
+AUTOMAKE_REQUIRED_VERSION=1.9
+
+check_version ()
+{
+    if expr $1 \>= $2 > /dev/null; then
+	echo "yes (version $1)"
+    else
+	echo "Too old (found version $1)!"
+	DIE=1
+    fi
+}
+
+echo
+echo Checking if required version of automake is installed
+echo
+
+DIE=0
+echo -n "checking for automake >= $AUTOMAKE_REQUIRED_VERSION ... "
+if (automake-1.9 --version) < /dev/null > /dev/null 2>&1; then
+   AUTOMAKE=automake-1.9
+   ACLOCAL=aclocal-1.9
+else
+    echo
+    echo "  You must have automake 1.9 or newer installed to compile glimmer."
+    echo "  Download the appropriate package for your distribution,"
+    echo "  or get the source tarball at ftp://ftp.gnu.org/pub/gnu/automake/"
+    DIE=1
+fi
+
+if test x$AUTOMAKE != x; then
+    VER=`$AUTOMAKE --version \
+         | grep automake | sed "s/.* \([0-9.]*\)[-a-z0-9]*$/\1/"`
+    check_version $VER $AUTOMAKE_REQUIRED_VERSION
+fi
+
+if test "$DIE" -eq 1; then
+    echo
+    echo "Please install/upgrade the missing tools and call me again."
+    echo	
+    exit 1
+fi
+
+$ACLOCAL \
+&& $AUTOMAKE --gnu --add-missing \
 && autoconf

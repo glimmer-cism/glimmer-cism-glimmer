@@ -9,18 +9,27 @@ FCFLAGS="$FCFLAGS -fpp"
 dnl Checking for python
 AM_PATH_PYTHON([2.3],,[AC_MSG_RESULT(need at least python 2.3)])
 
-# checking for latex and friends
-AC_CHECK_PROGS(LATEX,[latex])
-AC_CHECK_PROGS(DVIPS,[dvips])
-AC_CHECK_PROGS(DVIPDFT,[dvipdfm])
+# checking if we build the docs
+AC_MSG_CHECKING([whether we should build documentation])
+AC_ARG_ENABLE(doc, AS_HELP_STRING([--enable-doc],[Build documentation]),
+[case "${enableval}" in
+ yes)  FCFLAGS="$FCFLAGS -DPROFILING -pg"; AC_MSG_RESULT([yes]);;	
+ no)   AC_MSG_RESULT([no]);;
+ *) AC_MSG_ERROR(bad value ${enableval} for --enable-profile) ;;
+esac],[AC_MSG_RESULT([no])])
+if test "$enable_doc" == "yes"; then
+  AC_CHECK_PROGS(LATEX,[latex]) 
+  AC_CHECK_PROGS(DVIPS,[dvips]) 
+  AC_CHECK_PROGS(DVIPDFT,[dvipdfm]) 
+  AC_CHECK_PROGS(GNUPLOT,[gnuplot]) 
+  AC_CHECK_PROGS(DIA,[dia]) 
+  AC_CHECK_PROGS(FIG2DEV,[fig2dev]) 
+  AC_CHECK_PROGS(PS2EPSI,[ps2epsi]) 
+  AC_CHECK_PROGS(SED,[sed])
+fi
 AM_CONDITIONAL([DO_DOC_PS],  [test "$DVIPS" != ""])
 AM_CONDITIONAL([DO_DOC_PDF], [test "$DVIPDFT" != ""])
-# checking for other programs needed for compiling documentation
-AC_CHECK_PROGS(GNUPLOT,[gnuplot])
-AC_CHECK_PROGS(DIA,[dia])
-AC_CHECK_PROGS(FIG2DEV,[fig2dev])
-AC_CHECK_PROGS(PS2EPSI,[ps2epsi])
-AC_CHECK_PROGS(SED,[sed])
+AM_CONDITIONAL([BUILD_DOCS], [test "$enable_doc" == "yes"])
 
 # checking for BLAS library
 AC_ARG_WITH(blas,AS_HELP_STRING([--with-blas],[how to link external BLAS library]),[ac_cv_blas=$withval])
@@ -50,14 +59,13 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([],[use netcdf])],AC_MSG_RESULT([yes]),AC_MSG
 AC_LANG_POP(Fortran)
 
 # some options
-AC_ARG_ENABLE(profile, AS_HELP_STRING([--enable-profile],[Turn on profiling]),
 AC_MSG_CHECKING([whether profilng is enabled])
+AC_ARG_ENABLE(profile, AS_HELP_STRING([--enable-profile],[Turn on profiling]),
 [case "${enableval}" in
  yes)  FCFLAGS="$FCFLAGS -DPROFILING -pg"; AC_MSG_RESULT([yes]);;	
  no)   AC_MSG_RESULT([no]);;
  *) AC_MSG_ERROR(bad value ${enableval} for --enable-profile) ;;
-esac],[profile=false])
-AM_MAINTAINER_MODE
+esac],[AC_MSG_RESULT([no])])
 
 AC_CONFIG_FILES([Makefile src/Makefile src/python/Makefile src/fortran/Makefile src/fortran/SLAP_library/Makefile \
 		doc/Makefile doc/common/Makefile doc/dg/Makefile doc/dg/figures/Makefile \

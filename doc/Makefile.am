@@ -13,7 +13,6 @@ EXTRA_DIST = dg.tex dg_pdf.tex dg_ps.tex glimmer.tex glimmer_pdf.tex glimmer_ps.
 
 CLEANFILES = *~ *.aux *.dvi *.log *.out *.toc
 
-if MAINTAINER_MODE
 dg.pdf:	dg_pdf.dvi
 	$(DVIPDFT) -o dg.pdf dg_pdf.dvi
 
@@ -47,4 +46,3 @@ code_doc.tex:	../src/fortran/*.f90
 .tex.dvi::
 	latex $<
 	latex $<
-endif
