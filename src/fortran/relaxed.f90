@@ -148,6 +148,12 @@ program relaxed
      ! depress bedrock using this load
      model%geometry%relx = model%geometry%relx + depr
 
+     ! Flatten masked areas
+     
+     where (model%climate%out_mask.eq.0.0)
+        model%geometry%relx=min(-1.0,model%geometry%relx)
+     end where
+
   else
 
      where (model%geometry%thck > 0.0d0)
