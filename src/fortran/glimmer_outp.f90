@@ -278,7 +278,6 @@ contains
     ! *** horizontal velocities   m yr^-1
     ! *** effective viscocity  Pa s
     ! *** vertical velocities   m yr^-1
-    ! *** stresses       Pa
     ! *** temperatures    deg. C
     ! *** flow constant    Pa^-3 yr^-1
 
@@ -332,51 +331,6 @@ contains
     if (model%funits%which3d(2) == 1) then
       write(unit) model%numerics%time, 3, 0, real(f1)
       write(unit) real(f1*model%velocity%vvel(:,1:ewnv,1:nsnv))
-    end if
-
-    if (model%funits%which3d(7) == 1 .and. model%options%whichstrs == 1) then
-      write(unit) model%numerics%time, 4, 0, real(f5)
-      write(unit) real(f5*model%stress%efvs(:,1:ewnv,1:nsnv))
-    end if
-
-    if (model%funits%which3d(8) == 1 .and. model%options%whichstrs == 1) then
-      write(unit) model%numerics%time, 5, 0, real(f6)
-      write(unit) real(f6*model%stress%tau(:,1:ewnv,1:nsnv))
-    end if
-
-    if (model%funits%which3d(9) == 1 .and. model%options%whichstrs == 1) then
-      write(unit) model%numerics%time, 6, 0, real(f6)
-      write(unit) real(f6*model%stress%tauxz(:,1:ewnv,1:nsnv))
-    end if
-
-    if (model%funits%which3d(10) == 1 .and. model%options%whichstrs == 1) then
-      write(unit) model%numerics%time, 7, 0, real(f6)
-      write(unit) real(f6*model%stress%tauyz(:,1:ewnv,1:nsnv))
-    end if
-  
-    if (model%funits%which3d(11) == 1 .and. model%options%whichstrs == 1) then
-      write(unit) model%numerics%time, 8, 0, real(f6)
-      write(unit) real(f6*model%stress%tauxy(:,1:ewnv,1:nsnv))
-    end if
-
-    if (model%funits%which3d(12) == 1 .and. model%options%whichstrs == 1) then
-      write(unit) model%numerics%time, 9, 0, real(f6)
-      write(unit) real(f6*model%stress%tauxx(:,1:ewnv,1:nsnv))
-    end if
-
-    if (model%funits%which3d(13) == 1 .and. model%options%whichstrs == 1) then
-      write(unit) model%numerics%time,10, 0, real(f6)
-      write(unit) real(f6*model%stress%tauyy(:,1:ewnv,1:nsnv))
-    end if
-
-    if (model%funits%which3d(14) == 1 .and. model%options%whichstrs == 1) then
-      write(unit) model%numerics%time,11, 0, real(f6)
-      write(unit) real(f6*model%stress%gdsx(:,1:ewnv,1:nsnv))
-    end if
-
-    if (model%funits%which3d(15) == 1 .and. model%options%whichstrs == 1) then
-      write(unit) model%numerics%time,12, 0, real(f6)
-      write(unit) real(f6*model%stress%gdsy(:,1:ewnv,1:nsnv))
     end if
 
     do ns = 1,model%general%nsn 

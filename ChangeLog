@@ -5,6 +5,7 @@
  * Restructured code so that global grid definitions have their own 
 	derived type, which simplifies things. However, more rationalisation 
 	and simplification still possible
+ * Minor formatting, and removal of redundant stress arrays
 
 2004-05-04 Ian Rutt
  * Added upscale type to glimmer_interp.f90 and adjusted code 

@@ -117,7 +117,7 @@ contains
     real(rk) :: dlon
 
     instance%model%numerics%tinc=time_step             ! Initialise the model time step
-    dlon=grid%lons(2)-grid%lons(1)                               ! Calculate the longitudinal grid spacing - 
+    dlon=grid%lons(2)-grid%lons(1)                     ! Calculate the longitudinal grid spacing - 
                                                        ! this needs generalising, somehow
 
     call glimmer_global_type_initialise(instance%model)         ! Do (probably redundant) initialisation
@@ -125,16 +125,13 @@ contains
     instance%first=.true.                                       ! This is the first time-step
 
     call new_proj(instance%proj,radea)                          ! Initialise the projection
-    call new_downscale(instance%downs,instance%proj,grid)  ! Initialise the downscaling
+    call new_downscale(instance%downs,instance%proj,grid)       ! Initialise the downscaling
     call glimmer_i_allocate(instance,grid%nx,grid%ny)           ! Allocate arrays appropriately
     call glimmer_load_sigma(instance%model,unit)                ! Load the sigma file
     call initout(instance%model,unit)                           ! Initialise output files
     call calc_lats(instance%proj,instance%model%climate%lati)   ! Initialise the local latitude array. 
                                                                 ! This may be redundant, though.
-
-    call new_upscale(instance%ups, &                            ! Index global boxes
-                     grid, &
-                     instance%proj)
+    call new_upscale(instance%ups,grid,instance%proj)           ! Index global boxes
 
     call calc_coverage(instance%proj,instance%ups,&             ! Calculate coverage map
                        dlon,grid%lat_bound, &

@@ -314,11 +314,6 @@ module glimmer_types
     real(sp) :: trun
   end type glimmer_forcdata
 
-  type glimmer_stress
-    real(dp),dimension(:,:,:),pointer :: efvs
-    real(dp),dimension(:,:,:),pointer :: tauxz, tauyz, tauxy, tauxx, tauyy, tau, gdsx, gdsy
-  end type glimmer_stress
-
   type glimmer_funits
     integer, dimension(8) :: indices0dx
     integer, dimension(8) :: indices0dy
@@ -466,7 +461,6 @@ module glimmer_types
     type(glimmer_climate)  :: climate
     type(glimmer_temper)   :: temper
     type(glimmer_forcdata) :: forcdata
-    type(glimmer_stress)   :: stress
     type(glimmer_funits)   :: funits
     type(glimmer_numerics) :: numerics
     type(glimmer_pddcalc)  :: pddcalc
