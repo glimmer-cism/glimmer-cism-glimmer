@@ -71,7 +71,7 @@ relaxed: relaxed.o glimmer_global.o ncdf.o ncdf_file.o ncdf_infile.o glide_types
 test_config:	test_config.o glimmer_config.o glimmer_log.o
 	$(F77) -o $@ $^ $(LD_FLAGS)
 
-test_setup:	glimmer_config.o glide_types.o glide_setup.o test_setup.o glimmer_log.o glimmer_paramets.o
+test_setup:	glimmer_config.o glide_types.o glide_setup.o test_setup.o glimmer_log.o glimmer_paramets.o glide_mask.o
 		$(F77) -o $@ $^ $(LD_FLAGS)
 
 test_ts:	glimmer_ts.o glimmer_log.o test_ts.o

@@ -1,3 +1,7 @@
+2004-09-21 Magnus Hagdorn
+ * glint_io.f90.in: fix scaling bug of netCDF variables
+ * Makefile: added glide_mask.o to test_setup
+
 2004-09-20 Magnus Hagdorn
  * generate_ncvars.py: need to set NF90_FILL_REAL to 0 when reading netCDF files.
 	

@@ -96,8 +96,9 @@ contains
     use glimmer_ncdf
     use glint_type, only : glint_climate
     use glimmer_global, only : dp
+    use paramets, only : thk0, acc0
     use physcon, only : scyr
-    use paramets, only : thk0, tim0, vel0, vis0, len0, tau0, acc0
+    use glimmer_scales
     implicit none
 
     type(glimmer_nc_output), pointer :: outfile !*FD structure containg output netCDF descriptor
@@ -106,18 +107,6 @@ contains
     ! local variables
     integer status
     integer up, spot
-    real(dp):: f1, f2, f3, f4, f5, f6, f7, f8
-    ! Set up various constants. These were originally only
-    ! done once, but are done each time now, for safety.
-
-    f1 = scyr * thk0 / tim0
-    f2 = scyr * vel0 * thk0
-    f3 = vel0 / (vis0 * len0)
-    f4 = vel0 * scyr * len0
-    f5 = scyr * vel0
-    f6 = scyr * vel0 * len0 / (thk0**2)
-    f7 = tau0
-    f8 = tau0 * len0 / (scyr * vel0)    
 
     ! write variables
     !GENVAR_WRITE!
@@ -130,8 +119,9 @@ contains
     use glimmer_ncdf
     use glint_type, only : glint_climate
     use glimmer_global, only : dp
+    use paramets, only : thk0, acc0
     use physcon, only : scyr
-    use paramets, only : thk0, tim0, vel0, vis0, len0, tau0, acc0
+    use glimmer_scales
     implicit none
 
     type(glimmer_nc_input), pointer :: infile !*FD structure containg output netCDF descriptor
@@ -143,25 +133,12 @@ contains
     ! local variables
     integer status
     integer up
-    real(dp):: f1, f2, f3, f4, f5, f6, f7, f8
     logical :: scale=.true.
     character(len=100) :: message
 
     ! Deal with optional argument
 
     if (present(scale_vars)) scale=scale_vars
-
-    ! Set up various constants. These were originally only
-    ! done once, but are done each time now, for safety.
-
-    f1 = scyr * thk0 / tim0
-    f2 = scyr * vel0 * thk0
-    f3 = vel0 / (vis0 * len0)
-    f4 = vel0 * scyr * len0
-    f5 = scyr * vel0
-    f6 = scyr * vel0 * len0 / (thk0**2)
-    f7 = tau0
-    f8 = tau0 * len0 / (scyr * vel0) 
     
     ! read variables
     !GENVAR_READ!
