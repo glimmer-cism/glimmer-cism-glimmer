@@ -41,9 +41,9 @@
 !
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-module glint_pdd
+module glimmer_pdd
 
-  !*FD The GLINT annual positive degree day mass-balance scheme.
+  !*FD The GLIMMER annual positive degree day mass-balance scheme.
   !*FD Based on the original pdd mass-balance code from Tony's model.
   !*FD 
   !*FD {\bf N.B.} the module variables in this module are used for back-door 
@@ -57,7 +57,7 @@ module glint_pdd
 
   implicit none
 
-  type glint_pdd_params
+  type glimmer_pdd_params
 
     !*FD Holds parameters for positive-degree-day mass-balance
     !*FD calculation. The table has two axes - the $x$ axis is the
@@ -90,7 +90,7 @@ module glint_pdd
     real(dp) :: pddfac_ice  = 0.008 !*FD PDD factor for ice (m day$^{-1}$ $^{\circ}C$^{-1}$)
     real(dp) :: pddfac_snow = 0.003 !*FD PDD factor for snow (m day$^{-1}$ $^{\circ}C$^{-1}$)
 
-  end type glint_pdd_params
+  end type glimmer_pdd_params
  	 
   ! Module parameters use for back-door message-passing
 
@@ -100,7 +100,7 @@ module glint_pdd
   real(sp) :: mean_july_temp      !*FD Mean july temperature
 
   private
-  public :: glint_pdd_params, glint_pdd_init, glint_pdd_mbal
+  public :: glimmer_pdd_params, glimmer_pdd_init, glimmer_pdd_mbal
 
 contains
 
@@ -108,11 +108,11 @@ contains
 ! PUBLIC subroutines
 !-------------------------------------------------------------------------------
 
-  subroutine glint_pdd_init(params,config)
+  subroutine glimmer_pdd_init(params,config)
 
     use glimmer_config
 
-    type(glint_pdd_params),intent(inout) :: params !*FD The positive-degree-day parameters
+    type(glimmer_pdd_params),intent(inout) :: params !*FD The positive-degree-day parameters
     type(ConfigSection), pointer         :: config !*FD structure holding sections of configuration file   
 
     ! Read the config file and output to log
@@ -129,18 +129,18 @@ contains
     allocate(params%pddtab(params%nx,params%ny))
     call pddtabgrn(params)  
 
-  end subroutine glint_pdd_init
+  end subroutine glimmer_pdd_init
 
 !-------------------------------------------------------------------------------
 
-  subroutine glint_pdd_mbal(params,artm,arng,prcp,ablt,acab)
+  subroutine glimmer_pdd_mbal(params,artm,arng,prcp,ablt,acab)
 
     !*FD Calculates mass-balance over the ice model domain, by the
     !*FD positive-degree-day method.
 
     implicit none 
  
-    type(glint_pdd_params),   intent(inout) :: params  !*FD The positive-degree-day parameters
+    type(glimmer_pdd_params),   intent(inout) :: params  !*FD The positive-degree-day parameters
     real(sp), dimension(:,:), intent(in)    :: artm    !*FD Annual mean air-temperature 
                                                        !*FD ($^{\circ}$C)
     real(sp), dimension(:,:), intent(in)    :: arng    !*FD Annual temerature half-range ($^{\circ}$C)
@@ -247,7 +247,7 @@ contains
       end do
     end do
 
-  end subroutine glint_pdd_mbal
+  end subroutine glimmer_pdd_mbal
 
 !-------------------------------------------------------------------------------
 ! PRIVATE subroutines and functions
@@ -259,13 +259,13 @@ contains
 
     use glimmer_config
 
-    type(glint_pdd_params),intent(inout) :: params !*FD The positive-degree-day parameters
+    type(glimmer_pdd_params),intent(inout) :: params !*FD The positive-degree-day parameters
     type(ConfigSection), pointer         :: config !*FD structure holding sections of configuration file   
 
     ! local variables
     type(ConfigSection), pointer :: section
     
-    call GetSection(config,section,'GLINT annual pdd')
+    call GetSection(config,section,'GLIMMER annual pdd')
     if (associated(section)) then
        call GetValue(section,'dx',params%dx)
        call GetValue(section,'dy',params%dy)
@@ -286,12 +286,12 @@ contains
 
     use glimmer_log
 
-    type(glint_pdd_params),intent(inout) :: params !*FD The positive-degree-day parameters
+    type(glimmer_pdd_params),intent(inout) :: params !*FD The positive-degree-day parameters
     character(len=100) :: message
 
     call write_log_div
 
-    call write_log('GLINT annual PDD Scheme parameters:')
+    call write_log('GLIMMER annual PDD Scheme parameters:')
     call write_log('-----------------------------------')
     write(message,*) 'x-spacing of pdd table',params%dx,' degC'
     call write_log(message)
@@ -326,7 +326,7 @@ contains
 
     implicit none
 
-    type(glint_pdd_params),intent(inout) :: params !*FD PDD parameters
+    type(glimmer_pdd_params),intent(inout) :: params !*FD PDD parameters
 
     ! Internal variables
 
@@ -497,4 +497,4 @@ contains
 
   end function findgrid
  
-end module glint_pdd
+end module glimmer_pdd

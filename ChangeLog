@@ -1,3 +1,6 @@
+2005-02-23 Ian Rutt
+ * Renamed modules of mass-balance schemes to glimmer_*
+
 2005-02-23 Magnus Hagdorn
  * removed old tests in data
 
