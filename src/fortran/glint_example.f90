@@ -158,7 +158,6 @@ program glint_example
      intin=precip_clim2(:,:,i)
      call awi(nxp,nxp,lonbin,nyp,latbin,intin,maskin,nx,nx,lonbout,ny,latbout,intout,maskout,ierr)
      precip_clim(:,:,i)=intout
-     print*,ierr
   end do
 
   ! start logging

@@ -1,3 +1,6 @@
+2005-03-17 Ian Rutt
+ * Removed printing of ierr after calling awi.
+
 2005-03-16 Ian Rutt
  * Added some dodgy f77 interpolation code (awi.f) to deal with problems I
  had with different global grids in NCEP data used to force
