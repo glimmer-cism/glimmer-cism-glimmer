@@ -1,3 +1,12 @@
+Changes in Version 0.5.1
+========================
+* Bugfix on snow-depth accumulation in GLINT
+* Enabled fractional-year netcdf writing of snow and
+  superimposed ice depth in GLINT
+* Changed glint_example to use correct NCEP precip forcing.
+  This entailed adding some interpolation, since the precip
+  and temp are no longer on the same global grid.
+
 Changes in Version 0.5.0
 ========================
 * this is our first release!

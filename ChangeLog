@@ -1,5 +1,6 @@
 2005-03-17 Ian Rutt
- * Removed printing of ierr after calling awi.
+ * Removed printing of ierr after calling awi.f
+ * Released at version 0.5.1
 
 2005-03-16 Ian Rutt
  * Added some dodgy f77 interpolation code (awi.f) to deal with problems I
