@@ -65,7 +65,6 @@ contains
     type(glimmer_nc_input), pointer :: input => null()
 
     ! read configuration
-    model%funits%ncfile  = trim(model%funits%output_stem) // '.glw'
     call ConfigRead(model%funits%ncfile,config)
 
     ! get default meta data

@@ -1,4 +1,7 @@
 2004-06-03 Magnus Hagdorn
+ * found some more unused filenames and removed out_stem with ncfile
+
+2004-06-03 Magnus Hagdorn
  * removed unused filenames for namelists and structures
    usrffile, topgfile, relxfile, prcpfile, presusrffile, latifile
 

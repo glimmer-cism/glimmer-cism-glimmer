@@ -87,7 +87,7 @@ contains
 
     ! ...for the filenames
 
-    character(fname_length) :: sigfile,outstem
+    character(fname_length) :: sigfile,ncconf
 
     ! ...for options
 
@@ -199,7 +199,7 @@ contains
   
     if (there) then                            ! If it does exist, read it in
       open(unit,file=nmlfile)
-      read(unit,100)outstem
+      read(unit,100)ncconf
       read(unit,nml=sizs)
       read(unit,nml=prj)
       read(unit,100)sigfile
@@ -272,10 +272,9 @@ contains
     ! filenames
 
     sigfile=adjustl(sigfile)
-    outstem=adjustl(outstem)
 
     model%funits%sigfile     = sigfile
-    model%funits%output_stem = outstem
+    model%funits%ncfile = adjustl(ncconf)
 
     ! Constants
 

@@ -1,4 +1,4 @@
-g_land
+g_land.glw
 &sizs
 ewn=83
 nsn=141
@@ -44,12 +44,6 @@ hydtim = 20.0d0
 isotim = 3000.0d0
 bpar = 4.0, 0.1d0, 0.0d0, 0.0d-3, 10.0d0/
 &dats
-usrffile = 'none'
-latifile = 'g20lati'
-topgfile = 'g20topg'
-relxfile = 'g20relx'
-prcpfile = 'g20prcp'
-presusrffile = 'g20surf'
 forcfile = 'none'/
 &cons
 albedo=0.4

@@ -178,7 +178,6 @@ contains
     ! funits
 
     write(unit) instance%model%funits% sigfile
-    write(unit) instance%model%funits% output_stem
     write(unit) instance%model%funits% ncfile
 
     ! numerics
@@ -509,7 +508,6 @@ contains
     ! funits
 
     read(unit) instance%model%funits% sigfile
-    read(unit) instance%model%funits% output_stem
     read(unit) instance%model%funits% ncfile
 
     ! numerics
