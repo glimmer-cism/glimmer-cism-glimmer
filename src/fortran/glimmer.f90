@@ -162,7 +162,7 @@ contains
     ! ---------------------------------------------------------------
     ! Basic initialisation beginning with common initialisation
     ! ---------------------------------------------------------------
-
+    
     call glimmer_init_common(params%logf_unit,params)
 
     ! Set up constants and arrays in the parameter structure --------
@@ -896,7 +896,8 @@ contains
 
     use paramets, only: tau0,vel0,vis0,len0
     use physcon,  only: gn
-
+    use glimmer_scales
+    
     implicit none
 
     integer :: unit !*FD file unit to use for the log file
@@ -913,6 +914,10 @@ contains
 
     open(unit,file='glimmer.gll')
 
+    ! Setup scalings for output
+
+    call glimmer_init_scales
+    
   end subroutine glimmer_init_common
 
 !======================================================

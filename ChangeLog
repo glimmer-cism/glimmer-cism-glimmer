@@ -1,6 +1,7 @@
 2004-09-16 Ian Rutt
  * Added Tony's physics documentation to main docs.
-
+ * Patched netcdf I/O as per Magi's email
+	
 2004-09-14 Ian Rutt
  * Finished updating user documentation.
 

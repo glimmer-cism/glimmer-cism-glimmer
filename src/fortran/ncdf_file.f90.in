@@ -226,7 +226,8 @@ contains
     use glimmer_global, only : dp
 	use glide_messages
     use physcon, only : scyr
-    use paramets, only : thk0, tim0, vel0, vis0, len0, tau0, acc0
+    use paramets, only : thk0, vis0, acc0
+    use glimmer_scales
     implicit none
     type(glimmer_nc_output), pointer :: outfile
     !*FD structure containg output netCDF descriptor
@@ -236,7 +237,6 @@ contains
     ! local variables
     integer status
     integer up, spot
-    real(dp):: f1, f2, f3, f4, f5, f6, f7, f8
     integer :: ewnv, nsnv
 	character(40) :: timetxt
 
@@ -245,14 +245,6 @@ contains
 
     ewnv = model%general%ewn - 1
     nsnv = model%general%nsn - 1
-    f1 = scyr * thk0 / tim0
-    f2 = scyr * vel0 * thk0
-    f3 = vel0 / (vis0 * len0)
-    f4 = vel0 * scyr * len0
-    f5 = scyr * vel0
-    f6 = scyr * vel0 * len0 / (thk0**2)
-    f7 = tau0
-    f8 = tau0 * len0 / (scyr * vel0) 
 
 	call glide_stars
 	write(timetxt,*)model%numerics%time
