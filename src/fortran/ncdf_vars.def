@@ -1,0 +1,297 @@
+#[]
+#dimensions:    time, level, y1, x1
+#units:         
+#long_name:     
+#data:          
+#factor:        
+
+[time]
+dimensions:    time
+units:         year
+long_name:     Model time
+
+[x0]
+dimensions:    x0
+units:         meter
+long_name:     Cartisian x-coordinate, midpoint
+
+[y0]
+dimensions:    y0
+units:         meter
+long_name:     Cartisian y-coordinate, midpoint
+
+[x1]
+dimensions:    x1
+units:         meter
+long_name:     Cartisian x-coordinate
+
+[y1]
+dimensions:    y1
+units:         meter
+long_name:     Cartisian y-coordinate
+
+[x0_spot]
+dimensions:    spot
+units:         meter
+long_name:     Cartisian x-coordinate, midpoint
+
+[y0_spot]
+dimensions:    spot
+units:         meter
+long_name:     Cartisian y-coordinate, midpoint
+
+[x1_spot]
+dimensions:    spot
+units:         meter
+long_name:     Cartisian x-coordinate
+
+[y1_spot]
+dimensions:    spot
+units:         meter
+long_name:     Cartisian y-coordinate
+
+[level]
+dimensions:    level
+units:         1
+long_name:     sigma layers
+
+[lat]
+dimensions:    time, y1, x1
+units:         degreeN
+long_name:     Latitude
+data:          model%climate%lati
+load:          1
+standard_name: latitude
+
+[lon]
+dimensions:    time, y1, x1
+units:         degreeE
+long_name:     Longitude
+data:          model%climate%loni
+load:          1
+standard_name: longitude
+
+[mask]
+dimensions:    time, y1, x1
+units:         1
+long_name:     upscaling and downscaling mask
+data:          model%climate%out_mask
+load:          1
+
+[relx]
+dimensions:    time, y1, x1
+units:         meter
+long_name:     relaxed bedrock topography
+data:          model%geometry%relx
+factor:        thk0
+load:          1
+
+[presprcp]
+dimensions:    time, y1, x1
+units:         meter/year
+long_name:     present day precipitation
+data:          model%climate%presprcp
+factor:        scyr * acc0
+load:          1
+
+[presusrf]
+dimensions:    time, y1, x1
+units:         meter
+long_name:     present day surface of the ice-sheet
+data:          model%climate%presusrf
+factor:        thk0
+load:          1
+
+[std_dev]
+dimensions:    time, y1, x1
+units:         meter
+long_name:     standard deviation of sub-grid topography
+data:          model%geometry%std_dev
+factor:        thk0
+load:          1
+
+[uflx]
+dimensions:    time, y0, x0
+units:         meter2/year
+long_name:     flux in x direction
+data:          model%velocity%uflx(1:ewnv,1:nsnv)
+factor:        scale2d_f2
+
+[vflx]
+dimensions:    time, y0, x0
+units:         meter2/year
+long_name:     flux in x direction
+data:          model%velocity%vflx(1:ewnv,1:nsnv)
+factor:        scale2d_f2
+
+[diffu]
+dimensions:    time, y0, x0
+units:         meter2/year
+long_name:     apparent diffusivity
+data:          model%velocity%diffu(1:ewnv,1:nsnv)
+factor:        scale2d_f4
+
+[btrc]
+dimensions:    time, y0, x0
+units:         meter/pascal/year
+long_name:     basal slip coefficient
+data:          model%velocity%btrc(1:ewnv,1:nsnv)
+factor:        scale2d_f6
+
+[ubas]
+dimensions:    time, y0, x0
+units:         meter/year
+long_name:     basal slip velocity in x direction
+data:          model%velocity%ubas(1:ewnv,1:nsnv)
+factor:        scale2d_f5
+standard_name: land_ice_basal_x_velocity
+
+[vbas]
+dimensions:    time, y0, x0
+units:         meter/year
+long_name:     basal slip velocity in y direction
+data:          model%velocity%vbas(1:ewnv,1:nsnv)
+factor:        scale2d_f5
+standard_name: land_ice_basal_y_velocity
+
+[thk]
+dimensions:    time, y1, x1
+units:         meter
+long_name:     ice thickness
+data:          model%geometry%thck
+factor:        thk0
+standard_name: land_ice_thickness
+
+[usurf]
+dimensions:    time, y1, x1
+units:         meter
+long_name:     ice upper surface elevation
+data:          model%geometry%usrf
+factor:        thk0
+load:          1
+
+[lsurf]
+dimensions:    time, y1, x1
+units:         meter
+long_name:     ice lower surface elevation
+data:          model%geometry%lsrf
+factor:        thk0
+
+[topg]
+dimensions:    time, y1, x1
+units:         meter
+long_name:     bedrock topography
+data:          model%geometry%topg
+factor:        thk0
+load:          1
+standard_name: bedrock_altitude
+
+[acab]
+dimensions:    time, y1, x1
+units:         meter/year
+long_name:     accumulation, ablation rate
+data:          model%climate%acab
+factor:        scale2d_f1
+standard_name: land_ice_surface_mass_balance
+
+[bmlt]
+dimensions:    time, y1, x1
+units:         meter/year
+long_name:     basal melt rate
+data:          model%temper%bmlt
+factor:        scale2d_f1
+standard_name: land_ice_basal_melt_rate
+
+[bwat]
+dimensions:    time, y1, x1
+units:         meter
+long_name:     basal water depth
+data:          model%temper%bwat
+factor:        thk0
+
+[artm]
+dimensions:    time, y1, x1
+units:         degree_Celcius
+long_name:     annual mean air temperature
+data:          model%climate%artm
+standard_name: surface_temperature
+cell_methods:  time: mean
+
+[btemp]
+dimensions:    time, y1, x1
+units:         degree_Celcius
+long_name:     basal ice temperature
+data:          model%temper%temp(model%general%upn,1:model%general%ewn,1:model%general%nsn)
+
+[arng]
+dimensions:    time, y1, x1
+units:         degree_Celcius
+long_name:     annual temperature range
+data:          model%climate%arng
+
+[prcp]
+dimensions:    time, y1, x1
+units:         meter/year
+long_name:     precipitation
+data:          model%climate%prcp
+factor:        scale2d_f1
+standard_name: lwe_precipitation_rate
+
+[ablt]
+dimensions:    time, y1, x1
+units:         meter/year
+long_name:     ablation
+data:          model%climate%ablt
+factor:        scale2d_f1
+
+[dusrfdtm]
+dimensions:    time, y1, x1
+units:         meter/year
+long_name:     rate of upper ice surface elevation change
+data:          model%geomderv%dusrfdtm
+factor:        scale2d_f1
+
+[uvel]
+dimensions:    time, level, y0, x0
+units:         meter/year
+long_name:     ice velocity in x direction
+data:          model%velocity%uvel(up,1:ewnv,1:nsnv)
+factor:        scale3d_f1
+standard_name: land_ice_x_velocity
+
+[vvel]
+dimensions:    time, level, y0, x0
+units:         meter/year
+long_name:     ice velocity in y direction
+data:          model%velocity%vvel(up,1:ewnv,1:nsnv)
+factor:        scale3d_f1
+standard_name: land_ice_y_velocity
+
+[wvel]
+dimensions:    time, level, y1, x1
+units:         meter/year
+long_name:     vertical ice velocity
+data:          model%velocity%wvel(up,:,:)
+factor:        scale3d_f7
+standard_name: land_ice_z_velocity
+
+[wgrd]
+dimensions:    time, level, y1, x1
+units:         meter/year
+long_name:     ?? some velo ??
+data:          model%velocity%wgrd(up,:,:)
+factor:        scale3d_f7
+
+[flwa]
+dimensions:    time, level, y1, x1
+units:         ??
+long_name:     ??
+data:          model%temper%flwa(up,:,:)
+factor:        vis0*scyr
+
+[temp]
+dimensions:    time, level, y1, x1
+units:         degree_Celcius
+long_name:     ice temperature
+data:          model%temper%temp(up,1:model%general%ewn,1:model%general%nsn)
+standard_name: land_ice_temperature

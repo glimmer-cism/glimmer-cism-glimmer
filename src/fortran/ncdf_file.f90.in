@@ -1,0 +1,268 @@
+! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+! +                                                           +
+! +  ncdf_file.f90 - part of the GLIMMER ice model            + 
+! +                                                           +
+! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+! 
+! Copyright (C) 2004 GLIMMER contributors - see COPYRIGHT file 
+! for list of contributors.
+!
+! This program is free software; you can redistribute it and/or 
+! modify it under the terms of the GNU General Public License as 
+! published by the Free Software Foundation; either version 2 of 
+! the License, or (at your option) any later version.
+!
+! This program is distributed in the hope that it will be useful, 
+! but WITHOUT ANY WARRANTY; without even the implied warranty of 
+! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+! GNU General Public License for more details.
+!
+! You should have received a copy of the GNU General Public License 
+! along with this program; if not, write to the Free Software 
+! Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 
+! 02111-1307 USA
+!
+! GLIMMER is maintained by:
+!
+! Ian Rutt
+! School of Geographical Sciences
+! University of Bristol
+! University Road
+! Bristol
+! BS8 1SS
+! UK
+!
+! email: <i.c.rutt@bristol.ac.uk> or <ian.rutt@physics.org>
+!
+! GLIMMER is hosted on NeSCForge:
+!
+! http://forge.nesc.ac.uk/projects/glimmer/
+!
+! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+#define NC outfile%nc
+
+module glimmer_ncfile
+  !*FD routines for GLIMMER netCDF file I/O
+  !*FD written by Magnus Hagdorn, 2004
+
+  character(len=*), private, parameter :: mapvarname = 'mapping'
+
+contains
+  subroutine openall_out(model)
+    !*FD open all netCDF files for output
+    use glimmer_types
+    use glimmer_ncdf
+    implicit none
+    type(glimmer_global_type) :: model
+    
+    ! local variables
+    type(glimmer_nc_output), pointer :: oc
+
+    oc=>model%funits%out_first
+    do while(associated(oc))
+       call glimmer_nc_createfile(oc,model)
+       oc%next_write=model%numerics%time
+       oc=>oc%next
+    end do
+  end subroutine openall_out
+
+  subroutine writeall(model,atend)
+    !*FD if necessary write to netCDF files
+    use glimmer_types
+    use glimmer_ncdf
+    implicit none
+    type(glimmer_global_type) :: model
+    logical, optional :: atend
+
+    ! local variables
+    type(glimmer_nc_output), pointer :: oc
+    logical :: forcewrite=.false.
+
+    if (present(atend)) then
+       forcewrite = atend
+    end if
+
+    oc=>model%funits%out_first
+    do while(associated(oc))
+       if (model%numerics%time.ge.oc%next_write .or. (forcewrite.and.model%numerics%time.gt.oc%next_write-oc%freq)) then
+          call glimmer_nc_write(oc,model)
+       end if
+       oc=>oc%next
+    end do
+  end subroutine writeall
+
+  subroutine closeall_out(model)
+    !*FD close all netCDF files for output
+    use glimmer_types
+    use glimmer_ncdf
+    implicit none
+    type(glimmer_global_type) :: model
+    
+    ! local variables
+    type(glimmer_nc_output), pointer :: oc
+
+    oc=>model%funits%out_first
+    do while(associated(oc))
+       oc=>delete(oc)
+    end do
+    model%funits%out_first=>NULL()
+  end subroutine closeall_out
+
+  subroutine glimmer_nc_createfile(outfile,model)
+    !*FD create a new netCDF file
+    use glimmer_ncdf
+    use glimmer_types
+	use glide_messages
+    use glimmer_CFproj
+    use paramets, only : len0
+    implicit none
+    type(glimmer_nc_output), pointer :: outfile
+    !*FD structure containg output netCDF descriptor
+    type(glimmer_global_type) :: model
+    !*FD the model instance
+
+    ! local variables
+    integer status
+    integer i,mapid
+	character(40) :: freqtxt
+    
+    ! create new netCDF file
+    status = nf90_create(NC%filename,NF90_CLOBBER,NC%id)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+	call glide_stars
+	write(freqtxt,*)outfile%freq
+    call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,&
+		'Opening file '//trim(NC%filename)//' for output; write period every '//trim(adjustl(freqtxt))//' years')
+
+    ! writing meta data
+    status = nf90_put_att(NC%id, NF90_GLOBAL, 'Conventions', "CF-1.0")
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    status = nf90_put_att(NC%id, NF90_GLOBAL,'title',trim(outfile%metadata%title))
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    status = nf90_put_att(NC%id, NF90_GLOBAL,'institution',trim(outfile%metadata%institution))
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    status = nf90_put_att(NC%id, NF90_GLOBAL,'source',trim(outfile%metadata%source))
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    status = nf90_put_att(NC%id, NF90_GLOBAL,'history',trim(outfile%metadata%history))
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    status = nf90_put_att(NC%id, NF90_GLOBAL,'references',trim(outfile%metadata%references))
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    status = nf90_put_att(NC%id, NF90_GLOBAL,'comment',trim(outfile%metadata%comment))
+    call nc_errorhandle(__FILE__,__LINE__,status)
+
+    ! defining dimensions
+    status = nf90_def_dim(NC%id,'x0',model%general%ewn-1,NC%x0dim)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    status = nf90_def_dim(NC%id,'y0',model%general%nsn-1,NC%y0dim)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    status = nf90_def_dim(NC%id,'x1',model%general%ewn,NC%x1dim)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    status = nf90_def_dim(NC%id,'y1',model%general%nsn,NC%y1dim)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    status = nf90_def_dim(NC%id,'level',model%general%upn,NC%leveldim)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    if (NC%do_spot) then	 
+       status = nf90_def_dim(NC%id,'spot',size(outfile%spotx),NC%spotdim)	 
+       call nc_errorhandle(__FILE__,__LINE__,status)	 
+    end if
+    status = nf90_def_dim(NC%id,'time',NF90_UNLIMITED,NC%timedim)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+
+    ! defining variables
+    !GENVARS!
+
+    ! adding projection info
+    status = nf90_def_var(NC%id,mapvarname,NF90_CHAR,mapid)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    call CFproj_PutProj(NC%id,mapid,model%projection)
+
+    ! leaving define mode
+    status = nf90_enddef(NC%id)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    
+    ! filling coordinate variables
+    do i=1, model%general%ewn-1
+       status=nf90_put_var(NC%id,NC%x0var,((i-0.5)*model%numerics%dew*len0),(/i/))
+       call nc_errorhandle(__FILE__,__LINE__,status)
+    end do
+    do i=1, model%general%nsn-1
+       status=nf90_put_var(NC%id,NC%y0var,(i-0.5)*model%numerics%dns*len0,(/i/))
+       call nc_errorhandle(__FILE__,__LINE__,status)
+    end do
+    do i=1, model%general%ewn
+       status=nf90_put_var(NC%id,NC%x1var,(i-1.)*model%numerics%dew*len0,(/i/))
+       call nc_errorhandle(__FILE__,__LINE__,status)
+    end do
+    do i=1, model%general%nsn
+       status=nf90_put_var(NC%id,NC%y1var,(i-1.)*model%numerics%dns*len0,(/i/))
+       call nc_errorhandle(__FILE__,__LINE__,status)
+    end do    
+    status=nf90_put_var(NC%id,NC%levelvar,model%numerics%sigma)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    if (NC%do_spot) then
+       do i=1,size(outfile%spotx)
+          status=nf90_put_var(NC%id,NC%x0_spotvar, &
+               (real(outfile%spotx(i))-0.5)*real(model%numerics%dew*len0),(/i/))
+          call nc_errorhandle(__FILE__,__LINE__,status)
+          status=nf90_put_var(NC%id,NC%y0_spotvar, &
+               (real(outfile%spoty(i))-0.5)*real(model%numerics%dns*len0),(/i/))
+          call nc_errorhandle(__FILE__,__LINE__,status)
+          
+          status=nf90_put_var(NC%id,NC%x1_spotvar, &
+               (real(outfile%spotx(i))-1.0)*real(model%numerics%dew*len0),(/i/))
+          call nc_errorhandle(__FILE__,__LINE__,status)
+          status=nf90_put_var(NC%id,NC%y1_spotvar, &
+               (real(outfile%spoty(i))-1.0)*real(model%numerics%dns*len0),(/i/))
+          call nc_errorhandle(__FILE__,__LINE__,status)    
+       end do
+    end if
+  end subroutine glimmer_nc_createfile
+
+  subroutine glimmer_nc_write(outfile,model)
+    !*FD write variables to a netCDF file
+    use glimmer_ncdf
+    use glimmer_types
+    use glimmer_global, only : dp
+	use glide_messages
+    use physcon, only : scyr
+    use paramets, only : thk0, vis0, acc0
+    use glimmer_scales
+    implicit none
+    type(glimmer_nc_output), pointer :: outfile
+    !*FD structure containg output netCDF descriptor
+    type(glimmer_global_type) :: model
+    !*FD the model instance
+
+    ! local variables
+    integer status
+    integer up, spot
+    integer :: ewnv, nsnv
+	character(40) :: timetxt
+
+    ! Set up various constants. These were originally only
+    ! done once, but are done each time now, for safety.
+
+    ewnv = model%general%ewn - 1
+    nsnv = model%general%nsn - 1
+
+	call glide_stars
+	write(timetxt,*)model%numerics%time
+    call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__, &
+	    'Writing to file '//trim(NC%filename)//' at time '//trim(adjustl(timetxt)))
+
+    ! increase next_write 
+    outfile%next_write=outfile%next_write+outfile%freq
+    ! write time
+    status = nf90_put_var(NC%id,NC%timevar,model%numerics%time,(/outfile%timecounter/))
+
+    ! write variables
+    !GENVAR_WRITE!
+
+    ! increase time counter
+    outfile%timecounter = outfile%timecounter + 1
+
+    status = nf90_sync(NC%id)
+
+  end subroutine glimmer_nc_write
+end module glimmer_ncfile
