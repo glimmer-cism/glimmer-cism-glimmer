@@ -23,6 +23,24 @@ load:          1
 hot:           1
 coordinates:   lon lat
 
+[snowd]
+dimensions:    time, y1, x1
+units:         meter
+long_name:     snow depth
+data:          data%snowd
+load:          1
+hot:           1
+coordinates:   lon lat
+
+[siced]
+dimensions:    time, y1, x1
+units:         meter
+long_name:     superimposed ice depth
+data:          data%siced
+load:          1
+hot:           1
+coordinates:   lon lat
+
 [glint_acab]
 dimensions:    time, y1, x1
 units:         meter/year

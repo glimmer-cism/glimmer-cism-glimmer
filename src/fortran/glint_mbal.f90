@@ -53,7 +53,7 @@ module glint_mbal
 
   type glint_mbal_params
     type(glimmer_pdd_params),      pointer :: annual_pdd => null() !*FD Pointer to annual PDD params
-    type(glimmer_daily_pdd_params),pointer :: daily_pdd => null() !*FD Pointer to annual PDD params
+    type(glimmer_daily_pdd_params),pointer :: daily_pdd => null()  !*FD Pointer to daily PDD params
     integer :: which !*FD Flag for chosen mass-balance type
     integer :: tstep !*FD Timestep of mass-balance scheme in hours
   end type glint_mbal_params
@@ -79,6 +79,7 @@ contains
     ! Deallocate if necessary
   
     if (associated(params%annual_pdd)) deallocate(params%annual_pdd)
+    if (associated(params%daily_pdd))  deallocate(params%daily_pdd)
 
     ! Allocate desired type and initialise
     ! Also check we have a valid value of which
@@ -95,6 +96,10 @@ contains
       call enmabal_init
       call write_log('Energy-balance mass-balance model not implemented yet',GM_FATAL,__FILE__,__LINE__)
       params%tstep=1
+    case(4)
+      allocate(params%daily_pdd)
+      call glimmer_daily_pdd_init(params%daily_pdd,config)
+      params%tstep=days2hours
     case default
       call write_log('Invalid value of whichacab',GM_FATAL,__FILE__,__LINE__)
     end select
@@ -103,18 +108,19 @@ contains
 
   ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine glint_mbal_calc(params,artm,arng,prcp,ablt,acab)
+  subroutine glint_mbal_calc(params,artm,arng,prcp,snowd,siced,ablt,acab)
 
     use glimmer_log
 
     type(glint_mbal_params)      :: params !*FD parameters to be initialised
-    real(sp), dimension(:,:), intent(in)    :: artm    !*FD Annual mean air-temperature 
+    real(sp), dimension(:,:), intent(in)    :: artm    !*FD Mean air-temperature 
                                                        !*FD ($^{\circ}$C)
-    real(sp), dimension(:,:), intent(in)    :: arng    !*FD Annual temperature half-range ($^{\circ}$C)
-    real(sp), dimension(:,:), intent(in)    :: prcp    !*FD Annual accumulated precipitation 
-                                                       !*FD (mm water equivalent)
-    real(sp), dimension(:,:), intent(out)   :: ablt    !*FD Annual ablation (mm water equivalent)
-    real(sp), dimension(:,:), intent(out)   :: acab    !*FD Annual mass-balance (mm water equivalent)
+    real(sp), dimension(:,:), intent(in)    :: arng    !*FD Temperature half-range ($^{\circ}$C)
+    real(sp), dimension(:,:), intent(in)    :: prcp    !*FD Accumulated precipitation (m)
+    real(sp), dimension(:,:), intent(inout) :: snowd   !*FD Snow depth (m)
+    real(sp), dimension(:,:), intent(inout) :: siced   !*FD Superimposed ice depth (m)
+    real(sp), dimension(:,:), intent(out)   :: ablt    !*FD Ablation (m)
+    real(sp), dimension(:,:), intent(out)   :: acab    !*FD Mass-balance (m)
 
     select case(params%which)
     case(1)
@@ -125,6 +131,8 @@ contains
        ! The energy-balance model will go here...
        call enmabal
        call write_log('Energy-balance mass-balance model not implemented yet',GM_FATAL,__FILE__,__LINE__)
+    case(4)
+       call glimmer_daily_pdd_mbal(params%daily_pdd,artm,arng,prcp,snowd,siced,ablt,acab)
     end select
 
   end subroutine glint_mbal_calc

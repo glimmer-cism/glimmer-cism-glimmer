@@ -53,47 +53,109 @@ module glimmer_daily_pdd
      !*FD Holds parameters for daily positive-degree-day mass-balance
      !*FD calculation. 
 
-     real(dp) :: pddfs                  !*FD Later set to \texttt{(rhow / rhoi) * pddfac\_snow}
-     real(dp) :: pddfi                  !*FD Later set to \texttt{(rhow / rhoi) * pddfac\_ice}
-     real(dp) :: wmax        = 0.6_dp   !*FD Fraction of melted snow that refreezes
-     real(dp) :: pddfac_ice  = 0.008_dp !*FD PDD factor for ice (m day$^{-1}$ $^{\circ}C$^{-1}$)
-     real(dp) :: pddfac_snow = 0.003_dp !*FD PDD factor for snow (m day$^{-1}$ $^{\circ}C$^{-1}$)
-     real(dp) :: rain_threshold = 1.0_dp !*FD Threshold for precip melting (degC)
+     real(sp) :: pddfs                  !*FD Later set to \texttt{(rhow / rhoi) * pddfac\_snow}
+     real(sp) :: pddfi                  !*FD Later set to \texttt{(rhow / rhoi) * pddfac\_ice}
+     real(sp) :: wmax        = 0.6_sp   !*FD Fraction of melted snow that refreezes
+     real(sp) :: pddfac_ice  = 0.008_sp !*FD PDD factor for ice (m day$^{-1}$ $^{\circ}C$^{-1}$)
+     real(sp) :: pddfac_snow = 0.003_sp !*FD PDD factor for snow (m day$^{-1}$ $^{\circ}C$^{-1}$)
+     real(sp) :: rain_threshold = 1.0_sp !*FD Threshold for precip melting (degC)
+     integer  :: whichrain = 1  !*FD method for determining whether precip is rain or snow.
 
   end type glimmer_daily_pdd_params
 
-  real(dp),parameter :: one_over_pi=1.0_dp/pi
+  real(sp),parameter :: one_over_pi=1.0_sp/pi
+
+  private
+  public :: glimmer_daily_pdd_params, glimmer_daily_pdd_init, glimmer_daily_pdd_mbal
 
 contains
 
-  subroutine glimmer_daily_pdd_init(params)
+  subroutine glimmer_daily_pdd_init(params,config)
 
     use physcon, only : rhow, rhoi
+    use glimmer_config
   
     type(glimmer_daily_pdd_params) :: params
+    type(ConfigSection), pointer         :: config !*FD structure holding sections of configuration file
 
-    params%pddfs = (rhow / rhoi) * 0.003_dp 
-    params%pddfi = (rhow / rhoi) * 0.008_dp 
+    ! Read the config file and output to log
+
+    call daily_pdd_readconfig(params,config)
+    call daily_pdd_printconfig(params)
+
+    params%pddfs = (rhow / rhoi) * 0.003_sp 
+    params%pddfi = (rhow / rhoi) * 0.008_sp 
 
   end subroutine glimmer_daily_pdd_init
+
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  subroutine daily_pdd_readconfig(params,config)
+
+    !*FD Reads in configuration data for the annual PDD scheme.
+
+    use glimmer_config
+
+    type(glimmer_daily_pdd_params),intent(inout) :: params !*FD The positive-degree-day parameters
+    type(ConfigSection), pointer         :: config !*FD structure holding sections of configuration file   
+
+    ! local variables
+    type(ConfigSection), pointer :: section
+    
+    call GetSection(config,section,'GLIMMER daily pdd')
+    if (associated(section)) then
+       call GetValue(section,'wmax',params%wmax)
+       call GetValue(section,'pddfac_ice',params%pddfac_ice)
+       call GetValue(section,'pddfac_snow',params%pddfac_snow)
+       call GetValue(section,'rain_threshold',params%rain_threshold)
+       call GetValue(section,'whichrain',params%whichrain)
+    end if
+
+  end subroutine daily_pdd_readconfig
+
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  subroutine daily_pdd_printconfig(params)
+
+    use glimmer_log
+
+    type(glimmer_daily_pdd_params),intent(inout) :: params !*FD The positive-degree-day parameters
+    character(len=100) :: message
+
+    call write_log_div
+
+    call write_log('GLIMMER daily PDD Scheme parameters:')
+    call write_log('-----------------------------------')
+    write(message,*) 'Snow refreezing fraction',params%wmax
+    call write_log(message)
+    write(message,*) 'PDD factor for ice',params%pddfac_ice
+    call write_log(message)
+    write(message,*) 'PDD factor for snow',params%pddfac_snow
+    call write_log(message)
+    write(message,*) 'Rain threshold temperature',params%rain_threshold,' degC'
+    call write_log(message)
+    write(message,*) 'Rain/snow partition method',params%whichrain
+    call write_log('')
+
+  end subroutine daily_pdd_printconfig
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine glimmer_daily_pdd_mbal(params,artm,arng,prcp,snowd,siced,ablt,acab)
 
     type(glimmer_daily_pdd_params)        :: params !*FD Daily PDD scheme parameters
-    real(dp),dimension(:,:),intent(in)    :: artm   !*FD Daily mean air-temperature ($^{\circ}$C)
-    real(dp),dimension(:,:),intent(in)    :: arng   !*FD Daily temperature half-range ($^{\circ}$C)
-    real(dp),dimension(:,:),intent(in)    :: prcp   !*FD Daily precipitation (m)
-    real(dp),dimension(:,:),intent(inout) :: snowd  !*FD Snow depth (m)
-    real(dp),dimension(:,:),intent(inout) :: siced  !*FD Superimposed ice depth (m)
-    real(dp),dimension(:,:),intent(out)   :: ablt   !*FD Daily ablation (m)
-    real(dp),dimension(:,:),intent(out)   :: acab   !*FD Daily mass-balance (m)
+    real(sp),dimension(:,:),intent(in)    :: artm   !*FD Daily mean air-temperature ($^{\circ}$C)
+    real(sp),dimension(:,:),intent(in)    :: arng   !*FD Daily temperature half-range ($^{\circ}$C)
+    real(sp),dimension(:,:),intent(in)    :: prcp   !*FD Daily precipitation (m)
+    real(sp),dimension(:,:),intent(inout) :: snowd  !*FD Snow depth (m)
+    real(sp),dimension(:,:),intent(inout) :: siced  !*FD Superimposed ice depth (m)
+    real(sp),dimension(:,:),intent(out)   :: ablt   !*FD Daily ablation (m)
+    real(sp),dimension(:,:),intent(out)   :: acab   !*FD Daily mass-balance (m)
 
-    real(dp),dimension(size(prcp,1),size(prcp,2)) :: rain ! Daily rain
-    real(dp),dimension(size(prcp,1),size(prcp,2)) :: degd ! Degree-day
-    real(dp),dimension(size(prcp,1),size(prcp,2)) :: giced ! Temporary array for glacial ice
-    real(dp),dimension(size(prcp,1),size(prcp,2)) :: old_snow,old_sice
+    real(sp),dimension(size(prcp,1),size(prcp,2)) :: rain ! Daily rain
+    real(sp),dimension(size(prcp,1),size(prcp,2)) :: degd ! Degree-day
+    real(sp),dimension(size(prcp,1),size(prcp,2)) :: giced ! Temporary array for glacial ice
+    real(sp),dimension(size(prcp,1),size(prcp,2)) :: old_snow,old_sice
 
     integer :: nx,ny,i,j
 
@@ -102,9 +164,9 @@ contains
     old_snow=snowd
     old_sice=siced
 
-    rain=rainorsnw(1,artm,arng,prcp,params%rain_threshold)
+    rain=rainorsnw(params%whichrain,artm,arng,prcp,params%rain_threshold)
     degd=finddegdays(artm,arng)
-    giced=0.0_dp
+    giced=0.0_sp
 
     do i=1,nx
        do j=1,ny
@@ -119,21 +181,21 @@ contains
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  elemental real(dp) function finddegdays(localartm,localarng)
+  elemental real(sp) function finddegdays(localartm,localarng)
 
     !*FD Finds the degree-day as a function of mean daily temperature and
     !*FD half-range. The calculation is made on the assumption that
     !*FD daily temperatures vary as $T = T_{0} - \Delta T * \cos(\theta)$.
 
-    real(dp), intent(in) :: localartm !*FD Mean daily temperature (degC)
-    real(dp), intent(in) :: localarng !*FD Daily temperture half-range (degC)
+    real(sp), intent(in) :: localartm !*FD Mean daily temperature (degC)
+    real(sp), intent(in) :: localarng !*FD Daily temperture half-range (degC)
 
-    real(dp) :: time
+    real(sp) :: time
 
-    if (localartm - localarng > 0.0_dp) then
+    if (localartm - localarng > 0.0_sp) then
        finddegdays = localartm
-    else if (localartm + localarng < 0.0_dp) then  
-       finddegdays = 0.0_dp
+    else if (localartm + localarng < 0.0_sp) then  
+       finddegdays = 0.0_sp
     else
        time = acos(localartm / localarng) 
        finddegdays = (localartm*(pi-time)+localarng*sin(time))*one_over_pi
@@ -143,16 +205,16 @@ contains
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  elemental real(dp) function rainorsnw(which,localartm,localarng,localprcp,threshold)
+  elemental real(sp) function rainorsnw(which,localartm,localarng,localprcp,threshold)
 
     !*FD Determines a value for snow precipitation, dependent on air temperature and half-range.
     !*FD Takes precipitation as input and returns amount of rain.
 
     integer, intent(in) :: which     !*FD Selects method of calculation
-    real(dp),intent(in) :: localartm !*FD Air temperature (degC)
-    real(dp),intent(in) :: localarng !*FD Temperature half-range (degC)
-    real(dp),intent(in) :: localprcp !*FD Precipitation (arbitrary units)
-    real(dp),intent(in) :: threshold !*FD Snow/rain threshold (degC)
+    real(sp),intent(in) :: localartm !*FD Air temperature (degC)
+    real(sp),intent(in) :: localarng !*FD Temperature half-range (degC)
+    real(sp),intent(in) :: localprcp !*FD Precipitation (arbitrary units)
+    real(sp),intent(in) :: threshold !*FD Snow/rain threshold (degC)
 
     select case(which)
 
@@ -163,9 +225,9 @@ contains
        if (localartm - localarng > threshold) then
           rainorsnw = localprcp
        else if (localartm + localarng < threshold) then  
-          rainorsnw = 0.0_dp
+          rainorsnw = 0.0_sp
        else
-          rainorsnw = localprcp * (1.0_dp-one_over_pi * acos((localartm - threshold) / localarng))
+          rainorsnw = localprcp * (1.0_sp-one_over_pi * acos((localartm - threshold) / localarng))
        end if
 
     case default
@@ -175,7 +237,7 @@ contains
        if (localartm > threshold) then
           rainorsnw = localprcp
        else
-          rainorsnw = 0.0_dp
+          rainorsnw = 0.0_sp
        end if
 
     end select
@@ -192,14 +254,14 @@ contains
     !*FD of snow, superimposed ice and glacial ice, respectively.
 
     type(glimmer_daily_pdd_params) :: params !*FD PDD parameters
-    real(dp), intent(inout) :: snowdepth     !*FD Snow depth (m)
-    real(dp), intent(inout) :: sicedepth     !*FD Superimposed ice depth (m)
-    real(dp), intent(inout) :: gicedepth     !*FD Glacial ice depth (m)
-    real(dp), intent(in)    :: degd          !*FD The degree-day (degC day)
-    real(dp), intent(in)    :: prcp          !*FD Total precip (m)
-    real(dp), intent(in)    :: rain          !*FD Rain (m)
+    real(sp), intent(inout) :: snowdepth     !*FD Snow depth (m)
+    real(sp), intent(inout) :: sicedepth     !*FD Superimposed ice depth (m)
+    real(sp), intent(inout) :: gicedepth     !*FD Glacial ice depth (m)
+    real(sp), intent(in)    :: degd          !*FD The degree-day (degC day)
+    real(sp), intent(in)    :: prcp          !*FD Total precip (m)
+    real(sp), intent(in)    :: rain          !*FD Rain (m)
 
-    real(dp) :: potablt, wfrac
+    real(sp) :: potablt, wfrac
 
     !-------------------------------------------------------------------------
 
@@ -255,14 +317,14 @@ contains
 
 
           potablt = params%pddfi * (potablt - snowdepth) / params%pddfs
-          snowdepth = 0.0_dp 
+          snowdepth = 0.0_sp 
 
 	  sicedepth = sicedepth - potablt
 
-          if (sicedepth < 0.0_dp) then
+          if (sicedepth < 0.0_sp) then
 
              gicedepth = gicedepth + sicedepth
-             sicedepth = 0.0_dp
+             sicedepth = 0.0_sp
           end if
 
        end if

@@ -72,6 +72,8 @@ module glint_type
     real(sp),dimension(:,:),pointer :: artm        => null() !*FD Annual mean air temperature
     real(sp),dimension(:,:),pointer :: arng        => null() !*FD Annual air temperature half-range
     real(sp),dimension(:,:),pointer :: prcp        => null() !*FD Precipitation (mm or m)
+    real(sp),dimension(:,:),pointer :: snowd       => null() !*FD Snow depth (m)
+    real(sp),dimension(:,:),pointer :: siced       => null() !*FD Superimposed ice depth (m)
     real(rk),dimension(:,:),pointer :: xwind       => null() !*FD $x$-component of surface winds (m/s)
     real(rk),dimension(:,:),pointer :: ywind       => null() !*FD $y$-component of surface winds (m/s)
     real(dp),dimension(:,:),pointer :: global_orog => null() !*FD Global orography (m)
@@ -182,6 +184,8 @@ contains
     if (associated(instance%artm))          deallocate(instance%artm)
     if (associated(instance%arng))          deallocate(instance%arng)
     if (associated(instance%prcp))          deallocate(instance%prcp)
+    if (associated(instance%snowd))         deallocate(instance%snowd)
+    if (associated(instance%siced))         deallocate(instance%siced)
     if (associated(instance%xwind))         deallocate(instance%xwind)
     if (associated(instance%ywind))         deallocate(instance%ywind)
     if (associated(instance%global_orog))   deallocate(instance%global_orog) 
@@ -214,6 +218,8 @@ contains
     allocate(instance%artm(ewn,nsn));        instance%artm = 0.0
     allocate(instance%arng(ewn,nsn));        instance%arng = 0.0
     allocate(instance%prcp(ewn,nsn));        instance%prcp        = 0.0
+    allocate(instance%snowd(ewn,nsn));       instance%snowd       = 0.0
+    allocate(instance%siced(ewn,nsn));       instance%siced       = 0.0
     allocate(instance%xwind(ewn,nsn));       instance%xwind       = 0.0
     allocate(instance%ywind(ewn,nsn));       instance%ywind       = 0.0
     allocate(instance%global_orog(ewn,nsn)); instance%global_orog = 0.0

@@ -145,7 +145,7 @@ contains
     ! ------------------------------------------------------------------------ 
 
     call glint_mbal_calc(instance%mbal_params,instance%artm,instance%arng, &
-          instance%prcp,instance%ablt,instance%acab) 
+          instance%prcp,instance%snowd,instance%siced,instance%ablt,instance%acab) 
 
     ! ------------------------------------------------------------------------ 
     ! Accumulate mass-balance if necessary
