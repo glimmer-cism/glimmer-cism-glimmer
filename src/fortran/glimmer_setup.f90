@@ -891,6 +891,7 @@ contains
     allocate(model%geometry%topg(ewn,nsn));           model%geometry%topg = 0.0d0
     allocate(model%geometry%relx(ewn,nsn));           model%geometry%relx = 0.0d0
     allocate(model%geometry%mask(ewn,nsn));           model%geometry%mask = 0
+    allocate(model%geometry%std_dev(ewn,nsn));        model%geometry%std_dev = 0
 
     allocate(model%thckwk%olds(ewn,nsn,model%thckwk%nwhich))
                                                       model%thckwk%olds = 0.0d0

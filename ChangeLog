@@ -1,3 +1,8 @@
+2004-11-08 Ian Rutt
+ * Added loading of standard deviation field into glimmer (not used yet).
+ * Added subroutine to define CF projection by hand, if necessary
+ * Update input2ncdf.f90 to allow projection definition.
+
 2004-11-04 Ian Rutt
  * Added area considerations of mean_to_local subroutine in glimmer_interp.f90 (not used
    in glimmer itself).

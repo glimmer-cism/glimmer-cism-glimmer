@@ -54,7 +54,7 @@ bin2ncdf: bin2ncdf.o glimmer_global.o  ncdf.o ncdf_file.o glimmer_modu.o glimmer
 	$(F77) -o $@ $^ $(LD_FLAGS)
 
 input2ncdf:	input2ncdf.o glimmer_global.o  ncdf.o ncdf_file.o glimmer_modu.o glimmer_paramets.o  glimmer_CFproj.o glide_messages.o
-	$(F77) -o $@ $^ $(LD_FLAGS)
+	$(F77) -o $@ $^ $(LD_FLAGS) $(GLIMMERFLAGS)
 
 relaxed: relaxed.o  SLAP_library libglimmer.a
 	$(F77) -o $@ $< libglimmer.a SLAP_library/libslap.a $(LD_FLAGS) 

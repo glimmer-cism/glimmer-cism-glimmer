@@ -50,9 +50,14 @@ module glimmer_CFproj
   !*FD parameters in an appropriate format.
 
   private
-  public  CFproj_projection,CFproj_proj4,CFproj_GetProj,CFproj_PutProj
+  public  CFproj_projection,CFproj_proj4,CFproj_GetProj,CFproj_PutProj,CFproj_define
+  public  CFP_LAEA,CFP_AEA,CFP_LCC,CFP_STERE
 
   integer, parameter :: proj4len=100
+  integer, parameter :: CFP_LAEA=1
+  integer, parameter :: CFP_AEA=2
+  integer, parameter :: CFP_LCC=3
+  integer, parameter :: CFP_STERE=4
 
   ! Type definitions for various projections -------------------
 
@@ -245,6 +250,91 @@ contains
        call glide_msg(GM_FATAL,__FILE__,__LINE__,'Could not find any projection')
     end if
   end subroutine CFproj_PutProj
+
+  !-------------------------------------------------------------------------
+
+  subroutine CFproj_define(cfp,ptype,polar, &
+       longitude_of_central_meridian, &
+       latitude_of_projection_origin, &
+       scale_factor_at_projection_origin, &
+       standard_parallel, &
+       standard_parallel_2, &
+       false_easting, &
+       false_northing)
+
+    use glide_messages
+
+    type(CFproj_projection),intent(inout) :: cfp 
+    integer,intent(in) :: ptype
+    logical,optional,intent(in) :: polar
+    real,optional,intent(in) :: longitude_of_central_meridian
+    real,optional,intent(in) :: latitude_of_projection_origin
+    real,optional,intent(in) :: scale_factor_at_projection_origin
+    real,optional,intent(in) :: standard_parallel
+    real,optional,intent(in) :: standard_parallel_2
+    real,optional,intent(in) :: false_easting
+    real,optional,intent(in) :: false_northing
+
+    if (associated(cfp%laea))  deallocate(cfp%laea)
+    if (associated(cfp%aea))   deallocate(cfp%aea)
+    if (associated(cfp%lcc))   deallocate(cfp%lcc)
+    if (associated(cfp%stere)) deallocate(cfp%stere)
+
+    select case(ptype)
+    case(CFP_LAEA)
+       allocate(cfp%laea)
+       if(present(longitude_of_central_meridian)) &
+            cfp%laea%longitude_of_central_meridian = longitude_of_central_meridian
+       if(present(latitude_of_projection_origin)) &
+            cfp%laea%latitude_of_projection_origin = latitude_of_projection_origin
+       if(present(false_easting)) &
+            cfp%laea%false_easting = false_easting
+       if(present(false_northing)) &
+            cfp%laea%false_northing = false_northing
+    case(CFP_AEA)
+       allocate(cfp%aea)
+       if(present(longitude_of_central_meridian)) & 
+            cfp%aea%longitude_of_central_meridian = longitude_of_central_meridian
+       if(present(latitude_of_projection_origin)) &
+            cfp%aea%latitude_of_projection_origin = latitude_of_projection_origin
+       if(present(false_easting)) &
+            cfp%aea%false_easting = false_easting
+       if(present(false_northing))&
+            cfp%aea%false_northing = false_northing
+       if(present(standard_parallel).and.present(standard_parallel_2)) &
+            cfp%aea%standard_parallel = (/ standard_parallel,standard_parallel_2 /)
+    case(CFP_LCC)
+       allocate(cfp%lcc)
+       if (present(longitude_of_central_meridian)) &
+            cfp%lcc%longitude_of_central_meridian = longitude_of_central_meridian
+       if (present(latitude_of_projection_origin)) &
+            cfp%lcc%latitude_of_projection_origin = latitude_of_projection_origin
+       if (present(false_easting)) &
+            cfp%lcc%false_easting = false_easting
+       if (present(false_northing)) &
+            cfp%lcc%false_northing = false_northing
+       if (present(standard_parallel).and.present(standard_parallel_2)) &
+            cfp%lcc%standard_parallel = (/ standard_parallel,standard_parallel_2 /)
+    case(CFP_STERE)
+       allocate(cfp%stere)
+       if(present(polar)) cfp%stere%polar = polar
+       if(present(longitude_of_central_meridian)) &
+            cfp%stere%longitude_of_central_meridian = longitude_of_central_meridian
+       if(present(latitude_of_projection_origin)) &
+            cfp%stere%latitude_of_projection_origin = latitude_of_projection_origin
+       if(present(scale_factor_at_projection_origin)) &
+            cfp%stere%scale_factor_at_projection_origin = scale_factor_at_projection_origin
+       if(present(standard_parallel)) &
+            cfp%stere%standard_parallel = standard_parallel
+       if(present(false_easting)) &
+            cfp%stere%false_easting = false_easting
+       if(present(false_northing)) &
+            cfp%stere%false_northing = false_northing
+    case default
+       call glide_msg(GM_FATAL,__FILE__,__LINE__,'Unrecognised projection type')
+    end select
+
+  end subroutine CFproj_define
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! private readers

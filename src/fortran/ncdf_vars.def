@@ -102,6 +102,14 @@ data:          model%climate%presusrf
 factor:        thk0
 load:          1
 
+[std_dev]
+dimensions:    time, y1, x1
+units:         meter
+long_name:     standard deviation of sub-grid topography
+data:          model%geometry%std_dev
+factor:        thk0
+load:          1
+
 [uflx]
 dimensions:    time, y0, x0
 units:         meter2/year

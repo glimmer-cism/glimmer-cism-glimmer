@@ -48,12 +48,22 @@ program input2ncdf
   use glimmer_ncdf
   use glimmer_ncfile
   use glimmer_types
+  use glimmer_CFproj
   use paramets, only : len0
   implicit none
 
   ! file names
-  character(len=30) :: latfile, topofile, rtopofile, surffile, precepfile, pressurf,mask
-  integer unit, status
+  character(len=30) :: latfile, topofile, rtopofile, sdfile
+  character(len=30) :: surffile, precepfile, pressurf,mask
+  integer unit, status, ptype
+  logical :: polar
+  real :: longitude_of_central_meridian
+  real :: latitude_of_projection_origin
+  real :: scale_factor_at_projection_origin
+  real :: standard_parallel
+  real :: standard_parallel_2
+  real :: false_easting
+  real :: false_northing  
   type(glimmer_nc_output), pointer :: outfile
   type(glimmer_global_type) :: model
 
@@ -72,6 +82,9 @@ program input2ncdf
   write(*,*) 'Enter name of relaxed topography file.'
   read(*,*) rtopofile
   inquire(file=rtopofile,exist=NC%do_var(NC_B_RELX))
+  write(*,*) 'Enter name of standard deviation file.'
+  read(*,*) sdfile
+  inquire(file=sdfile,exist=NC%do_var(NC_B_STD_DEV))
   write(*,*) 'Enter name of surface file.'
   read(*,*) surffile
   inquire(file=surffile,exist=NC%do_var(NC_B_USURF))
@@ -85,9 +98,57 @@ program input2ncdf
   read(*,*) mask
   inquire(file=mask,exist=NC%do_var(NC_B_MASK))
 
-
   write(*,*) 'Enter name of output netCDF file.'
   read(*,*) NC%filename
+
+  ! Define a projection 
+
+  write(*,*) 'Enter the projection type:'
+  write(*,*) CFP_LAEA,') Lambert Azimuthal Equal-Area'
+  write(*,*) CFP_AEA ,') Albers Equal Area Conic'
+  write(*,*) CFP_LCC ,') Lambert Conic Conformal'
+  write(*,*) CFP_STERE,') Stereographic'
+  read(*,*) ptype
+
+  write(*,*) 'Enter longitude of central meridian:'
+  read(*,*) longitude_of_central_meridian
+
+  write(*,*) 'Enter latitude of projection origin:'
+  read(*,*) latitude_of_projection_origin
+
+  write(*,*) 'Enter false easting:'
+  read(*,*) false_easting
+
+  write(*,*) 'Enter false northing:'
+  read(*,*) false_northing
+
+  if (ptype.ne.CFP_LAEA) then
+     write(*,*) 'Enter standard parallel'
+     read(*,*) standard_parallel
+  end if
+
+  if (ptype.eq.CFP_AEA.or.ptype.eq.CFP_LCC) then
+     write(*,*) 'Enter standard parallel 2'
+     read(*,*) standard_parallel_2
+  end if
+
+  if (ptype.eq.CFP_STERE) then
+     write(*,*) 'Polar? (true or false)'
+     read(*,*) polar
+     write(*,*) 'Enter scale factor at projection origin'
+     read(*,*) scale_factor_at_projection_origin
+  end if
+
+  call CFproj_define(model%projection, &
+       ptype, &
+       polar, &
+       longitude_of_central_meridian, &
+       latitude_of_projection_origin, &
+       scale_factor_at_projection_origin, &
+       standard_parallel, &
+       standard_parallel_2, &
+       false_easting, &
+       false_northing)
 
   if (.not.NC%do_var(NC_B_TOPG)) then
      write(*,*) 'No topo file, bailing out...'
@@ -138,6 +199,12 @@ program input2ncdf
   if (NC%do_var(NC_B_PRESUSRF)) then
      call readplan(pressurf,data,time,nx,ny,delta)
      status = nf90_put_var(NC%id, NC%varids(NC_B_PRESUSRF), data, (/1,1,1/))
+     call nc_errorhandle(__FILE__,__LINE__,status)
+  end if
+
+  if (NC%do_var(NC_B_STD_DEV)) then
+     call readplan(sdfile,data,time,nx,ny,delta)
+     status = nf90_put_var(NC%id, NC%varids(NC_B_STD_DEV), data, (/1,1,1/))
      call nc_errorhandle(__FILE__,__LINE__,status)
   end if
 

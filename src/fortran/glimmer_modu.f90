@@ -236,7 +236,11 @@ module glimmer_types
 
     real(dp),dimension(:,:),pointer :: relx => null()
      
-    !*FD The elevation of the relaxed topography, by \texttt{thck0}.
+    !*FD The elevation of the relaxed topography, divided by \texttt{thck0}.
+
+    real(dp),dimension(:,:),pointer :: std_dev => null()
+
+    !*FD The standard deviation of the sub-grid topography, divided by \texttt{thck0}.
 
     integer, dimension(:,:),pointer :: mask => null()
     
