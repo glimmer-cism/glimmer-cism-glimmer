@@ -47,7 +47,7 @@ module glint_initialise
   use glint_type
 
   private
-  public glint_i_initialise, glint_i_end
+  public glint_i_initialise, glint_i_end, calc_coverage
 
 contains
 
@@ -56,6 +56,7 @@ contains
     !*FD Initialise an ice model (glide) instance
     use glimmer_config
     use glint_global_grid
+    use glide
     implicit none
 
     ! Arguments    
@@ -71,6 +72,12 @@ contains
     instance%model%numerics%tinc=time_step             ! Initialise the model time step
     ! read glint configuration
     call glint_i_readconfig(instance,config)    
+
+    ! setting nx,ny of proj
+    instance%proj%nx = instance%model%general%ewn
+    instance%proj%ny = instance%model%general%nsn
+    instance%proj%dx = instance%model%numerics%dew
+    instance%proj%dy = instance%model%numerics%dns
     
     call new_proj(instance%proj,radea)                          ! Initialise the projection
     call new_downscale(instance%downs,instance%proj,grid)       ! Initialise the downscaling
@@ -112,6 +119,7 @@ contains
   subroutine glint_i_readconfig(instance,config)
     !*FD read glint configuration
     use glimmer_config
+    use glimmer_log
     implicit none
     type(ConfigSection), pointer :: config              !*FD structure holding sections of configuration file   
     type(glint_instance),  intent(inout) :: instance    !*FD The instance being initialised.
@@ -123,7 +131,7 @@ contains
     call proj_readconfig(instance%proj,config)         ! read glint projection configuration
     call proj_printconfig(instance%proj)               ! and print it
     
-    call GetSection(config,section,'GLINT')
+    call GetSection(config,section,'GLINT climate')
     if (associated(section)) then
        call GetValue(section,'temperature_file',instance%forcdata%forcfile)
        call GetValue(section,'artm_mode',instance%climate%whichartm)
@@ -151,6 +159,8 @@ contains
     use glimmer_ncinfile
     use glint_climate
     use glint_io
+    use glide_setup
+    use glide_temp
     implicit none
 
     type(glint_instance),intent(inout)   :: instance    !*FD Instance whose elements are to be allocated.
@@ -251,14 +261,14 @@ contains
        
        ! Calculate the elevation of the lower ice surface
        
-       call calclsrf(instance%model%geometry%thck,instance%model%geometry%topg,instance%model%geometry%lsrf)
+       call glide_calclsrf(instance%model%geometry%thck,instance%model%geometry%topg,instance%model%geometry%lsrf)
        
        ! Calculate the elevation of the upper ice surface by adding thickness
        ! onto the lower surface elevation.
        
        instance%model%geometry%usrf = instance%model%geometry%thck + instance%model%geometry%lsrf
        
-       call timeevoltemp(instance%model,0,instance%global_orog)     ! calculate initial temperature distribution
+       call timeevoltemp(instance%model,0)     ! calculate initial temperature distribution
 
        deallocate(arng) 
        
@@ -268,7 +278,7 @@ contains
        ! Calculate the lower and upper surfaces of the ice-sheet 
        ! -----------------------------------------------------------------
        
-       call calclsrf(instance%model%geometry%thck,instance%model%geometry%topg,instance%model%geometry%lsrf)
+       call glide_calclsrf(instance%model%geometry%thck,instance%model%geometry%topg,instance%model%geometry%lsrf)
        instance%model%geometry%usrf = instance%model%geometry%thck + instance%model%geometry%lsrf
        
     endif

@@ -219,8 +219,10 @@ contains
                trim(NCI%filename), ' at time ', model%numerics%time
           call write_log(message)
           NCI%just_processed = .TRUE.
+          NCI%processsed_time = model%numerics%time
        end if
-    else
+    end if
+    if (model%numerics%time.gt.NCI%processsed_time) then
        if (NCI%just_processed) then
           ! finished reading during last time step, need to increase counter...
           infile%current_time = infile%current_time + 1

@@ -45,11 +45,11 @@ module glint_timestep
 
   use glint_type
   private
-  public glimmer_i_tstep
+  public glint_i_tstep
 
 contains
 
-  subroutine glimmer_i_tstep(time,instance,lats,lons,g_temp,g_temp_range, &
+  subroutine glint_i_tstep(time,instance,lats,lons,g_temp,g_temp_range, &
        g_precip,g_zonwind,g_merwind,g_orog,g_orog_out,g_albedo,g_ice_frac,&
        g_water_in,g_water_out,t_win,t_wout,ice_vol,out_f)
 
@@ -60,9 +60,11 @@ contains
     !*FD Note also that input quantities here are accumulated totals since the
     !*FD last call.
     use glide
+    use glide_setup
     use glint_mbal
     use paramets
     use glint_io
+    use glint_climate
     implicit none
 
     ! ------------------------------------------------------------------------  
@@ -225,7 +227,7 @@ contains
             instance%model%climate%  acab)
        instance%model%geometry%thck = max(0.0d0, instance%model%climate%acab* instance%model%numerics%dt)
 
-       call calclsrf(instance%model%geometry%thck, &
+       call glide_calclsrf(instance%model%geometry%thck, &
             instance%model%geometry%topg, &
             instance%model%geometry%lsrf)
        instance%model%geometry%usrf = instance%model%geometry%thck + instance%model%geometry%lsrf
@@ -383,7 +385,7 @@ contains
     deallocate(upscale_temp,accum_temp,ablat_temp)
     instance%first=.false.
 
-  end subroutine glimmer_i_tstep
+  end subroutine glint_i_tstep
 
   subroutine glint_remove_bath(orog,x,y)
 

@@ -240,19 +240,19 @@ contains
           call write_log_div
           write(message,*) 'Writing to file ', trim(NCO%filename), ' at time ', model%numerics%time
           call write_log(trim(message))
-          
-          ! increase next_write 
+          ! increase next_write
           outfile%next_write=outfile%next_write+outfile%freq
+          NCO%processsed_time = model%numerics%time
           ! write time
           status = nf90_put_var(NCO%id,NCO%timevar,model%numerics%time,(/outfile%timecounter/))
           NCO%just_processed = .TRUE.         
        end if
-    else
+    end if
+    if (model%numerics%time.gt.NCO%processsed_time) then
        if (NCO%just_processed) then
           ! finished writing during last time step, need to increase counter...
           
           outfile%timecounter = outfile%timecounter + 1
-
           status = nf90_sync(NCO%id)
           NCO%just_processed = .FALSE.
        end if

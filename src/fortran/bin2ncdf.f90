@@ -1,6 +1,6 @@
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! +                                                           +
-! +  glimmer_outp.f90 - part of the GLIMMER ice model         + 
+! +  bin2ncdf.f90 - part of the GLIMMER ice model             + 
 ! +                                                           +
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! 
@@ -556,14 +556,14 @@ program bin2ncdf
   use bin2ncdf_mod
   use glimmer_ncdf
   use glimmer_ncfile
-  use glimmer_types
+  use glide_types
   use paramets, only : len0
   implicit none
 
   character(len=30) :: infile
   integer unit0d, unit2d, unit3d, status
   type(glimmer_nc_output), pointer :: outfile
-  type(glimmer_global_type) :: model
+  type(glide_global_type) :: model
   logical :: do0d,do2d,do3d
 
   allocate(outfile)

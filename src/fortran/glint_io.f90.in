@@ -52,6 +52,7 @@ contains
   subroutine glint_writeall(instance)
     !*FD write GLINT data to all netCDF files
     use glimmer_ncdf
+    use glimmer_ncfile
     use glint_type
     implicit none
     type(glint_instance), intent(inout)  :: instance  !*FD Model instance
@@ -60,7 +61,7 @@ contains
     type(glimmer_nc_output), pointer :: oc
     oc=>instance%model%funits%out_first
     do while(associated(oc))
-       call glimmer_nc_checkwrite(oc,instance%model)
+       call glimmer_nc_checkwrite(oc,instance%model,.false.)
        if (oc%nc%just_processed) then
           ! write standard variables
           call glint_nc_write(oc,instance%climate)
@@ -72,6 +73,7 @@ contains
   subroutine glint_readall(instance)
     !*FD write GLINT data to all netCDF files
     use glimmer_ncdf
+    use glimmer_ncinfile
     use glint_type
     implicit none
     type(glint_instance), intent(inout)  :: instance  !*FD Model instance
@@ -124,6 +126,7 @@ contains
 
   subroutine glint_nc_read(infile,climate,scale_vars)
     !*FD read variables from a netCDF file
+    use glimmer_log
     use glimmer_ncdf
     use glint_type, only : glint_climate
     use glimmer_global, only : dp

@@ -45,15 +45,23 @@ program testsetup
   !*FD written by Magnus Hagdorn, June 2004
   use glide_types
   use glide_setup
+  use glimmer_config
+  use glimmer_log
   implicit none
 
   type(glide_global_type) :: model        ! model instance
-  character(len=50) :: fname   ! name of paramter file
-  
+  character(len=20) :: fname   ! name of paramter file
+  type(ConfigSection), pointer :: config  ! configuration stuff
 
   write(*,*) 'Enter name of GLIDE configuration file to be read'
   read(*,*) fname
 
-  call readconfig(model,fname)
-  call printconfig(6,model)
+  ! start logging
+  call open_log(unit=50)
+  
+  ! read configuration
+  call ConfigRead(fname,config)  
+
+  call glide_readconfig(model,config)
+  call glide_printconfig(model)
 end program testsetup

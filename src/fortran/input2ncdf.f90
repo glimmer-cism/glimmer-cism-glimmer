@@ -47,7 +47,7 @@ program input2ncdf
   !*FD written by Magnus Hagdorn, May 2004
   use glimmer_ncdf
   use glimmer_ncfile
-  use glimmer_types
+  use glide_types
   use paramets, only : len0
   implicit none
 
@@ -55,7 +55,7 @@ program input2ncdf
   character(len=30) :: latfile, topofile, rtopofile, surffile, precepfile, pressurf,mask
   integer unit, status
   type(glimmer_nc_output), pointer :: outfile
-  type(glimmer_global_type) :: model
+  type(glide_global_type) :: model
 
   integer nx,ny
   real time,delta

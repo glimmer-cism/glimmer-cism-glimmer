@@ -9,7 +9,8 @@ GLIMMERFLAGS=$(F77FLAGS) $(GLIMMERPRECOPT)
 #
 SUBDIRS = SLAP_library
 LIBS = libglimmer.a libglide.a libglint.a
-PROGS = glimmer_example bin2ncdf input2ncdf relaxed simple_glide eis_glide
+PROGS = glimmer_example bin2ncdf input2ncdf simple_glide eis_glide
+#relaxed is currently broken...
 TESTS = test_config test_setup test_ts
 DATA = ncdf_vars.def
 
@@ -35,7 +36,7 @@ $(SUBDIRS):
 
 
 libglimmer.a: 	glimmer_CFproj.o glimmer_config.o glimmer_global.o glimmer_utils.o glimmer_log.o glimmer_ts.o\
-		ncdf.o ncdf_params.o ncdf_file.o ncdf_infile.o glimmer_paramets.o glimmer_physcon.o glimmer_degd.o
+		ncdf.o ncdf_params.o ncdf_file.o ncdf_infile.o glimmer_paramets.o glimmer_physcon.o glimmer_degd.o gmt.o
 		ar rcv $@ $^
 		if [ "$(RANLIB)" != "" ] ; then $(RANLIB) $@ ; fi
 
@@ -44,7 +45,7 @@ libglide.a:	glide.o glide_setup.o glide_types.o glimmer_temp.o glimmer_isot.o gl
 		if [ "$(RANLIB)" != "" ] ; then $(RANLIB) $@ ; fi
 
 libglint.a:	glint_climate.o glint_initialise.o glint_io.o glint_timestep.o glint_type.o \
-		glimmer_proj.o glimmer_interp.o glimmer_global_grid.o glimmer_mbal.o
+		glimmer.o glimmer_proj.o glimmer_interp.o glimmer_global_grid.o glimmer_mbal.o
 		ar rcv $@ $^
 		if [ "$(RANLIB)" != "" ] ; then $(RANLIB) $@ ; fi
 
@@ -54,24 +55,23 @@ eis_glide:	$(EIS) libglide.a libglimmer.a SLAP_library
 simple_glide:	$(SIMPLE) libglide.a libglimmer.a SLAP_library
 		$(F77) -o $@ $(SIMPLE) libglide.a libglimmer.a SLAP_library/libslap.a $(LD_FLAGS)
 
-glimmer_example :  glimmer_example.o SLAP_library libglimmer.a
-	$(F77) $(GLIMMERFLAGS) -o $@ $< libglimmer.a SLAP_library/libslap.a $(LD_FLAGS)
+glimmer_example :  glimmer_example.o libglide.a libglimmer.a libglint.a SLAP_library
+	$(F77) $(GLIMMERFLAGS) -o $@ $< libglint.a libglide.a libglimmer.a SLAP_library/libslap.a $(LD_FLAGS)
 
-bin2ncdf: bin2ncdf.o glimmer_global.o  ncdf.o ncdf_file.o glimmer_modu.o glimmer_physcon.o glimmer_paramets.o  glimmer_CFproj.o
+bin2ncdf: bin2ncdf.o glimmer_global.o  ncdf.o ncdf_file.o glide_types.o glimmer_physcon.o glimmer_paramets.o  glimmer_CFproj.o glimmer_log.o 
 	$(F77) -o $@ $^ $(LD_FLAGS) 
 
-input2ncdf:	input2ncdf.o glimmer_global.o  ncdf.o ncdf_file.o glimmer_modu.o glimmer_paramets.o  glimmer_CFproj.o
+input2ncdf:	input2ncdf.o glimmer_global.o  ncdf.o ncdf_file.o glide_types.o glimmer_paramets.o  glimmer_CFproj.o glimmer_log.o
 	$(F77) -o $@ $^ $(LD_FLAGS)
 
-relaxed: relaxed.o glimmer_global.o ncdf.o ncdf_file.o ncdf_infile.o glimmer_modu.o glimmer_setup.o glimmer_physcon.o glimmer_paramets.o \
-         glimmer_proj.o gmt.o glimmer_interp.o glimmer_utils.o glimmer_config.o ncdf_params.o glimmer_outp.o glimmer_temp.o \
-         glimmer_mbal.o glimmer_thck.o glimmer_velo.o glimmer_CFproj.o glimmer_degd.o glimmer_CFproj.o
+relaxed: relaxed.o glimmer_global.o ncdf.o ncdf_file.o ncdf_infile.o glide_types.o glide_setup.o glimmer_physcon.o glimmer_paramets.o \
+         glimmer_config.o ncdf_params.o glimmer_outp.o glimmer_CFproj.o 
 	$(F77) -o $@ $^ $(LD_FLAGS) SLAP_library/libslap.a
 
-test_config:	test_config.o glimmer_config.o
+test_config:	test_config.o glimmer_config.o glimmer_log.o
 	$(F77) -o $@ $^ $(LD_FLAGS)
 
-test_setup:	glimmer_config.o glide_types.o glide_setup.o test_setup.o
+test_setup:	glimmer_config.o glide_types.o glide_setup.o test_setup.o glimmer_log.o glimmer_paramets.o
 		$(F77) -o $@ $^ $(LD_FLAGS)
 
 test_ts:	glimmer_ts.o glimmer_log.o test_ts.o

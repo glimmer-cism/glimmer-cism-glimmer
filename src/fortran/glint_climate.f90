@@ -53,6 +53,7 @@ contains
     use paramets, only : len0, thk0
     use glint_type
     use glint_mbal
+    use glimmer_log
     implicit none
 
 
@@ -195,7 +196,7 @@ contains
 
        artm=instance%climate%usurftemp
        arng=0.0
-       call glimmer_lapserate(artm,real(usrf*thk0,rk),real(instance%climate%ulapse_rate,rk))
+       call glint_lapserate(artm,real(usrf*thk0,rk),real(instance%climate%ulapse_rate,rk))
 
        ! ----------------------------------------------------------
     case(7) ! Supplied large-scale temperature and range
@@ -212,11 +213,11 @@ contains
 
           ! Reduce temperatures to sea-level
 
-          call glimmer_lapserate(artm,real(g_orog,rk),real(-instance%climate%ulapse_rate,rk))
+          call glint_lapserate(artm,real(g_orog,rk),real(-instance%climate%ulapse_rate,rk))
 
           ! Raise them to high-res orography 
 
-          call glimmer_lapserate(artm,real(usrf*thk0,rk),real(instance%climate%ulapse_rate,rk))
+          call glint_lapserate(artm,real(usrf*thk0,rk),real(instance%climate%ulapse_rate,rk))
 
        else
           call error_log('ERROR: Error in arguments to CALCARTM - stopping')

@@ -94,13 +94,13 @@ contains
     ! local variables
     type(ConfigSection), pointer :: section
     
-    call GetSection(config,section,'projection')
+    call GetSection(config,section,'GLINT projection')
     if (associated(section)) then
        call GetValue(section,'projection',proj%p_type)
        call GetValue(section,'lonc',proj%lonc)
        call GetValue(section,'latc',proj%latc)
        call GetValue(section,'cpx',proj%cpx)
-       call GetValue(section,'cpx',proj%cpy)
+       call GetValue(section,'cpy',proj%cpy)
        call GetValue(section,'std parallel',proj%std_par)
     end if
   end subroutine proj_readconfig

@@ -57,6 +57,8 @@ module glimmer_ncdf
 
      logical :: just_processed = .FALSE.
      !*FD set to .TRUE. if the file was used during the last time step
+     real :: processsed_time = 0.0
+     !*FD the time when the file was last processed
      character(len=fname_length) :: filename = " "
      !*FD name of netCDF file
      logical, dimension(num_vars) :: do_var
