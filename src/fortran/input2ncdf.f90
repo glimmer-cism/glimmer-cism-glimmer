@@ -48,6 +48,7 @@ program input2ncdf
   use glimmer_ncdf
   use glimmer_ncfile
   use glimmer_types
+  use paramets, only : len0
   implicit none
 
   ! file names
@@ -94,6 +95,7 @@ program input2ncdf
   end if
 
   call readplan(topofile,data,time,nx,ny,delta)
+  delta = delta/len0
   model%general%upn = 1
   model%numerics%dew = delta
   model%numerics%dns = delta

@@ -1,3 +1,7 @@
+2004-06-15 Magnus Hagdorn
+ * input2ncdf.f90: work out node spacing 
+ * new build system
+	
 2004-06-14 Magnus Hagdorn
  * fixed problems in input CF file (g_land.input.nc)
  * work out node spacing and removed unused tensor quantities (bin2ncdf.f90)

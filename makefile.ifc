@@ -1,3 +1,7 @@
+ifndef GLIMMER_PREFIX
+GLIMMER_PREFIX=../../
+endif
+
 #
 # Architecture specific defines for genie compilation - this version for
 # Linux 

@@ -7,7 +7,10 @@ include $(ARC_FILE)
 #
 GLIMMERFLAGS=$(F77FLAGS) $(GLIMMERPRECOPT)
 #
-LIBNAME = libglimmer
+SUBDIRS = SLAP_library
+LIBS = libglimmer.a
+PROGS = glimmer_example bin2ncdf input2ncdf
+DATA = ncdf_vars.def
 
 AUTOGEN = ncdf.f90 ncdf_file.f90 ncdf_infile.f90 ncdf_params.f90
 
@@ -29,27 +32,58 @@ INCLUDE_FILES=
 
 OTHER_FILES=$(ARC_FILE) $(THIS_FILE)
 
-$(LIBNAME).a: $(OBJECTS) $(OTHER_FILES) $(INCLUDE_FILES)
-	if [ -f $(LIBNAME).a ] ; then \rm $(LIBNAME).a ; fi
-	ar rcv $(LIBNAME).a $(OBJECTS)
-	if [ "$(RANLIB)" != "" ] ; then $(RANLIB) $(LIBNAME).a ; fi
-	\cp -f *.mod ../../mod
-	\cp -f $(LIBNAME).a ../../lib
+all: $(LIBS) $(PROGS)
 
-example :  $(LIBNAME).a glimmer_example.o
-	$(F77) $(GLIMMERFLAGS) -o glimmer_example glimmer_example.o -L. -lglimmer -lslap $(LD_FLAGS)
+.PHONY:		clean all subdirs $(SUBDIRS)
+
+subdirs:	$(SUBDIRS)
+
+$(SUBDIRS):
+		$(MAKE) -C $@
+
+
+libglimmer.a: $(OBJECTS) $(OTHER_FILES) $(INCLUDE_FILES)
+	ar rcv $@ $(OBJECTS)
+	if [ "$(RANLIB)" != "" ] ; then $(RANLIB) $@ ; fi
+
+glimmer_example :  glimmer_example.o SLAP_library libglimmer.a
+	$(F77) $(GLIMMERFLAGS) -o $@ $< libglimmer.a SLAP_library/libslap.a $(LD_FLAGS)
 
 bin2ncdf: bin2ncdf.o glimmer_global.o  ncdf.o ncdf_file.o glimmer_modu.o glimmer_physcon.o glimmer_paramets.o  glimmer_CFproj.o
 	$(F77) -o $@ $^ $(LD_FLAGS) 
 
-input2ncdf:	input2ncdf.o glimmer_global.o  ncdf.o ncdf_file.o glimmer_modu.o
+input2ncdf:	input2ncdf.o glimmer_global.o  ncdf.o ncdf_file.o glimmer_modu.o glimmer_paramets.o  glimmer_CFproj.o
 	$(F77) -o $@ $^ $(LD_FLAGS)
 
 test_config:	test_config.o glimmer_config.o
 	$(F77) -o $@ $^ $(LD_FLAGS)
 
+# install glimmer
+install:	install-mod install-libs install-progs install-data
+		for dir in $(SUBDIRS); do \
+		  $(MAKE) -C $$dir install; \
+		done
+
+install-data:	$(DATA)
+		install -d $(GLIMMER_PREFIX)/share/glimmer
+		cp $(DATA) $(GLIMMER_PREFIX)/share/glimmer
+
+install-mod:	$(OBJECTS)
+		install -d $(GLIMMER_PREFIX)/mod
+		cp *.mod $(GLIMMER_PREFIX)/mod
+install-libs:	$(LIBS)
+		install -d $(GLIMMER_PREFIX)/lib
+		cp $(LIBS) $(GLIMMER_PREFIX)/lib
+install-progs:	$(PROGS)
+		install -d $(GLIMMER_PREFIX)/bin
+		install $(PROGS) $(GLIMMER_PREFIX)/bin
+
+# clean up
 clean : 
-	\rm -f *.o *.a *.mod f90_dep.mak $(AUTOGEN)
+	rm -f *.o *.mod f90_dep.mak $(AUTOGEN) $(PROGS) $(LIBS)
+	for dir in $(SUBDIRS); do \
+	  $(MAKE) -C $$dir clean; \
+	done
 
 f90_dep.mak: *.f90 $(AUTOGEN)
 	python ../python/f90_dependencies.py -o $@ $^
@@ -69,4 +103,3 @@ ncdf_params.f90:	ncdf_vars.def ncdf_params.f90.in
 		python ../python/generate_ncvars.py $< $@.in	
 
 include f90_dep.mak 
-

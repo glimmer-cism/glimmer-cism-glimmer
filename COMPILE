@@ -4,7 +4,13 @@ Glimmer COMPILE file
 
 This version of the code has been sucessfully tested under three compilers:
 Compaq Visual Fortran on Windows, and the Intel and Portland Group compilers 
-on Linux. 
+on Linux and SUN WS 6.0 on Sun Solaris systems.
+
+Prerequisites:
+=============
+* The netCDF library
+  get it from here: http://www.unidata.ucar.edu/packages/netcdf/
+  you need to make sure that the f90 bindings are also installed
 
 Compiling under Windows:
 =======================
@@ -26,36 +32,33 @@ copied from the data directory into the working directory.
 Compiling under Unix/Linux:
 ==========================
 
+You can control where glimmer is installed by setting the GLIMMER_PREFIX variable.
+Files will be installed in the usual places:
+$GLIMMER_PREFIX/bin   for executables
+$GLIMMER_PREFIX/lib   for libraries
+$GLIMMER_PREFIX/mod   for modules
+$GLIMMER_PREFIX/share for data files
+If GLIMMER_PREFIX is not set, install paths will default to the checked out directory, 
+./glimmer
+
 Makefiles are provided for both the SLAP library and the Glimmer code. The
 general sequence of commands to compile and link under Unix/Linux is as
 follows, assuming you start in the glimmer/src/fortran directory (the one with
-the model code in):
+the model code in). The Makefile will resolve dependencies automatically.
 
-1) Compile the SLAP library:
+make
+   will compile all libraries and programs
+make install
+   will install everything in $GLIMMER_PREFIX
+make clean
+   will delete unneeded files
 
-   > cd SLAP_library
-   > make
-   > cd ..
-
-2) Compile the Glimmer library:
-
-   > make
-
-3) Compile and link the example:
-
-   > make example
-
-4) Move the executable into the data directory:
-
-   > mv glimmer_example ../../data
-
-5) Execute the model:
-
-   > cd ../../data
-   > ./glimmer_example
-
+Compilation Options:
+====================
 Parameters required by make are contained in makefile.arc (in the same manner
-currently used by Genie). The relevant variables for Glimmer are F77 and
+currently used by Genie). There are a number of architecture dependent parameter 
+files. Find the one (create a new one) most suited and create a symbolic link to
+makefile.arc. The relevant variables for Glimmer are F77 and
 F77FLAGS, which specify the compiler command and flags to use,
 respectively. Note that although F77 is indicated, a FORTRAN 90 compiler is
 required. The required values of these variables for the different compilers

@@ -1,3 +1,8 @@
+ifndef GLIMMER_PREFIX
+GLIMMER_PREFIX=..
+endif
+all:	glimmer.pdf glimmer.ps
+
 dg.pdf:	dg_pdf.dvi
 	dvipdfm -o dg.pdf dg_pdf.dvi
 
@@ -15,6 +20,10 @@ glimmer.pdf:	glimmer_pdf.dvi
 
 glimmer.ps:	glimmer_ps.dvi
 	dvips -o glimmer.ps glimmer_ps.dvi
+
+install:	glimmer.ps glimmer.pdf
+		install -d $(GLIMMER_PREFIX)/share/docs/glimmer
+		cp $^ $(GLIMMER_PREFIX)/share/docs/glimmer
 
 ug_ps.dvi:	ug_ps.tex
 	cd ug; $(MAKE)
