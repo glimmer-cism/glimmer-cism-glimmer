@@ -1,5 +1,5 @@
 
-module glimmer_global_grid
+module glint_global_grid
 
   use glimmer_global
   use physcon, only: pi
@@ -315,4 +315,4 @@ contains
 
   end function delta_lon
 
-end module glimmer_global_grid
+end module glint_global_grid

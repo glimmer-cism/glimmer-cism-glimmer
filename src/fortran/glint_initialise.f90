@@ -47,7 +47,7 @@ module glint_initialise
   use glint_type
 
   private
-  public glint_i_initialise, glint_i_end, calc_coverage
+  public glint_i_initialise, glint_i_end, calc_coverage, get_i_upscaled_fields
 
 contains
 
@@ -480,5 +480,76 @@ contains
     lon_diff=aa-bb
 
   end function lon_diff
+
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  subroutine get_i_upscaled_fields(instance,orog,albedo,ice_frac)
+
+    !*FD Upscales and returns certain fields, according to the 
+    !*FD arguments supplied
+
+    use paramets
+
+    type(glint_instance),            intent(in)  :: instance
+    real(rk),dimension(:,:),optional,intent(out) :: orog
+    real(rk),dimension(:,:),optional,intent(out) :: albedo
+    real(rk),dimension(:,:),optional,intent(out) :: ice_frac
+
+    real(rk),dimension(:,:),allocatable :: if_temp,upscale_temp
+
+	  ! Calculate orography
+
+    if (present(orog)) then
+      call mean_to_global(instance%proj, &
+                          instance%ups_orog, &
+                          instance%model%geometry%usrf, &
+                          orog,    &
+                          instance%climate%out_mask)
+      orog=thk0*orog
+    endif
+
+    if (present(albedo).or.present(ice_frac)) then
+
+      if (present(albedo)) then
+        allocate(if_temp(size(albedo,1),size(albedo,2)))
+      else
+        allocate(if_temp(size(ice_frac,1),size(ice_frac,2)))
+      endif
+      allocate(upscale_temp(instance%model%general%ewn,instance%model%general%nsn))
+
+      ! First, ice coverage on local grid 
+  
+      where (instance%model%geometry%thck>0.0)
+        upscale_temp=1.0
+      elsewhere
+        upscale_temp=0.0
+      endwhere
+
+      ! Upscale it...
+
+      call mean_to_global(instance%proj, &
+                          instance%ups, &
+                          upscale_temp, &
+                          if_temp,    &
+                          instance%climate%out_mask)
+
+      if (present(ice_frac)) ice_frac=if_temp
+
+    endif
+
+    ! Calculate albedo -------------------------------------------------------
+
+    if (present(albedo)) then 
+      where (if_temp>0.0)
+        albedo=instance%climate%ice_albedo
+      elsewhere
+        albedo=0.0
+      endwhere
+    endif
+
+    if (allocated(if_temp)) deallocate(if_temp)
+    if (allocated(upscale_temp)) deallocate(upscale_temp)
+
+  end subroutine get_i_upscaled_fields
 
 end module glint_initialise

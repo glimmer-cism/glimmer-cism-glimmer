@@ -45,7 +45,7 @@ module glint_type
   use glimmer_global
   use glint_proj
   use glint_interp
-  use glimmer_degd
+  use glide_pdd
   use glide_types
 
   implicit none

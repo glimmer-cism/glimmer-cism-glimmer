@@ -47,16 +47,17 @@ program glimmer_example
 !*FD some example global fields and associated grid data,
 !*FD Initialises the model, and then runs it for 1000 years.
 
-  use glimmer_main
-
+  use glint_main
+  use glimmer_log
+  use glide_messages
   implicit none
 
   ! Program variables -------------------------------------------------------------------
 
-  type(glimmer_params) :: ice_sheet    ! This is the derived type variable that holds all 
+  type(glint_params) :: ice_sheet    ! This is the derived type variable that holds all 
                                        ! domains of the ice model
 
-  character(fname_length) :: paramfile='example.glp'  ! The top-level configuration file
+  character(fname_length) :: paramfile='g_land.config'  ! The top-level configuration file
 
   integer :: total_years ! Length of run in years
 
@@ -116,6 +117,9 @@ program glimmer_example
   nxo=200 ; nyo=100         ! Grid used for orographic output
 
   ! Allocate arrays appropriately
+
+  ! start logging
+  call open_log(unit=101)  
 
   allocate(temp(nx,ny),precip(nx,ny),zonwind(nx,ny))
   allocate(merwind(nx,ny),lats(ny),lons(nx),orog(nx,ny))
@@ -228,15 +232,15 @@ program glimmer_example
 
   ! Initialise the ice model
 
-  call initialise_glimmer(ice_sheet,lats,lons,paramfile,orog=orog,ice_frac=ice_frac,albedo=albedo)
+  call initialise_glint(ice_sheet,lats,lons,paramfile,orog=orog,ice_frac=ice_frac,albedo=albedo)
 
   ! Set alternative output grid for orography
 
-  call glimmer_set_orog_res(ice_sheet,lons_orog,lats_orog)
+  call glint_set_orog_res(ice_sheet,lons_orog,lats_orog)
 
   ! Get coverage maps for the ice model instances
 
-  if (glimmer_coverage_map(ice_sheet,coverage,cov_orog).ne.0) then
+  if (glint_coverage_map(ice_sheet,coverage,cov_orog).ne.0) then
     call glide_msg(GM_FATAL,__FILE__,__LINE__,'Unable to get coverage maps')
     stop
   endif
@@ -249,7 +253,7 @@ program glimmer_example
   ! Do timesteps ---------------------------------------------------------------------------
 
   do time=0.0*24.0*360.0,total_years*24.0*360.0,24.0*360.0   ! In this case, we do 50000 years
-    call glimmer(ice_sheet,time,temp,precip,zonwind,merwind,orog, &
+    call glint(ice_sheet,time,temp,precip,zonwind,merwind,orog, &
                  orog_out=orog_out,   albedo=albedo,         output_flag=out, &
                  ice_frac=ice_frac,   water_out=fw,          water_in=fw_in, &
                  total_water_in=twin, total_water_out=twout, ice_volume=ice_vol) 
@@ -258,7 +262,7 @@ program glimmer_example
 
   ! Finalise/tidy up everything ------------------------------------------------------------
 
-  call end_glimmer(ice_sheet)
+  call end_glint(ice_sheet)
 
 100 format(f9.5)
 101 format(e12.5)

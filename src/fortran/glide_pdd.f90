@@ -55,10 +55,53 @@ module glide_pdd
   !*FD comprehensible, and avoid the need to have two customised copies of 
   !*FD the integration code.
 
-  use glimmer_types
+  use glide_types
 
   implicit none
 
+  type glimmer_pddcalc
+
+    !*FD Holds parameters for positive-degree-day mass-balance
+    !*FD calculation. The table has two axes - the $x$ axis is the
+    !*FD difference between mean annual and July temps, while the
+    !*FD $y$- axis is the mean annual temp
+
+    integer  :: dx        = 1   !*FD Spacing of values in x-direction ($^{\circ}$C)
+    integer  :: dy        = 1   !*FD Spacing of values in y-direction ($^{\circ}$C)
+    integer  :: ix        = 0   !*FD Lower bound of $x$-axis ($^{\circ}$C)
+    integer  :: iy        = -50 !*FD Lower bound of $y$-axis ($^{\circ}$C)
+    integer  :: nx        = 31  !*FD Number of values in x-direction
+    integer  :: ny        = 71  !*FD Number of values in y-direction
+    real(sp) :: dailytemp = 0.0 
+    real(sp) :: tma       = 0.0
+    real(sp) :: tmj       = 0.0
+    real(sp) :: dtmj      = 0.0
+    real(sp) :: dd_sigma  = 5.0 !*FD Standard deviation of daily temperature (K)
+    logical  :: first     = .true.
+    logical  :: pt_alloc  = .false. !*FD set \texttt{.true.} if \texttt{pddtab}
+                                    !*FD has been allocated.
+ 
+    ! The actual PDD table ---------------------------------------------
+
+    real(sp),dimension(:,:),pointer :: pddtab  => null() 
+    
+    !*FD PDD table - must be allocated with dimensions nx,ny.
+
+    ! Parameters for the PDD calculation
+
+    real(sp) :: pddfs               !*FD Later set to \texttt{(rhow / rhoi) * pddfac\_snow / (acc0 * scyr)}
+    real(sp) :: pddfi               !*FD Later set to \texttt{(rhow / rhoi) * pddfac\_ice  / (acc0 * scyr)}
+    real(sp) :: wmax        = 0.6   !*FD Fraction of melted snow that refreezes
+    real(dp) :: pddfac_ice  = 0.008 !*FD PDD factor for ice (m day$^{-1}$ $^{\circ}C$^{-1}$)
+    real(dp) :: pddfac_snow = 0.003 !*FD PDD factor for snow (m day$^{-1}$ $^{\circ}C$^{-1}$)
+
+    ! andreas values for pdd coeffs
+    ! pddfs 0.005 and pddfi 0.016
+    ! eismint pddfs 0.003 and pddfi 0.008
+    ! ritz et al 1997 pddfs 0.005 and pddfi 0.016
+
+  end type glimmer_pddcalc
+	 
   real(sp) :: dd_sigma            !*FD The value of $\sigma$ in the PDD integral
   real(sp) :: t_a_prime           !*FD The value of $T'_{a}$ in the PDD integral
   real(sp) :: mean_annual_temp    !*FD Mean annual temperature

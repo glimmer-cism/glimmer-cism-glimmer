@@ -42,22 +42,21 @@
 !
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-module glimmer_main
+module glint_main
 
   !*FD  This is the main glimmer module, which contains the top-level 
   !*FD  subroutines and derived types comprising the glimmer ice model.
 
   use glimmer_global
-  use glimmer_object
-  use glimmer_global_grid
-  use glide_messages
+  use glint_type
+  use glint_global_grid
 
   ! ------------------------------------------------------------
   ! GLIMMER_PARAMS derived type definition
   ! This is where default values are set.
   ! ------------------------------------------------------------
 
-  type glimmer_params 
+  type glint_params 
   
     !*FD Derived type containing parameters relevant to all instances of 
     !*FD the model - i.e. those parameters which pertain to the global model. 
@@ -71,7 +70,7 @@ module glimmer_main
     ! Ice model instances --------------------------------------
 
     integer                                     :: ninstances = 1       !*FD Number of ice model instances
-    type(glimmer_instance),pointer,dimension(:) :: instances  => null() !*FD Array of glimmer\_instances
+    type(glint_instance),pointer,dimension(:) :: instances  => null() !*FD Array of glimmer\_instances
 
     ! Global model parameters ----------------------------------
 
@@ -119,7 +118,7 @@ module glimmer_main
     logical :: first = .true. !*FD Set if this is the first call to glimmer - make sure we set up
                               !*FD start times correctly.
 
-  end type glimmer_params
+ end type glint_params
 
   ! ------------------------------------------------------------
   ! global parameters/constants
@@ -133,23 +132,25 @@ module glimmer_main
 
   ! Private names -----------------------------------------------
 
-  private glimmer_allocate_arrays,glimmer_init_common
-  private get_globals,get_fnamelist,calc_bounds,pi
+  private glint_allocate_arrays
+  private glint_readconfig, calc_bounds,pi
 
 contains
 
-  subroutine initialise_glimmer(params,lats,longs,paramfile,latb,lonb,orog,albedo, &
+  subroutine initialise_glint(params,lats,longs,paramfile,latb,lonb,orog,albedo, &
                                 ice_frac,output_flag)
 
     !*FD Initialises the model
 
-    use glimmer_project
-
+    use glint_proj
+    use glimmer_config
+    use glint_initialise
+    use glimmer_log
     implicit none
 
     ! Subroutine argument declarations
 
-    type(glimmer_params),          intent(inout) :: params      !*FD parameters to be set
+    type(glint_params),            intent(inout) :: params      !*FD parameters to be set
     real(rk),dimension(:),         intent(in)    :: lats,longs  !*FD location of gridpoints 
                                                                 !*FD in global data.
     character(fname_length),       intent(in)    :: paramfile   !*FD name of file containing 
@@ -169,22 +170,14 @@ contains
 
     ! Internal variables
 
-    character(fname_length),dimension(:),pointer :: fnamelist=>null()   ! The parameter filenames for each instance
     real(rk),dimension(:),allocatable :: mbtsteps ! Temporary array of mass-balance timesteps. These
                                                   ! are checked to make sure they are all the same
+    type(ConfigSection), pointer :: global_config, instance_config, section  ! configuration stuff
+    character(len=100) :: message
+    character(fname_length):: instance_fname                        ! name of instance specific configuration file
     integer :: i,args
     real(rk),dimension(:,:),allocatable :: orog_temp,if_temp,alb_temp
 
-    ! ---------------------------------------------------------------
-    ! Basic initialisation beginning with common initialisation
-    ! ---------------------------------------------------------------
-    
-    call glimmer_init_common(params%logf_unit,params)
-
-    ! Set up constants and arrays in the parameter structure --------
-
-    params%paramfile = paramfile
- 
     ! Initialise main global grid -----------------------------------
 
     args=0
@@ -194,13 +187,13 @@ contains
 
     select case(args)
     case(0)
-      call new_global_grid(params%g_grid,longs,lats)
+       call new_global_grid(params%g_grid,longs,lats)
     case(1)
-      call new_global_grid(params%g_grid,longs,lats,lonb=lonb)
+       call new_global_grid(params%g_grid,longs,lats,lonb=lonb)
     case(2)
-      call new_global_grid(params%g_grid,longs,lats,latb=latb)
+       call new_global_grid(params%g_grid,longs,lats,latb=latb)
     case(3)
-      call new_global_grid(params%g_grid,longs,lats,lonb=lonb,latb=latb)
+       call new_global_grid(params%g_grid,longs,lats,lonb=lonb,latb=latb)
     end select
 
     ! Initialise orography grid identically at the moment -----------
@@ -209,7 +202,7 @@ contains
 
     ! Allocate arrays -----------------------------------------------
 
-    call glimmer_allocate_arrays(params)
+    call glint_allocate_arrays(params)
 
     ! Initialise arrays ---------------------------------------------
 
@@ -221,14 +214,14 @@ contains
     params%g_av_zonwind = 0.0
     params%g_av_merwind = 0.0
 
-    ! ---------------------------------------------------------------
-    ! Open the global configuration file and read in the parameters for each run,
-    ! allocating appropriately
-    ! ---------------------------------------------------------------
+    ! --------------------------------------------------------------
+    ! read global configuration file
+    ! --------------------------------------------------------------
+    call ConfigRead(paramfile,global_config)
+    call glint_readconfig(params,global_config)
 
-    call read_global_parameters(paramfile,params,fnamelist)
-
-    ! Allocate the array of instances
+    ! Allocate array of glimmer instances
+    ! and the list of associated namelist files
 
     allocate(params%instances(params%ninstances))
     allocate(mbtsteps(params%ninstances))
@@ -242,28 +235,46 @@ contains
 
     params%total_coverage=0.0
     params%total_cov_orog=0.0
-
     params%cov_normalise=0.0
     params%cov_norm_orog=0.0
 
-    do i=1,params%ninstances
-      call glimmer_i_initialise(params%file_unit,    &
-                                fnamelist(i),        &
-                                params%instances(i), &
-                                params%radea,        &
-                                params%g_grid,       &
-                                params%tstep_main,   &
-                                mbtsteps(i))
+    call write_log('Reading instance configurations')
+    call write_log('-------------------------------')
+    call GetSection(global_config,section,'GLINT instance')
+    if (.not.associated(section)) then
+       if (params%ninstances.gt.1) then
+          write(message,*) 'Must specify ',params%ninstances,' instance config files'
+          call error_log(message)
+          stop
+       end if
+       call write_log(trim(paramfile))
+       call glint_i_initialise(global_config,params%instances(1),params%radea,params%g_grid,params%tstep_main)
+    else
 
-      params%total_coverage = params%total_coverage &
-                            + params%instances(i)%frac_coverage
-      params%total_cov_orog = params%total_cov_orog &
-                            + params%instances(i)%frac_cov_orog
+      do i=1,params%ninstances
+          instance_fname = ''
+          call GetValue(section,'name',instance_fname)
+          call write_log(trim(instance_fname))
+          call ConfigRead(instance_fname,instance_config)
+          call glint_i_initialise(instance_config, params%instances(i), &
+               params%radea,params%g_grid,params%tstep_main)
+       
+          params%total_coverage = params%total_coverage &
+               + params%instances(i)%frac_coverage
+          params%total_cov_orog = params%total_cov_orog &
+               + params%instances(i)%frac_cov_orog
 
-      where (params%total_coverage>0.0) params%cov_normalise=params%cov_normalise+1.0
-      where (params%total_cov_orog>0.0) params%cov_norm_orog=params%cov_norm_orog+1.0
+          where (params%total_coverage>0.0) params%cov_normalise=params%cov_normalise+1.0
+          where (params%total_cov_orog>0.0) params%cov_norm_orog=params%cov_norm_orog+1.0
 
-    enddo
+          call GetSection(section%next,section,'GLINT instance')
+          if (.not.associated(section)) then
+             write(message,*) 'Must specify ',params%ninstances,' instance config files'
+             call error_log(message)
+             stop
+          end if
+       end do
+    end if
 
     ! Check that all mass-balance time-steps are the same length and 
     ! assign that value to the top-level variable
@@ -314,14 +325,14 @@ contains
   
     deallocate(mbtsteps)
 
-  end subroutine initialise_glimmer
+  end subroutine initialise_glint
 
 !================================================================================
 
-  subroutine glimmer(params,time,temp,precip,zonwind,merwind,orog, &
-                     output_flag,orog_out,albedo,ice_frac,water_in, &
-                     water_out,elapsed_time,total_water_in,total_water_out, &
-                     ice_volume)
+  subroutine glint(params,time,temp,precip,zonwind,merwind,orog, &
+       output_flag,orog_out,albedo,ice_frac,water_in, &
+       water_out,elapsed_time,total_water_in,total_water_out, &
+       ice_volume)
 
     !*FD Main Glimmer subroutine.
     !*FD
@@ -339,19 +350,19 @@ contains
     !*FD to the change in \texttt{ice\_volume}, after conversion between m$^3$ and kg.
 
     use glimmer_utils
-    use glimmer_mbal
-    use glimmer_interp
-
+    use glint_mbal
+    use glint_interp
+    use glint_timestep
     implicit none
 
     ! Subroutine argument declarations
 
-    type(glimmer_params),            intent(inout) :: params          !*FD parameters for this run
+    type(glint_params),              intent(inout) :: params          !*FD parameters for this run
     real(rk),                        intent(in)    :: time            !*FD Current model time        (hours)
     real(rk),dimension(:,:),         intent(in)    :: temp            !*FD Surface temperature field (celcius)
     real(rk),dimension(:,:),         intent(in)    :: precip          !*FD Precipitation rate        (mm/s)
     real(rk),dimension(:,:),         intent(in)    :: zonwind,merwind !*FD Zonal and meridional components 
-                                                                      !*FD of the wind field         (m/s)
+    !*FD of the wind field         (m/s)
     real(rk),dimension(:,:),         intent(inout) :: orog            !*FD The large-scale orography (m)
     logical,                optional,intent(out)   :: output_flag     !*FD Set true if outputs set
     real(rk),dimension(:,:),optional,intent(inout) :: orog_out        !*FD The fed-back, output orography (m)
@@ -363,7 +374,7 @@ contains
     real(rk),               optional,intent(inout) :: total_water_in  !*FD Area-integrated water flux in (kg)
     real(rk),               optional,intent(inout) :: total_water_out !*FD Area-integrated water flux out (kg)
     real(rk),               optional,intent(inout) :: ice_volume      !*FD Total ice volume (m$^3$)
-    
+
     ! Internal variables
 
     integer :: i
@@ -449,16 +460,6 @@ contains
         out_f%water_out=.false.
       endif
 
-      if (present(water_in)) then
-        water_in = 0.0
-        allocate(win_temp(size(orog,1),size(orog,2)))
-        out_f%water_in=.true.
-      else
-        out_f%water_in=.false.
-      endif
-
-      ! Reset output total variables and set flags
-
       if (present(total_water_in))  then
         total_water_in  = 0.0
         out_f%total_win = .true.
@@ -500,25 +501,25 @@ contains
       ! Do a timestep for each instance
 
       do i=1,params%ninstances
-        call glimmer_i_tstep(params%file_unit,          &
-                          params%logf_unit,             &
-                          time*hours2years,             &
-                          params%instances(i),          &
-                          params%g_av_temp,             &
-                          params%g_temp_range,          &
-                          params%g_av_precip,           &
-                          params%g_av_zonwind,          &
-                          params%g_av_merwind,          &
-                          orog,                         &
-                          orog_out_temp,                &
-                          albedo_temp,                  &
-                          if_temp,                      &
-                          win_temp,                     &
-                          wout_temp,                    &
-                          twin_temp,                    &
-                          twout_temp,                   &
-                          icevol_temp,                  &
-                          out_f)
+        call glint_i_tstep(time*hours2years,&
+               params%instances(i),          &
+               params%g_grid%lats,           &
+               params%g_grid%lons,           &
+               params%g_av_temp,             &
+               params%g_temp_range,          &
+               params%g_av_precip,           &
+               params%g_av_zonwind,          &
+               params%g_av_merwind,          &
+               orog,                         &
+               orog_out_temp,                &
+               albedo_temp,                  &
+               if_temp,                      &
+               win_temp,                     &
+               wout_temp,                    &
+               twin_temp,                    &
+               twout_temp,                   &
+               icevol_temp,                  &
+               out_f)
 
         ! Add this contribution to the output orography
  
@@ -593,33 +594,30 @@ contains
     if (allocated(win_temp))      deallocate(win_temp)
     if (allocated(orog_out_temp)) deallocate(orog_out_temp)
 
-  end subroutine glimmer
+  end subroutine glint
 
 !===================================================================
 
-  subroutine end_glimmer(params)
+  subroutine end_glint(params)
 
     !*FD perform tidying-up operations for glimmer
+    use glint_initialise
     implicit none
 
-    type(glimmer_params),intent(inout) :: params          !*FD parameters for this run
+    type(glint_params),intent(inout) :: params          !*FD parameters for this run
 
     integer i
     ! end individual instances
 
     do i=1,params%ninstances
-      call glimmer_i_end(params%instances(i)%model,params%file_unit)
+       call glint_i_end(params%instances(i))
     enddo
 
-    ! close log file
-
-    close(params%logf_unit)
-
-  end subroutine end_glimmer
+  end subroutine end_glint
 
 !=====================================================
 
-  integer function glimmer_coverage_map(params,coverage,cov_orog)
+  integer function glint_coverage_map(params,coverage,cov_orog)
 
     !*FD Retrieve ice model fractional 
     !*FD coverage map. This function is provided so that glimmer may
@@ -633,194 +631,30 @@ contains
 
     implicit none
     
-    type(glimmer_params),intent(in) :: params       !*FD ice model parameters
+    type(glint_params),intent(in) :: params         !*FD ice model parameters
     real(rk),dimension(:,:),intent(out) :: coverage !*FD array to hold coverage map
     real(rk),dimension(:,:),intent(out) :: cov_orog !*FD Orography coverage
 
     if (.not.params%coverage_calculated) then
-      glimmer_coverage_map=1
+      glint_coverage_map=1
       return
     endif
 
     if (size(coverage,1).ne.params%g_grid%nx.or. &
         size(coverage,2).ne.params%g_grid%ny) then
-      glimmer_coverage_map=2
+      glint_coverage_map=2
       return
     endif
 
-    glimmer_coverage_map=0
+    glint_coverage_map=0
     coverage=params%total_coverage
     cov_orog=params%total_cov_orog
 
-  end function glimmer_coverage_map
-
-!=======================================================
-
-  integer function glimmer_main_funit(params)
-
-    !*FD Returns the value of the 
-    !*FD main logical file unit used by glimmer
-    !*RV The value of the 
-    !*RV main logical file unit used by glimmer.
-
-    implicit none
-
-    type(glimmer_params),intent(in) :: params !*FD Ice model parameters
-   
-    glimmer_main_funit=params%file_unit
-
-  end function glimmer_main_funit
-
-!=====================================================
-
-  subroutine glimmer_set_main_funit(params,unit)
-
-    !*FD sets the main logical 
-    !*FD file unit used by glimmer.
-
-    implicit none
-
-    type(glimmer_params),intent(inout) :: params !*FD ice model parameters
-    integer,intent(in) :: unit !*FD number of logical file unit to be used
-
-    params%file_unit=unit
-
-  end subroutine glimmer_set_main_funit
-
-!=====================================================
-
-  subroutine glimmer_write_restart(params,unit,filename)
-
-    !*FD write the restart
-    !*FD file for the whole ice model. Note that the logical file unit 
-    !*FD is not open at entry or exit to this subroutine.
-
-    use glimmer_restart
-
-    implicit none
-
-    type(glimmer_params),intent(in) :: params   !*FD ice model parameters
-    integer,             intent(in) :: unit     !*FD logical file unit to use
-    character(*),        intent(in) :: filename !*FD filename to write
-
-    integer :: i
-
-    open(unit,file=filename,form='unformatted')
-    
-!    write(unit) params% nxg
-!    write(unit) params% nyg
-!    write(unit) params% glat
-!    write(unit) params% glon
-!    write(unit) params% glat_bound
-!    write(unit) params% glon_bound
-    write(unit) params% ninstances
-    write(unit) params% radea
-    write(unit) params% tstep_main
-    write(unit) params% av_start_time
-    write(unit) params% av_steps
-    write(unit) params% g_av_precip
-    write(unit) params% g_av_temp
-    write(unit) params% g_max_temp
-    write(unit) params% g_min_temp
-    write(unit) params% g_temp_range
-    write(unit) params% g_av_zonwind
-    write(unit) params% g_av_merwind
-    write(unit) params% total_coverage 
-    write(unit) params% cov_normalise
-    write(unit) params% coverage_calculated
-    write(unit) params% paramfile
-    write(unit) params% file_unit
-    write(unit) params% logf_unit
-
-    do i=1,params%ninstances
-      call glimmer_i_write_restart(params%instances(i),unit)
-    enddo
-
-    close(unit)
-
-  end subroutine glimmer_write_restart
-
-!================================================
-
-  subroutine glimmer_read_restart(params,unit,filename)
-
-    !*FD Read the restart file
-    !*FD for the ice model, and allocate necessary
-    !*FD arrays.  Note that the file unit is closed on entry and exit.
-    !*FD Also, this subroutine must be run `from cold' --- i.e.
-    !*FD without any arrays having been allocated. The
-    !*FD model cannot thus be restarted mid-run.
-
-    use glimmer_restart
-
-    implicit none
-
-    type(glimmer_params),intent(out) :: params !*FD ice model parameters
-    integer,intent(in) :: unit                 !*FD logical file unit to use
-    character(*),intent(in) :: filename        !*FD filename to read
-
-    integer :: i
-
-!    if (associated(params%glat))           deallocate(params%glat)
-!    if (associated(params%glon))           deallocate(params%glon)
-!    if (associated(params%glat_bound))     deallocate(params%glat_bound)
-!    if (associated(params%glon_bound))     deallocate(params%glon_bound)
-    if (associated(params%instances))      deallocate(params%instances)
-    if (associated(params%g_av_precip))    deallocate(params%g_av_precip)
-    if (associated(params%g_av_temp))      deallocate(params%g_av_temp)
-    if (associated(params%g_max_temp))     deallocate(params%g_max_temp)
-    if (associated(params%g_min_temp))     deallocate(params%g_min_temp)
-    if (associated(params%g_temp_range))   deallocate(params%g_temp_range)
-    if (associated(params%g_av_zonwind))   deallocate(params%g_av_zonwind)
-    if (associated(params%g_av_merwind))   deallocate(params%g_av_merwind)
-    if (associated(params%total_coverage)) deallocate(params%total_coverage)
-    if (associated(params%cov_normalise))  deallocate(params%cov_normalise)
-
-    call glimmer_init_common(params%logf_unit,params)
-
-    open(unit,file=filename,form='unformatted')
-
-!    read(unit) params% nxg
-!    read(unit) params% nyg
-
-    call glimmer_allocate_arrays(params)
-
-!    read(unit) params% glat
-!    read(unit) params% glon
-!    read(unit) params% glat_bound
-!    read(unit) params% glon_bound
-    read(unit) params% ninstances
-    read(unit) params% radea
-    read(unit) params% tstep_main
-    read(unit) params% av_start_time
-    read(unit) params% av_steps
-    read(unit) params% g_av_precip
-    read(unit) params% g_av_temp
-    read(unit) params% g_max_temp
-    read(unit) params% g_min_temp
-    read(unit) params% g_temp_range
-    read(unit) params% g_av_zonwind
-    read(unit) params% g_av_merwind
-    read(unit) params% total_coverage 
-    read(unit) params% cov_normalise
-    read(unit) params% coverage_calculated
-    read(unit) params% paramfile
-    read(unit) params% file_unit
-    read(unit) params% logf_unit
-
-    allocate(params%instances(params%ninstances))
-
-    do i=1,params%ninstances
-!      call glimmer_i_read_restart(params%instances(i),unit,params%nxg,params%nyg)
-    enddo  
-
-    close(unit)
-
-  end subroutine glimmer_read_restart
+  end function glint_coverage_map
 
 !=============================================================================
 
-  subroutine glimmer_set_orog_res(params,lons,lats,lonb,latb)
+  subroutine glint_set_orog_res(params,lons,lats,lonb,latb)
 
     !*FD Sets the output resolution of the upscaled orography, which needs
     !*FD to be different when using a spectral-transform atmosphere. If present, the boundary
@@ -829,9 +663,11 @@ contains
     !*FD The elements are arranged such that the boundarys of \texttt{lons(i)} are found in
     !*FD \texttt{lonb(i)} and \texttt{lonb(i+1)}.
 
+    use glint_initialise
+
     implicit none
 
-    type(glimmer_params),          intent(inout) :: params !*FD Ice model parameters.
+    type(glint_params),          intent(inout) :: params !*FD Ice model parameters.
     real(rk),dimension(:),         intent(in)    :: lons   !*FD Global grid longitude locations (degrees)
     real(rk),dimension(:),         intent(in)    :: lats   !*FD Global grid latitude locations (degrees)
     real(rk),dimension(:),optional,intent(in)    :: lonb   !*FD Global grid-box boundaries in longitude (degrees)
@@ -879,7 +715,7 @@ contains
       call new_upscale(params%instances(i)%ups_orog, &
                        params%g_grid_orog, &
                        params%instances(i)%proj, &
-                       params%instances(i)%model%climate%out_mask)
+                       params%instances(i)%climate%out_mask)
 
       ! Deallocate fractional coverage if necessary, and reallocate
 
@@ -893,7 +729,7 @@ contains
                          params%instances(i)%ups_orog,&             ! Calculate coverage map
                          params%g_grid_orog, &
                          params%radea, &
-                         params%instances(i)%model%climate%out_mask, &
+                         params%instances(i)%climate%out_mask, &
                          params%instances(i)%frac_cov_orog)
 
       ! Add to total
@@ -909,19 +745,19 @@ contains
 
     where (params%total_cov_orog>1.0) params%total_cov_orog=1.0
 
-  end subroutine glimmer_set_orog_res
+  end subroutine glint_set_orog_res
 
 !----------------------------------------------------------------------
 ! PRIVATE INTERNAL GLIMMER SUBROUTINES FOLLOW.............
 !----------------------------------------------------------------------
 
-  subroutine glimmer_allocate_arrays(params)
+  subroutine glint_allocate_arrays(params)
 
   !*FD allocates glimmer arrays
 
     implicit none
 
-    type(glimmer_params),intent(inout) :: params !*FD ice model parameters
+    type(glint_params),intent(inout) :: params !*FD ice model parameters
 
     allocate(params%g_av_precip (params%g_grid%nx,params%g_grid%ny))
     allocate(params%g_av_temp   (params%g_grid%nx,params%g_grid%ny))
@@ -937,84 +773,7 @@ contains
     allocate(params%total_cov_orog(params%g_grid_orog%nx,params%g_grid_orog%ny))
     allocate(params%cov_norm_orog (params%g_grid_orog%nx,params%g_grid_orog%ny))
 
-  end subroutine glimmer_allocate_arrays
-
-!====================================================
-
-  subroutine glimmer_init_common(unit,params)
-
-    !*FD Initialises common
-    !*FD variables that need to be initialised, regardless
-    !*FD of whether a restart is being performed. Also opens the log file
-
-    use paramets, only: tau0,vel0,vis0,len0
-    use physcon,  only: gn
-    use glimmer_scales
-    
-    implicit none
-
-    integer :: unit !*FD file unit to use for the log file
-    type(glimmer_params) :: params !*FD ice model parameters
-
-    ! THIS IS WHERE INITIALISATION THAT IS NEEDED REGARDLESS
-    ! OF WHETHER WE ARE RESTARTING BELONGS!!!
-
-    ! Set up tau0 - this a moved from a the glimmer init subroutine
-
-    tau0 = (vel0/(vis0*len0))**(1.0/gn) 
-
-    ! Open log file - this is where all sorts of junk gets written, apparently.
-
-    open(unit,file='glimmer.gll')
-
-    ! Setup scalings for output
-
-    call glimmer_init_scales
-    
-  end subroutine glimmer_init_common
-
-!======================================================
-
-  subroutine read_global_parameters(filename,params,fnamelist)
-
-    use glimmer_config
-    use glimmer_global
-    use glide_messages
-    
-    implicit none
-
-    !*FD Reads the global configuration file, including the list
-    !*FD of configuration filenames for individual instances
-
-    character(*),        intent(in)    :: filename  !*FD Filename of top-level configuration file
-    type(glimmer_params),intent(inout) :: params    !*FD ice model parameters
-    character(*),dimension(:),pointer :: fnamelist
-
-    ! Internal pointers/variables
-
-    type(ConfigSection), pointer :: config,section
-    character(fname_length),dimension(:),pointer :: instance_fnames => null()
-    character(80) :: outtxt
-
-    call ConfigRead(filename,config)
-
-    call GetSection(config,section,'parameters')
-    if (associated(section)) then
-       call GetValue(section,'time-step',params%tstep_main)
-       call GetValue(section,'instance filenames',instance_fnames)
-    else
-       write(outtxt,*)'No parameters section found in top-level confiuration file: ',trim(filename)
-       call glide_msg(GM_FATAL,__FILE__,__LINE__,trim(outtxt))
-    end if
-
-    if(associated(fnamelist)) deallocate(fnamelist)
-
-    allocate(fnamelist(size(instance_fnames)))
-
-    fnamelist=instance_fnames
-    params%ninstances=size(instance_fnames)
-    
-  end subroutine read_global_parameters
+  end subroutine glint_allocate_arrays
 
 !========================================================
 
@@ -1036,6 +795,36 @@ contains
     end where
 
   end function splice_field
+
+  subroutine glint_readconfig(params,config)
+    !*FD read global parameters for GLINT model
+    use glimmer_config
+    use glimmer_log
+    implicit none
+
+    type(glint_params),intent(inout) :: params !*FD ice model parameters
+    type(ConfigSection), pointer :: config     !*FD structure holding sections of configuration file
+
+
+    type(ConfigSection), pointer :: section
+    character(len=100) :: message
+
+    call GetSection(config,section,'GLINT')
+    if (associated(section)) then
+       call GetValue(section,'n_instance',params%ninstances)
+       call GetValue(section,'timestep',params%tstep_main)
+    end if
+
+    ! Print some configuration
+    call write_log('GLINT global')
+    call write_log('------------')
+    write(message,*) 'number of instances :',params%ninstances
+    call write_log(message)
+    write(message,*) 'main time step      :',params%tstep_main
+    call write_log(message)
+    call write_log('')
+  end subroutine glint_readconfig
+
 
 !========================================================
 
@@ -1093,6 +882,7 @@ contains
 
   end subroutine calc_bounds
 
+
 !========================================================
 
   real(rk) function check_mbts(timesteps)
@@ -1126,4 +916,6 @@ contains
 
   end function check_mbts
 
-end module glimmer_main
+
+end module glint_main
+
