@@ -288,6 +288,12 @@ class PrintNCDF_BASEIO(PrintVars):
                 self.stream.write("%s       status = nf90_get_var(NCI%%id, %s, &\n%s            %s, (/%s/))\n"%(spaces,'NCI%%varids(%s)'%var_type(var),
                                                                                                                spaces,var['data'], dimstring))
                 self.stream.write("%s       call nc_errorhandle(__FILE__,__LINE__,status)\n"%(spaces))
+
+                if var['mask']:
+                    self.stream.write("%s       where (%s.eq.NF90_FILL_REAL)\n"%(spaces,var['data']))
+                    self.stream.write("%s          %s = 0.\n"%(spaces,var['data']))
+                    self.stream.write("%s       end where\n"%spaces)
+                    
                 if 'factor' in var:
                     self.stream.write("%s       if (scale) %s = %s/(%s)\n"%(spaces,var['data'],var['data'],var['factor']))
 

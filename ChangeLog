@@ -1,3 +1,6 @@
+2004-09-20 Magnus Hagdorn
+ * generate_ncvars.py: need to set NF90_FILL_REAL to 0 when reading netCDF files.
+	
 2004-09-10 Magnus Hagdorn
  * data_dep.dot: removed initialisation from graph and moved bedrock adjustment and surface calcs to end of 
    time step
