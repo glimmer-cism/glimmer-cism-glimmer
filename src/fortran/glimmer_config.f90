@@ -75,12 +75,12 @@ module glimmer_config
   end interface
 
 contains
-  function ConfigRead(fname)
+  subroutine ConfigRead(fname,config)
     !*FD read configuration file
     implicit none
     character(len=*), intent(in) :: fname
     !*FD name of configuration file
-    type(ConfigSection), pointer :: ConfigRead
+    type(ConfigSection), pointer :: config
 
     ! local variables
     type(ConfigSection), pointer :: this_section
@@ -94,28 +94,31 @@ contains
        write(*,*) 'Cannot open configuration file ',trim(fname)
        stop
     end if
-
-    open(unit,file=fname)
+    
+    open(unit,file=trim(fname))
     ios=0
     linenr=0
-    ConfigRead=>NULL()
+    config=>NULL()
     this_section=>NULL()
     do while(ios.eq.0)
        read(unit,fmt='(a250)',iostat=ios) line
        line = adjustl(line)
+       if (ios.ne.0) then
+          exit
+       end if
        if (.not.(line(1:1).eq.'!' .or. line(1:1).eq.'#' .or. line(1:1).eq.';' .or. line(1:1).eq.' ')) then
           ! handle comments
           if (line(1:1).eq.'[') then
              ! new section
              call handle_section(linenr,line,this_section)
              this_value=>NULL()
-             if (.not.associated(ConfigRead)) then
+             if (.not.associated(config)) then
                 ! this is the first section in config file
-                ConfigRead=>this_section
+                config=>this_section
              end if
           else
              ! handle value
-             if (.not.associated(ConfigRead)) then
+             if (.not.associated(this_section)) then
                 write(*,*) 'Error, no section defined yet'
                 write(*,*) trim(adjustl(fname)), linenr
                 stop
@@ -129,7 +132,7 @@ contains
        linenr = linenr + 1
     end do
     close(unit)
-  end function ConfigRead
+  end subroutine ConfigRead
 
   subroutine PrintConfig(config)
     implicit none
@@ -151,22 +154,21 @@ contains
     end do
   end subroutine PrintConfig
 
-  function GetSection(config,name)
+  subroutine GetSection(config,found,name)
     !*FD Find and return section with name
     implicit none
     type(ConfigSection), pointer :: config
-    type(ConfigSection), pointer :: GetSection
+    type(ConfigSection), pointer :: found
     character(len=*),intent(in) :: name
 
-    GetSection=>config
-    
-    do while(associated(GetSection))
-       if (name.eq.trim(GetSection%name)) then
+    found=>config
+    do while(associated(found))
+       if (name.eq.trim(found%name)) then
           return
        end if
-       GetSection=>GetSection%next
+       found=>found%next
     end do
-  end function GetSection
+  end subroutine GetSection
 
   subroutine GetValueReal(section,name,val)
     !*FD get real value
@@ -253,7 +255,7 @@ contains
        stop
     end if
 
-    section => InsertSection(trim(adjustl(line(2:i-1))),section)
+    call InsertSection(trim(adjustl(line(2:i-1))),section)
   end subroutine handle_section
   
   subroutine handle_value(linenr,line,value)
@@ -276,42 +278,46 @@ contains
        stop
     end if
 
-    value => InsertValue(trim(adjustl(line(:i-1))), trim(adjustl(line(i+1:))),value)
+    call InsertValue(trim(adjustl(line(:i-1))), trim(adjustl(line(i+1:))),value)
   end subroutine handle_value
 
-  function InsertSection(name,here)
+  subroutine InsertSection(name,section)
     !*FD add a new section
     implicit none
     character(len=*), intent(in) :: name
-    type(ConfigSection), pointer :: here, InsertSection
+    type(ConfigSection), pointer :: section
+    type(ConfigSection), pointer :: new_sec
 
-    allocate(InsertSection)
-    InsertSection%name = name
+    allocate(new_sec)
+    new_sec%name = name
 
-    if (associated(here)) then
-       if (associated(here%next)) then
-          InsertSection%next => here%next
+    if (associated(section)) then
+       if (associated(section%next)) then
+          new_sec%next => section%next
        end if
-       here%next => InsertSection
+       section%next=>new_sec
     end if
-  end function InsertSection
+    section=>new_sec
+  end subroutine InsertSection
 
-  function InsertValue(name,value,here)
+  subroutine InsertValue(name,val,value)
     !*FD add a new value
     implicit none
-    character(len=*), intent(in) :: name, value
-    type(ConfigValue), pointer :: here, InsertValue
+    character(len=*), intent(in) :: name, val
+    type(ConfigValue), pointer :: value
+    type(ConfigValue), pointer :: new_value
 
-    allocate(InsertValue)
+    allocate(new_value)
     
-    InsertValue%name = name
-    InsertValue%value = value
+    new_value%name = name
+    new_value%value = val
 
-    if(associated(here)) then
-       if (associated(here%next)) then
-          InsertValue%next => here%next
+    if(associated(value)) then
+       if (associated(value%next)) then
+          new_value%next => value%next
        end if
-       here%next => InsertValue
+       value%next => new_value
     end if
-  end function InsertValue
+    value=>new_value
+  end subroutine InsertValue
 end module glimmer_config

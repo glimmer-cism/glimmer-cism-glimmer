@@ -1,3 +1,11 @@
+2004-05-17 Magnus Hagdorn
+ * working around silly problem with Intel compiler. I am still not quite sure what the problem is,
+   but config reader API had to be changed from functions to subroutines
+   (glimmer_config.f90, test_config.f90, ncdf_params.f90.in)
+ * makefile.ifc: added DEBUG flags, renamed compiler to ifort
+ * replaced binary input files g20lati, g20prcp, g20relx, g20surf, g20thck, g20topg with netCDF input
+   file g_land.input.nc. This is also reflected in netCDF control file (g_land.glw)
+	
 2004-05-14 Magnus Hagdorn
  netCDF input, Round 1
  * add netCDF input capabilities, removed old I/O bits

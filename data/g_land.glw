@@ -9,4 +9,4 @@ frequency: 1000
 variables: THK TOPG ABLT ACAB ARNG BMLT BTEMP BTRC DIFFU
 
 [input]
-name: input.nc
+name: g_land.input.nc

@@ -62,28 +62,26 @@ contains
 
     ! read configuration
     model%funits%ncfile  = trim(model%funits%output_stem) // '.glw'
-    config => ConfigRead(model%funits%ncfile)
+    call ConfigRead(model%funits%ncfile,config)
 
     ! setup outputs
-    section => GetSection(config,'output')
+    call GetSection(config,section,'output')
     do while(associated(section))
-       write(*,*)
        output => handle_output(section,output)
        if (.not.associated(model%funits%out_first)) then
           model%funits%out_first => output
        end if
-       section => GetSection(section%next,'output')
+       call GetSection(section%next,section,'output')
     end do
 
     ! setup inputs
-    section => GetSection(config,'input')
+    call GetSection(config,section,'input')
     do while(associated(section))
-       write(*,*)
        input => handle_input(section,input)
        if (.not.associated(model%funits%in_first)) then
           model%funits%in_first => input
        end if
-       section => GetSection(section%next,'input')
+       call GetSection(section%next,section,'input')
     end do
 
   end subroutine ReadNCParams

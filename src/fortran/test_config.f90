@@ -56,14 +56,13 @@ program testconfig
   write(*,*) 'Enter name of configuration file'
   read(*,*) fname
 
-  config => ConfigRead(fname)
+  call ConfigRead(fname,config)
 
   call PrintConfig(config)
 
-  section=>GetSection(config,'a section')
+  call GetSection(config,section,'a section')
 
   write(*,*) associated(section)
-  write(*,*) associated(GetSection(config,'not a section'))
 
   call GetValue(section,'an_int',intval)
   call GetValue(section,'a_float',realval)
