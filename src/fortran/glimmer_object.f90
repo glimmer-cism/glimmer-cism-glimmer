@@ -104,10 +104,14 @@ module glimmer_object
     !*FD A derived type used internally to communicate the outputs which need
     !*FD to be upscaled, thus avoiding unnecessary calculation
 
-    logical :: orog        !*FD Set if we need to upscale the orography
-    logical :: albedo      !*FD Set if we need to upscale the albedo
-    logical :: ice_frac    !*FD Set if we need to upscale the ice fraction
-    logical :: fresh_water !*FD Set if we need to upscale the freshwater flux
+    logical :: orog         !*FD Set if we need to upscale the orography
+    logical :: albedo       !*FD Set if we need to upscale the albedo
+    logical :: ice_frac     !*FD Set if we need to upscale the ice fraction
+    logical :: water_in     !*FD Set if we need to upscale the input water flux
+    logical :: water_out    !*FD Set if we need to upscale the output water flux
+    logical :: total_win    !*FD Set if we need to sum the total water taken up by ice sheet
+    logical :: total_wout   !*FD Set if we need to sum the total ablation by the ice sheet
+    logical :: ice_vol      !*FD Set if we need to calculate the total ice volume
 
   end type output_flags
 
@@ -235,11 +239,14 @@ contains
 
   subroutine glimmer_i_tstep(unit,logunit,time,instance,lats,lons,g_temp,g_temp_range, &
                           g_precip,g_zonwind,g_merwind,g_orog,g_orog_out,g_albedo,g_ice_frac,&
-                          g_fw_flux,out_f)
+                          g_water_in,g_water_out,t_win,t_wout,ice_vol,out_f)
 
     !*FD Performs time-step of an ice model instance. Note that this 
     !*FD code will need to be altered to take account of the 
     !*FD energy-balance mass-balance model when it is completed.
+    !*FD
+    !*FD Note also that input quantities here are accumulated totals since the
+    !*FD last call.
 
     use glimmer_isot
     use glimmer_thck
@@ -261,16 +268,20 @@ contains
     type(glimmer_instance), intent(inout):: instance     !*FD Model instance
     real(rk),dimension(:),  intent(in)   :: lats         !*FD Latitudes of global grid points (degrees north)
     real(rk),dimension(:),  intent(in)   :: lons         !*FD Longitudes of global grid points (degrees east)
-    real(rk),dimension(:,:),intent(in)   :: g_temp       !*FD Global annual mean surface temperature field (
-    real(rk),dimension(:,:),intent(in)   :: g_temp_range !*FD Global annual surface temperature range field ($^{\circ}$C)
-    real(rk),dimension(:,:),intent(in)   :: g_precip     !*FD Global annual precip field total (mm/a)
-    real(rk),dimension(:,:),intent(in)   :: g_zonwind    !*FD Global annual mean surface zonal wind (m/s)
-    real(rk),dimension(:,:),intent(in)   :: g_merwind    !*FD Global annual mean surface meridonal wind (m/s)
+    real(rk),dimension(:,:),intent(in)   :: g_temp       !*FD Global mean surface temperature field ($^{\circ}$C)
+    real(rk),dimension(:,:),intent(in)   :: g_temp_range !*FD Global surface temperature range field ($^{\circ}$C)
+    real(rk),dimension(:,:),intent(in)   :: g_precip     !*FD Global precip field total (mm)
+    real(rk),dimension(:,:),intent(in)   :: g_zonwind    !*FD Global mean surface zonal wind (m/s)
+    real(rk),dimension(:,:),intent(in)   :: g_merwind    !*FD Global mean surface meridonal wind (m/s)
     real(rk),dimension(:,:),intent(in)   :: g_orog       !*FD Input global orography (m)
     real(rk),dimension(:,:),intent(out)  :: g_orog_out   !*FD Output orography (m)
-    real(rk),dimension(:,:),intent(out)  :: g_albedo     !*FD Output surface albedo (m)
+    real(rk),dimension(:,:),intent(out)  :: g_albedo     !*FD Output surface albedo 
     real(rk),dimension(:,:),intent(out)  :: g_ice_frac   !*FD Output ice fraction
-    real(rk),dimension(:,:),intent(out)  :: g_fw_flux    !*FD Output freshwater flux
+    real(rk),dimension(:,:),intent(out)  :: g_water_in   !*FD Input water flux (mm)
+    real(rk),dimension(:,:),intent(out)  :: g_water_out  !*FD Output water flux (mm)
+    real(rk),               intent(out)  :: t_win        !*FD Total water input (kg)
+    real(rk),               intent(out)  :: t_wout       !*FD Total water output (kg)
+    real(rk),               intent(out)  :: ice_vol      !*FD Output ice volume (m^3)
     type(output_flags),     intent(in)   :: out_f        !*FD Flags to tell us whether to do output       
 
     ! ------------------------------------------------------------------------  
@@ -278,6 +289,8 @@ contains
     ! ------------------------------------------------------------------------  
 
     real(rk),dimension(:,:),allocatable :: upscale_temp  ! temporary array for upscaling
+    real(rk),dimension(:,:),allocatable :: accum_temp    ! temporary array for accumulation
+    real(rk),dimension(:,:),allocatable :: ablat_temp    ! temporary array for ablation
     real(rk) :: f1 ! Scaling factor for converting precip and run-off amounts.
 
     f1 = scyr * thk0 / tim0
@@ -285,6 +298,8 @@ contains
     ! Allocate temporary upscaling array -------------------------------------
 
     allocate(upscale_temp(instance%model%general%ewn,instance%model%general%nsn))
+    allocate(accum_temp(instance%model%general%ewn,instance%model%general%nsn))
+    allocate(ablat_temp(instance%model%general%ewn,instance%model%general%nsn))
 
     ! ------------------------------------------------------------------------  
     ! Update internal clock
@@ -378,7 +393,7 @@ contains
       instance%model%climate%prcp=instance%model%climate%uprecip_rate/f1
 
     case(1)   ! Large scale precip -------------------------------------------
-              ! Note that we / by 1000 to convert to m yr^{-1}, and then by
+              ! Note that we / by 1000 to convert to meters, and then by
               ! f1 for scaling in the model.
 
       instance%model%climate%prcp=instance%model%climate%prcp/(1000.0*f1)
@@ -429,8 +444,20 @@ contains
                     instance%model%geometry%lsrf)
       instance%model%geometry%usrf = instance%model%geometry%thck + &
                                      instance%model%geometry%lsrf
-      instance%first=.false.
-    endif
+      !instance%first=.false.
+
+      ! If this is the first time-setp, we need to make sure the
+      ! accumulated ice is accounted for
+
+      accum_temp=instance%model%geometry%thck
+
+      ! Reset mass-balance variables to zero, as we've already used these
+
+      instance%model%climate%prcp = 0.0
+      instance%model%climate%ablt = 0.0
+      instance%model%climate%acab = 0.0
+
+    end if
 
     ! ------------------------------------------------------------------------ 
     ! Calculate isostasy
@@ -505,17 +532,19 @@ contains
     ! Calculate ablation, and thus mass-balance
     ! ------------------------------------------------------------------------ 
 
-    call calcacab(instance%model%numerics, &
-                  instance%model%paramets, &
-                  instance%model%pddcalc,  &
-                  instance%model%options%  whichacab, &
-                  instance%model%geometry% usrf,      &
-                  instance%model%climate%  artm,      &
-                  instance%model%climate%  arng,      &
-                  instance%model%climate%  prcp,      &
-                  instance%model%climate%  ablt,      &
-                  instance%model%climate%  lati,      &
-                  instance%model%climate%  acab)
+    if (.not.instance%first) then
+      call calcacab(instance%model%numerics, &
+                    instance%model%paramets, &
+                    instance%model%pddcalc,  &
+                    instance%model%options%  whichacab, &
+                    instance%model%geometry% usrf,      &
+                    instance%model%climate%  artm,      &
+                    instance%model%climate%  arng,      &
+                    instance%model%climate%  prcp,      &
+                    instance%model%climate%  ablt,      &
+                    instance%model%climate%  lati,      &
+                    instance%model%climate%  acab)
+    end if
 
     call maskthck(instance%model%options%  whichthck, &
                   instance%model%geometry% thck,      &
@@ -526,25 +555,75 @@ contains
                   instance%model%geometry% empty)
 
     ! ------------------------------------------------------------------------
-    ! At this point we need to do the freshwater flux calculation, as the 
+    ! At this point we need to do the water flux output calculations, as the 
     ! limits of the ice-sheet may change before we get to the end of the
     ! subroutine, where the other outputs are calculated
+    !
+    ! Both these fields are also scaled to be in mm
     ! ------------------------------------------------------------------------
+    ! Begin by calculating the actual mass balance (as opposed to the possible
+    ! ablation/accumulation
+    ! ------------------------------------------------------------------------
+      
+    if (out_f%water_out.or.out_f%total_wout.or. &
+        out_f%water_in .or.out_f%total_win) then
 
-    if (out_f%fresh_water) then
+      if (.not.instance%first) then
+        accum_temp=instance%model%climate%prcp*instance%model%numerics%dt
+        ablat_temp=min(instance%model%geometry%thck+accum_temp, &
+                     instance%model%climate%ablt*instance%model%numerics%dt)
+      else
+        ablat_temp=0.0
+      endif
+
+    endif
+
+    ! First water input (i.e. mass balance + ablation)
+
+    if (out_f%water_in) then
 
       where (instance%model%geometry%thck>0.0)
-        upscale_temp=f1*instance%model%climate%ablt
+        upscale_temp=f1*1000.0*accum_temp
       elsewhere
         upscale_temp=0.0
       endwhere
 
-      call mean_to_global(instance%proj, &
-                          instance%ups, &
-                          upscale_temp, &
-                          g_fw_flux,    &
+      call mean_to_global(instance%proj,  &
+                          instance%ups,   &
+                          upscale_temp,   &
+                          g_water_in,     &
                           instance%model%climate%out_mask)
 
+    endif
+
+    ! Now water output (i.e. ablation)
+
+    if (out_f%water_out) then
+
+      where (instance%model%geometry%thck>0.0)
+        upscale_temp=f1*1000.0*ablat_temp
+      elsewhere
+        upscale_temp=0.0
+      endwhere
+
+      call mean_to_global(instance%proj,  &
+                          instance%ups,   &
+                          upscale_temp,   &
+                          g_water_out,    &
+                          instance%model%climate%out_mask)
+
+    endif
+
+    ! ------------------------------------------------------------------------
+    ! Sum water fluxes and convert if necessary
+    ! ------------------------------------------------------------------------
+
+    if (out_f%total_win) then
+      t_win  = sum(accum_temp)*f1*1000.0*instance%proj%dx*instance%proj%dy
+    endif
+
+    if (out_f%total_wout) then
+      t_wout = sum(ablat_temp)*f1*1000.0*instance%proj%dx*instance%proj%dy
     endif
 
     ! ------------------------------------------------------------------------ 
@@ -672,7 +751,7 @@ contains
 
     ! Use thickness to calculate albedo and ice fraction ---------------------
 
-    if (out_f%albedo.or.out_f%ice_frac.or.out_f%fresh_water) then
+    if (out_f%albedo.or.out_f%ice_frac.or.out_f%water_out) then
 
       ! First, ice coverage on local grid 
   
@@ -706,9 +785,16 @@ contains
       endwhere
     endif
 
+    ! Calculate ice volume ---------------------------------------------------
+
+    if (out_f%ice_vol) then
+      ice_vol=f1*sum(instance%model%geometry%thck)*instance%proj%dx*instance%proj%dy
+    endif
+
     ! Tidy up ----------------------------------------------------------------
 
-    deallocate(upscale_temp)
+    deallocate(upscale_temp,accum_temp,ablat_temp)
+    instance%first=.false.
 
   end subroutine glimmer_i_tstep
 

@@ -54,9 +54,9 @@ program glimmer_example
   type(glimmer_params) :: ice_sheet
   integer :: nx,ny,i,j,nxo,nyo
   character(fname_length) :: paramfile='example.glp'
-  real(rk) :: time
+  real(rk) :: time,twin,twout,ice_vol
   real(rk),dimension(:,:),allocatable :: temp,precip,zonwind,merwind,orog,coverage,cov_orog
-  real(rk),dimension(:,:),allocatable :: albedo, orog_out, ice_frac, fw
+  real(rk),dimension(:,:),allocatable :: albedo, orog_out, ice_frac, fw,fw_in
   real(rk),dimension(:),allocatable :: lats,lons,lats_orog,lons_orog
   logical :: out
   
@@ -67,7 +67,7 @@ program glimmer_example
   allocate(temp(nx,ny),precip(nx,ny),zonwind(nx,ny))
   allocate(merwind(nx,ny),lats(ny),lons(nx),orog(nx,ny))
   allocate(coverage(nx,ny),orog_out(nxo,nyo),albedo(nx,ny),ice_frac(nx,ny),fw(nx,ny))
-  allocate(lats_orog(nyo),lons_orog(nxo),cov_orog(nxo,nyo))
+  allocate(lats_orog(nyo),lons_orog(nxo),cov_orog(nxo,nyo),fw_in(nx,ny))
 
   temp=0.0
   precip=0.0
@@ -157,7 +157,7 @@ program glimmer_example
   enddo
   close(20)
 
-  precip=precip*24*365   ! Convert background precip rate from mm/h to mm/a
+  precip=precip/3600.0   ! Convert background precip rate from mm/h to mm/s
 
   time=24.0*360.0
 
@@ -181,7 +181,8 @@ program glimmer_example
   do time=0.0*24.0*360.0,10000.0*24.0*360.0,24.0*360.0
     call glimmer(ice_sheet,time,temp,precip,zonwind,merwind,orog, &
                  orog_out=orog_out,albedo=albedo,output_flag=out, &
-                 ice_frac=ice_frac,fw_flux=fw) 
+                 ice_frac=ice_frac,water_out=fw,water_in=fw_in, &
+                 total_water_in=twin,total_water_out=twout,ice_volume=ice_vol) 
     print*,out
   enddo
   call end_glimmer(ice_sheet)
