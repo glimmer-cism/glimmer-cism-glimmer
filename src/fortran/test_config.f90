@@ -1,6 +1,6 @@
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! +                                                           +
-! +  glimmer_outp.f90 - part of the GLIMMER ice model         + 
+! +  testconfig.f90 - part of the GLIMMER ice model           + 
 ! +                                                           +
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! 
