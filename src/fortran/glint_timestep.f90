@@ -212,10 +212,13 @@ contains
     ! apply climate
 
     call calcartm(instance, instance%climate%whichartm, &
-            instance%climate%presusrf, &
+            instance%model%geometry%usrf, &
             instance%model%climate%lati,     &
-            instance%climate%presartm, &  !** OUTPUT
-            instance%climate%  arng)                      !** OUTPUT
+            instance%model%climate%  artm, &  !** OUTPUT
+            instance%climate%  arng,                   &   !** OUTPUT
+            g_orog=instance%global_orog,                   &
+            g_artm=instance%climate%g_artm,          &
+            g_arng=instance%climate%g_arng)
 
     call calcacab(instance%model%numerics, &
          instance%climate, &

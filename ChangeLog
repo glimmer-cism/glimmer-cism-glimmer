@@ -1,4 +1,7 @@
 2004-07-15 Magnus Hagdorn
+ * glint_timestep.f90: read the source, magi! ah well, temperature calculations seem to work...
+
+2004-07-15 Magnus Hagdorn
  * glint_timestep.f90: must apply climate forcing every time step
 
 2004-07-15 Magnus Hagdorn
