@@ -1,3 +1,6 @@
+2005-03-01 Ian Rutt
+ * Removed redundant paramfiles.tex from doc/ug
+
 2005-02-29 Ian Rutt
  * Updated docs to match new GLINT API
  * Added additional underscore control code substitution to parts of LaTeX
