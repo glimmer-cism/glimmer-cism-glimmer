@@ -1,7 +1,7 @@
 \section{GLIDE}
 GLIDE is the actual ice sheet model. GLIDE comprises three procedures which initialise the model, perform a single time step and finalise the model. GLIDE configuration and API are described in the following subsections.
 
-\subsection{Configuration}
+\subsection{Configuration}\label{ug.sec.config}
 The format of the configuration files is similar to Windows \texttt{.ini} files and contains sections. Each section contains key, values pairs.
 \begin{itemize}
  \item Empty lines, or lines starting with a \texttt{\#}, \texttt{;} or \texttt{!} are ignored.
@@ -38,7 +38,7 @@ Sections and keys are case sensitive and may contain white space. However, the c
   \texttt{dew} & (real) node spacing in $x$--direction\\
   \texttt{dns} & (real) node spacing in $y$--direction\\
   \texttt{sigma\_file} & (string) Name of file containing $\sigma$ coordinates. The $\sigma$ coordinates are calculated if no file name is given using the formula 
-	$$\sigma_i=\frac{1-(x_i+1)^{-n}}{1-2^{-n}}\quad\mbox{with}\quad x_i=\frac{\sigma_i-1}{\sigma_n-1}, n=2$$ We should probably allow $n$ to be a run--time parameter.\\
+        $$\sigma_i=\frac{1-(x_i+1)^{-n}}{1-2^{-n}}\quad\mbox{with}\quad x_i=\frac{\sigma_i-1}{\sigma_n-1}, n=2$$ We should probably allow $n$ to be a run--time parameter.\\
   \hline
   %%%% TIME
   \hline
@@ -64,65 +64,65 @@ Sections and keys are case sensitive and may contain white space. However, the c
               \begin{tabular}[t]{cl}
                0 & isothermal\\
                {\bf 1} & full \\
-	      \end{tabular}\\
+              \end{tabular}\\
   \texttt{flow\_law} & 
               \begin{tabular}[t]{cl}
               {\bf 0} & Patterson and Budd\\
               1 & Patterson and Budd (temp=-10degC)\\
               2 & const $10^{-16}$a$^{-1}$Pa$^{-n}$\\
-	      \end{tabular}\\
+              \end{tabular}\\
   \texttt{isostasy} & 
               \begin{tabular}[t]{cl}
               0 & none\\
               {\bf 1} & local\\
               2 & elastic\\
-	      \end{tabular}\\
+              \end{tabular}\\
   \texttt{sliding\_law} & 
               \begin{tabular}[t]{cl}
               0 & linear function of grav driving stress\\
               $[1-3]$ & unknown \\
               {\bf 4} & zero everywhere \\
-	      \end{tabular}\\
+              \end{tabular}\\
   \texttt{basal\_water} & 
               \begin{tabular}[t]{cl}
               0 & local water balance\\
               1 & local water balance + const flux \\
               {\bf 2} & none\\
-	      \end{tabular}\\
+              \end{tabular}\\
   \texttt{marine\_margin} & 
               \begin{tabular}[t]{cl}
               {\bf 0} & threshold\\
               1 & no ice shelf\\
               2 & ignore marine margin\\
-	      \end{tabular}\\
+              \end{tabular}\\
   \texttt{slip\_coeff} & 
               \begin{tabular}[t]{cl}
               0 & $\propto$ basal water\\
               {\bf 1} & zero\\
-	      \end{tabular}\\
+              \end{tabular}\\
   \texttt{stress\_calc} & 
               \begin{tabular}[t]{cl}
               0 & zeroth-order\\
               1 & first-order\\
               {\bf 2} & vertically-integrated first-order\\
               3 & none\\
-	      \end{tabular}\\
+              \end{tabular}\\
   \texttt{evolution} & 
               \begin{tabular}[t]{cl}
               {\bf 0} & pseudo-diffusion\\
               1 & unknown \\
               2 & diffusion \\
-	      \end{tabular}\\
+              \end{tabular}\\
   \texttt{vertical\_integration} & 
               \begin{tabular}[t]{cl}
               {\bf 0} & standard\\
               1 & obey upper BC\\
-	      \end{tabular}\\
+              \end{tabular}\\
   \texttt{topo\_is\_relaxed} &  
               \begin{tabular}[t]{cp{8cm}}
               {\bf 0} & relaxed topography is read from a separate variable\\
               1 & first time slice of input topography is assumed to be relaxed\\
-	      \end{tabular}\\
+              \end{tabular}\\
   \hline
   %%%%
   \hline
@@ -195,8 +195,41 @@ netCDF I/O can be configured in the main configuration file or in a separate fil
   \end{supertabular}
 \end{center}
 
-\subsection{Initialisation}
+\subsection{GLIDE API}
+This Section describes a very basic application using GLIDE. See \texttt{simple\_glide.f90} for a very basic ice sheet driver using the API described below.
+\subsubsection{Reading Configuration}
+The main configuration file, described in \ref{ug.sec.config}, is stored in a derived type defined in \texttt{glimmer\_config.f90}:
+\begin{verbatim}
+type(ConfigSection), pointer :: config
+\end{verbatim}
+The configuration file is read using
+\begin{verbatim}
+call ConfigRead(fname,config)
+\end{verbatim}
+where \texttt{fname} is the name of the configuration file and \texttt{config} the previously defined pointer to the derived type holding the configuration.
 
-\subsection{Time Step}
+\subsubsection{Initialisation}
+All data related to the ice sheet model is stored in a derived type defined:
+\begin{verbatim}
+type(glide_global_type) :: model
+\end{verbatim}
+This means multiple ice sheet instances can be run by a single program. It is not clear if GLIDE is thread--safe, however, we plan to investigate this and see if multiple GLIDE instances can be run in parallel using OpenMP or MPI.
 
-\subsection{Finalisation}
+Memory is allocated and data initialised by the initialisation procedure:
+\begin{verbatim}
+call glide_initialise(model,config)
+\end{verbatim}
+where \texttt{model} is the derived type holding the ice sheet model instance and \texttt{config} is a pointer to the configuration.
+
+\subsubsection{Time Step}
+The model is stepped forward in time with 
+\begin{verbatim}
+call glide_tstep(model,time)
+\end{verbatim}
+where \texttt{model} is the derived type holding the ice sheet model instance and \texttt{time} the current model time. It is up to the user to provide the surface mass balance and surface temperature by setting the variables \texttt{model\%climate\%acab(:,:)} (mass balance) and \texttt{model\%climate\%artm(:,:)}.
+
+\subsubsection{Finalisation}
+Once the model has finished running, data are deallocated and open files closed with a call to
+\begin{verbatim}
+call glide_finalise(model)
+\end{verbatim}

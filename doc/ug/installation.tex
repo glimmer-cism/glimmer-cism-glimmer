@@ -2,12 +2,108 @@
 GLIMMER is a relatively complex system of libraries and programs which build on other libraries. This section documents how to get GLIMMER and its prerequisites, compile and install it. Please report problems and bugs to the \href{http://forge.nesc.ac.uk/mailman/listinfo/glimmer-discuss}{GLIMMER mailing list}.
 
 \subsection{Prerequisites}
+GLIMMER is distributed as source code, a sane built environment is therefore required to compile the system. On UNIX systems \href{http://www.gnu.org/software/make/}{GNU make} is suggested since the Makefiles may rely on some GNU make specific features. The latest version of GLIMMER and friends can be downloaded from \href{http://forge.nesc.ac.uk/}{NeSCForge} using \href{http://www.gnu.org/software/cvs/}{CVS}.
+
 GLIMMER is mostly written in FORTRAN95, a good f95 compiler is, therefore, required. GLIMMER is known to work with the NAGware f95, Intel ifort compilers. GLIMMER does not compile with the SUN WS 6.0 f95 compiler due to a compiler bug.
 
-Part of the make system relies on \href{http://www.python.org}{python} which is used for analysing dependencies and f95 code generation.
+Part of the make system relies on \href{http://www.python.org}{python} which is used for analysing dependencies and f95 code generation. Furthermore, the Python scripts rely on language features which were only introduced with version 2.3. However, this requirement might be relaxed at some stage.
+
+In addition to f90 and python you will also need {\LaTeX} if you want to build the documentation.
 
 Furthermore, GLIMMER depends on these packages:
 \begin{itemize}
 \item \href{http://www.unidata.ucar.edu/packages/netcdf/index.html}{{\bf netCDF}}: You will most likely need to compile and install the netCDF library yourslef since the packages usually do not contain the f90 bindings which are used by GLIMMER.
-
+\item \href{http://www.remotesensing.org/proj}{{\bf PROJ.4}}: The cartographic projections library which is used to handle projections.
+\item \href{http://gmt.soest.hawaii.edu/}{{\bf GMT}}: The Generic Mapping Tools are used for visualisation.
 \end{itemize}
+
+\subsection{Installing GLIMMER Components}
+We recommend that GLIMMER and its components is installed in its own directory tree, e.g. \texttt{GLIMMER}, and sources in a subdirectory, e.g. \texttt{GLIMMER/src}. The build system expects the environment variables summarised in Table \ref{ug.tab.env}.
+
+\begin{table}[htbp]
+  \centering
+  \begin{tabular}{|l|p{10cm}|}
+    \hline
+    Variable & Description \\
+    \hline
+    \hline
+    \texttt{GLIMMER\_PREFIX} & The top level GLIMMER directory. The build system installs libraries into \texttt{\$GLIMMER\_PREFIX/lib}, f95 modules into \texttt{\$GLIMMER/mod}, include files into \texttt{\$GLIMMER/include} and executables into \texttt{\$GLIMMER/bin}. Add \texttt{\$GLIMMER/bin} to your \texttt{PATH}.\\
+    \hline
+    \texttt{PROJ\_PREFIX} & Prefix where \texttt{PROJ.4} is installed. \\
+    \hline
+    \texttt{GMTINC} & Directory where the GMT header file \texttt{gmt\_grd.h} can be found.\\
+    \hline
+  \end{tabular}
+  \caption{Environment variables used by GLIMMER.}
+  \label{ug.tab.env}
+\end{table}
+
+\subsubsection{proj4}
+\texttt{proj4} is the f90 wrapper for the \texttt{PROJ.4} library. \texttt{proj4} is a CVS module of the GLIMMER system. You can get it using CVS:
+{\small
+\begin{verbatim}
+cvs -d:pserver:anonymous@forge.nesc.ac.uk:/cvsroot/glimmer login
+cvs -z3 -d:pserver:anonymous@forge.nesc.ac.uk:/cvsroot/glimmer co proj4
+\end{verbatim}}
+
+\texttt{proj4} uses \texttt{cfortran.h} to wrap C code with fortran code. In order for \texttt{cfortran.h} to work you need to specify your fortran compiler while compiling, e.g. if you use the NAG f90 compiler you have to compile \texttt{proj4} using:
+{\small
+\begin{verbatim}
+CFLAGS=-DNAGf90Fortran make
+\end{verbatim}}
+Install \texttt{proj4} with
+{\small
+\begin{verbatim}
+make install
+\end{verbatim}}
+
+\subsubsection{GLIMMER}
+Get GLIMMER from the CVS repository at NeSCForge:
+{\small
+\begin{verbatim}
+cvs -d:pserver:anonymous@forge.nesc.ac.uk:/cvsroot/glimmer login
+cvs -z3 -d:pserver:anonymous@forge.nesc.ac.uk:/cvsroot/glimmer co glimmer
+\end{verbatim}}
+
+Options for the compilation of the model are set the file \texttt{makefile.arc}. You can choose one of the compiler specific makefiles and create a symbolic link, e.g.
+{\small
+\begin{verbatim}
+ln -s makefile.nag makefile.arc
+\end{verbatim}}
+Model compilation and installation should be straight forward:
+{\small
+\begin{verbatim}
+make
+make install
+\end{verbatim}}
+
+\subsection{GMT Visualisation Tools}
+The visualisation tools are based on GMT programs written in Python. In order to be able to use these it is necessary to have a few extra packages:
+\begin{itemize}
+\item \href{http://www.pfdubois.com/numpy/}{{\bf Numerical Python}}: Numerical Python extends python to be able to work on gridded data.
+\item \href{http://starship.python.net/~hinsen/ScientificPython/}{{\bf Scientific Python}}: Scientific Python provides access to netCDF files. Make sure you enable the netCDF specific modules.
+\end{itemize}
+
+The visualisation tools are based on \texttt{PyGMT} which you can get from NeSCForge
+{\small
+\begin{verbatim}
+cvs -d:pserver:anonymous@forge.nesc.ac.uk:/cvsroot/pygmt login
+cvs -z3 -d:pserver:anonymous@forge.nesc.ac.uk:/cvsroot/pygmt co PyGMT
+\end{verbatim}}
+\texttt{PyGMT} is installed using
+{\small
+\begin{verbatim}
+python setup.py install --home=$GLIMMER_PREFIX
+\end{verbatim}}
+
+The visualisation tools are part of the GLIMMER CVS repository. You can get them using
+{\small
+\begin{verbatim}
+cvs -d:pserver:anonymous@forge.nesc.ac.uk:/cvsroot/glimmer login
+cvs -z3 -d:pserver:anonymous@forge.nesc.ac.uk:/cvsroot/glimmer co PyCF
+\end{verbatim}}
+and install them
+{\small
+\begin{verbatim}
+python setup.py install --home=$GLIMMER_PREFIX
+\end{verbatim}}
