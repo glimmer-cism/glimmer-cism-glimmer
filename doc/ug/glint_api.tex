@@ -62,9 +62,17 @@ other documentation for details).
     ice albedo field \\
     \texttt{ice\_frac} & \texttt{real(rk)} & \texttt{intent(out)} & The initial
     ice fraction \\
+    \texttt{orog\_lats} & \texttt{real(rk)} & \texttt{intent(in)} &
+    Latitudinal location of gridpoints for global orography output\\
+    \texttt{orog\_longs} & \texttt{real(rk)} & \texttt{intent(in)} &
+    Longitudinal location of gridpoints for global orography output\\
+    \texttt{orog\_latb} & \texttt{real(rk)} & \texttt{intent(in)} & Locations
+    of the latitudinal boundaries of the grid-boxes (orography)\\
+    \texttt{orog\_lonb} & \texttt{real(rk)} & \texttt{intent(in)} & Locations
+    of the longitudinal boundaries of the grid-boxes (orography)\\
     \texttt{output\_flag} & \texttt{logical} & \texttt{intent(out)} & Set to
     show outputs have been updated (provided for consistency with main
-    \texttt{glint} subroutine.\\
+    \texttt{glint} subroutine).\\
   \end{supertabular}
 \end{center}
 %
@@ -76,6 +84,17 @@ other documentation for details).
 \item The latitudes contained in \texttt{lats} must be in descending order, so
   that $\mathtt{lats(i)}>\mathtt{lats(i+1)}$ for $1\leq \mathtt{i} \leq
   \mathtt{size(lats)}$.
+\item The optional arguments \texttt{orog\_lats}, \texttt{orog\_longs},
+  \texttt{orog\_latb}, and \texttt{orog\_lonb} may be used to define the frid
+  on which the orography is output from GLINT. This is useful if the global
+  model has spectral dynamics, and thus a higher-resolution orography is
+  needed for greater accuracy when transforming to spectral space. These
+  arguments may not be present in arbitrary combinations - only
+  \texttt{orog\_lats}+\texttt{orog\_longs},
+  \texttt{orog\_lats}+\texttt{orog\_longs}+\texttt{orog\_latb},
+  \texttt{orog\_lats}+\texttt{orog\_longs}+\texttt{orog\_lonb}, and
+  \texttt{orog\_lats}+\texttt{orog\_longs}+\texttt{orog\_latb}+\texttt{orog\_lonb}
+  are permitted. Other combinations will generate a fatal error.
 \end{itemize}
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -297,56 +316,3 @@ first \\
 \hline
 \end{tabular}
 \end{center}
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% GLINT_SET_OROG_RES                          %
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-\subsection{Subroutine \texttt{glint\_set\_orog\_res}}
-%
-\paragraph{Purpose}
-%
-To set the output resolution of the global orography field. This might be necessary
-if running a spectral atmospheric model, which needs to transform the
-orography to spectral space before use.
-%
-\paragraph{Name and mandatory arguments}
-%
-\begin{verbatim}
-  glint_set_orog_res(params,lons,lats)
-\end{verbatim}
-\paragraph{Arguments}
-%
-\begin{center}
-  \tablefirsthead{%
-     \hline
-     } 
-  \tablehead{%
-    \hline
-    \multicolumn{4}{|p{0.98\textwidth}|}{\emph{\small continued from previous page}}\\
-    \hline
-  } 
-  \tabletail{%
-    \hline
-    \multicolumn{4}{|r|}{\emph{\small continued on next page}}\\
-    \hline}
-      \tablelasttail{\hline}
-          \begin{supertabular}{lllp{5.5cm}}
-              \multicolumn{4}{|l|}{{\bf Mandatory}}\\
-              \hline  
-              \texttt{params} & \texttt{type(glint\_params)} &
-     \texttt{intent(inout)} & Ice model parameters \\
-     \texttt{lons(:)} & \texttt{real(rk)} & \texttt{intent(in)} & Longitudinal
-     locations of grid-points.\\ 
-     \texttt{lats(:)} & \texttt{real(rk)} & \texttt{intent(in)} & Latitudinal locations of grid-points.\\ 
-     \hline
-     \multicolumn{4}{|l|}{{\bf Optional}}\\
-     \hline  
-     \texttt{lonb(:)} & \texttt{real(rk)} & \texttt{intent(in)} & Longitudinal
-     locations of grid-box boundaries --- this array has one more element than \texttt{lons}.\\ 
-     \texttt{latb(:)} & \texttt{real(rk)} & \texttt{intent(in)} & Latitudinal
-     locations of grid-box boundaries --- this array has one more element than \texttt{lats}.\\ 
-     \end{supertabular}
-\end{center}
-%
-

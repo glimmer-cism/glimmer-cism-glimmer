@@ -1,3 +1,8 @@
+2005-02-29 Ian Rutt
+ * Updated docs to match new GLINT API
+ * Added additional underscore control code substitution to parts of LaTeX
+   autogeneration in generate_ncvars.py
+
 2005-02-28 Magnus Hagdorn
  * updated documentation
  * glimmer_config.f90: fixed a bug, grr too many programming languages swimming in my head

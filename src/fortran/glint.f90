@@ -154,14 +154,14 @@ contains
     real(rk),dimension(:,:),optional,intent(out)   :: ice_frac    !*FD Initial ice fraction 
     real(rk),dimension(:),  optional,intent(in)    :: orog_lats   !*FD Latitudinal location of gridpoints 
                                                                   !*FD for global orography output.
-    real(rk),dimension(:),  optional,intent(in)    :: orog_longs  !*FD Latitudinal location of gridpoints 
+    real(rk),dimension(:),  optional,intent(in)    :: orog_longs  !*FD Longitudinal location of gridpoints 
                                                                   !*FD for global orography output.
     real(rk),dimension(:),  optional,intent(in)    :: orog_latb   !*FD Locations of the latitudinal 
                                                                   !*FD boundaries of the grid-boxes (orography).
     real(rk),dimension(:),  optional,intent(in)    :: orog_lonb   !*FD Locations of the longitudinal
                                                                   !*FD boundaries of the grid-boxes (orography).
     logical,                optional,intent(out)   :: output_flag !*FD Flag to show output set (provided for
-                                                                  !*FD consistency
+                                                                  !*FD consistency)
 
     ! Internal variables -----------------------------------------------------------------------
 

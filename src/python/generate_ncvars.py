@@ -163,7 +163,7 @@ class PrintDoc(PrintVars):
             if var['load'].lower() in ['1','true','t']:
                 load = '$^\\ast$'
 
-        self.stream.write("\\texttt{%s}%s & %s & %s\\\\\n"%(var['name'],load,var['long_name'],
+        self.stream.write("\\texttt{%s}%s & %s & %s\\\\\n"%(var['name'].replace('_','\_'),load,var['long_name'].replace('_','\_'),
                                                             var['units'].replace('_','\_')))
         if 'standard_name' in var:
             self.stream.write("&CF name: \\texttt{%s}&\\\\\n"%(var['standard_name'].replace('_','\_')))
