@@ -1,4 +1,7 @@
 2005-03-07 Magnus Hagdorn
+ * glimmer_ncio.f90: fixed bug #110
+
+2005-03-07 Magnus Hagdorn
  * glide_thck.f90: only print warning about empty thck field when compiled with -DDEBUG
  * glide_launch.py: write extra fields to result file, date, glimmer version, glimmer FCFLAGS
  * add simple test directory

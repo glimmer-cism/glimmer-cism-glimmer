@@ -169,6 +169,15 @@ contains
        NCO%define_mode = .FALSE.
     end if
 
+    if (model%numerics%time.gt.NCO%processsed_time) then
+       if (NCO%just_processed) then
+          ! finished writing during last time step, need to increase counter...
+          
+          outfile%timecounter = outfile%timecounter + 1
+          status = nf90_sync(NCO%id)
+          NCO%just_processed = .FALSE.
+       end if
+    end if
     if (model%numerics%time.ge.outfile%next_write .or. (forcewrite.and.model%numerics%time.gt.outfile%next_write-outfile%freq)) then
        if (.not.NCO%just_processed) then
           call write_log_div
@@ -180,15 +189,6 @@ contains
           ! write time
           status = nf90_put_var(NCO%id,NCO%timevar,model%numerics%time,(/outfile%timecounter/))
           NCO%just_processed = .TRUE.         
-       end if
-    end if
-    if (model%numerics%time.gt.NCO%processsed_time) then
-       if (NCO%just_processed) then
-          ! finished writing during last time step, need to increase counter...
-          
-          outfile%timecounter = outfile%timecounter + 1
-          status = nf90_sync(NCO%id)
-          NCO%just_processed = .FALSE.
        end if
     end if
   end subroutine glimmer_nc_checkwrite
