@@ -112,9 +112,17 @@ contains
 ! PUBLIC subroutines
 !-------------------------------------------------------------------------------
 
-  subroutine glint_pdd_init(params)
+  subroutine glint_pdd_init(params,config)
+
+    use glimmer_config
 
     type(glint_pdd_params),intent(inout) :: params !*FD The positive-degree-day parameters
+    type(ConfigSection), pointer         :: config !*FD structure holding sections of configuration file   
+
+    ! Read the config file and output to log
+
+    call pdd_readconfig(params,config)
+    call pdd_printconfig(params)
 
     ! Deallocate arrays
 
@@ -129,14 +137,14 @@ contains
 
 !-------------------------------------------------------------------------------
 
-  subroutine glint_pdd_mbal(pddcalc,artm,arng,prcp,lati,ablt,acab)
+  subroutine glint_pdd_mbal(params,artm,arng,prcp,lati,ablt,acab)
 
     !*FD Calculates mass-balance over the ice model domain, by the
     !*FD positive-degree-day method.
 
     implicit none 
  
-    type(glint_pdd_params),   intent(inout) :: pddcalc !*FD The positive-degree-day parameters
+    type(glint_pdd_params),   intent(inout) :: params !*FD The positive-degree-day parameters
     real(sp), dimension(:,:), intent(in)    :: artm    !*FD Annual mean air-temperature 
                                                        !*FD ($^{\circ}$C)
     real(sp), dimension(:,:), intent(in)    :: arng    !*FD Annual temerature half-range ($^{\circ}$C)
@@ -167,8 +175,8 @@ contains
 
           ! Find the no. of pdd from the mean annual temp and its range
 
-          ky = int((artm(ew,ns)-pddcalc%iy)/pddcalc%dy)
-          kx = int((arng(ew,ns)-pddcalc%ix)/pddcalc%dx) 
+          ky = int((artm(ew,ns)-params%iy)/params%dy)
+          kx = int((arng(ew,ns)-params%ix)/params%dx) 
     
           ! Check to see if indicies are in range
 
@@ -176,12 +184,12 @@ contains
             tx = 0
             jx = 2
             kx = 1
-          else if ( kx > pddcalc%nx-2 ) then
+          else if ( kx > params%nx-2 ) then
             tx = 1.0
-            jx = pddcalc%nx
-            kx = pddcalc%nx-1
+            jx = params%nx
+            kx = params%nx-1
           else
-            tx = arng(ew,ns) - kx * pddcalc%dx - pddcalc%ix
+            tx = arng(ew,ns) - kx * params%dx - params%ix
             jx = kx + 2
             kx = kx + 1
           end if
@@ -190,22 +198,22 @@ contains
             ty = 0.0
             jy = 2
             ky = 1
-          else if ( ky > pddcalc%ny-2 ) then
+          else if ( ky > params%ny-2 ) then
             ty = 1.0
-            jy = pddcalc%ny
-            ky = pddcalc%ny-1
+            jy = params%ny
+            ky = params%ny-1
           else
-            ty = artm(ew,ns) - ky * pddcalc%dy - pddcalc%iy;
+            ty = artm(ew,ns) - ky * params%dy - params%iy;
             jy = ky + 2
             ky = ky + 1
           end if
             
           ! this is done using a look-up table constructed earlier
 
-          pdd = pddcalc%pddtab(kx,ky)*(1.0-tx)*(1.0-ty) + &
-                pddcalc%pddtab(jx,ky) * tx * (1.0 - ty) + &
-                pddcalc%pddtab(jx,jy) * tx * ty +         &
-                pddcalc%pddtab(kx,jy) * (1.0 - tx) * ty
+          pdd = params%pddtab(kx,ky)*(1.0-tx)*(1.0-ty) + &
+                params%pddtab(jx,ky) * tx * (1.0 - ty) + &
+                params%pddtab(jx,jy) * tx * ty +         &
+                params%pddtab(kx,jy) * (1.0 - tx) * ty
 
           ! now start to find the actual net annual accumulation
           ! correct prcpitation for changes in air temperature
@@ -217,12 +225,12 @@ contains
           ! this is the depth of superimposed ice that would need to be
           ! melted before runoff can occur (prcp is already scaled)
 
-          wfrac = pddcalc%wmax * prcp(ew,ns)
+          wfrac = params%wmax * prcp(ew,ns)
 
           ! this is the total potential ablation of SNOW
           ! note we convert to scaled ablation
     
-          pablt = pdd * pddcalc%pddfs
+          pablt = pdd * params%pddfs
 
           ! if the total snow ablation is less than the depth of 
           ! superimposed ice - no runoff occurs
@@ -245,7 +253,7 @@ contains
           else if(pablt > wfrac .and.pablt <= prcp(ew,ns)) then   
             ablt(ew,ns) = pablt - wfrac 
           else
-            ablt(ew,ns) = prcp(ew,ns) - wfrac + pddcalc%pddfi*(pdd-prcp(ew,ns)/pddcalc%pddfs) 
+            ablt(ew,ns) = prcp(ew,ns) - wfrac + params%pddfi*(pdd-prcp(ew,ns)/params%pddfs) 
           end if
 
           ! Finally, mass-balance is difference between accumulation and
@@ -265,7 +273,70 @@ contains
 ! PRIVATE subroutines and functions
 !-------------------------------------------------------------------------------
 
-  subroutine pddtabgrn(pddcalc)
+  subroutine pdd_readconfig(params,config)
+
+    !*FD Reads in configuration data for the annual PDD scheme.
+
+    use glimmer_config
+
+    type(glint_pdd_params),intent(inout) :: params !*FD The positive-degree-day parameters
+    type(ConfigSection), pointer         :: config !*FD structure holding sections of configuration file   
+
+    ! local variables
+    type(ConfigSection), pointer :: section
+    
+    call GetSection(config,section,'GLINT annual pdd')
+    if (associated(section)) then
+       call GetValue(section,'dx',params%dx)
+       call GetValue(section,'dy',params%dy)
+       call GetValue(section,'ix',params%ix)
+       call GetValue(section,'iy',params%iy)
+       call GetValue(section,'nx',params%nx)
+       call GetValue(section,'ny',params%ny)
+       call GetValue(section,'wmax',params%wmax)
+       call GetValue(section,'pddfac_ice',params%pddfac_ice)
+       call GetValue(section,'pddfac_snow',params%pddfac_snow)
+    end if
+
+  end subroutine pdd_readconfig
+
+!-------------------------------------------------------------------------------
+
+  subroutine pdd_printconfig(params)
+
+    use glimmer_log
+
+    type(glint_pdd_params),intent(inout) :: params !*FD The positive-degree-day parameters
+    character(len=100) :: message
+
+    call write_log_div
+
+    call write_log('GLINT annual PDD Scheme parameters:')
+    call write_log('-----------------------------------')
+    write(message,*) 'x-spacing of pdd table',params%dx,' degC'
+    call write_log(message)
+    write(message,*) 'y-spacing of pdd table',params%dy,' degC'
+    call write_log(message)
+    write(message,*) 'Lower bound of x-axis',params%ix,' degC'
+    call write_log(message)
+    write(message,*) 'Lower bound of y-axis',params%iy,' degC'
+    call write_log(message)
+    write(message,*) 'Number of points in x',params%nx
+    call write_log(message)
+    write(message,*) 'Number of points in y',params%ny
+    call write_log(message)
+    write(message,*) 'Snow refreezing fraction',params%wmax
+    call write_log(message)
+    write(message,*) 'PDD factor for ice',params%pddfac_ice
+    call write_log(message)
+    write(message,*) 'PDD factor for snow',params%pddfac_snow
+    call write_log(message)
+
+  end subroutine pdd_printconfig
+
+!-------------------------------------------------------------------------------
+        
+  subroutine pddtabgrn(params)
 
     !*FD Initialises the positive-degree-day-table.
 
@@ -276,7 +347,7 @@ contains
 
     implicit none
 
-    type(glint_pdd_params),intent(inout) :: pddcalc !*FD PDD parameters
+    type(glint_pdd_params),intent(inout) :: params !*FD PDD parameters
 
     ! Internal variables
 
@@ -288,8 +359,8 @@ contains
 
     ! Initialise a couple of constants
 
-    pddcalc%pddfs = (rhow / rhoi) * pddcalc%pddfac_snow / (acc0 * scyr)
-    pddcalc%pddfi = (rhow / rhoi) * pddcalc%pddfac_ice  / (acc0 * scyr)
+    params%pddfs = (rhow / rhoi) * params%pddfac_snow / (acc0 * scyr)
+    params%pddfi = (rhow / rhoi) * params%pddfac_ice  / (acc0 * scyr)
 
     !--------------------------------------------------------------------
     ! Main loops:
@@ -300,25 +371,25 @@ contains
 
     call write_log('Calculating PDD table...',GM_DIAGNOSTIC)
 
-    do tma = pddcalc%iy, pddcalc%iy+(pddcalc%ny-1)*pddcalc%dy, pddcalc%dy
+    do tma = params%iy, params%iy+(params%ny-1)*params%dy, params%dy
 
-       ky = findgrid(tma,real(pddcalc%iy),real(pddcalc%dy))
+       ky = findgrid(tma,real(params%iy),real(params%dy))
 
-       do dtmj = pddcalc%ix, pddcalc%ix+(pddcalc%nx-1)*pddcalc%dx, pddcalc%dx
+       do dtmj = params%ix, params%ix+(params%nx-1)*params%dx, params%dx
 
           mean_july_temp = tma + dtmj   
-          kx  = findgrid(dtmj,real(pddcalc%ix),real(pddcalc%dx)) 
+          kx  = findgrid(dtmj,real(params%ix),real(params%dx)) 
 
           ! need these lines to take account of the backdoor message passing used here
 
           mean_annual_temp=tma
-          dd_sigma=pddcalc%dd_sigma
+          dd_sigma=params%dd_sigma
 
-          pddcalc%pddtab(kx,ky)=(1.0/(dd_sigma*sqrt(twopi)))*romberg_int(inner_integral,0.0,twopi)
+          params%pddtab(kx,ky)=(1.0/(dd_sigma*sqrt(twopi)))*romberg_int(inner_integral,0.0,twopi)
 
           ! convert to days     
 
-          pddcalc%pddtab(kx,ky) = 365.0 * pddcalc%pddtab(kx,ky) / twopi
+          params%pddtab(kx,ky) = 365.0 * params%pddtab(kx,ky) / twopi
 
        end do
     end do
@@ -328,7 +399,7 @@ contains
   end subroutine pddtabgrn
 
 !-------------------------------------------------------------------------------
-        
+
   real(sp) function inner_integral(day)
 
     !*FD Calculates the value of the inner integral, i.e.

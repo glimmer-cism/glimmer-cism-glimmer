@@ -85,7 +85,7 @@ contains
 
     ! initialise the pdd scheme (does this regardless of need at the moment)
 
-    call glint_pdd_init(instance%pddcalc)
+    call glint_pdd_init(instance%pddcalc,config)
 
     ! setting nx,ny of proj
 
