@@ -20,7 +20,22 @@
 
 # python script used to generate source code files given a variable definition file
 
-import ConfigParser, sys, time, string
+import ConfigParser, sys, time, string,re 
+
+def spotname(name):
+    """Return name of spotvariable."""
+    return "%s_spot"%name
+
+def is_dimvar(var):
+    """Return True if variable is associated with a dimension.
+
+    this is assumed to be the case if no time dim is present
+    """
+
+    if 'time' in var['dimensions'] and var['name'] != 'time':
+        return False
+    else:
+        return True
 
 class Variables(dict):
     """Dictionary containing variable definitions."""
@@ -42,13 +57,41 @@ class Variables(dict):
             for (name, value) in vars.items(v):
                 vardef[name] = value
             self.__setitem__(v,vardef)
+            self.__add_spot(vardef)
+
+    def __add_spot(self,vdef):
+        """Add spot variable.
+
+        vname: name of variable
+        vdef:  variable definition"""
+
+        if 'time' not in vdef['dimensions']:
+            return
+
+        spdef = {}
+        for k in vdef:
+            if k=='name':
+                spdef[k] = spotname(vdef[k])
+            elif k=='dimensions':
+                search = re.search('y[0-1]\s*,\s*x[0-1]', vdef[k])
+                if search!=None:
+                    spdef[k] = vdef[k][:search.start()] + 'spot' + vdef[k][search.end():]
+                else:
+                    return
+            else:
+                spdef[k] = vdef[k]
+        if 'x0' in vdef['dimensions']:
+            spdef['coordinates'] = 'y0_spot x0_spot'
+        else:
+            spdef['coordinates'] = 'y1_spot x1_spot'
+        self.__setitem__(spdef['name'],spdef)
 
     def keys(self):
         """Reorder standard keys alphabetically."""
         dk = []
         vk = []
         for v in dict.keys(self):
-            if v == self.__getitem__(v)['dimensions']:
+            if is_dimvar(self.__getitem__(v)):
                 dk.append(v)
             else:
                 vk.append(v)
@@ -117,7 +160,7 @@ class PrintNCDF(PrintVars):
     def print_var_types(self,var):
         """Write variable id to stream."""
 
-        if var['dimensions'] != var['name']:
+        if not is_dimvar(var):
             self.stream.write("  integer, parameter :: %s = %d ! %s\n"%(var_type(var),self.thisvar,var['long_name']))
             self.thisvar = self.thisvar + 1
 
@@ -125,7 +168,7 @@ class PrintNCDF(PrintVars):
         """Write single variable block to stream for ncdf."""
 
         # skip variables associated with dimension 
-        if var['dimensions'] != var['name']:
+        if not is_dimvar(var):
             self.stream.write("    if (nc%%do_var(%s)) then\n"%var_type(var))
             self.stream.write("       write(unit,*) '%s'\n"%var['name'])
             self.stream.write("    end if\n")
@@ -180,7 +223,7 @@ class PrintNCDF_FILE(PrintVars):
         
         self.stream.write("    !     %s -- %s\n"%(var['name'],var['long_name']))
         spaces = 0
-        if var['dimensions'] != var['name']:
+        if not is_dimvar(var):
             spaces=3
             self.stream.write("    if (NC%%do_var(%s)) then\n"%(var_type(var)))
             id = 'NC%%varids(%s)'%var_type(var)
@@ -200,7 +243,7 @@ class PrintNCDF_FILE(PrintVars):
                                                                                                            attrib,
                                                                                                            spaces*' ',
                                                                                                            var[attrib]))
-        if var['dimensions'] != var['name']:
+        if not is_dimvar(var):
             self.stream.write("    end if\n")
         self.stream.write("\n")
 
@@ -208,7 +251,7 @@ class PrintNCDF_FILE(PrintVars):
         """Write single variable block to stream for ncdf_file."""
 
         # skip variables associated with dimension 
-        if var['dimensions'] != var['name']:
+        if not is_dimvar(var):
             dims = string.split(var['dimensions'],',')
             dims.reverse()
             for i in range(0,len(dims)):

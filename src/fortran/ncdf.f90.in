@@ -58,6 +58,8 @@ module glimmer_ncdf
      !*FD name of netCDF file
      logical, dimension(num_vars) :: do_var
      !*FD array specifying which variables should be written to netCDF file
+     logical :: do_spot = .false.
+     !*FD write spot data
      integer id
      !*FD id of netCDF file
 
@@ -73,18 +75,22 @@ module glimmer_ncdf
      !*FD id of sigma level dimension
      integer timedim
      !*FD id of time dimension
-     integer x0var
+     integer spotdim
+     !*FD id of spot index dimensions
+     integer x0var, x0_spotvar
      !*FD id of x0 variable
-     integer y0var
+     integer y0var, y0_spotvar
      !*FD id of y0 variable
-     integer x1var
+     integer x1var, x1_spotvar
      !*FD id of x1 variable
-     integer y1var
+     integer y1var, y1_spotvar
      !*FD id of y1 variable
      integer levelvar
      !*FD id of sigma level variable
      integer timevar
-     !*FD id of time variable     
+     !*FD id of time variable 
+     integer spotvar
+     !*FD id of spot variable
      integer, dimension(num_vars) :: varids
      !*FD array holding variable ids
   end type glimmer_nc_stat

@@ -16,18 +16,25 @@ F77=ifc
 #
 F77_LD=ifc
 #
+# netcdf library
+# This may have to be installed from:
+# http://www.unidata.ucar.edu/packages/netcdf/index.html
+#
+NETCDF_LIB=-lnetcdf
+NETCDF_PREFIX=/usr/local/netcdf-3.5.1
+#
 # Compilation flags for C compiler
 #
 CCFLAGS= -DIFC -g -DLINUX
 # 
 # compilation flags for fortran compiler
 #
-F77FLAGS=-fpp -w -std95
+F77FLAGS=-fpp -w -std95 -I$(NETCDF_PREFIX)/include
 #F77FLAGSR8=-r8
 #
 # final stage loader flags
 #
-LD_FLAGS=
+LD_FLAGS=-L$(NETCDF_PREFIX)/lib $(NETCDF_LIB)
 #
 # locations of wishx and xqplot.tcl
 # they are in fact just empty files
@@ -59,12 +66,6 @@ DOPTS=
 # Libraries needed for final fortran linkage
 #
 FORTRANLIBS=
-#
-# netcdf library
-# This may have to be installed from:
-# http://www.unidata.ucar.edu/packages/netcdf/index.html
-#
-NETCDF=-lnetcdf_ifc
 
 .c.o:
 	$(CC) -c $(CCFLAGS) $*.c

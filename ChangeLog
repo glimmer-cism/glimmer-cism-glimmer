@@ -1,3 +1,8 @@
+2004-05-10 Magnus Hagdorn
+ * added spot variables (generate_ncvars.py, ncdf_vars.def, ncdf.f90.in, ncdf_file.f90.in)
+ * bin2ncdf.f90: does 3D now as well, there is a bug with the 0D time series.
+ * input2ncdf.f90: start of a tool to convert glimmer input files to netCDF file
+
 2004-05-08 Magnus Hagdorn
  * first round of netCDF stuff
    generate_ncvars.py: code generator taking netCDF file description
