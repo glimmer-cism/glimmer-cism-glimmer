@@ -1,3 +1,9 @@
+2004-08-13 Ian Rutt
+ * Updated documentation a little
+ * Minor formatting changes
+ * Changes to some constants to conform with EISMINT-1. These should be
+   moved to the configuration files at some point.
+ 
 2004-08-13 Magnus Hagdorn
  * fixed bug in glimmer_thck.f90: size of opvrew,opvrns is different from ipvr so where
    construct cannot be used

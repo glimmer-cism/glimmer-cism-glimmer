@@ -57,7 +57,7 @@ module physcon
 
   real(dp),parameter :: pi = 3.1415926535897d0   !*FD Value of $\pi$.
 
-  real(dp),parameter :: rhoi = 917.0             !*FD The density of ice (kg m$^{-3}$)
+  real(dp),parameter :: rhoi = 910.0             !*FD The density of ice (kg m$^{-3}$)
   real(dp),parameter :: rhom = 3300.0d0          !*FD The density of magma(?) (kg m$^{-3}$)
   real(dp),parameter :: rhoo = 1028.0d0          !*FD The density of the ocean (kg m$^{-3}$)
   real(dp),parameter :: rhow = 1000.0d0          !*FD The density of fresh water (kg m$^{-3}$)
@@ -73,14 +73,17 @@ module physcon
                                                  !*FD in \texttt{patebudd}, for $T^{*}<263$K.
                                                  !*FD (Pa$^{-3}$ s$^{-1}$) 
   real(dp),parameter :: gascon = 8.314d0         !*FD The gas ideal constant $R$ (J mol$^{-1}$ K$^{-1}$)
-  real(dp),parameter :: actenh = 139.0d3         ! J mol^-1
-  real(dp),parameter :: actenl = 60.0d3          ! J mol^-1
+  real(dp),parameter :: actenh = 139.0d3         !*FD Activation energy in Glenn's flow law for $T^{*}\geq263$K. (J mol$^{-1}$)
+  real(dp),parameter :: actenl = 60.0d3          !*FD Activation energy in Glenn's flow law for $T^{*}<263$K. (J mol$^{-1}$)
 
-  real(dp),parameter :: shci = 2009.0d0          ! J kg^{-1} K^{-1}
-  real(dp),parameter :: lhci = 335.0d3           ! J kg^{-1} 
-  real(dp),parameter :: coni = 2.1d0             ! W m^{-1} K^{-1}
+  real(dp),parameter :: shci = 2009.0d0          !*FD Specific heat capacity of ice (J kg$^{-1}$ K$^{-1}$)
+  real(dp),parameter :: lhci = 335.0d3           !*FD Latent heat of melting of ice (J kg$^{-1}$) 
+  real(dp),parameter :: coni = 2.1d0             !*FD Thermal conductivity of ice (W m$^{-1}$ K$^{-1}$)
 
-  real(dp),parameter :: pmlt = 9.7456d-8         ! K Pa^{-1}
+  real(dp),parameter :: pmlt = 9.7456d-8         !*FD Factor for dependence of melting point on pressure (K Pa$^{-1}$)
   real(dp),parameter :: trpt = 273.15d0          !*FD Triple point of water (K)
+
+  real(dp),parameter :: pddfac_ice  = 0.008      !*FD PDD factor for ice (m day$^{-1}$ $^{\circ}C$^{-1}$)
+  real(dp),parameter :: pddfac_snow = 0.003      !*FD PDD factor for snow (m day$^{-1}$ $^{\circ}C$^{-1}$)
 
 end module physcon

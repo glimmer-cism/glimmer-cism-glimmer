@@ -67,7 +67,7 @@ contains
     type(glimmer_global_type),intent(inout) :: model       !*FD Ice model parameters.
     integer,                  intent(in)    :: which       !*FD Flag to choose method.
     real(dp),dimension(:,:),  intent(in)    :: global_orog !*FD Global orography, interpolated 
-                                                           !*FD onto the ice model grid.
+    !*FD onto the ice model grid.
 
     !------------------------------------------------------------------------------------
     ! Internal variables
@@ -98,279 +98,284 @@ contains
 
     case(0) ! Set column to surface air temperature -------------------------------------
 
-      call calcartm(model,                                &
-                    model%options%whichartm,              &
-                    model%geometry%usrf,                  &
-                    model%climate%lati,                   &
-                    model%climate%artm,                   &   !** OUTPUT
-                    model%climate%arng,                   &   !** OUTPUT
-                    g_orog=global_orog,                   &
-                    g_artm=model%climate%g_artm,          &
-                    g_arng=model%climate%g_arng)
+       call calcartm(model,                                &
+            model%options%whichartm,              &
+            model%geometry%usrf,                  &
+            model%climate%lati,                   &
+            model%climate%artm,                   &   !** OUTPUT
+            model%climate%arng,                   &   !** OUTPUT
+            g_orog=global_orog,                   &
+            g_artm=model%climate%g_artm,          &
+            g_arng=model%climate%g_arng)
 
-      do ns = 1,model%general%nsn
-        do ew = 1,model%general%ewn
-          model%temper%temp(:,ew,ns) = dmin1(0.0d0,dble(model%climate%artm(ew,ns)))
-        end do
-      end do
-       
+       do ns = 1,model%general%nsn
+          do ew = 1,model%general%ewn
+             model%temper%temp(:,ew,ns) = dmin1(0.0d0,dble(model%climate%artm(ew,ns)))
+          end do
+       end do
+
     case(1) ! Do full temperature solution ---------------------------------------------
 
-      ! Work out where the ice is floating, and assign to mask array -------------------
+       ! Work out where the ice is floating, and assign to mask array -------------------
 
-      allocate(floater(model%general%ewn,model%general%nsn))
-      floater = abs(model%geometry%topg-model%geometry%lsrf) > floatlim
+       allocate(floater(model%general%ewn,model%general%nsn))
+       floater = abs(model%geometry%topg-model%geometry%lsrf) > floatlim
 
-      ! Calculate time-derivatives of thickness and upper surface elevation ------------
+       ! Calculate time-derivatives of thickness and upper surface elevation ------------
 
-      call timeders(model%thckwk,            &
-                    model%geometry%thck,     &
-                    model%geomderv%dthckdtm, &
-                    model%geometry%mask,     &
-                    model%numerics%time,     &
-                    1)
+       call timeders(model%thckwk,            &
+            model%geometry%thck,     &
+            model%geomderv%dthckdtm, &
+            model%geometry%mask,     &
+            model%numerics%time,     &
+            1)
 
-      call timeders(model%thckwk,            &
-                    model%geometry%usrf,     &
-                    model%geomderv%dusrfdtm, &
-                    model%geometry%mask,     &
-                    model%numerics%time,     &
-                    2)
+       call timeders(model%thckwk,            &
+            model%geometry%usrf,     &
+            model%geomderv%dusrfdtm, &
+            model%geometry%mask,     &
+            model%numerics%time,     &
+            2)
 
-      ! Calculate surface air temperatures ---------------------------------------------
+       ! Calculate surface air temperatures ---------------------------------------------
 
-      call calcartm(model,                                &
-                    model%options%whichartm,              &
-                    model%geometry%usrf,                  &
-                    model%climate%lati,                   &
-                    model%climate%artm,                   &   !** OUTPUT
-                    model%climate%arng,                   &   !** OUTPUT
-                    g_orog=global_orog,                   &
-                    g_artm=model%climate%g_artm,          &
-                    g_arng=model%climate%g_arng)
+       call calcartm(model,                                &
+            model%options%whichartm,              &
+            model%geometry%usrf,                  &
+            model%climate%lati,                   &
+            model%climate%artm,                   &   !** OUTPUT
+            model%climate%arng,                   &   !** OUTPUT
+            g_orog=global_orog,                   &
+            g_artm=model%climate%g_artm,          &
+            g_arng=model%climate%g_arng)
 
-      ! Calculate the vertical velocity of the grid ------------------------------------
+       ! Calculate the vertical velocity of the grid ------------------------------------
 
-      call gridwvel(model%numerics%sigma,  &
-                    model%numerics%thklim, &
-                    model%velocity%uvel,   &
-                    model%velocity%vvel,   &
-                    model%geomderv,        &
-                    model%geometry%thck,   &
-                    model%velocity%wgrd)
+       call gridwvel(model%numerics%sigma,  &
+            model%numerics%thklim, &
+            model%velocity%uvel,   &
+            model%velocity%vvel,   &
+            model%geomderv,        &
+            model%geometry%thck,   &
+            model%velocity%wgrd)
 
-      ! Calculate the actual vertical velocity; method depends on whichwvel ------------
+       ! Calculate the actual vertical velocity; method depends on whichwvel ------------
 
-      select case(model%options%whichwvel)
-      case(0) 
+       select case(model%options%whichwvel)
+       case(0) 
 
-        ! Usual vertical integration
+          ! Usual vertical integration
 
-        call wvelintg(model%velocity%uvel,                        &
-                      model%velocity%vvel,                        &
-                      model%geomderv,                             &
-                      model%numerics,                             &
-                      model%velowk,                               &
-                      model%velocity%wgrd(model%general%upn,:,:), &
-                      model%geometry%thck,                        &
-                      model%temper%bmlt,                          &
-                      model%velocity%wvel)
+          call wvelintg(model%velocity%uvel,                        &
+               model%velocity%vvel,                        &
+               model%geomderv,                             &
+               model%numerics,                             &
+               model%velowk,                               &
+               model%velocity%wgrd(model%general%upn,:,:), &
+               model%geometry%thck,                        &
+               model%temper%bmlt,                          &
+               model%velocity%wvel)
 
-      case(1)
+       case(1)
 
-        ! Vertical integration constrained so kinematic upper BC obeyed.
+          ! Vertical integration constrained so kinematic upper BC obeyed.
 
-        call wvelintg(model%velocity%uvel,                        &
-                      model%velocity%vvel,                        &
-                      model%geomderv,                             &
-                      model%numerics,                             &
-                      model%velowk,                               &
-                      model%velocity%wgrd(model%general%upn,:,:), &
-                      model%geometry%thck,                        &
-                      model%temper%  bmlt,                        &
-                      model%velocity%wvel)
+          call wvelintg(model%velocity%uvel,                        &
+               model%velocity%vvel,                        &
+               model%geomderv,                             &
+               model%numerics,                             &
+               model%velowk,                               &
+               model%velocity%wgrd(model%general%upn,:,:), &
+               model%geometry%thck,                        &
+               model%temper%  bmlt,                        &
+               model%velocity%wvel)
 
-        call chckwvel(model%numerics,                             &
-                      model%geomderv,                             &
-                      model%velocity%uvel(1,:,:),                 &
-                      model%velocity%vvel(1,:,:),                 &
-                      model%velocity%wvel,                        &
-                      model%geometry%thck,                        &
-                      model%climate% acab)
-      end select
+          call chckwvel(model%numerics,                             &
+               model%geomderv,                             &
+               model%velocity%uvel(1,:,:),                 &
+               model%velocity%vvel(1,:,:),                 &
+               model%velocity%wvel,                        &
+               model%geometry%thck,                        &
+               model%climate% acab)
 
-      ! Allocate some arrays and initialise ----------------------------------------------
+       end select
 
-      allocate(model%tempwk%initadvt(model%general%upn,model%general%ewn,model%general%nsn))
-      allocate(model%tempwk%inittemp(model%general%upn,model%general%ewn,model%general%nsn))
-      allocate(model%tempwk%dissip(model%general%upn,model%general%ewn,model%general%nsn))
+       ! Allocate some arrays and initialise ----------------------------------------------
 
-      model%tempwk%inittemp = 0.0d0
+       allocate(model%tempwk%initadvt(model%general%upn,model%general%ewn,model%general%nsn))
+       allocate(model%tempwk%inittemp(model%general%upn,model%general%ewn,model%general%nsn))
+       allocate(model%tempwk%dissip(model%general%upn,model%general%ewn,model%general%nsn))
 
-      ! ----------------------------------------------------------------------------------
+       model%tempwk%inittemp = 0.0d0
 
-      call finddisp(model, &
-                    model%geometry%thck, &
-                    model%geomderv%stagthck, &
-                    model%geomderv%dusrfdew, &
-                    model%geomderv%dusrfdns, &
-                    model%temper%flwa)
+       ! ----------------------------------------------------------------------------------
 
-      call hadvall(model, &
-                   model%temper%temp, &
-                   model%velocity%uvel, &
-                   model%velocity%vvel, &
-                   model%geometry%thck)
+       call finddisp(model, &
+            model%geometry%thck, &
+            model%geomderv%stagthck, &
+            model%geomderv%dusrfdew, &
+            model%geomderv%dusrfdns, &
+            model%temper%flwa)
 
-      iter = 0
-      again = 0
+       call hadvall(model, &
+            model%temper%temp, &
+            model%velocity%uvel, &
+            model%velocity%vvel, &
+            model%geometry%thck)
 
-      do while (again .eq. 0)
+       iter = 0
+       again = 0
 
-        tempresid = 0.0d0
+       do while (again .eq. 0)
 
-        do ns = 2,model%general%nsn-1
-          do ew = 2,model%general%ewn-1
-            if(model%geometry%thck(ew,ns)>model%numerics%thklim) then
+          tempresid = 0.0d0
 
-              call hadvpnt(model%tempwk,                           &
-                           iteradvt,                               &
-                           diagadvt,                               &
-                           model%temper%temp(:,ew-2:ew+2,ns),      &
-                           model%temper%temp(:,ew,ns-2:ns+2),      &
-                           model%velocity%uvel(:,ew-1:ew,ns-1:ns), &
-                           model%velocity%vvel(:,ew-1:ew,ns-1:ns))
-  
-              call findvtri(model,iter,ew,ns,subd,diag,supd,rhsd,iteradvt,diagadvt, &
-                            model%temper%temp(:,ew,ns), &
-                            model%velocity%wgrd(:,ew,ns), &
-                            model%velocity%wvel(:,ew,ns), &
-                            model%geometry%thck(ew,ns), &
-                            model%climate%artm(ew,ns), &
-                            floater(ew,ns))
-            
-              prevtemp = model%temper%temp(:,ew,ns)
+          do ns = 2,model%general%nsn-1
+             do ew = 2,model%general%ewn-1
+                if(model%geometry%thck(ew,ns)>model%numerics%thklim) then
 
-              call tridag(subd(2:model%general%upn), &
-                          diag(1:model%general%upn), &
-                          supd(1:model%general%upn-1), &
-                          rhsd(1:model%general%upn), &
-                          model%temper%temp(1:model%general%upn,ew,ns))
+                   call hadvpnt(model%tempwk,                           &
+                        iteradvt,                               &
+                        diagadvt,                               &
+                        model%temper%temp(:,ew-2:ew+2,ns),      &
+                        model%temper%temp(:,ew,ns-2:ns+2),      &
+                        model%velocity%uvel(:,ew-1:ew,ns-1:ns), &
+                        model%velocity%vvel(:,ew-1:ew,ns-1:ns))
 
-              call corrpmpt(model%temper%temp(:,ew,ns),model%geometry%thck(ew,ns),model%temper%bwat(ew,ns), &
-                            model%numerics%sigma,model%general%upn)
+                   call findvtri(model,iter,ew,ns,subd,diag,supd,rhsd,iteradvt,diagadvt, &
+                        model%temper%temp(:,ew,ns), &
+                        model%velocity%wgrd(:,ew,ns), &
+                        model%velocity%wvel(:,ew,ns), &
+                        model%geometry%thck(ew,ns), &
+                        model%climate%artm(ew,ns), &
+                        floater(ew,ns))
 
-              tempresid = dmax1(tempresid,maxval(abs(model%temper%temp(:,ew,ns)-prevtemp(:))))
+                   prevtemp = model%temper%temp(:,ew,ns)
 
-            endif
+                   call tridag(subd(2:model%general%upn), &
+                        diag(1:model%general%upn), &
+                        supd(1:model%general%upn-1), &
+                        rhsd(1:model%general%upn), &
+                        model%temper%temp(1:model%general%upn,ew,ns))
+
+                   call corrpmpt(model%temper%temp(:,ew,ns),model%geometry%thck(ew,ns),model%temper%bwat(ew,ns), &
+                        model%numerics%sigma,model%general%upn)
+
+                   tempresid = dmax1(tempresid,maxval(abs(model%temper%temp(:,ew,ns)-prevtemp(:))))
+
+                endif
+             end do
           end do
-        end do
 
-        if (0 == iter) then
-          deallocate(model%tempwk%initadvt)
-        end if
-
-        iter = iter + 1
- 
-        if (tempresid > tempthres .and. iter < mxit) then
-          again = 0
-        else 
-          again = 1
-        end if
-        
-      end do
-
-      model%temper%niter = model%temper%niter + iter 
-
-      do ns = 1,model%general%nsn
-        do ew = 1,model%general%ewn
-          if (model%geometry%thck(ew,ns) <= model%numerics%thklim) then
-            model%temper%temp(:,ew,ns) = dmin1(0.0d0,dble(model%climate%artm(ew,ns)))
+          if (0 == iter) then
+             deallocate(model%tempwk%initadvt)
           end if
-        end do
-      end do
 
-      deallocate(model%tempwk%inittemp)
+          iter = iter + 1
 
-      call swapbndt(ewbc, &
-                    model%temper%temp(:,1,:), &
-                    model%temper%temp(:,2,:), &
-                    model%temper%temp(:,model%general%ewn,:), &
-                    model%temper%temp(:,model%general%ewn-1,:), &
-                    0)
-      call swapbndt(nsbc, &
-                    model%temper%temp(:,:,1), &
-                    model%temper%temp(:,:,2), &
-                    model%temper%temp(:,:,model%general%nsn), &
-                    model%temper%temp(:,:,model%general%nsn-1), &
-                    1)
+          if (tempresid > tempthres .and. iter < mxit) then
+             again = 0
+          else 
+             again = 1
+          end if
 
-      ! Calculate basal melt rate --------------------------------------------------
+       end do
 
-      call calcbmlt(model, &
-                    model%temper%temp, &
-                    model%geometry%thck, &
-                    model%temper%bwat, &
-                    model%geomderv%stagthck, &
-                    model%geomderv%dusrfdew, &
-                    model%geomderv%dusrfdns, &
-                    model%velocity%ubas, &
-                    model%velocity%vbas, &
-                    model%temper%bmlt, &
-                    floater)
+       model%temper%niter = model%temper%niter + iter 
 
-      ! Calculate basal water depth ------------------------------------------------
+       do ns = 1,model%general%nsn
+          do ew = 1,model%general%ewn
+             if (model%geometry%thck(ew,ns) <= model%numerics%thklim) then
+                model%temper%temp(:,ew,ns) = dmin1(0.0d0,dble(model%climate%artm(ew,ns)))
+             end if
+          end do
+       end do
 
-      call calcbwat(model, &
-                    model%options%whichbwat, &
-                    model%temper%bmlt, &
-                    model%temper%bwat, &
-                    model%geometry%thck, &
-                    model%geometry%topg, &
-                    model%temper%temp(model%general%upn,:,:), &
-                    floater) 
+       deallocate(model%tempwk%inittemp)
 
-      ! Calculate Glenn's A --------------------------------------------------------
+       call swapbndt(ewbc, &
+            model%temper%temp(:,1,:), &
+            model%temper%temp(:,2,:), &
+            model%temper%temp(:,model%general%ewn,:), &
+            model%temper%temp(:,model%general%ewn-1,:), &
+            0)
+       call swapbndt(nsbc, &
+            model%temper%temp(:,:,1), &
+            model%temper%temp(:,:,2), &
+            model%temper%temp(:,:,model%general%nsn), &
+            model%temper%temp(:,:,model%general%nsn-1), &
+            1)
 
-      call calcflwa(model%numerics,        &
-                    model%velowk,          &
-                    model%paramets%fiddle, &
-                    model%temper%flwa,     &
-                    model%temper%temp,     &
-                    model%geometry%thck,   &
-                    model%options%whichflwa) 
+       ! Calculate basal melt rate --------------------------------------------------
 
-      ! Deallocate arrays ----------------------------------------------------------
+       call calcbmlt(model, &
+            model%temper%temp, &
+            model%geometry%thck, &
+            model%temper%bwat, &
+            model%geomderv%stagthck, &
+            model%geomderv%dusrfdew, &
+            model%geomderv%dusrfdns, &
+            model%velocity%ubas, &
+            model%velocity%vbas, &
+            model%temper%bmlt, &
+            floater)
 
-      deallocate(model%tempwk%dissip,floater)
+       ! Calculate basal water depth ------------------------------------------------
+
+       call calcbwat(model, &
+            model%options%whichbwat, &
+            model%temper%bmlt, &
+            model%temper%bwat, &
+            model%geometry%thck, &
+            model%geometry%topg, &
+            model%temper%temp(model%general%upn,:,:), &
+            floater) 
+
+       ! Calculate Glenn's A --------------------------------------------------------
+
+       call calcflwa(model%numerics,        &
+            model%velowk,          &
+            model%paramets%fiddle, &
+            model%temper%flwa,     &
+            model%temper%temp,     &
+            model%geometry%thck,   &
+            model%options%whichflwa) 
+
+       ! Deallocate arrays ----------------------------------------------------------
+
+       deallocate(model%tempwk%dissip,floater)
 
     case(2) ! Do something else, unspecified ---------------------------------------
 
-      call calcartm(model,                                       &
-                    model%options%whichartm,model%geometry%usrf, &
-                    model%climate%lati,                          &
-                    model%climate%artm,                          &   !** OUTPUT
-                    model%climate%arng,                          &   !** OUTPUT
-                    g_orog=global_orog,                          &
-                    g_artm=model%climate%g_artm,                 &
-                    g_arng=model%climate%g_arng)
-      model%temper%bwat = 0.0d0
+       call calcartm(model,                                       &
+            model%options%whichartm,model%geometry%usrf, &
+            model%climate%lati,                          &
+            model%climate%artm,                          &   !** OUTPUT
+            model%climate%arng,                          &   !** OUTPUT
+            g_orog=global_orog,                          &
+            g_artm=model%climate%g_artm,                 &
+            g_arng=model%climate%g_arng)
+       model%temper%bwat = 0.0d0
 
-      do ns = 1,model%general%nsn
-        do ew = 1,model%general%ewn
-          model%temper%temp(:,ew,ns) = dmin1(0.0d0,dble(model%climate%artm(ew,ns))) * (1.0d0 - model%numerics%sigma)
-          call corrpmpt(model%temper%temp(:,ew,ns),model%geometry%thck(ew,ns),model%temper%bwat(ew,ns),&
-                        model%numerics%sigma,model%general%upn)
-        end do
-      end do
+       do ns = 1,model%general%nsn
+          do ew = 1,model%general%ewn
+             model%temper%temp(:,ew,ns) = dmin1(0.0d0,dble(model%climate%artm(ew,ns))) * (1.0d0 - model%numerics%sigma)
+             call corrpmpt(model%temper%temp(:,ew,ns),model%geometry%thck(ew,ns),model%temper%bwat(ew,ns),&
+                  model%numerics%sigma,model%general%upn)
+          end do
+       end do
+
+    case default
+
+       call glide_msg(GM_FATAL,__FILE__,__LINE__,'Unrecognised value of whichtemp')
 
     end select
 
-      ! Output some information ----------------------------------------------------
+    ! Output some information ----------------------------------------------------
 
-      write(outtxt,*)"temp ", model%numerics%time, iter, model%temper%niter, &
-                          real(model%temper%temp(model%general%upn,model%general%ewn/2+1,model%general%nsn/2+1))
-      call glide_msg(GM_TIMESTEP,__FILE__,__LINE__,trim(adjustl(outtxt)))
+    write(outtxt,*)"temp ", model%numerics%time, iter, model%temper%niter, &
+         real(model%temper%temp(model%general%upn,model%general%ewn/2+1,model%general%nsn/2+1))
+    call glide_msg(GM_TIMESTEP,__FILE__,__LINE__,trim(adjustl(outtxt)))
 
   end subroutine timeevoltemp
 
@@ -487,7 +492,7 @@ contains
        
       !   make sure that surface is above sealevel
 
-          esurf = max(0.0, sngl(usrf(ew,ns)*thk0))
+          esurf = max(0.0, real(usrf(ew,ns)*thk0,sp))
      
       !   find mean annual temp (is surface above inversion layer?)
 
@@ -499,9 +504,6 @@ contains
 
       !   find July temp (express as annual half range for convenience)
     
-      !   arng(ew,ns)= 30.78 - 0.006277 * esurf - 0.3262 * lati(ew,ns) + perturb - artm(ew,ns)
-
-      ! CHANGED BY ALT 14/02/01 TO MATCH EISMINT 
           arng(ew,ns)= 30.38 - 0.006277 * esurf - 0.3262 * lati(ew,ns) + model%temper%perturb - artm(ew,ns)
 
         end do

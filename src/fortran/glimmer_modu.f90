@@ -421,7 +421,7 @@ module glimmer_types
     real(sp) :: tma       = 0.0
     real(sp) :: tmj       = 0.0
     real(sp) :: dtmj      = 0.0
-    real(sp) :: dd_sigma  = 5.0
+    real(sp) :: dd_sigma  = 5.0 !*FD Standard deviation of daily temperature (K)
     logical  :: first     = .true.
     logical  :: pt_alloc  = .false. !*FD set \texttt{.true.} if \texttt{pddtab}
                                     !*FD has been allocated.

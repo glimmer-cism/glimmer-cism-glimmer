@@ -44,7 +44,7 @@
 module paramets
 
   use glimmer_global, only : sp, dp
-  use physcon, only : scyr,rhoi,rhow,rhoo
+  use physcon, only : scyr,rhoi,rhow,rhoo,pddfac_ice,pddfac_snow
 
   implicit none; save
 
@@ -66,9 +66,9 @@ module paramets
   ! eismint pddfs 0.003 and pddfi 0.008
   ! ritz et al 1997 pddfs 0.005 and pddfi 0.016
 
-  real(sp), parameter :: pddfs = (rhow / rhoi) * 0.003 / (acc0 * scyr)
-  real(sp), parameter :: pddfi = (rhow / rhoi) * 0.008 / (acc0 * scyr)
-  real(sp), parameter :: wmax = 0.6
+  real(sp), parameter :: pddfs = (rhow / rhoi) * pddfac_snow / (acc0 * scyr)
+  real(sp), parameter :: pddfi = (rhow / rhoi) * pddfac_ice  / (acc0 * scyr)
+  real(sp), parameter :: wmax = 0.6  !*FD Fraction of melted snow that refreezes
 
   ! original pfac value 1.0533 from eismint
   ! new value from ritz et al 1997 1.081 is equiv to
@@ -76,7 +76,7 @@ module paramets
   ! newer value from huybrechts 2002 1.0725 is equiv
   ! to his exp(0.169x/2.4)
 
-  real(sp), parameter :: pfac = 1.081
+  real(sp), parameter :: pfac = 1.000
 
   ! originally a saved variable in subroutine marinlim
 
