@@ -715,7 +715,7 @@ contains
     integer get_nsn
     type(glide_global_type) :: model
 
-    get_nsn = model%general%ewn
+    get_nsn = model%general%nsn
   end function get_nsn
   
 

@@ -89,10 +89,10 @@ contains
 
     ! setting nx,ny of proj
 
-    instance%proj%nx = instance%model%general%ewn
-    instance%proj%ny = instance%model%general%nsn
-    instance%proj%dx = instance%model%numerics%dew
-    instance%proj%dy = instance%model%numerics%dns
+    instance%proj%nx = get_ewn(instance%model)
+    instance%proj%ny = get_nsn(instance%model)
+    instance%proj%dx = get_dew(instance%model)
+    instance%proj%dy = get_dns(instance%model)
 
     call new_proj(instance%proj,radea)                        ! Initialise the projection
     call new_downscale(instance%downs,instance%proj,grid)     ! Initialise the downscaling

@@ -2,6 +2,8 @@
  * Tidied up GLINT pdd scheme and added config file handling
  * Major pruning of redundant forcing code in GLINT, and general
    reorganisation. Not fully functional yet.
+ * Began bugfixing on GLINT
+ * Fixed problem with accessor functions - get_nsn was returning ewn!
 	
 2005-02-16 Ian Rutt
  * First stage of making sure GLINT does what it should. Build
