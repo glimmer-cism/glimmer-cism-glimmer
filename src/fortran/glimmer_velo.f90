@@ -494,7 +494,7 @@ contains
     ! Get some values for the domain size by checking sizes of input arrays
     !------------------------------------------------------------------------------------
 
-    upn=size(uvel,1) ; ewn=size(uvel,2)-1 ; nsn=size(uvel,3)-1
+    upn=size(uvel,1) ; ewn=size(uvel,2) ; nsn=size(uvel,3)
 
     !------------------------------------------------------------------------------------
     ! Do initial set-up, if not already done before
@@ -547,11 +547,11 @@ contains
           cons(2) = sum(geomderv%dthckdew(ew-1:ew,ns-1:ns)) / 16.0d0
           cons(3) = sum(geomderv%dusrfdns(ew-1:ew,ns-1:ns)) / 16.0d0
           cons(4) = sum(geomderv%dthckdns(ew-1:ew,ns-1:ns)) / 16.0d0
-          cons(5) = sum(geomderv%stagthck(ew-1:ew,ns-1:ns)) / dew16
-          cons(6) = sum(geomderv%stagthck(ew-1:ew,ns-1:ns)) / dns16
+          ! cons(5) = sum(geomderv%stagthck(ew-1:ew,ns-1:ns)) / dew16
+          ! cons(6) = sum(geomderv%stagthck(ew-1:ew,ns-1:ns)) / dns16
           ! * better? (an alternative from TP's original code)
-          ! cons(5) = (thck(ew-1,ns)+2.0d0*thck(ew,ns)+thck(ew+1,ns)) / dew16
-          ! cons(6) = (thck(ew,ns-1)+2.0d0*thck(ew,ns)+thck(ew,ns+1)) / dns16
+          cons(5) = (thck(ew-1,ns)+2.0d0*thck(ew,ns)+thck(ew+1,ns)) / dew16
+          cons(6) = (thck(ew,ns-1)+2.0d0*thck(ew,ns)+thck(ew,ns+1)) / dns16
 
           velowk%suvel = hsum(uvel(:,ew-1:ew,ns-1:ns))
           velowk%svvel = hsum(vvel(:,ew-1:ew,ns-1:ns))

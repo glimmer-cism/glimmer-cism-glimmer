@@ -142,11 +142,13 @@ contains
 
     call geomders(model%numerics, &
          model%geometry% usrf, &
+         model%geomderv% stagthck,&
          model%geomderv% dusrfdew, &
          model%geomderv% dusrfdns)
 
     call geomders(model%numerics, &
          model%geometry% thck, &
+         model%geomderv% stagthck,&
          model%geomderv% dthckdew, &
          model%geomderv% dthckdns)
 
