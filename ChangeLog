@@ -1,3 +1,7 @@
+2005-03-11 Magnus Hagdorn
+ * configure.in, version.tex.in glimmer_version.f90.in, glimmer-config.in: add micro version
+ * updated NEWS
+
 2005-03-10 Ian Rutt
  * Began preliminary work on objectifying mass-balance accumulation in GLINT
  * Now plumbed in and working. Needs more work to enable asynchronous coupling

@@ -49,7 +49,7 @@ while test $# -gt 0; do
       echo_exec_prefix=yes
       ;;
     --version)
-      echo @GLIMMER_MAJOR_VERSION@.@GLIMMER_MINOR_VERSION@
+      echo @GLIMMER_MAJOR_VERSION@.@GLIMMER_MINOR_VERSION@.@GLIMMER_MICRO_VERSION@
       ;;
     --fcflags)
       echo_fcflags=yes
