@@ -3,6 +3,7 @@
  * Also minor formatting/organisational changes.
  * Removed auto-generation of NetCDF handling code - using latest build, but hardwired
  * Made formatting changes to NetCDF routines
+ * Updated build routine (not quite working....)
 
 2005-01-07 Ian Rutt
  * Made substantial changes to structure to enable to begin process of allowing the 

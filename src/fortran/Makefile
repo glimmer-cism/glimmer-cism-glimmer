@@ -10,9 +10,6 @@ GLIMMERFLAGS=$(F77FLAGS) $(GLIMMERPRECOPT)
 SUBDIRS = SLAP_library
 LIBS = libglimmer.a
 PROGS = glimmer_example bin2ncdf input2ncdf relaxed test_config
-DATA = ncdf_vars.def
-
-AUTOGEN = ncdf.f90 ncdf_file.f90 ncdf_infile.f90 ncdf_params.f90
 
 OBJECTS = glide_pdd.o glimmer_isot.o glimmer_setup.o \
           glimmer_modu.o glimmer_outp.o glimmer_paramets.o glimmer_physcon.o glimmer_restart.o \
@@ -27,7 +24,7 @@ SOURCES = glide_pdd.f90 glimmer_isot.f90 glimmer_setup.f90 \
           glimmer.f90 glimmer_global.f90 glimmer_interp.f90 glimmer_mbal.f90 \
           glimmer_object.f90 glimmer_proj.f90 glimmer_utils.f90 gmt.f90 \
           glimmer_global_grid.f90 glimmer_config.f90 glimmer_CFproj.f90 \
-          glide_messages.f90 $(AUTOGEN)
+          glide_messages.f90 ncdf.f90 ncdf_file.f90 ncdf_infile.f90 ncdf_params.f90
 
 INCLUDE_FILES=
 
@@ -63,14 +60,10 @@ test_config:	test_config.o glimmer_config.o glide_messages.o
 	$(F77) -o $@ $^ $(LD_FLAGS)
 
 # install glimmer
-install:	install-mod install-libs install-progs install-data
+install:	install-mod install-libs install-progs
 		for dir in $(SUBDIRS); do \
 		  $(MAKE) -C $$dir install; \
 		done
-
-install-data:	$(DATA)
-		install -d $(GLIMMER_PREFIX)/share/glimmer
-		cp $(DATA) $(GLIMMER_PREFIX)/share/glimmer
 
 install-mod:	$(OBJECTS)
 		install -d $(GLIMMER_PREFIX)/mod
@@ -84,22 +77,12 @@ install-progs:	$(PROGS)
 
 # clean up
 clean : 
-	rm -f *.o *.mod f90_dep.mak $(AUTOGEN) $(PROGS) $(LIBS)
+	rm -f *.o *.mod f90_dep.mak $(PROGS) $(LIBS)
 	for dir in $(SUBDIRS); do \
 	  $(MAKE) -C $$dir clean; \
 	done
 
-f90_dep.mak: *.f90 $(AUTOGEN)
+f90_dep.mak: *.f90
 	python ../python/f90_dependencies.py -o $@ $^
-
-#some special rules for automatically generating ncdf src code
-ncdf.f90:	ncdf_vars.def ncdf.f90.in
-		python ../python/generate_ncvars.py $< $@.in	
-ncdf_file.f90:	ncdf_vars.def ncdf_file.f90.in
-		python ../python/generate_ncvars.py $< $@.in	
-ncdf_infile.f90:	ncdf_vars.def ncdf_infile.f90.in
-		python ../python/generate_ncvars.py $< $@.in	
-ncdf_params.f90:	ncdf_vars.def ncdf_params.f90.in
-		python ../python/generate_ncvars.py $< $@.in	
 
 include f90_dep.mak 

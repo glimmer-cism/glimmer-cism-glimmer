@@ -21,7 +21,7 @@ file: g_land.gls
 
 [options]
 whichtemp:   0
-whichartm:   3
+whichartm:   7
 whichthck:   4
 whichflwa:   1
 whichisot:   1
@@ -32,7 +32,7 @@ whichbtrc:   1
 whichacab:   1
 whichevol:   2
 whichwvel:   0
-whichprecip: 3
+whichprecip: 1
 
 [timesteps]
 #The time-step lengths are given as a 
