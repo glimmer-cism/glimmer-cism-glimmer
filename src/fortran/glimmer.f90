@@ -407,6 +407,8 @@ contains
 
     if (time-params%av_start_time.ge.nint(params%tstep_mbal*years2hours)) then
 
+      Print*,'mass-balance...',time-params%av_start_time,params%tstep_mbal*years2hours
+
       ! Set output_flag
 
       ! At present, outputs are done for each mass-balance timestep, since

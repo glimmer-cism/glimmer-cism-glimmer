@@ -387,7 +387,7 @@ contains
                     g_orog=instance%global_orog,          &
                     g_artm=instance%model%climate%g_artm, &
                     g_arng=instance%model%climate%g_arng)
-	  call timeevoltemp(instance%model,0,instance%model%climate%artm)     ! calculate initial temperature distribution
+    	  call timeevoltemp(instance%model,0,instance%model%climate%artm)     ! calculate initial temperature distribution
 	  instance%newtemps = .true.                                   ! we have new temperatures
  
     endif
@@ -561,6 +561,15 @@ contains
     ! ------------------------------------------------------------------------ 
 
     if (.not.instance%first) then
+      call calcartm(instance%model,                       &
+                    instance%model%options%whichartm,     &
+                    instance%model%geometry%usrf,         &
+                    instance%model%climate%lati,          &
+                    instance%model%climate%artm,          &
+                    instance%model%climate%arng,          &
+                    g_orog=instance%global_orog,          &
+                    g_artm=instance%model%climate%g_artm, &
+                    g_arng=instance%model%climate%g_arng)
       call calcacab(instance%model%numerics, &
                     instance%model%paramets, &
                     instance%model%pddcalc,  &
