@@ -61,6 +61,7 @@ units:         degreeN
 long_name:     Latitude
 data:          model%climate%lati
 load:          1
+standard_name: latitude
 
 [relx]
 dimensions:    time, y1, x1
@@ -92,6 +93,7 @@ units:         meter2/year
 long_name:     flux in x direction
 data:          model%velocity%uflx(1:ewnv,1:nsnv)
 factor:        f2
+standard_name: 
 
 [vflx]
 dimensions:    time, y0, x0
@@ -99,6 +101,7 @@ units:         meter2/year
 long_name:     flux in x direction
 data:          model%velocity%vflx(1:ewnv,1:nsnv)
 factor:        f2
+standard_name: 
 
 [diffu]
 dimensions:    time, y0, x0
@@ -120,6 +123,7 @@ units:         meter/year
 long_name:     basal slip velocity in x direction
 data:          model%velocity%ubas(1:ewnv,1:nsnv)
 factor:        f5
+standard_name: land_ice_basal_x_velocity
 
 [vbas]
 dimensions:    time, y0, x0
@@ -127,6 +131,7 @@ units:         meter/year
 long_name:     basal slip velocity in y direction
 data:          model%velocity%vbas(1:ewnv,1:nsnv)
 factor:        f5
+standard_name: land_ice_basal_y_velocity
 
 [thk]
 dimensions:    time, y1, x1
@@ -134,6 +139,7 @@ units:         meter
 long_name:     ice thickness
 data:          model%geometry%thck
 factor:        thk0
+standard_name: land_ice_thickness
 
 [usurf]
 dimensions:    time, y1, x1
@@ -157,6 +163,7 @@ long_name:     bedrock topography
 data:          model%geometry%topg
 factor:        thk0
 load:          1
+standard_name: bedrock_altitude
 
 [acab]
 dimensions:    time, y1, x1
@@ -164,6 +171,7 @@ units:         meter/year
 long_name:     accumulation, ablation rate
 data:          model%climate%acab
 factor:        f1
+standard_name: land_ice_surface_mass_balance
 
 [bmlt]
 dimensions:    time, y1, x1
@@ -171,6 +179,7 @@ units:         meter/year
 long_name:     basal melt rate
 data:          model%temper%bmlt
 factor:        f1
+standard_name: land_ice_basal_melt_rate
 
 [bwat]
 dimensions:    time, y1, x1
@@ -184,6 +193,8 @@ dimensions:    time, y1, x1
 units:         degree_Celcius
 long_name:     annual mean air temperature
 data:          model%climate%artm
+standard_name: surface_temperature
+cell_methods:  time: mean
 
 [btemp]
 dimensions:    time, y1, x1
@@ -203,6 +214,7 @@ units:         meter/year
 long_name:     precipitation
 data:          model%climate%prcp
 factor:        f1
+standard_name: lwe_precipitation_rate
 
 [ablt]
 dimensions:    time, y1, x1
@@ -224,6 +236,7 @@ units:         meter/year
 long_name:     ice velocity in x direction
 data:          model%velocity%uvel(up,1:ewnv,1:nsnv)
 factor:        f1
+standard_name: land_ice_x_velocity
 
 [vvel]
 dimensions:    time, level, y0, x0
@@ -231,6 +244,7 @@ units:         meter/year
 long_name:     ice velocity in y direction
 data:          model%velocity%vvel(up,1:ewnv,1:nsnv)
 factor:        f1
+standard_name: land_ice_y_velocity
 
 [efvs]
 dimensions:    time, level, y0, x0
@@ -301,6 +315,7 @@ units:         meter/year
 long_name:     vertical ice velocity
 data:          model%velocity%wvel(up,:,:)
 factor:        f3/tim0
+standard_name: land_ice_z_velocity
 
 [wgrd]
 dimensions:    time, level, y1, x1
@@ -321,3 +336,4 @@ dimensions:    time, level, y1, x1
 units:         degree_Celcius
 long_name:     ice temperature
 data:          model%temper%temp(up,1:model%general%ewn,1:model%general%nsn)
+standard_name: land_ice_temperature

@@ -129,8 +129,8 @@ contains
     write(*,*) 'Opening file ', trim(NC%filename), ' for output; write period every',outfile%freq,' years'
 
     ! writing meta data
-    !status = nf90_put_att(NC%id, NF90_GLOBAL, 'Conventions', "CF-1.0")
-    !call nc_errorhandle(__FILE__,__LINE__,status)
+    status = nf90_put_att(NC%id, NF90_GLOBAL, 'Conventions', "CF-1.0")
+    call nc_errorhandle(__FILE__,__LINE__,status)
     status = nf90_put_att(NC%id, NF90_GLOBAL,'title',trim(outfile%metadata%title))
     call nc_errorhandle(__FILE__,__LINE__,status)
     status = nf90_put_att(NC%id, NF90_GLOBAL,'institution',trim(outfile%metadata%institution))

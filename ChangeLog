@@ -1,4 +1,7 @@
 2004-05-24 Magnus Hagdorn
+ * added some standard name attributes (ncdf_file.f90.in, ncdf_vars.def)
+	
+2004-05-24 Magnus Hagdorn
  * g_land.gln: removed outs namelist
  * glimmer_global.f90: added version string
  * ncdf_file.f90.in, generate_ncvars.py: renamed loop index sp to spot
