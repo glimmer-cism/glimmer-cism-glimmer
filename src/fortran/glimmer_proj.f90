@@ -169,6 +169,7 @@ contains
     !*FD non-integer values indicating a position between grid-points.
 
     use gmt
+    use glide_messages
 
     implicit none
 
@@ -179,6 +180,7 @@ contains
     type(projection),intent(in) :: proj !*FD The projection being used
 
     real(rk) :: tlat,tlon
+    character(40) :: errtxt
 
     tlat=lat ; tlon=lon
 
@@ -192,7 +194,8 @@ contains
     case(4)
       call gmt_stereo2_sph (tlon,tlat,x,y,proj%gmt_params)
     case default
-      print*,'ERROR: ',proj%p_type,' is not a valid projection type'
+      write(errtxt,*)proj%p_type,' is not a valid projection type'
+      call glide_msg(GM_ERROR,__FILE__,__LINE__,trim(errtxt))
     end select
 
     x=(x/proj%dx)+proj%cpx
@@ -209,6 +212,7 @@ contains
     !*FD non-integer values indicating a position between grid-points.
 
     use gmt
+    use glide_messages
 
     implicit none
 
@@ -219,6 +223,7 @@ contains
     type (projection),intent(in) :: proj !*FD The projection being used
 
     real(rk) :: xx,yy
+    character(40) :: errtxt
 
     xx=x ; yy=y
 
@@ -233,7 +238,8 @@ contains
     case(3:4)
       call gmt_istereo_sph (lon,lat,xx,yy,proj%gmt_params)
     case default
-      print*,'ERROR: ',proj%p_type,' is not a valid projection type'
+      write(errtxt,*)proj%p_type,' is not a valid projection type'
+      call glide_msg(GM_ERROR,__FILE__,__LINE__,trim(errtxt))
     end select
 
     lon=loncorrect(lon)
@@ -243,6 +249,8 @@ contains
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine calc_lats(proj,array)
+
+    use glide_messages
 
     !*FD Calculates the latitude of all points in the
     !*FD projected domain. The output latitudes (\texttt{array})
@@ -258,8 +266,7 @@ contains
     nx=size(array,1) ; ny=size(array,2)
 
     if ((nx.ne.proj%nx).or.(ny.ne.proj%ny)) then
-      print*,'Array size wrong in calc_lats'
-      stop
+      call glide_msg(GM_FATAL,__FILE__,__LINE__,'Array size wrong in calc_lats')
     endif
 
     do i=1,nx

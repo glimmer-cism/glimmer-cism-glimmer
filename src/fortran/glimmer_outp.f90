@@ -51,6 +51,8 @@ contains
 
     !*FD Sets up forcing data from time-series file (e.g. GRIP data)
 
+    use glide_messages
+
     implicit none
 
     character(*), intent(in)          :: fname     !*FD filename to use
@@ -69,8 +71,7 @@ contains
     inquire(file=fname,exist=there)    
 
     if ( .not. there ) then
-      print*,'ERROR: Time series file not found'
-      stop
+      call glide_msg(GM_FATAL,__FILE__,__LINE__,'Time series file not found')
     endif
 
     ! ---------------------------------------------------------------

@@ -347,6 +347,7 @@ contains
   subroutine polint(xa,ya,n,x,y,dy)
 
      use glimmer_global, only: sp
+     use glide_messages
       
     implicit none
 
@@ -389,8 +390,7 @@ contains
         den=ho-hp
     
         if (den == 0.) then
-           write(*,*) 'failure in polint'
-           stop
+           call glide_msg(GM_FATAL,__FILE__,__LINE__,'Failure in polint')
         end if
 
         den=w/den

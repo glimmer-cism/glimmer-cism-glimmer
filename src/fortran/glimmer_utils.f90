@@ -217,6 +217,8 @@ contains
 
   subroutine check_conformal_2d_real(array1,array2,label)
 
+    use glide_messages
+
     !*FD Checks that two arrays
     !*FD are of the same size. Aliased as {\tt check\_conformal}.
 
@@ -226,11 +228,10 @@ contains
 
     if ((size(array1,1)/=size(array2,1)).or.(size(array1,2)/=size(array2,2))) then
       if (present(label)) then
-        print*,'ERROR: Non-conformal arrays. Label: ',label
+        call glide_msg(GM_FATAL,__FILE__,__LINE__,'Non-conformal arrays. Label: '//label)
       else
-        print*,'ERROR: Non-conformal arrays. No label'
+        call glide_msg(GM_FATAL,__FILE__,__LINE__,'ERROR: Non-conformal arrays. No label')
       endif
-      stop
     endif
 
   end subroutine check_conformal_2d_real
@@ -290,6 +291,8 @@ contains
 
   subroutine indexx(array,index)
 
+    use glide_messages
+
     !*FD Performs an index sort of \texttt{array} and returns the result in
     !*FD \texttt{index}. The order of elements in \texttt{array} is unchanged.
     !*FD
@@ -304,8 +307,7 @@ contains
     integer :: i
 
     if (size(array).ne.size(index)) then
-      print*,'ERROR: INDEXX size mismatch.'
-      stop
+      call glide_msg(GM_FATAL,__FILE__,__LINE__,'ERROR: INDEXX size mismatch.')
     endif
 
     do i=1,size(index)

@@ -51,6 +51,7 @@ contains
 
     use glimmer_global, only : dp, sp 
     use paramets, only : thk0
+    use glide_messages
 
     implicit none
 
@@ -70,6 +71,9 @@ contains
     integer, parameter :: mxtbnd = 10
     integer :: ew,ns
 
+    character(40) :: timetxt
+    character(80) :: outtxt
+
     if (model%pcgdwk%first1) then
       model%pcgdwk%fc = (/ model%numerics%alpha * model%numerics%dt / (2.0d0 * model%numerics%dew), &
               model%numerics%alpha * model%numerics%dt / (2.0d0 * model%numerics%dew), model%numerics%dt, &
@@ -81,8 +85,8 @@ contains
 
       thck = dmax1(0.0d0,thck + acab * model%pcgdwk%fc(2))
       usrf = thck + lsrf
-      print *, "* thck empty - net accumulation added", model%numerics%time
-
+      write(timetxt,*)model%numerics%time
+      call glide_msg(GM_FATAL,__FILE__,__LINE__,"* thck empty - net accumulation added "//trim(timetxt))
     else
 
       !* the number of grid points and the number of nonzero matrix elements (including bounary points)
@@ -155,8 +159,9 @@ contains
       thck = max(0.0d0, thck)
       usrf = thck + lsrf
 
-      print *, "* thck ", model%numerics%time, linit, model%pcgdwk%mlinit, model%pcgdwk%tlinit, totpts, &
+      write(outtxt,*)"* thck ", model%numerics%time, linit, model%pcgdwk%mlinit, model%pcgdwk%tlinit, totpts, &
           real(thk0*thck(model%general%ewn/2+1,model%general%nsn/2+1))
+      call glide_msg(GM_TIMESTEP,__FILE__,__LINE__,trim(outtxt))
 
       deallocate(model%pcgdwk%pcgrow,model%pcgdwk%pcgcol)
       deallocate(model%pcgdwk%pcgval,model%pcgdwk%rhsd,model%pcgdwk%answ)
@@ -210,6 +215,7 @@ contains
     use glimmer_global, only : dp 
   !use pcgdwk 
   !use funits, only : ulog
+    use glide_messages
 
     implicit none
 
@@ -226,6 +232,8 @@ contains
 
     integer, parameter :: isym = 0, itol = 2, itmax = 101
     integer :: ierr, mxnelt
+
+    character(80) :: outtxt
 
     if (first) then
       call ds2y(model%pcgdwk%pcgsize(1),model%pcgdwk%pcgsize(2), &
@@ -262,11 +270,12 @@ contains
                 isym,itol,tol,itmax,iter,err,ierr,0,rwork,mxnelt,iwork,mxnelt)
 
     if (ierr /= 0) then
-      print *, 'pcg error ', ierr, itmax, iter
+      write(outtxt,*)'pcg error ', ierr, itmax, iter
+      call glide_msg(GM_ERROR,__FILE__,__LINE__,trim(outtxt))
       call dcpplt(model%pcgdwk%pcgsize(1),model%pcgdwk%pcgsize(2),model%pcgdwk%pcgrow, &
                 model%pcgdwk%pcgcol,model%pcgdwk%pcgval,isym,lunit)
-      print *, model%pcgdwk%pcgval
-      stop
+      write(outtxt,*)model%pcgdwk%pcgval
+      call glide_msg(GM_FATAL,__FILE__,__LINE__,trim(outtxt))
     end if
 
     deallocate(rwork,iwork)
@@ -603,6 +612,7 @@ contains
   subroutine filterthck(thck,ewn,nsn)
 
     use glimmer_global, only : dp ! ew, ewn, ns, nsn
+    use glide_messages
 
     implicit none
 
@@ -613,6 +623,8 @@ contains
     real(dp), parameter :: f = 0.1d0 / 16.0d0
     integer :: count
     integer :: ns,ew
+
+    character(40) :: outtxt
 
     allocate(smth(ewn,nsn))
     count = 1
@@ -635,7 +647,8 @@ contains
     end do
 
     thck(3:ewn-2,3:nsn-2) = smth(3:ewn-2,3:nsn-2)
-    print *, count
+    write(outtxt,*)count
+    call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,trim(outtxt))
 
     deallocate(smth)            
 
@@ -647,7 +660,7 @@ contains
 
     use glimmer_global, only : dp
     use paramets, only : thk0, vel0
-
+    use glide_messages
     use glimmer_velo
     use glimmer_types
 
@@ -664,6 +677,8 @@ contains
 
     integer :: linit
     integer, parameter :: mxtbnd = 10, ewbc = 1, nsbc = 1
+
+    character(80) :: outtxt
 
 ! ewbc/nsbc set the type of boundary condition aplied at the end of
 ! the domain. a value of 0 implies zero gradient.
@@ -682,7 +697,8 @@ contains
 
       model%geometry%thck = dmax1(0.0d0,model%geometry%thck + model%climate%acab * model%pcgdwk%fc2(2))
       model%geometry%usrf = model%geometry%thck + model%geometry%lsrf
-      print *, "* thck empty - net accumulation added", model%numerics%time
+      write(outtxt,*)"thck empty - net accumulation added", model%numerics%time
+      call glide_msg(GM_FATAL,__FILE__,__LINE__,trim(outtxt))
 
     else
 
@@ -879,9 +895,12 @@ contains
                     model%velocity%vflx,     &
                     model%velocity%diffu)
 
-        print *, "* thck ", model%numerics%time, linit, model%pcgdwk%mlinit, model%pcgdwk%tlinit, model%geometry%totpts, &
-        real(thk0*model%geometry%thck(model%general%ewn/2+1,model%general%nsn/2+1)), &
-        real(vel0*maxval(abs(model%velocity%ubas))), real(vel0*maxval(abs(model%velocity%vbas))) 
+        write(outtxt,*)"thck ", model%numerics%time, linit, model%pcgdwk%mlinit, model%pcgdwk%tlinit, model%geometry%totpts
+        call glide_msg(GM_TIMESTEP,__FILE__,__LINE__,trim(outtxt))
+        write(outtxt,*)real(thk0*model%geometry%thck(model%general%ewn/2+1,model%general%nsn/2+1))
+        call glide_msg(GM_TIMESTEP,__FILE__,__LINE__,trim(outtxt))
+        write(outtxt,*)real(vel0*maxval(abs(model%velocity%ubas))), real(vel0*maxval(abs(model%velocity%vbas))) 
+        call glide_msg(GM_TIMESTEP,__FILE__,__LINE__,trim(outtxt))
 
       deallocate(model%pcgdwk%pcgrow,model%pcgdwk%pcgcol,model%pcgdwk%pcgval,model%pcgdwk%rhsd,model%pcgdwk%answ)
 

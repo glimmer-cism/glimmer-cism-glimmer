@@ -49,6 +49,7 @@ module glimmer_main
   use glimmer_global
   use glimmer_object
   use glimmer_global_grid
+  use glide_messages
 
   ! ------------------------------------------------------------
   ! GLIMMER_PARAMS derived type definition

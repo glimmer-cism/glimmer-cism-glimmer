@@ -245,6 +245,7 @@ contains
     use glimmer_ncfile
     use glimmer_interp
     use glimmer_mbal
+    use glide_messages
     use paramets
 
     ! ------------------------------------------------------------------------  
@@ -281,6 +282,7 @@ contains
     real(rk),dimension(:,:),allocatable :: accum_temp    ! temporary array for accumulation
     real(rk),dimension(:,:),allocatable :: ablat_temp    ! temporary array for ablation
     real(rk) :: f1 ! Scaling factor for converting precip and run-off amounts.
+    character(40) :: timetxt
 
     f1 = scyr * thk0 / tim0
 
@@ -714,7 +716,8 @@ contains
 
     instance%newtemps = .false.
 
-    print *, "* completed time ", instance%model%numerics%time
+    write(timetxt,*)instance%model%numerics%time
+    call glide_msg(GM_TIMESTEP,__FILE__,__LINE__,"completed time "//trim(timetxt))
 
     ! ------------------------------------------------------------------------ 
     ! Upscaling of output
@@ -1006,6 +1009,8 @@ contains
 
   subroutine glimmer_load_sigma(model,unit)
 
+    use glide_messages
+
     !*FD Loads a file containing
     !*FD sigma vertical coordinates.
 
@@ -1034,11 +1039,9 @@ contains
       return
     end if
 
-10  print *, 'something wrong with sigma coord file'
+10  call glide_msg(GM_FATAL,__FILE__,__LINE__,'something wrong with sigma coord file')
  
-    stop
-
-  end subroutine glimmer_load_sigma
+   end subroutine glimmer_load_sigma
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

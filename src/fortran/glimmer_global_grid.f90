@@ -38,6 +38,8 @@ contains
 
   subroutine new_global_grid(grid,lons,lats,lonb,latb)
 
+    use glide_messages
+
     !*FD Initialises a new global grid type
 
     type(global_grid),             intent(inout) :: grid !*FD The grid to be initialised
@@ -68,15 +70,13 @@ contains
 
     if (present(lonb)) then
       if (.not.size(lonb)==grid%nx+1) then
-        print*,'ERROR: new_global_grid. lonb mismatch'
-        stop
+        call glide_msg(GM_FATAL,__FILE__,__LINE__,'Lonb mismatch in new_global_grid')
       endif
     endif
 
     if (present(latb)) then
       if (.not.size(latb)==grid%ny+1) then
-        print*,'ERROR: new_global_grid. latb mismatch'
-        stop
+        call glide_msg(GM_FATAL,__FILE__,__LINE__,'Latb mismatch in new_global_grid')
       endif
     endif
 
@@ -201,6 +201,8 @@ contains
 
   real(rk) function mid_lon(a,b)
 
+    use glide_messages
+
     !*FD Calculates the mid-point between two longitudes.
     !*FD \texttt{a} must be west of \texttt{b}.
 
@@ -212,8 +214,7 @@ contains
 
     if (aa>360.0.or.aa<0.0  .or. &
         bb>360.0.or.bb<0.0) then
-        Print*,'Out of range in mid_lon'
-        stop
+        call glide_msg(GM_FATAL,__FILE__,__LINE__,'Out of range in mid_lon')
     endif
 
     if (aa>bb) aa=aa-360.0

@@ -77,6 +77,7 @@ module glimmer_config
 contains
   subroutine ConfigRead(fname,config)
     !*FD read configuration file
+    use glide_messages
     implicit none
     character(len=*), intent(in) :: fname
     !*FD name of configuration file
@@ -85,14 +86,14 @@ contains
     ! local variables
     type(ConfigSection), pointer :: this_section
     type(ConfigValue), pointer ::  this_value
+    character(40) :: errtxt
     logical there
     integer unit,ios,linenr
     character(len=linelen) :: line
 
     inquire (exist=there,file=fname)
     if (.not.there) then
-       write(*,*) 'Cannot open configuration file ',trim(fname)
-       stop
+       call glide_msg(GM_FATAL,__FILE__,__LINE__,'Cannot open configuration file '//trim(fname))
     end if
     
     unit=99
@@ -120,9 +121,9 @@ contains
           else
              ! handle value
              if (.not.associated(this_section)) then
-                write(*,*) 'Error, no section defined yet'
-                write(*,*) trim(adjustl(fname)), linenr
-                stop
+                write(errtxt,*)linenr
+                call glide_msg(GM_FATAL,__FILE__,__LINE__,'Error, no section defined yet. '// &
+                  trim(adjustl(fname))//errtxt)
              end if
              call handle_value(linenr,line,this_value)
              if (.not.associated(this_section%values)) then
@@ -137,6 +138,7 @@ contains
   end subroutine ConfigRead
 
   subroutine PrintConfig(config)
+    use glide_messages
     implicit none
     type(ConfigSection), pointer :: config
 
@@ -145,13 +147,13 @@ contains
     
     sec=>config
     do while(associated(sec))
-       write(*,*) sec%name
+       call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,trim(sec%name))
        val=>sec%values
        do while(associated(val))
-          write(*,*) '  ',trim(val%name),' == ', trim(val%value)
+          call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,'  '//trim(val%name)//' == '//trim(val%value))
           val=>val%next
        end do
-       write(*,*)
+       call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,'')
        sec=>sec%next
     end do
   end subroutine PrintConfig
@@ -305,6 +307,7 @@ contains
   !==================================================================================
 
   subroutine handle_section(linenr,line,section)
+    use glide_messages
     implicit none
     integer, intent(in) :: linenr
     character(len=*) :: line
@@ -312,6 +315,7 @@ contains
 
     ! local variables
     integer i
+    character(40) :: errtxt
 
     do i=1,linelen
        if (line(i:i).eq.']') then
@@ -319,15 +323,15 @@ contains
        end if
     end do
     if (line(i:i).ne.']') then
-       write(*,*) 'Cannot find end of section'
-       write(*,*) linenr
-       stop
+       write(errtxt,*)linenr
+       call glide_msg(GM_FATAL,__FILE__,__LINE__,'Cannot find end of section'//trim(errtxt))
     end if
 
     call InsertSection(trim(adjustl(line(2:i-1))),section)
   end subroutine handle_section
   
   subroutine handle_value(linenr,line,value)
+    use glide_messages
     implicit none
     integer, intent(in) :: linenr
     character(len=*) :: line
@@ -335,6 +339,7 @@ contains
 
     ! local variables
     integer i
+    character(40) :: errtxt
 
     do i=1,linelen
        if (line(i:i).eq.'=' .or. line(i:i).eq.':') then
@@ -342,9 +347,8 @@ contains
        end if
     end do
     if (.not.(line(i:i).eq.'=' .or. line(i:i).eq.':')) then
-       write(*,*) 'Cannot find = or : '
-       write(*,*) linenr
-       stop
+       write(errtxt,*)linenr
+       call glide_msg(GM_FATAL,__FILE__,__LINE__,'Cannot find = or : '//trim(errtxt))
     end if
 
     call InsertValue(trim(adjustl(line(:i-1))), trim(adjustl(line(i+1:))),value)

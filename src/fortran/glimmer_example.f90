@@ -172,7 +172,7 @@ program glimmer_example
   ! Get coverage maps for the ice model instances
 
   if (glimmer_coverage_map(ice_sheet,coverage,cov_orog).ne.0) then
-    Print*,'unable to get coverage maps'
+    call glide_msg(GM_FATAL,__FILE__,__LINE__,'Unable to get coverage maps')
     stop
   endif
 

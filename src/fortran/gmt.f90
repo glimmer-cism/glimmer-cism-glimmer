@@ -113,6 +113,8 @@ contains
 
   subroutine gmt_set(p_type,latc,lonc,radea,std_par,project_info)
 
+    use glide_messages
+
     !*FD Initialise a GMT parameter type
 
     integer,intent(in) :: p_type  !*FD Type of projection to select
@@ -130,6 +132,8 @@ contains
     real(rk),intent(in) :: std_par !*FD Standard parallel (polar stereographic only, ignored otherwise)
     type(gmt_pinf),intent(inout) :: project_info !*FD GMT parameters to be initialised
 
+    character(40) :: errtxt
+
     call gmt_type_init(project_info)
 
     project_info%EQ_RAD=radea                 ! radius of earth
@@ -143,8 +147,8 @@ contains
     case(3:4)  ! Spherical/stereographic (oblique, equatorial) 
       call gmt_map_init_stereo(latc,lonc,project_info)
     case default
-      print*,'* ERROR: ',p_type,' is not a valid projection type.'
-      stop 
+      write(errtxt,*)'* ERROR: ',p_type,' is not a valid projection type.'
+      call glide_msg(GM_FATAL,__FILE__,__LINE__,trim(errtxt))
     end select
 
   end subroutine gmt_set

@@ -1,3 +1,7 @@
+2004-06-29 Ian Rutt
+ * Began standardisation of GLIMMER's use of standard output, using new module
+ called glide_messages. NetCDF usage of this not completed yet.
+
 2004-06-28 Ian Rutt
  * Changed relaxed.f90 so that the relaxed topography is set to just below
  zero in masked areas.

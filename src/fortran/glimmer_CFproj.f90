@@ -100,6 +100,7 @@ contains
   function CFproj_GetProj(ncid)
     !*FD read projection from netCDF file
     use netcdf
+    use glide_messages
     implicit none
     type(CFproj_projection) :: CFproj_GetProj
     integer, intent(in) :: ncid
@@ -147,14 +148,15 @@ contains
        else if (index(mapname,'stereographic').ne.0) then
           CFproj_GetProj%stere => CFproj_get_stere(ncid,varid)
        else
-          write(*,*) 'Warning, do not know about this projection: ',trim(mapname)
+          call glide_msg(GM_WARNING,__FILE__,__LINE__,'Do not know about this projection: '//trim(mapname))
        end if
     else
-       write(*,*) 'Warning, no map projection found'
+       call glide_msg(GM_WARNING,__FILE__,__LINE__,'No map projection found')
     end if
   end function CFproj_GetProj
 
   function CFproj_proj4(projection)
+    use glide_messages
     implicit none
     character(len=proj4len), dimension(:), pointer :: CFproj_proj4
     type(CFproj_projection) :: projection
@@ -172,13 +174,14 @@ contains
        CFproj_proj4 => CFproj_proj4_stere(projection%stere)
        return
     else
-       write(*,*) 'Warning, no projection found!'
+       call glide_msg(GM_WARNING,__FILE__,__LINE__,'No projection found!')
     end if
   end function CFproj_proj4
 
   subroutine CFproj_PutProj(ncid,mapid,projection)
     !*FD write projection to netCDF file
     use netcdf
+    use glide_messages
     implicit none
     type(CFproj_projection) :: projection
     integer, intent(in) :: ncid
@@ -197,7 +200,7 @@ contains
        call CFproj_put_stere(ncid,mapid,projection%stere)
        return
     else
-       write(*,*) 'Warning, could not find any projection'
+       call glide_msg(GM_FATAL,__FILE__,__LINE__,'Could not find any projection')
     end if
   end subroutine CFproj_PutProj
 
@@ -230,6 +233,7 @@ contains
 
   function CFproj_get_stere_polar(ncid,mapid)
     use netcdf
+    use glide_messages
     implicit none
     type(CFproj_stere), pointer :: CFproj_get_stere_polar
     integer, intent(in) :: ncid
@@ -256,8 +260,8 @@ contains
        CFproj_get_stere_polar%standard_parallel = dummy
     end if
     if (CFproj_get_stere_polar%standard_parallel.ne.0 .and. CFproj_get_stere_polar%scale_factor_at_projection_origin.ne.0.) then
-       write(*,*) 'Error (stereographic projection), can only handle either standard_parallel or scale_factor_at_projection_origin'
-       stop
+       call glide_msg(GM_FATAL,__FILE__,__LINE__,'(stereographic projection), can only handle either'// &
+          ' standard_parallel or scale_factor_at_projection_origin')
     end if
   end function CFproj_get_stere_polar
 

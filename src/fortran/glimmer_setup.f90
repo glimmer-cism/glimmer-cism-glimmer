@@ -59,6 +59,7 @@ contains
     use glimmer_types
     use glimmer_project
     use glimmer_ncparams
+    use glide_messages
     implicit none
 
     ! Subroutine arguments
@@ -121,6 +122,10 @@ contains
     ! ...for the forcing
 
     real(sp) :: trun ! The total time for the run.
+
+    ! Error handling
+
+    character(40) :: errtxt
 
     ! -------------------------------------------------------------------
     ! namelist definitions
@@ -231,8 +236,8 @@ contains
       read(unit,nml=forc)
       close(unit)
     else
-      print*,'Error opening namelist file ',trim(nmlfile),' - it doesn''t exist!'
-      stop
+      write(errtxt,*)'Error opening namelist file ',trim(nmlfile),' - it doesn''t exist!'
+      call glide_msg(GM_FATAL,__FILE__,__LINE__,trim(errtxt))
     end if
 
     ! -------------------------------------------------------------------
@@ -364,6 +369,7 @@ contains
     use glimmer_temp
     use glimmer_thck
 	use glimmer_velo
+    use glide_messages
     use glimmer_ncinfile
     implicit none
 
@@ -419,9 +425,7 @@ contains
     end do
 
     if (model%options%whichprecip==3 .and. .not. found_precip) then
-       print*,"To run with whichprecip=3, you need to supply a"
-       print*,"forcing filename..."
-       stop
+       call glide_msg(GM_FATAL,__FILE__,__LINE__,"To run with whichprecip=3, you need to supply a forcing filename")
     endif
 
     call readall(model)

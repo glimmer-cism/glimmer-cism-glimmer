@@ -56,6 +56,7 @@ contains
     use paramets,       only : thk0
     use glimmer_velo
     use glimmer_thck
+    use glide_messages
 
     implicit none
 
@@ -84,6 +85,7 @@ contains
     integer, parameter :: ewbc = 1, nsbc = 1 
 
     logical, allocatable, dimension(:,:) :: floater
+    character(80) :: outtxt
 
     !------------------------------------------------------------------------------------
     ! ewbc/nsbc set the type of boundary condition aplied at the end of
@@ -366,8 +368,9 @@ contains
 
       ! Output some information ----------------------------------------------------
 
-      print *, "* temp ", model%numerics%time, iter, model%temper%niter, &
+      write(outtxt,*)"* temp ", model%numerics%time, iter, model%temper%niter, &
                           real(model%temper%temp(model%general%upn,model%general%ewn/2+1,model%general%nsn/2+1))
+      call glide_msg(GM_TIMESTEP,__FILE__,__LINE__,trim(outtxt))
 
   end subroutine timeevoltemp
 
@@ -380,6 +383,7 @@ contains
 
     use glimmer_global, only : dp, sp 
     use paramets, only : len0, thk0
+    use glide_messages
 
     use glimmer_mbal
 
@@ -549,8 +553,7 @@ contains
 
       else
 
-        print*,'ERROR: Error in arguments to CALCARTM - stopping'
-        stop
+        call glide_msg(GM_FATAL,__FILE__,__LINE__,'Error in arguments to CALCARTM - stopping')
 
       endif
 
@@ -562,8 +565,7 @@ contains
     case default ! Flag an error otherwise
                  ! -----------------------------------------------------
 
-      Print*,'ERROR: Unsupported value of whichartm'
-      stop
+      call glide_msg(GM_FATAL,__FILE__,__LINE__,'ERROR: Unsupported value of whichartm')
 
     end select
                 
@@ -1041,6 +1043,7 @@ contains
     use glimmer_global, only : dp 
     use physcon, only : rhoi, grav, rhow, scyr
     use paramets, only : tim0, thk0, len0 
+    use glide_messages
 
     implicit none
 
@@ -1059,6 +1062,8 @@ contains
     real(dp), dimension(:,:), allocatable :: wphi, bwatu, bwatv, fluxew, fluxns, bint, smth
   
     integer :: t_wat,ns,ew
+
+    character(80) :: outtxt
 
     select case (which)
     case(0)
@@ -1120,7 +1125,8 @@ contains
         estimate = (0.2d0 * watvel) / min(model%numerics%dew,model%numerics%dns)
         call find_dt_wat(model%numerics%dttem,estimate,model%tempwk%dt_wat,model%tempwk%nwat) 
 
-        print *, model%numerics%dttem*tim0/scyr, model%tempwk%dt_wat*tim0/scyr, model%tempwk%nwat
+        write(outtxt,*) model%numerics%dttem*tim0/scyr, model%tempwk%dt_wat*tim0/scyr, model%tempwk%nwat
+        call glide_msg(GM_DIAGNOSTIC,__FILE__,__LINE__,trim(outtxt))
 
         model%tempwk%c = (/ rhow * grav, rhoi * grav, 2.0d0 * model%numerics%dew, 2.0d0 * model%numerics%dns, &
                0.25d0 * model%tempwk%dt_wat / model%numerics%dew, 0.25d0 * model%tempwk%dt_wat / model%numerics%dns, &

@@ -151,6 +151,7 @@ program input2ncdf
 contains
   subroutine readplan(fname,data,time,ewn,nsn, delta)
     use glimmer_global, only : sp
+    use glide_messages
     implicit none
     character(*),intent(in) :: fname
     real(kind=sp), dimension(:,:), pointer :: data
@@ -162,6 +163,7 @@ contains
     character :: cdum*4 
     logical :: here
     integer i,j
+    character(40) :: errtxt
 
     if (associated(data)) then
        deallocate(data)
@@ -169,8 +171,8 @@ contains
 
     inquire(file=fname,exist=here)
     if ( .not. here ) then
-      print*,'planform file ',fname,' not found'
-      stop
+      write(errtxt,*)'planform file ',trim(fname),' not found'
+      call glide_msg(GM_FATAL,__FILE__,__LINE__,trim(errtxt))
     endif
 
 #ifdef CVF
@@ -195,6 +197,7 @@ contains
   subroutine maskread(filename,data,nx,ny)
 
     use glimmer_global, only : sp
+    use glide_messages
 
     implicit none
 
@@ -218,8 +221,7 @@ contains
 
     inquire(file=filename,exist=there)
     if ( .not. there ) then
-      print*,'mask file ',filename,' not found'
-      stop
+      call glide_msg(GM_FATAL,__FILE__,__LINE__,'mask file '//trim(filename)//' not found')
     endif
 
 #ifdef CVF
