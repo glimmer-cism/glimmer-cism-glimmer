@@ -550,8 +550,8 @@ contains
     allocate(model%velocity%wgrd(upn,ewn,nsn));       model%velocity%wgrd = 0.0d0
     allocate(model%velocity%uflx(ewn-1,nsn-1));       model%velocity%uflx = 0.0d0
     allocate(model%velocity%vflx(ewn-1,nsn-1));       model%velocity%vflx = 0.0d0
-    allocate(model%velocity%diffu(ewn,nsn));          model%velocity%diffu = 0.0d0
-    allocate(model%velocity%btrc(ewn,nsn));           model%velocity%btrc = 0.0d0
+    allocate(model%velocity%diffu(ewn-1,nsn-1));      model%velocity%diffu = 0.0d0
+    allocate(model%velocity%btrc(ewn-1,nsn-1));       model%velocity%btrc = 0.0d0
     allocate(model%velocity%ubas(ewn-1,nsn-1));       model%velocity%ubas = 0.0d0
     allocate(model%velocity%vbas(ewn-1,nsn-1));       model%velocity%vbas = 0.0d0
 
@@ -560,10 +560,10 @@ contains
     allocate(model%climate%lati(ewn,nsn));            model%climate%lati = 0.0
     allocate(model%climate%loni(ewn,nsn));            model%climate%loni = 0.0
 
-    allocate(model%geomderv%dthckdew(ewn,nsn));       model%geomderv%dthckdew = 0.0d0 
-    allocate(model%geomderv%dusrfdew(ewn,nsn));       model%geomderv%dusrfdew = 0.0d0
-    allocate(model%geomderv%dthckdns(ewn,nsn));       model%geomderv%dthckdns = 0.0d0
-    allocate(model%geomderv%dusrfdns(ewn,nsn));       model%geomderv%dusrfdns = 0.0d0
+    allocate(model%geomderv%dthckdew(ewn-1,nsn-1));   model%geomderv%dthckdew = 0.0d0 
+    allocate(model%geomderv%dusrfdew(ewn-1,nsn-1));   model%geomderv%dusrfdew = 0.0d0
+    allocate(model%geomderv%dthckdns(ewn-1,nsn-1));   model%geomderv%dthckdns = 0.0d0
+    allocate(model%geomderv%dusrfdns(ewn-1,nsn-1));   model%geomderv%dusrfdns = 0.0d0
     allocate(model%geomderv%dthckdtm(ewn,nsn));       model%geomderv%dthckdtm = 0.0d0
     allocate(model%geomderv%dusrfdtm(ewn,nsn));       model%geomderv%dusrfdtm = 0.0d0
     allocate(model%geomderv%stagthck(ewn-1,nsn-1));   model%geomderv%stagthck = 0.0d0

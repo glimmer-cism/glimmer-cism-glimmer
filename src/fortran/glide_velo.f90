@@ -75,10 +75,10 @@ contains
     nsn=model%general%nsn
     upn=model%general%upn
 
-    allocate(model%velowk%fslip(ewn,nsn))
+    allocate(model%velowk%fslip(ewn-1,nsn-1))
 
     allocate(model%velowk%depth(upn))
-    allocate(model%velowk%dintflwa(ewn,nsn))
+    allocate(model%velowk%dintflwa(ewn-1,nsn-1))
 
     model%velowk%depth = (/ (((model%numerics%sigma(up+1)+model%numerics%sigma(up))/2.0d0)**gn &
          *(model%numerics%sigma(up+1)-model%numerics%sigma(up)),up=1,upn-1),0.0d0 /)
@@ -184,15 +184,11 @@ contains
     real(dp),dimension(:,:),  intent(in)    :: dusrfdns
     real(dp),dimension(:,:),  intent(out)   :: diffu
 
-    integer :: ewn,nsn
 
-    ewn=size(stagthck,1) ; nsn=size(stagthck,2)
-
-    where (stagthck(1:ewn,1:nsn) .ne. 0.)
-       diffu(1:ewn,1:nsn) = velowk%dintflwa(1:ewn,1:nsn) * stagthck(1:ewn,1:nsn)**p4 * &
-            sqrt(dusrfdew(1:ewn,1:nsn)**2 + dusrfdns(1:ewn,1:nsn)**2)**p2 
+    where (stagthck .ne. 0.)
+       diffu = velowk%dintflwa * stagthck**p4 * sqrt(dusrfdew**2 + dusrfdns**2)**p2 
     elsewhere
-       diffu(1:ewn,1:nsn) = 0.0d0
+       diffu = 0.0d0
     end where
   end subroutine velo_calc_diffu
 
@@ -318,18 +314,14 @@ contains
     
       ! Linear function of gravitational driving stress ---------------------------------
 
-      call calcbtrc(velowk,flag2,bwat,relx,btrc(1:ewn-1,1:nsn-1))
+      call calcbtrc(velowk,flag2,bwat,relx,btrc)
 
-      where (numerics%thklim < geomderv%stagthck(1:ewn-1,1:nsn-1))
-        ubas(1:ewn-1,1:nsn-1) = btrc(1:ewn-1,1:nsn-1) * rhograv * &
-                                geomderv%stagthck(1:ewn-1,1:nsn-1) * &
-                                geomderv%dusrfdew(1:ewn-1,1:nsn-1)
-        vbas(1:ewn-1,1:nsn-1) = btrc(1:ewn-1,1:nsn-1) * rhograv * &
-                                geomderv%stagthck(1:ewn-1,1:nsn-1) * &
-                                geomderv%dusrfdns(1:ewn-1,1:nsn-1)
+      where (numerics%thklim < geomderv%stagthck)
+        ubas = btrc * rhograv * geomderv%stagthck * geomderv%dusrfdew
+        vbas = btrc * rhograv * geomderv%stagthck * geomderv%dusrfdns
       elsewhere
-        ubas(1:ewn-1,1:nsn-1) = 0.0d0
-        vbas(1:ewn-1,1:nsn-1) = 0.0d0
+        ubas = 0.0d0
+        vbas = 0.0d0
       end where
 
     case(1)
@@ -337,9 +329,9 @@ contains
       ! *tp* option to be used in picard iteration for thck
       ! *tp* start by find constants which dont vary in iteration
 
-      call calcbtrc(velowk,flag2,bwat,relx,btrc(1:ewn-1,1:nsn-1))
+      call calcbtrc(velowk,flag2,bwat,relx,btrc)
 
-      velowk%fslip(1:ewn-1,1:nsn-1) = rhograv * btrc(1:ewn-1,1:nsn-1)
+      velowk%fslip = rhograv * btrc
 
     case(2)
 
@@ -347,10 +339,10 @@ contains
       ! *tp* called once per non-linear iteration, set uvel to ub * H /(ds/dx) which is
       ! *tp* a diffusivity for the slip term (note same in x and y)
 
-      where (numerics%thklim < geomderv%stagthck(1:ewn-1,1:nsn-1))
-        ubas(1:ewn-1,1:nsn-1) = velowk%fslip(1:ewn-1,1:nsn-1) * geomderv%stagthck(1:ewn-1,1:nsn-1)**2  
+      where (numerics%thklim < geomderv%stagthck)
+        ubas = velowk%fslip * geomderv%stagthck**2  
       elsewhere
-        ubas(1:ewn-1,1:nsn-1) = 0.0d0
+        ubas = 0.0d0
       end where
 
     case(3)
@@ -358,21 +350,17 @@ contains
       ! *tp* option to be used in picard iteration for thck
       ! *tp* finally calc ub and vb from diffusivities
 
-      where (numerics%thklim < geomderv%stagthck(1:ewn-1,1:nsn-1))
-        vbas(1:ewn-1,1:nsn-1) = ubas(1:ewn-1,1:nsn-1) *  &
-                                geomderv%dusrfdns(1:ewn-1,1:nsn-1) / &
-                                geomderv%stagthck(1:ewn-1,1:nsn-1)
-        ubas(1:ewn-1,1:nsn-1) = ubas(1:ewn-1,1:nsn-1) *  &
-                                geomderv%dusrfdew(1:ewn-1,1:nsn-1) / &
-                                geomderv%stagthck(1:ewn-1,1:nsn-1)
+      where (numerics%thklim < geomderv%stagthck)
+        vbas = ubas *  geomderv%dusrfdns / geomderv%stagthck
+        ubas = ubas *  geomderv%dusrfdew / geomderv%stagthck
       elsewhere
-        ubas(1:ewn-1,1:nsn-1) = 0.0d0
-        vbas(1:ewn-1,1:nsn-1) = 0.0d0
+        ubas = 0.0d0
+        vbas = 0.0d0
       end where
 
     case default
-      ubas(1:ewn-1,1:nsn-1) = 0.0d0
-      vbas(1:ewn-1,1:nsn-1) = 0.0d0
+      ubas = 0.0d0
+      vbas = 0.0d0
     end select
 
   end subroutine slipvelo
@@ -427,8 +415,8 @@ contains
     select case(flag)
     case(0)
 
-      do ns = 1,nsn-1
-        do ew = 1,ewn-1
+      do ns = 1,nsn
+        do ew = 1,ewn
 
           if (stagthck(ew,ns) /= 0.0d0) then
 
@@ -483,8 +471,8 @@ contains
 
     case(1)
 
-      do ns = 1,nsn-1
-        do ew = 1,ewn-1
+      do ns = 1,nsn
+        do ew = 1,ewn
           if (stagthck(ew,ns) /= 0.0d0) then
 
             hrzflwa = hsum4(flwa(:,ew:ew+1,ns:ns+1))  
@@ -506,17 +494,16 @@ contains
 
     case(2)
 
-      where (0.0d0 /= stagthck(1:ewn-1,1:nsn-1))
-        diffu(1:ewn-1,1:nsn-1) = velowk%dintflwa(1:ewn-1,1:nsn-1) * stagthck(1:ewn-1,1:nsn-1)**p4 * &
-              sqrt(dusrfdew(1:ewn-1,1:nsn-1)**2 + dusrfdns(1:ewn-1,1:nsn-1)**2)**p2 
+      where (0.0d0 /= stagthck)
+        diffu = velowk%dintflwa * stagthck**p4 * sqrt(dusrfdew**2 + dusrfdns**2)**p2 
       elsewhere
-        diffu(1:ewn-1,1:nsn-1) = 0.0d0
+        diffu = 0.0d0
       end where
 
     case(3)
 
-      do ns = 1,nsn-1
-        do ew = 1,ewn-1
+      do ns = 1,nsn
+        do ew = 1,ewn
           if (stagthck(ew,ns) /= 0.0d0) then
 
             vflx(ew,ns) = diffu(ew,ns) * dusrfdns(ew,ns) + vbas(ew,ns) * stagthck(ew,ns)
@@ -904,7 +891,7 @@ contains
             wchk = geomderv%dusrfdtm(ew,ns) &
                  - acab(ew,ns) &
                  + (sum(uvel(ew-1:ew,ns-1:ns)) * sum(geomderv%dusrfdew(ew-1:ew,ns-1:ns)) &
-                 + sum(vvel(ew-1:ew,ns-1:ns)) * sum(geomderv%dusrfdns(ew-1:ew,ns-1:ns))) &
+                 +  sum(vvel(ew-1:ew,ns-1:ns)) * sum(geomderv%dusrfdns(ew-1:ew,ns-1:ns))) &
                  / 16.0d0
 
             

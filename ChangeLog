@@ -1,3 +1,10 @@
+2005-03-03 Magnus Hagdorn
+ * glide_thck.f90: move flwa calcs up in lin solver
+ * glide_types.f90: make size of arrays on velo grid 1 less than
+   size of arrays on temp grid
+ * glide_vars.def: remove f95 array sections (since arrays are right size now)
+ * glide_velo.f90: reduce array size of some work arrays, simplify where loops
+
 2005-03-01 Magnus Hagdorn
  * glide_velo.f90: new subroutine for handling vetical velo in case of periodic EW BC
  * glide_temp.f90: hooked up this subroutine

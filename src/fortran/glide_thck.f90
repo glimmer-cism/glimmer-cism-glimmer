@@ -101,6 +101,8 @@ contains
                model%isos% relx,          &
                model%velocity% ubas,          &
                model%velocity% vbas)
+          ! calculate Glen's A if necessary
+          call velo_integrate_flwa(model%velowk,model%geomderv%stagthck,model%temper%flwa)
        end if
        call slipvelo(model%numerics,                &
             model%velowk,                  &
@@ -112,10 +114,6 @@ contains
             model%velocity% ubas,          &
             model%velocity% vbas)
 
-       ! calculate Glen's A if necessary
-       if (newtemps) then
-          call velo_integrate_flwa(model%velowk,model%geomderv%stagthck,model%temper%flwa)
-       end if
        ! calculate diffusivity
        call velo_calc_diffu(model%velowk,model%geomderv%stagthck,model%geomderv%dusrfdew, &
             model%geomderv%dusrfdns,model%velocity%diffu)
@@ -503,6 +501,7 @@ contains
       call dcpplt(model%pcgdwk%pcgsize(1),model%pcgdwk%pcgsize(2),model%pcgdwk%pcgrow, &
                 model%pcgdwk%pcgcol,model%pcgdwk%pcgval,isym,lunit)
       print *, model%pcgdwk%pcgval
+      write(*,*) model%numerics%time
       call glide_finalise(model,.true.)
       stop
     end if
