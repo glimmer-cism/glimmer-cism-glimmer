@@ -1,3 +1,9 @@
+2004-12-01 Magnus Hagdorn
+ * glimmer_thck.f90: added debug flag DEBUG_PICARD which when defined output
+   maximum number of Picard iteration in given interval, fixed a bug where the
+   slopes where not updated to the latest ice thicknesses, also ice surfaces where
+   not updated
+	
 2004-11-30 Magnus Hagdorn
  * glimmer_temp.f90: fix minor bug and some clean-ups
 

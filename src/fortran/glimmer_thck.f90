@@ -39,15 +39,21 @@
 ! http://forge.nesc.ac.uk/projects/glimmer/
 !
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
 module glide_thck
 
   use glide_types
 
+#ifdef DEBUG_PICARD
+  ! debugging Picard iteration
+  integer, private, parameter :: picard_unit=101
+  real, private, parameter    :: picard_interval=500.
+  integer, private            :: picard_max=0
+#endif
 contains
 
   subroutine init_thck(model)
     !*FD initialise work data for ice thickness evolution
+    use glimmer_log
     implicit none
     type(glide_global_type) :: model
 
@@ -57,6 +63,12 @@ contains
          model%numerics%dt, (1.0d0-model%numerics%alpha) / model%numerics%alpha, &
          1.0d0 / model%numerics%alpha, model%numerics%alpha * model%numerics%dt / &
          (2.0d0 * model%numerics%dns * model%numerics%dns), 0.0d0 /) 
+
+#ifdef DEBUG_PICARD
+    call write_log('Logging Picard iterations')
+    open(picard_unit,name='picard_info.data',status='unknown')
+    write(picard_unit,*) '#time    max_iter'
+#endif
   end subroutine init_thck
 
   subroutine thck_lin_evolve(model,newtemps,logunit)
@@ -135,6 +147,7 @@ contains
 
     use glimmer_global, only : dp
     use glide_velo
+    use glide_setup
     implicit none
     ! subroutine arguments
     type(glide_global_type) :: model
@@ -175,7 +188,7 @@ contains
        model%thckwk%oldthck = model%geometry%thck
        ! do Picard iteration
        do p=1,pmax
-          model%thckwk%oldthck2 = model%thckwk%oldthck
+          model%thckwk%oldthck2 = model%geometry%thck
 
           call stagvarb(model%geometry% thck, &
                model%geomderv% stagthck,&
@@ -210,20 +223,26 @@ contains
                model%geomderv%dusrfdns,model%velocity%diffu)
 
           ! get new thicknesses
-          call thck_evolve(model,logunit,first_p,model%geometry%thck,model%thckwk%oldthck)
+          call thck_evolve(model,logunit,first_p,model%thckwk%oldthck,model%geometry%thck)
 
           first_p = .false.
-          residual = maxval(abs(model%thckwk%oldthck-model%thckwk%oldthck2))
-#ifdef DEBUG
-          write(*,*) '*Picard iter ',p,residual
-#endif
+          residual = maxval(abs(model%geometry%thck-model%thckwk%oldthck2))
           if (residual.le.tol) then
              exit
           end if
+          
+          ! calculate upper and lower surface
+          call glide_calclsrf(model%geometry%thck, model%geometry%topg, model%climate%eus, model%geometry%lsrf)
+          model%geometry%usrf = max(0.d0,model%geometry%thck + model%geometry%lsrf)
 
        end do
-
-       model%geometry%thck = model%thckwk%oldthck
+#ifdef DEBUG_PICARD
+       picard_max=max(picard_max,p)
+       if (model%numerics%tinc > mod(model%numerics%time,picard_interval)) then
+          write(picard_unit,*) model%numerics%time,p
+          picard_max = 0
+       end if
+#endif
 
        ! calculate horizontal velocity field
        call slipvelo(model%numerics,                &
