@@ -1,0 +1,13 @@
+\section{Getting and Installing GLIMMER}
+GLIMMER is a relatively complex system of libraries and programs which build on other libraries. This section documents how to get GLIMMER and its prerequisites, compile and install it. Please report problems and bugs to the \href{http://forge.nesc.ac.uk/mailman/listinfo/glimmer-discuss}{GLIMMER mailing list}.
+
+\subsection{Prerequisites}
+GLIMMER is mostly written in FORTRAN95, a good f95 compiler is, therefore, required. GLIMMER is known to work with the NAGware f95, Intel ifort compilers. GLIMMER does not compile with the SUN WS 6.0 f95 compiler due to a compiler bug.
+
+Part of the make system relies on \href{http://www.python.org}{python} which is used for analysing dependencies and f95 code generation.
+
+Furthermore, GLIMMER depends on these packages:
+\begin{itemize}
+\item \href{http://www.unidata.ucar.edu/packages/netcdf/index.html}{{\bf netCDF}}: You will most likely need to compile and install the netCDF library yourslef since the packages usually do not contain the f90 bindings which are used by GLIMMER.
+
+\end{itemize}

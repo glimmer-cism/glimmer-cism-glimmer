@@ -4,3 +4,10 @@
 \setlength{\textwidth}{14.55cm}
 \setlength{\textheight}{22.3cm}
 
+% implement href as a footnote
+\begingroup% 
+\ifx\href\undefined%
+\gdef\href#1#2{%
+#2\footnote{\texttt{#1}}%
+}%
+\fi\endgroup%

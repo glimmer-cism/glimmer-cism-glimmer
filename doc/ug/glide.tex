@@ -142,6 +142,59 @@ Sections and keys are case sensitive and may contain white space. However, the c
   \end{supertabular}
 \end{center}
 
+netCDF I/O can be configured in the main configuration file or in a separate file (see \texttt{ioparams} in the \texttt{[options]} section). Any number of input and output files can be specified. Input files are processed in the same order hey occur in the configuration file, thus potentially overwriting priviously loaded fields.
+
+\begin{center}
+    \tablefirsthead{%
+    \hline
+    }
+  \tablehead{%
+    \hline
+    \multicolumn{2}{|p{0.98\textwidth}|}{\emph{\small continued from previous page}}\\
+    \hline
+    }
+  \tabletail{%
+    \hline
+    \multicolumn{2}{|r|}{\emph{\small continued on next page}}\\
+    \hline}
+  \tablelasttail{\hline}
+  \begin{supertabular}{|l|p{11cm}|}
+  %%%% defaults
+  \hline
+  \multicolumn{2}{|l|}{\texttt{[default]}}\\
+  \hline
+  \multicolumn{2}{|p{0.98\textwidth}|}{This section contains metadata describing the experiment. Any of these parameters can be modified in the \texttt{[output]} section. The model automatically attaches a time stamp and the model version to the netCDF output file.}\\
+  \hline
+   \texttt{title}& Title of the experiment\\
+   \texttt{institution} & Institution at which the experiment was run\\
+   \texttt{references} & References that might be useful\\
+   \texttt{comment} & A comment, further describing the experiment\\
+  \hline
+  %%%% 
+  \hline
+  \multicolumn{2}{|l|}{\texttt{[input]}}\\
+  \hline
+  \multicolumn{2}{|p{0.98\textwidth}|}{Any number of input files can be specified. They are processed in the order they occur in the configuration file, potentially overriding previously loaded variables.}\\
+  \hline
+   \texttt{name}& The name of the netCDF file to be read. Typically netCDF files end with \texttt{.nc}.\\
+   \texttt{time}& The time slice to be read from the netCDF file. The first time slice is read by default.\\
+  \hline
+  %%%% 
+  \hline
+  \multicolumn{2}{|l|}{\texttt{[output]}}\\
+  \hline
+  \multicolumn{2}{|p{0.98\textwidth}|}{This section of the netCDF parameter file controls how often selected  variables are written to file.}\\
+  \hline
+   \texttt{name} & The name of the output netCDF file. Typically netCDF files end with \texttt{.nc}.\\
+   \texttt{frequency} & The time interval in years, determining how often selected variables are written to file.\\
+   \texttt{variables} & List of variables to be written to file. See Appendix \ref{ug.sec.varlist} for a list of known variables. Names should be separated by at least one space. The variable names are case sensitive. Append \texttt{\_spot} to the variable name to store variable at specified locations.\\
+   \texttt{numspot} & The number of spot locations\\
+   \texttt{spotx} & List of $x$--indecies specifying spot locations.\\
+   \texttt{spoty} & List of $y$--indecies specifying spot locations.\\   
+  \hline
+  \end{supertabular}
+\end{center}
+
 \subsection{Initialisation}
 
 \subsection{Time Step}
