@@ -2,8 +2,11 @@
 module glimmer_global_grid
 
   use glimmer_global
+  use physcon, only: pi
 
   implicit none
+
+  real(rk),parameter :: pi2=2.0*pi
 
   ! ------------------------------------------------------------
   ! GLOBAL_GRID derived type
@@ -32,11 +35,20 @@ module glimmer_global_grid
     real(rk),pointer,dimension(:) :: lon_bound => null() !*FD Longitudinal boundaries of 
                                                          !*FD data-points in global fields (degrees)
 
+    ! Areas of grid-boxes --------------------------------------
+
+    real(rk),pointer,dimension(:,:) :: box_areas => null() !*FD The areas of the grid-boxes (m$^2$).
+                                                         !*FD This is a two-dimensional array to take
+                                                         !*FD account of the possibility of a grid irregularly
+                                                         !*FD spaced in longitude
+
   end type global_grid
+
+  private pi
 
 contains
 
-  subroutine new_global_grid(grid,lons,lats,lonb,latb)
+  subroutine new_global_grid(grid,lons,lats,lonb,latb,radius)
 
     use glide_messages
 
@@ -47,6 +59,12 @@ contains
     real(rk),dimension(:),         intent(in)    :: lats !*FD Latitudinal positions of grid-points (degrees)
     real(rk),dimension(:),optional,intent(in)    :: lonb !*FD Longitudinal boundaries of grid-boxes (degrees)
     real(rk),dimension(:),optional,intent(in)    :: latb !*FD Latitudinal boundaries of grid-boxes (degrees)
+    real(rk),             optional,intent(in)    :: radius !*FD The radius of the Earth (m)
+
+    ! Internal variables
+
+    real(rk) :: radea=1.0
+    integer :: i,j
 
     ! Check to see if things are allocated, and if so, deallocate them
 
@@ -54,6 +72,7 @@ contains
     if (associated(grid%lons))      deallocate(grid%lons)
     if (associated(grid%lat_bound)) deallocate(grid%lat_bound)
     if (associated(grid%lon_bound)) deallocate(grid%lon_bound)
+    if (associated(grid%box_areas)) deallocate(grid%box_areas)
 
     ! Find size of grid
 
@@ -65,6 +84,7 @@ contains
     allocate(grid%lats(grid%ny))
     allocate(grid%lon_bound(grid%nx+1))
     allocate(grid%lat_bound(grid%ny+1))
+    allocate(grid%box_areas(grid%nx,grid%ny))
 
     ! Check dimensions of boundary arrays, if supplied
 
@@ -98,6 +118,19 @@ contains
     else
       call calc_bounds_lat(lats,grid%lat_bound)
     endif
+  
+    ! Set radius of earth if necessary
+
+    if (present(radius)) radea=radius
+
+    ! Calculate areas of grid-boxes
+
+    do i=1,grid%nx
+      do j=1,grid%ny
+        grid%box_areas(i,j)=delta_lon(grid%lon_bound(i),grid%lon_bound(i+1))*radea**2* &
+          (sin_deg(grid%lat_bound(j))-sin_deg(grid%lat_bound(j+1)))
+      enddo
+    enddo
 
   end subroutine new_global_grid
 
@@ -121,11 +154,13 @@ contains
     if (associated(out%lons))      deallocate(out%lons)
     if (associated(out%lat_bound)) deallocate(out%lat_bound)
     if (associated(out%lon_bound)) deallocate(out%lon_bound)
+    if (associated(out%box_areas)) deallocate(out%box_areas)
 
     allocate(out%lons(out%nx))
     allocate(out%lats(out%ny))
     allocate(out%lon_bound(out%nx+1))
     allocate(out%lat_bound(out%ny+1))
+    allocate(out%box_areas(out%nx,out%ny))
 
     ! Copy data
 
@@ -133,6 +168,7 @@ contains
     out%lats     =in%lats
     out%lat_bound=in%lat_bound
     out%lon_bound=in%lon_bound
+    out%box_areas=in%box_areas
 
   end subroutine copy_global_grid
 
@@ -234,5 +270,49 @@ contains
     mid_lon=out
 
   end function mid_lon
+
+!-------------------------------------------------------------
+
+  real(rk) function sin_deg(a)
+
+    !*FD Calculate sin(a), where a is in degrees
+
+    real(rk) :: a
+    real(rk) :: aa
+
+    aa=pi*a/180.0
+
+    do
+      if (aa<=pi2) exit
+      aa=aa-pi2
+    end do
+
+    do
+      if (aa>=0.0) exit
+      aa=aa+pi2
+    end do
+  
+    sin_deg=sin(aa)
+
+  end function sin_deg
+
+!-------------------------------------------------------------
+
+  real(rk) function delta_lon(a,b)
+
+    real(rk) :: a,b
+    real(rk) :: aa,bb,dl
+
+    aa=a ; bb=b
+
+    do
+      dl=bb-aa
+      if (dl>=0.0) exit
+      aa=aa-360.0
+    end do
+
+    delta_lon=dl*pi/180.0
+
+  end function delta_lon
 
 end module glimmer_global_grid

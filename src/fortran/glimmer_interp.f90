@@ -246,7 +246,7 @@ contains
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine mean_to_local(proj,global,lats,lons,localsp,localdp,global_fn)
+  subroutine mean_to_local(proj,grid,global,localsp,localdp,global_fn)
 
     !*FD Average a high-resolution global field onto the projected grid
     !*FD This assumes that the global field is sufficiently high-resolution 
@@ -256,13 +256,13 @@ contains
     use glimmer_project
     use glimmer_utils
     use glide_messages
+    use glimmer_global_grid
 
     ! Argument declarations
 
     type(projection),                intent(in)  :: proj      !*FD Target map projection
+    type(global_grid),               intent(in)  :: grid      !*FD Global grid information
     real(rk),dimension(:,:),         intent(in)  :: global    !*FD Global field (input)
-    real(rk),dimension(:),           intent(in)  :: lats      !*FD Latitudes of global gridpoints 
-    real(rk),dimension(:),           intent(in)  :: lons      !*FD Longitudes of global gridpoints 
     real(sp),dimension(:,:),optional,intent(out) :: localsp   !*FD Local field on projected grid (output) sp
     real(dp),dimension(:,:),optional,intent(out) :: localdp   !*FD Local field on projected grid (output) dp
     real(sp),optional, external                  :: global_fn !*FD Function returning values in global field. This  
@@ -272,17 +272,13 @@ contains
                                                               !*FD In these circumstances, \texttt{global}
                                                               !*FD may be of any size, and its contents are irrelevant.
 
-    integer :: nxg,nyg,i,j,xbox,ybox
+    integer :: i,j,xbox,ybox
     real(rk) :: lat,lon,x,y
     real(dp),dimension(proj%nx,proj%ny) :: temp_out
-    integer,dimension(proj%nx,proj%ny) :: mean_count
-
-    ! Find size of input field
-
-    nxg=size(lons) ; nyg=size(lats)
+    real(rk),dimension(proj%nx,proj%ny) :: mean_count
 
     if (.not.present(global_fn)) then 
-       if ((nxg/=size(lons)).or.(nyg/=size(lats))) then
+       if ((grid%nx/=size(grid%lons)).or.(grid%ny/=size(grid%lats))) then
           call glide_msg(GM_FATAL,__FILE__,__LINE__,'Size mismatch in interp_to_local')
        end if
     end if
@@ -300,15 +296,15 @@ contains
 
     ! Loop over all global points
 
-    do i=1,nxg
+    do i=1,grid%nx
 
-       lon=lons(i)
+       lon=grid%lons(i)
 
-       do j=1,nyg
+       do j=1,grid%ny
 
           ! Find location in local coordinates
 
-          lat=lats(j)  ! (Have already found lat above)
+          lat=grid%lats(j)  ! (Have already found lat above)
           call ll_to_xy(lon,lat,x,y,proj)
           xbox=nint(x)
           ybox=nint(y)
@@ -318,11 +314,11 @@ contains
           if (xbox.ge.1.and.xbox.le.proj%nx.and. &
               ybox.ge.1.and.ybox.le.proj%ny) then
              if (present(global_fn)) then
-                temp_out(xbox,ybox)=temp_out(xbox,ybox)+global_fn(i,j)
+                temp_out(xbox,ybox)=temp_out(xbox,ybox)+global_fn(i,j)*grid%box_areas(xbox,ybox)
              else
-                temp_out(xbox,ybox)=temp_out(xbox,ybox)+global(i,j)
+                temp_out(xbox,ybox)=temp_out(xbox,ybox)+global(i,j)*grid%box_areas(xbox,ybox)
              end if
-             mean_count(xbox,ybox)=mean_count(xbox,ybox)+1
+             mean_count(xbox,ybox)=mean_count(xbox,ybox)+grid%box_areas(xbox,ybox)
           end if
 
        end do
