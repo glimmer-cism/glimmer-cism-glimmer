@@ -51,6 +51,9 @@ module eis_temp
   type eis_temp_type
      real :: lapse_rate  = -0.008                !*FD lapse rate
      character(len=fname_length) :: fname=''     !*FD name of file containing temperature ts
+     integer :: lat_type = 0                     !*FD type of lat dependend function (0 polynomial,
+                                                 !*FD 1 exponential: a+b*exp(c*(lat-lat0))
+     real :: lat0 = 44.95                        !*FD parameter used for exponential function
      integer :: torder = 2                       !*FD order of temperature polynomial
      type(glimmer_tseries) :: temp_ts            !*FD temperature time series 
      real, dimension(:),pointer :: tvalue        !*FD temperature value
@@ -69,7 +72,13 @@ contains
     call GetSection(config,section,'EIS Temperature')
     if (associated(section)) then
        call GetValue(section,'temp_file',temp%fname)
-       call GetValue(section,'order',temp%torder)
+       call GetValue(section,'type',temp%lat_type)
+       if (temp%lat_type.eq.1) then
+          call GetValue(section,'lat0',temp%lat0)
+          temp%torder = 3
+       else
+          call GetValue(section,'order',temp%torder)
+       end if
        call GetValue(section,'lapse_rate',temp%lapse_rate)
     end if
   end subroutine eis_temp_config
@@ -85,8 +94,15 @@ contains
     call write_log('---------------')
     write(message,*) 'temperature file  : ',trim(temp%fname)
     call write_log(message)
-    write(message,*) 'order of temp poly: ',temp%torder
-    call write_log(message)
+    if (temp%lat_type.eq.1) then
+       call write_log('lat dependance is exponential')
+       write(message,*) 'lat0               : ',temp%lat0
+       call write_log(message)
+    else
+       call write_log('lat dependance is polynomial')
+       write(message,*) 'order of temp poly: ',temp%torder
+       call write_log(message)
+    end if
     write(message,*) 'lapse rate        : ',temp%lapse_rate
     call write_log(message)
     call write_log('')
@@ -119,10 +135,15 @@ contains
 
     call glimmer_ts_step(temp%temp_ts,real(time),temp%tvalue)
     ! spatial temp distrib
-    model%climate%artm = temp%tvalue(1)    
-    do i=2,temp%torder
-       model%climate%artm(:,:) = model%climate%artm(:,:) + temp%tvalue(i)*model%climate%lati(:,:)**(i-1)
-    end do
+    model%climate%artm = temp%tvalue(1)
+    if (temp%lat_type.eq.1) then
+       model%climate%artm(:,:) = model%climate%artm(:,:) + &
+            temp%tvalue(2)*exp(temp%tvalue(3)*(model%climate%lati(:,:)-temp%lat0))
+    else
+       do i=2,temp%torder
+          model%climate%artm(:,:) = model%climate%artm(:,:) + temp%tvalue(i)*model%climate%lati(:,:)**(i-1)
+       end do
+    end if
     ! vertical temp distrib
     model%climate%artm(:,:) = model%climate%artm(:,:) + temp%lapse_rate * & 
          (model%geometry%usrf(:,:) - model%climate%eus)

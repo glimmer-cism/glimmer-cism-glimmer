@@ -1,3 +1,6 @@
+2005-01-22 Magnus Hagdorn
+ * exponential temp parameterisation for eis_glide
+
 2004-12-17 Magnus Hagdorn
  * isostasy.f90: moved lithosphere calculations to its own subroutine
 	
