@@ -207,7 +207,7 @@ Horizontal bed velocity: \\
 \texttt{whichmarn} & integer & 0 &{\raggedright
  Ice thickness: \\
 \begin{tabular}{lp{7cm}}
-0 & Set thickness to zero if relaxed bedrock is more than certain water depth (??) \\
+0 & Set thickness to zero if relaxed bedrock is more than certain water depth \\
 1 &  Set thickness to zero if floating \\
 2 &  No action \\
 \end{tabular}}\\
@@ -239,8 +239,6 @@ Thickness evolution method:\\
  & & & 1) Vertical integration constrained so that \\
  & & & upper kinematic B.C. obeyed \\
 \hline 
-\texttt{whichmask} & integer & 0 & ?? \\
-\hline
 \texttt{whichprecip} & integer & 0 & {\raggedright
 Source of precipitation:\\
 \begin{tabular}{lp{7cm}}
@@ -293,6 +291,8 @@ Name & Type & Default & Description (units)\\
 %
 \subsubsection{Possible \texttt{[parameters]} section entries}
 %
+The values of various parameters used in the model.
+%
 \begin{center}
 \begin{tabular}{|c|c|c|l|}
 \hline
@@ -332,12 +332,18 @@ factors used in \\
 \hline
 \texttt{thklim} & real & 100 & Lower limit for 3D ice calculations (m?) \\
 \hline
-\texttt{mlimit} & real & -- & ? \\
+\texttt{mlimit} & real & -- & Maximum water depth for grounded ice, \\
+ & & & used in conjuction with $\mathtt{options:whichmarn}=0$\\
 \hline
 \end{tabular}
 \end{center}
 %
-\subsubsection{Possible \texttt{dats} namelist entries}
+\subsection{Possible \texttt{[forcing]} section entries}
+%
+These parameters control the time-series forcing if the model is used in
+parameterized forcing mode (with $\mathtt{options:whichartm}=3$ and
+$\mathtt{options:whichprecip}=3$. Time-series forcing is not currently
+supported, though, and might not work.
 %
 \begin{center}
 \begin{tabular}{|c|c|c|l|}
@@ -345,47 +351,64 @@ factors used in \\
 Name & Type & Default & Description (units)\\
 \hline
 \hline
-& & & \\
-\hline
-\end{tabular}
-\end{center}
-%
-\subsubsection{Possible \texttt{cons} namelist entries}
-%
-\begin{center}
-\begin{tabular}{|c|c|c|l|}
-\hline
-Name & Type & Default & Description (units)\\
-\hline
-\hline
-\texttt{lapse\_rate} & real & -8.0 & Lapse rate used when adjusting \\
- & & & air temperature for elevation ($\mathrm{K}\,\mathrm{km}^{-1}$) \\
-\hline
-\texttt{precip\_rate} & real & 0.5 & Uniform precipitation rate,
+\texttt{file} & character & -- & Name of file containing forcing time-series
 \\
- & & & used in conjuction with \texttt{whichprecip}=0 \\
- & & & ($\mathrm{m}\,\mathrm{yr}^{-1}$ water equivalent) \\
-\hline
-\texttt{air\_temp} & real & -20.0 & Uniform surface air temperature, \\
- & & & used in conjunction with \texttt{whichsurftemp}=0,1 ($^{\circ}\mathrm{C}$) \\
-\hline
-\texttt{albedo} & real & 0.4 & Ice albedo \\
-\hline
-\end{tabular}
-\end{center}
-%
-\subsection{Possible \texttt{forc} namelist entries}
-%
-\begin{center}
-\begin{tabular}{|c|c|c|l|}
-\hline
-Name & Type & Default & Description (units)\\
-\hline
 \hline
 \texttt{trun} & real & -- & Length of model run (years).\\
  & & & {\bf N.B.} This variable {\em does not} control the length of \\
  & & & the model run --- it is used in the case when \texttt{whichartm}=3 \\
  & & & to tell the forcing initialisation how long the run is going to be. \\
 \hline
+\texttt{pfac} & real & 1.081 & Temperature power factor to use with
+$\mathtt{options:whichprecip}=3$. \\
+\hline
 \end{tabular}
 \end{center}
+%
+\subsubsection{Possible \texttt{[constants]} section entries}
+%
+The values of various constants used in the model --- these relate to the
+interface with the global model, which distinguishes them from the entries in
+the \texttt{[parameters]} section.
+%
+\begin{center}
+\begin{tabular}{|c|c|c|l|}
+\hline
+Name & Type & Default & Description (units)\\
+\hline
+\hline
+\texttt{lapse rate} & real & -8.0 & Lapse rate used when adjusting \\
+ & & & air temperature for elevation ($\mathrm{K}\,\mathrm{km}^{-1}$) \\
+\hline
+\texttt{precip rate} & real & 0.5 & Uniform precipitation rate,
+\\
+ & & & used in conjuction with \texttt{whichprecip}=0 \\
+ & & & ($\mathrm{m}\,\mathrm{yr}^{-1}$ water equivalent) \\
+\hline
+\texttt{air temp} & real & -20.0 & Uniform surface air temperature, \\
+ & & & used in conjunction with \texttt{whichsurftemp}=0,1 ($^{\circ}\mathrm{C}$) \\
+\hline
+\texttt{albedo} & real & 0.4 & Ice albedo, used solely when returning \\
+ & & & albedo to the global model. \\
+\hline
+\end{tabular}
+\end{center}
+%
+\subsection{Possible \texttt{[PDD scheme]} section entries}
+%
+These parameters control the positive degree day scheme.
+%
+\begin{center}
+\begin{tabular}{|c|c|c|l|}
+\hline
+Name & Type & Default & Description (units)\\
+\hline
+\texttt{wmax} & real & 0.6 & Fraction of melted snow that refreezes \\
+\hline
+\texttt{ice pdd factor} & real & -- & PDD factor for ice \\
+\hline
+\texttt{snow pdd factor} & real & -- & PDD factor for snow \\
+\hline
+\end{tabular}
+\end{center}
+%

@@ -39,11 +39,11 @@ In this call, the arguments are as follows:
  defined above;
 \item \texttt{lats} and \texttt{lons} are one-dimensional arrays giving the
   locations of the global grid-points in latitude and longitude, respectively; 
-\item \texttt{paramfile} is the file name of the top-level GLIMMER parameter
-  namelist.
+\item \texttt{paramfile} is the file name of the top-level GLIMMER
+  configuration file.
 \end{itemize}
 %
-The contents of the namelist files will be dealt with later. Having
+The contents of the configuration files will be dealt with later. Having
 initialised the model, it may now be called as part of the main climate
 model time-step loop:
 %
@@ -58,11 +58,11 @@ section below. The compulsory arguments are:
 \begin{itemize}
 \item \texttt{ice\_sheet} is the variable of type \texttt{glimmer\_params}
  defined above;
-\item \texttt{time} is the current model time, in years;
+\item \texttt{time} is the current model time, in hours;
 \item \texttt{temp} is the daily mean $2\,\mathrm{m}$ global air temperature field, in
   $^{\circ}\mathrm{C}$;
 \item \texttt{precip} is the global daily precipitation fields,
-  in $\mathrm{mm}/\mathrm{day}$ (water equivalent, making no distinction
+  in $\mathrm{mm}\,\mathrm{s}^{-1}$ (water equivalent, making no distinction
   between rain, snow, etc.);
 \item \texttt{zonwind} and \texttt{merwind} are the daily mean global zonal and
   meridional components of the $10\,\mathrm{m}$ wind field, in
@@ -107,8 +107,8 @@ instance filenames:  g_land.gli
 %
 The file contains only one section, \texttt{parameters}, which has two
 name-value pairs: \texttt{time-step} and \texttt{instance filenames}. The
-first of these is the main ice model time-step, in years. The second namelist
-is a list of configuration files for each ice model instance. GLIMMER will
+first of these is the main ice model time-step, in years. The second is a list
+of configuration files for each ice model instance. GLIMMER will 
 create ice model instances for each of the filenames listed here, without the
 need to explicitly specify how many instances there are to be.
 

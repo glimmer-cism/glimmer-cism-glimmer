@@ -2,7 +2,7 @@
 
 \subsection{What is GLIMMER?}
 
-GLIMMER is the land ice component of GENIE, and integrated Earth-system model
+GLIMMER is the land-ice component of GENIE, an integrated Earth-system model
 being developed as part of the UK e-science initiative, and funded by
 NERC. The name GLIMMER stands for Genie Land-Ice Model with Multiply-Enabled
 Regions, and its design is motivated by the desire to
@@ -13,9 +13,9 @@ accomplished by providing a very well-defined interface, which allows access to
 all the functionality required by the user. All model fields and
 time-dependent parameters required by the ice model are passed to it through
 the argument lists of the supplied subroutines. Initialisation data is
-supplied through easily-understood confuguration files, while 
+supplied through easily-understood configuration files, while 
 netCDF\footnote{\texttt{http://www.unidata.ucar.edu/packages/netcdf/index.html}} 
-files are used for platform independent binary I/O. Some simple visualisation
+files are used for platform-independent binary I/O. Some simple visualisation
 code, built on Python, GMT and Proj4 is supplied, although this has not yet
 reached a level of functionality to supplant a fully-featured visualisation
 and programming environment such as Matlab.
@@ -27,8 +27,8 @@ run the ice model over several different regions of the globe, and to define
 those regions at runtime. Each specified region is termed an \emph{instance}
 of the ice model. Primarily, then, GLIMMER provides a uniform interface
 between a global climate model and an arbitrary number of ice models. The
-processes of down-scaling input variables, and subsequently aggregating and
-up-scaling outputs is handled invisibly by GLIMMER, leaving the user solely
+processes of downscaling input variables, and subsequently aggregating and
+upscaling outputs is handled invisibly by GLIMMER, leaving the user solely
 with the tasks of supplying input data and parameters, and handling outputs in
 the manner appropriate to the problem being tackled. These techniques could be
 applied to any surface model that you might want to run only over
@@ -39,7 +39,7 @@ particular regions of the globe.
 We hope so! The external interface of GLIMMER is designed to be quite
 flexible, but certain assumptions have necessarily been made about the form
 taken by input fields, etc. In general, these are derived from the
-characteristics of the GENIE climate model, and the Reading IGCM, which is one
+characteristics of the GENIE climate model and the Reading IGCM, which is one
 of atmospheric models available in GENIE. Nevertheless, the specified input
 fields are chosen on the basis of their physical importance, rather than
 because of their availability within a given atmospheric model. This may mean
@@ -60,7 +60,7 @@ In order to use GLIMMER, the following is necessary:
 \item The global grid must not have grid points at either of the poles. This
   restriction is not expected to be permanent, but in the meantime
   can probably be overcome by moving the location of the polar points to be
-  fractionally short of the pole (e.g. at 89.9$^{\circ}$ and -89.9$^{\circ}$).
+  fractionally short of the pole (e.g. at 89.9$^{\circ}$N and 89.9$^{\circ}$S).
 \item The user must supply the bedrock topography for each of the ice model
   instances. These data are read from netCDF files.
 \item GLIMMER is written in FORTRAN 95, and the Unix/Linux build system
