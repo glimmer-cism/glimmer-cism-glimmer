@@ -59,7 +59,7 @@ program input2ncdf
   logical :: polar
   real :: longitude_of_central_meridian
   real :: latitude_of_projection_origin
-  real :: scale_factor_at_projection_origin
+  real :: scale_factor_at_proj_origin
   real :: standard_parallel
   real :: standard_parallel_2
   real :: false_easting
@@ -136,7 +136,7 @@ program input2ncdf
      write(*,*) 'Polar? (true or false)'
      read(*,*) polar
      write(*,*) 'Enter scale factor at projection origin'
-     read(*,*) scale_factor_at_projection_origin
+     read(*,*) scale_factor_at_proj_origin
   end if
 
   call CFproj_define(model%projection, &
@@ -144,7 +144,7 @@ program input2ncdf
        polar, &
        longitude_of_central_meridian, &
        latitude_of_projection_origin, &
-       scale_factor_at_projection_origin, &
+       scale_factor_at_proj_origin, &
        standard_parallel, &
        standard_parallel_2, &
        false_easting, &

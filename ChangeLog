@@ -1,3 +1,7 @@
+2004-11-10 Ian Rutt
+ * Changed scale_factor_at_projection_origin to scale_factor_at_proj_origin, to comply
+   with f95 standard - identifiers must be 31 characters or less.
+
 2004-11-08 Ian Rutt
  * Added loading of standard deviation field into glimmer (not used yet).
  * Added subroutine to define CF projection by hand, if necessary
