@@ -508,32 +508,37 @@ contains
         mod(instance%model%numerics%time,instance%model%numerics%nvel) .or. &
         instance%model%numerics%time == instance%model%numerics%tinc ) then
            
-      call slipvelo(instance%model%numerics, &
-                    instance%model%velowk,   &
-                    instance%model%paramets, &
-                    instance%model%geomderv, &
-                    (/instance%model%options%whichslip,&
-                      instance%model%options%whichbtrc/), &
-                    instance%model%temper%   bwat,     &
-                    instance%model%velocity% btrc,     &
-                    instance%model%geometry% relx,     &
-                    instance%model%velocity% ubas,     &
-                    instance%model%velocity% vbas)
+       if (instance%model%options%whichevol/=2) then
 
-      call zerovelo(instance%model%velowk,             &
-                    instance%model%numerics%sigma,     &
-                    0,                                 &
-                    instance%model%geomderv% stagthck, &
-                    instance%model%geomderv% dusrfdew, &
-                    instance%model%geomderv% dusrfdns, &
-                    instance%model%temper%   flwa,     &
-                    instance%model%velocity% ubas,     &
-                    instance%model%velocity% vbas,     &
-                    instance%model%velocity% uvel,     &
-                    instance%model%velocity% vvel,     &
-                    instance%model%velocity% uflx,     &
-                    instance%model%velocity% vflx,     &
-                    instance%model%velocity% diffu)
+          call slipvelo(instance%model%numerics, &
+                        instance%model%velowk,   &
+                        instance%model%paramets, &
+                        instance%model%geomderv, &
+                        (/instance%model%options%whichslip,&
+                        instance%model%options%whichbtrc/), &
+                        instance%model%temper%   bwat,     &
+                        instance%model%velocity% btrc,     &
+                        instance%model%geometry% relx,     &
+                        instance%model%velocity% ubas,     &
+                        instance%model%velocity% vbas)
+
+          call zerovelo(instance%model%velowk,             &
+                        instance%model%numerics%sigma,     &
+                        0,                                 &
+                        instance%model%geomderv% stagthck, &
+                        instance%model%geomderv% dusrfdew, &
+                        instance%model%geomderv% dusrfdns, &
+                        instance%model%temper%   flwa,     &
+                        instance%model%velocity% ubas,     &
+                        instance%model%velocity% vbas,     &
+                        instance%model%velocity% uvel,     &
+                        instance%model%velocity% vvel,     &
+                        instance%model%velocity% uflx,     &
+                        instance%model%velocity% vflx,     &
+                        instance%model%velocity% diffu)
+
+       end if
+
     end if
 
     ! ------------------------------------------------------------------------ 

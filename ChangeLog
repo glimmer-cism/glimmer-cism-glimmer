@@ -1,6 +1,8 @@
 2004-09-16 Ian Rutt
  * Added Tony's physics documentation to main docs.
  * Patched netcdf I/O as per Magi's email
+ * Added if block round velocity calculation so they're not
+   done if whichevol=2 (when they are redundant).
 	
 2004-09-14 Ian Rutt
  * Finished updating user documentation.
