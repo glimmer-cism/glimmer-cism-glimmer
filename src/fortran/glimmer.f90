@@ -993,24 +993,13 @@ contains
     ! Internal pointers/variables
 
     type(ConfigSection), pointer :: config,section
-    character(20),dimension(1) :: allowed_sections=(/'parameters'/)
-    character(20),dimension(2) :: allowed_values=(/'time-step','instance filenames'/)
     character(fname_length),dimension(:),pointer :: instance_fnames => null()
     character(80) :: outtxt
 
     call ConfigRead(filename,config)
 
-    if (ValidateSections(config,allowed_sections)/=0) then
-       write(outtxt,*)'Unexpected sections in configuration file: ',trim(filename)
-       call glide_msg(GM_FATAL,__FILE__,__LINE__,trim(outtxt))
-    end if
-
-    call GetSection(config,section,allowed_sections(1))
+    call GetSection(config,section,'parameters')
     if (associated(section)) then
-       if (ValidateValueNames(section,allowed_values)/=0) then
-          write(outtxt,*)'Unexpected value names in configuration file: ',trim(filename)
-          call glide_msg(GM_FATAL,__FILE__,__LINE__,trim(outtxt))
-       end if
        call GetValue(section,'time-step',params%tstep_main)
        call GetValue(section,'instance filenames',instance_fnames)
     else

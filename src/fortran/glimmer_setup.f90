@@ -74,91 +74,21 @@ contains
     real(sp),dimension(:),pointer :: nmsb_temp => null()
     real(dp),dimension(:),pointer :: bpar_temp => null()
 
-    ! Lists of allowed section/value names
-    ! REMEMBER to UPDATE THESE if new variables are added,
-    ! or their names in the config flie are changed
-
-    character(20),dimension(11) :: allowed_sections = (/ &
-         'output',            &
-         'domain size',       &
-         'projection',        &
-         'sigma coordinates', &
-         'options',           &
-         'timesteps',         &
-         'grid-lengths',      &
-         'parameters',        &
-         'forcing',           &
-         'constants',         &
-         'PDD scheme'/)
-
-    character(20),dimension(1)  :: output_values = (/'configuration file'/)
-    character(20),dimension(3)  :: domain_values = (/'east-west','north-south','vertical'/)
-    character(20),dimension(6)  :: projection_values = (/ &
-         'type',             &
-         'false easting',    &
-         'false northing',   &
-         'parallel',         &
-         'central meridian', &
-         'standard parallel' /)
-    character(20),dimension(1) :: sigma_values = (/'file'/)
-    character(20),dimension(13) :: options_values = (/ &
-         'whichtemp', &
-         'whichartm', &
-         'whichthck', &
-         'whichflwa', &
-         'whichisot', &
-         'whichslip', &
-         'whichbwat', &
-         'whichmarn', &
-         'whichbtrc', &
-         'whichacab', &
-         'whichevol', &
-         'whichwvel', &
-         'whichprecip' /)
-    character(20),dimension(3) :: timesteps_values = (/ &
-         'temperature','velocity','isostasy'/)
-    character(20),dimension(2) :: grid_values = (/ &
-         'east-west','north-south' /)
-    character(20),dimension(9) :: params_values = (/ &
-         'geot','fiddle','airt','nmsb','hydtim','isotim', &
-         'bpar','thklim','mlimit'/)
-    character(20),dimension(3) :: forcing_values = (/ &
-         'file','trun','pfac'/)
-    character(20),dimension(4) :: constants_values = (/ &
-         'albedo','lapse rate','precip rate','air temp'/)
-    character(20),dimension(3) :: pdd_values = (/ &
-         'wmax','ice pdd factor','snow pdd factor'/)
-
     ! Open and read the configuration structure
 
     call ConfigRead(filename,config)
-
-    ! Verify we have allowed section names
-
-    if (ValidateSections(config,allowed_sections)/=0) then
-       write(outtxt,*)'Unexpected sections in configuration file: ',trim(filename)
-       call glide_msg(GM_FATAL,__FILE__,__LINE__,trim(outtxt))
-    end if
-     
+    
     ! read Output section
 
-    call GetSection(config,section,allowed_sections(1))
+    call GetSection(config,section,'output')
     if (associated(section)) then
-       if (ValidateValueNames(section,output_values)/=0) then
-          write(outtxt,*)'Unexpected value names in configuration file: ',trim(filename)
-          call glide_msg(GM_FATAL,__FILE__,__LINE__,trim(outtxt))
-       end if
        call GetValue(section,'configuration file',model%funits%ncfile)
     end if
 
     ! read domain size section
 
-    call GetSection(config,section,allowed_sections(2))
+    call GetSection(config,section,'domain size')
     if (associated(section)) then
-       if (ValidateValueNames(section,domain_values)/=0) then
-          write(outtxt,*)'Unexpected value names in configuration file: ',trim(filename)
-          call glide_msg(GM_FATAL,__FILE__,__LINE__,trim(outtxt))
-       end if
        call GetValue(section,'east-west',  model%general%ewn)
        call GetValue(section,'north-south',model%general%nsn)
        call GetValue(section,'vertical',   model%general%upn)
@@ -166,12 +96,8 @@ contains
 
     ! read projection section
 
-    call GetSection(config,section,allowed_sections(3))
+    call GetSection(config,section,'projection')
     if (associated(section)) then
-       if (ValidateValueNames(section,projection_values)/=0) then
-          write(outtxt,*)'Unexpected value names in configuration file: ',trim(filename)
-          call glide_msg(GM_FATAL,__FILE__,__LINE__,trim(outtxt))
-       end if
        call GetValue(section,'type',             proj%p_type)
        call GetValue(section,'false easting',    proj%cpx)
        call GetValue(section,'false northing',   proj%cpy)
@@ -182,23 +108,15 @@ contains
 
     ! read sigma coordinates section
 
-    call GetSection(config,section,allowed_sections(4))
+    call GetSection(config,section,'sigma coordinates')
     if (associated(section)) then
-       if (ValidateValueNames(section,sigma_values)/=0) then
-          write(outtxt,*)'Unexpected value names in configuration file: ',trim(filename)
-          call glide_msg(GM_FATAL,__FILE__,__LINE__,trim(outtxt))
-       end if
        call GetValue(section,'file',model%funits%sigfile)
     end if
 
     ! read options section
 
-    call GetSection(config,section,allowed_sections(5))
+    call GetSection(config,section,'options')
     if (associated(section)) then
-       if (ValidateValueNames(section,options_values)/=0) then
-          write(outtxt,*)'Unexpected value names in configuration file: ',trim(filename)
-          call glide_msg(GM_FATAL,__FILE__,__LINE__,trim(outtxt))
-       end if
        call GetValue(section,'whichtemp',model%options%whichtemp)
        call GetValue(section,'whichartm',model%options%whichartm)
        call GetValue(section,'whichthck',model%options%whichthck)
@@ -216,12 +134,8 @@ contains
 
     ! read timesteps section
 
-    call GetSection(config,section,allowed_sections(6))
+    call GetSection(config,section,'timesteps')
     if (associated(section)) then
-       if (ValidateValueNames(section,timesteps_values)/=0) then
-          write(outtxt,*)'Unexpected value names in configuration file: ',trim(filename)
-          call glide_msg(GM_FATAL,__FILE__,__LINE__,trim(outtxt))
-       end if
        call GetValue(section,'temperature',model%numerics%ntem)
        call GetValue(section,'velocity',   model%numerics%nvel)
        call GetValue(section,'isostasy',   model%numerics%niso)
@@ -229,24 +143,16 @@ contains
 
     ! read grid-lengths section
 
-    call GetSection(config,section,allowed_sections(7))
+    call GetSection(config,section,'grid-lengths')
     if (associated(section)) then
-       if (ValidateValueNames(section,grid_values)/=0) then
-          write(outtxt,*)'Unexpected value names in configuration file: ',trim(filename)
-          call glide_msg(GM_FATAL,__FILE__,__LINE__,trim(outtxt))
-       end if
        call GetValue(section,'east-west',  model%numerics%dew)
        call GetValue(section,'north-south',model%numerics%dns)
     end if
 
     ! read parameters section
 
-    call GetSection(config,section,allowed_sections(8))
+    call GetSection(config,section,'parameters')
     if (associated(section)) then
-       if (ValidateValueNames(section,params_values)/=0) then
-          write(outtxt,*)'Unexpected value names in configuration file: ',trim(filename)
-          call glide_msg(GM_FATAL,__FILE__,__LINE__,trim(outtxt))
-       end if
        call GetValue(section,'geot',  model%paramets%geot)
        call GetValue(section,'fiddle',model%paramets%fiddle)
        call GetValue(section,'airt',  airt_temp,numval=size(model%paramets%airt))
@@ -285,12 +191,8 @@ contains
 
     ! read forcing section
 
-    call GetSection(config,section,allowed_sections(9))
+    call GetSection(config,section,'forcing')
     if (associated(section)) then
-       if (ValidateValueNames(section,forcing_values)/=0) then
-          write(outtxt,*)'Unexpected value names in configuration file: ',trim(filename)
-          call glide_msg(GM_FATAL,__FILE__,__LINE__,trim(outtxt))
-       end if
        call GetValue(section,'file',model%funits%forcfile)
        call GetValue(section,'trun',model%forcdata%trun)
        call GetValue(section,'pfac',model%climate%pfac)
@@ -298,12 +200,8 @@ contains
 
     ! read constants section
 
-    call GetSection(config,section,allowed_sections(10))
+    call GetSection(config,section,'constants')
     if (associated(section)) then
-       if (ValidateValueNames(section,constants_values)/=0) then
-          write(outtxt,*)'Unexpected value names in configuration file: ',trim(filename)
-          call glide_msg(GM_FATAL,__FILE__,__LINE__,trim(outtxt))
-       end if
        call GetValue(section,'albedo',     model%climate%ice_albedo)
        call GetValue(section,'lapse rate', model%climate%ulapse_rate)
        call GetValue(section,'precip rate',model%climate%uprecip_rate)
@@ -312,12 +210,8 @@ contains
 
     ! read PDD scheme section
 
-    call GetSection(config,section,allowed_sections(11))
+    call GetSection(config,section,'PDD scheme')
     if (associated(section)) then
-       if (ValidateValueNames(section,pdd_values)/=0) then
-          write(outtxt,*)'Unexpected value names in configuration file: ',trim(filename)
-          call glide_msg(GM_FATAL,__FILE__,__LINE__,trim(outtxt))
-       end if
        call GetValue(section,'wmax',model%pddcalc%wmax)
        call GetValue(section,'ice pdd factor',model%pddcalc%pddfac_ice)
        call GetValue(section,'snow pdd factor',model%pddcalc%pddfac_snow)

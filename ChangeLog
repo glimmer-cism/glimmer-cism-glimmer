@@ -1,3 +1,6 @@
+2005-02-08 Ian Rutt
+ * Removed NAG-non-compliant section and value name checking from glimmer_setup.f90
+
 2005-01-31 Ian Rutt
  * Reverted last change, since it was based on a misunderstanding. _No_ fields are spliced
    into the input - the splicing takes place as the output fields are prepared from the outputs
