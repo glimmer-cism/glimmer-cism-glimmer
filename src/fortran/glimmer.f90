@@ -377,8 +377,6 @@ contains
       params%first=.false.
     endif
 
-    print*,'Glimmer...',time
-
     ! Reset output flag
 
     if (present(output_flag)) output_flag=.false.

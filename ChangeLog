@@ -1,3 +1,7 @@
+2005-01-11 Ian Rutt
+ * Completed first stage changes to Glimmer structure for the new mass-balance model. 
+ * Also minor formatting/organisational changes.
+
 2005-01-07 Ian Rutt
  * Made substantial changes to structure to enable to begin process of allowing the 
    Energy-balance mass-balance model to be used in Glimmer. Needs testing, though.

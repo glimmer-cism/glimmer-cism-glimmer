@@ -149,7 +149,7 @@ contains
 
     instance%model%numerics%tinc=time_step            ! Initialise the model time step
 
-    call  read_config_file(unit,nmlfile,instance%model,instance%proj) ! Read config file and initialise variables
+    call read_config_file(unit,nmlfile,instance%model,instance%proj) ! Read config file and initialise variables
     call new_proj(instance%proj,radea)                          ! Initialise the projection
     call new_downscale(instance%downs,instance%proj,grid)       ! Initialise the downscaling
     call glimmer_i_allocate(instance,grid%nx,grid%ny)           ! Allocate arrays appropriately
@@ -177,7 +177,7 @@ contains
       instance%model%numerics%time = 0.0              ! each instance has a copy of the counter
     endif                                             ! for simplicity.
 
-    call openall_out(instance%model)                            ! Initialise output files
+    call openall_out(instance%model)                  ! Initialise output files
     call writeall(instance%model)
 
     tstep_mbal=instance%model%numerics%tinc_mbal      ! Initialise the mass-balance timestep
@@ -292,8 +292,6 @@ contains
     character(40) :: timetxt
     real(rk) :: start_volume,end_volume,flux_fudge
 
-    print*,'mass balance...',time
-
     ! Set scaling factor for water flux calculations -------------------------
 
     f1 = scyr * thk0 / tim0
@@ -304,7 +302,7 @@ contains
 
     instance%model%numerics%time=time  
 
-    ! Set accumulation start if necessary ------------------------------------
+    ! Set mass-balance accumulation start if necessary -----------------------
 
     if (instance%first_accum) then
       instance%accum_start=nint(time-instance%model%numerics%tinc_mbal)
@@ -384,41 +382,22 @@ contains
                   g_arng=instance%model%climate%g_arng)
 
     ! ------------------------------------------------------------------------  
-    ! Calculate the precipitation field 
+    ! Calculate or process the precipitation field 
     ! ------------------------------------------------------------------------  
 
-    select case(instance%model%options%whichprecip)
-
-    case(0)   ! Uniform precipitation ----------------------------------------
-
-      instance%model%climate%prcp=instance%model%climate%uprecip_rate/f1
-
-    case(1)   ! Large scale precip -------------------------------------------
-              ! Note that we / by 1000 to convert to meters, and then by
-              ! f1 for scaling in the model.
-
-      instance%model%climate%prcp=instance%model%climate%prcp/(1000.0*f1)
-
-    case(2)   ! Precip parameterization --------------------------------------
-
-      call glimmer_precip(instance%model%climate%prcp, &
-                          instance%xwind,&
-                          instance%ywind,&
-                          instance%model%climate%artm,&
-                          instance%local_orog,&
-                          instance%proj%dx,&
-                          instance%proj%dy,&
-                          fixed_a=.true.)
-      instance%model%climate%prcp=instance%model%climate%prcp/(1000.0*f1)
-
-    case(3)   ! Prescribed small-scale precip from file, ---------------------
-              ! adjusted for temperature
-
-      instance%model%climate%prcp = instance%model%climate%presprcp * &
-             instance%model%climate%pfac ** (instance%model%climate%artm - &
-                                             instance%model%climate%presartm)
-
-    end select
+    call calcprcp(instance%model%options%whichprecip, &
+                  instance%model%climate%prcp, &
+                  instance%model%climate%uprecip_rate, &
+                  f1, &
+                  instance%xwind, &
+                  instance%ywind, &
+                  instance%model%climate%artm, &
+                  instance%local_orog, &
+                  instance%proj%dx, &
+                  instance%proj%dy, &
+                  instance%model%climate%presprcp, &
+                  instance%model%climate%presartm, &
+                  instance%model%climate%pfac)
 
     ! ------------------------------------------------------------------------ 
     ! Calculate ablation, and thus mass-balance
@@ -437,20 +416,18 @@ contains
                   instance%model%climate%  acab,      &
                   instance%model%geometry% thck)
 
-    ! Accumulate if necessary
+    ! Accumulate mass-balance if necessary
 
     instance%model%climate%prcp_save = instance%model%climate%prcp_save + instance%model%climate%prcp
     instance%model%climate%ablt_save = instance%model%climate%ablt_save + instance%model%climate%ablt
     instance%model%climate%acab_save = instance%model%climate%acab_save + instance%model%climate%acab
 
-    ! If it's not time for a timestep, return
+    ! If it's not time for a dynamics/temp/velocity timestep, return
 
     if (time-instance%accum_start.lt.instance%model%numerics%tinc) return
 
-    print*,'dynamics...',time
-
     ! ------------------------------------------------------------------------  
-    ! ICE TIMESTEP begins HERE
+    ! ICE TIMESTEP begins HERE ***********************************************
     ! ------------------------------------------------------------------------  
  
     ! Copy and zero accumulated totals ---------------------------------------
@@ -658,6 +635,7 @@ contains
                   instance%model%climate%  lati,      &
                   instance%model%numerics%mlimit,     &
                   ablat_temp)
+
     ! ------------------------------------------------------------------------ 
     ! Calculate isostasy
     ! ------------------------------------------------------------------------ 
@@ -1179,5 +1157,53 @@ contains
     lon_diff=aa-bb
 
   end function lon_diff
+
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  subroutine calcprcp(which,prcp,up_rate,f1,xwind,ywind,artm,orog,dx,dy,presprcp, &
+                      presartm,pfac)
+
+    use glimmer_mbal
+
+    integer,                intent(in)    :: which    !*FD Precipitation option
+    real(sp),dimension(:,:),intent(inout) :: prcp     !*FD Large-scale precip on input,
+                                                      !*FD desired precip field on output
+    real(sp),               intent(in)    :: up_rate  !*FD user-specified uniform precip rate
+    real(rk),               intent(in)    :: f1       !*FD scaling parameter
+    real(rk),dimension(:,:),intent(in)    :: xwind    !*FD x-wind
+    real(rk),dimension(:,:),intent(in)    :: ywind    !*FD y-wind
+    real(sp),dimension(:,:),intent(in)    :: artm     !*FD air temperature
+    real(rk),dimension(:,:),intent(in)    :: orog     !*FD local orography
+    real(rk),               intent(in)    :: dx       !*FD x-spacing
+    real(rk),               intent(in)    :: dy       !*FD y-spacing
+    real(sp),dimension(:,:),intent(in)    :: presprcp !*FD present-day precip
+    real(sp),dimension(:,:),intent(in)    :: presartm !*FD present-day air temp
+    real(sp),               intent(in)    :: pfac     !*FD precip parameterisation factor
+
+   select case(which)
+
+    case(0)   ! Uniform precipitation ----------------------------------------
+
+      prcp=up_rate/f1
+
+    case(1)   ! Large scale precip -------------------------------------------
+              ! Note that we / by 1000 to convert to meters, and then by
+              ! f1 for scaling in the model.
+
+      prcp=prcp/(1000.0*f1)
+
+    case(2)   ! Precip parameterization --------------------------------------
+
+      call glimmer_precip(prcp,xwind,ywind,artm,orog,dx,dy,fixed_a=.true.)
+      prcp=prcp/(1000.0*f1)
+
+    case(3)   ! Prescribed small-scale precip from file, ---------------------
+              ! adjusted for temperature
+
+      prcp = presprcp * pfac ** (artm - presartm)
+
+    end select
+
+  end subroutine calcprcp
 
 end module glimmer_object
