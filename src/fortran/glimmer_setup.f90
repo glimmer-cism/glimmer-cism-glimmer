@@ -498,16 +498,14 @@ contains
        
        model%geometry%usrf = model%geometry%thck + model%geometry%lsrf
        
-       call timeevoltemp(model,0,real(global_orog,dp))     ! calculate initial temperature distribution
+       call calcartm(model, 3, &
+            model%geometry%usrf, &
+            model%climate%lati,     &
+            model%climate%artm, &  !** OUTPUT
+            arng)                      !** OUTPUT
+       call timeevoltemp(model,0,model%climate%artm)     ! calculate initial temperature distribution
 	   newtemps = .true.                          ! we have new temperatures
 
-	   call calcflwa(model%numerics,        &              ! Calculate Glen's A
-                     model%velowk,          &
-                     model%paramets%fiddle, &
-                     model%temper%flwa,     &
-                     model%temper%temp,     &
-                     model%geometry%thck,   &
-                     model%options%whichflwa)
 
        first=.false.
        deallocate(arng) 

@@ -372,17 +372,6 @@ contains
     ! ------------------------------------------------------------------------  
   
     if (instance%first) then
-	  call timeevoltemp(instance%model,0,instance%global_orog)     ! calculate initial temperature distribution
-	  instance%newtemps = .true.                                   ! we have new temperatures
- 
-      call calcflwa(instance%model%numerics,        &              ! Calculate Glen's A
-                    instance%model%velowk,          &
-                    instance%model%paramets%fiddle, &
-                    instance%model%temper%flwa,     &
-                    instance%model%temper%temp,     &
-                    instance%model%geometry%thck,   &
-                    instance%model%options%whichflwa)
-
       call calcartm(instance%model,                       &
                     instance%model%options%whichartm,     &
                     instance%model%geometry%usrf,         &
@@ -392,6 +381,9 @@ contains
                     g_orog=instance%global_orog,          &
                     g_artm=instance%model%climate%g_artm, &
                     g_arng=instance%model%climate%g_arng)
+	  call timeevoltemp(instance%model,0,instance%model%climate%artm)     ! calculate initial temperature distribution
+	  instance%newtemps = .true.                                   ! we have new temperatures
+ 
     endif
 
     ! ------------------------------------------------------------------------  
@@ -599,16 +591,18 @@ contains
 
     if ( instance%model%numerics%tinc >  &
          mod(instance%model%numerics%time,instance%model%numerics%ntem) ) then
+      call calcartm(instance%model,                       &
+                    instance%model%options%whichartm,     &
+                    instance%model%geometry%usrf,         &
+                    instance%model%climate%lati,          &
+                    instance%model%climate%artm,          &
+                    instance%model%climate%arng,          &
+                    g_orog=instance%global_orog,          &
+                    g_artm=instance%model%climate%g_artm, &
+                    g_arng=instance%model%climate%g_arng)
       call timeevoltemp(instance%model, &
                         instance%model%options%whichtemp, &
-                        instance%global_orog)
-      call calcflwa(instance%model%numerics,         & 
-                    instance%model%velowk,           &
-                    instance%model%paramets% fiddle, &
-                    instance%model%temper%   flwa,   &
-                    instance%model%temper%   temp,   &
-                    instance%model%geometry% thck,   &
-                    instance%model%options%  whichflwa) 
+                        instance%model%climate%artm)
       instance%newtemps = .true.
     end if
 
