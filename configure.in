@@ -1,5 +1,5 @@
 dnl Process this file with autoconf to produce a configure script.
-AC_INIT([GLIDE],[0.2],[Magnus.Hagdorn@ed.ac.uk])
+AC_INIT([GLIDE],[0.2],[glimmer-discuss@forge.nesc.ac.uk])
 AM_INIT_AUTOMAKE
 AC_PROG_RANLIB
 AC_PROG_FC
@@ -10,8 +10,17 @@ dnl Checking for python
 AM_PATH_PYTHON([2.3],,[AC_MSG_RESULT(need at least python 2.3)])
 
 # checking for latex and friends
+AC_CHECK_PROGS(LATEX,[latex])
+AC_CHECK_PROGS(DVIPS,[dvips])
 AC_CHECK_PROGS(DVIPDFT,[dvipdfm])
+AM_CONDITIONAL([DO_DOC_PS],  [test "$DVIPS" != ""])
 AM_CONDITIONAL([DO_DOC_PDF], [test "$DVIPDFT" != ""])
+# checking for other programs needed for compiling documentation
+AC_CHECK_PROGS(GNUPLOT,[gnuplot])
+AC_CHECK_PROGS(DIA,[dia])
+AC_CHECK_PROGS(FIG2DEV,[fig2dev])
+AC_CHECK_PROGS(PS2EPSI,[ps2epsi])
+AC_CHECK_PROGS(SED,[sed])
 
 # checking for BLAS library
 AC_ARG_WITH(blas,AS_HELP_STRING([--with-blas],[how to link external BLAS library]),[ac_cv_blas=$withval])
@@ -50,5 +59,7 @@ AC_MSG_CHECKING([whether profilng is enabled])
 esac],[profile=false])
 AM_MAINTAINER_MODE
 
-AC_CONFIG_FILES([Makefile doc/Makefile src/Makefile src/python/Makefile src/fortran/Makefile src/fortran/SLAP_library/Makefile])
+AC_CONFIG_FILES([Makefile src/Makefile src/python/Makefile src/fortran/Makefile src/fortran/SLAP_library/Makefile \
+		doc/Makefile doc/common/Makefile doc/dg/Makefile doc/dg/figures/Makefile \
+		doc/ug/Makefile doc/ug/figs/Makefile doc/num/Makefile doc/num/figs/Makefile doc/num/gnu/Makefile])
 AC_OUTPUT

@@ -1,3 +1,6 @@
+2005-02-03 Magnus Hagdorn
+ * added automake support to doc directory
+
 2005-02-02 Magnus Hagdorn
  * fixed problem with dependency tracking
 
