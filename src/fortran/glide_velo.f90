@@ -1076,4 +1076,16 @@ contains
 
   end subroutine calcbtrc
 
+  subroutine calc_basal_shear(model)
+    !*FD calculate basal shear stress: tau_{x,y} = -ro_i*g*H*d(H+h)/d{x,y}
+    use physcon, only : rhoi,grav
+    implicit none
+    type(glide_global_type) :: model        !*FD model instance
+
+
+    model%velocity%tau_x = -rhoi*grav*model%geomderv%stagthck
+    model%velocity%tau_y = model%velocity%tau_x * model%geomderv% dthckdns
+    model%velocity%tau_x = model%velocity%tau_x * model%geomderv% dthckdew
+  end subroutine calc_basal_shear
+
 end module glide_velo

@@ -340,7 +340,9 @@ contains
 #ifdef PROFILING
     call glide_prof_stop(model,8,'isostasy water')
 #endif
-
+    
+    ! basal shear stress calculations are for now disabled.
+    !call calc_basal_shear(model)
   end subroutine glide_tstep_p2
 
   subroutine glide_tstep_p3(model)

@@ -1,3 +1,11 @@
+2005-04-04 Magnus Hagdorn
+ * glide_thck.f90: move surface and horiz deriv calculations to
+   thck_evolve
+ * glide_types.f90: added basal shear stress variables
+ * glide_vars.def: ditto
+ * glide_velo.f90: added shear stress calculations
+ * glide.f90: indicated where basal shear stress cals might go
+ 
 2005-03-24 Ian Rutt
  * Changed glint_global_interp to use global grid types to define
    input and output grids

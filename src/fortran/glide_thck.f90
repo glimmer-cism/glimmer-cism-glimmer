@@ -190,24 +190,6 @@ contains
        do p=1,pmax
           model%thckwk%oldthck2 = model%geometry%thck
 
-          call stagvarb(model%geometry% thck, &
-               model%geomderv% stagthck,&
-               model%general%  ewn, &
-               model%general%  nsn)
-
-          call geomders(model%numerics, &
-               model%geometry% usrf, &
-               model%geomderv% stagthck,&
-               model%geomderv% dusrfdew, &
-               model%geomderv% dusrfdns)
-
-          call geomders(model%numerics, &
-               model%geometry% thck, &
-               model%geomderv% stagthck,&
-               model%geomderv% dthckdew, &
-               model%geomderv% dthckdns)
-
-
           call slipvelo(model%numerics,                &
                model%velowk,                  &
                model%geomderv,                &
@@ -231,10 +213,6 @@ contains
              exit
           end if
           
-          ! calculate upper and lower surface
-          call glide_calclsrf(model%geometry%thck, model%geometry%topg, model%climate%eus, model%geometry%lsrf)
-          model%geometry%usrf = max(0.d0,model%geometry%thck + model%geometry%lsrf)
-
        end do
 #ifdef DEBUG_PICARD
        picard_max=max(picard_max,p)
@@ -264,7 +242,7 @@ contains
 
     !*FD set up sparse matrix and solve matrix equation to find new ice thickness distribution
     !*FD this routine does not override the old thickness distribution
-
+    use glide_setup, only: glide_calclsrf
     use glimmer_global, only : dp
     implicit none
     ! subroutine arguments
@@ -387,6 +365,29 @@ contains
             real(thk0*new_thck(model%general%ewn/2+1,model%general%nsn/2+1)), &
             real(vel0*maxval(abs(model%velocity%ubas))), real(vel0*maxval(abs(model%velocity%vbas))) 
 #endif
+       
+       !------------------------------------------------------------
+       ! calculate upper and lower surface and various derivatives
+       !------------------------------------------------------------
+       call glide_calclsrf(model%geometry%thck, model%geometry%topg, model%climate%eus, model%geometry%lsrf)
+       model%geometry%usrf = max(0.d0,model%geometry%thck + model%geometry%lsrf)
+
+       call stagvarb(model%geometry% thck, &
+            model%geomderv% stagthck,&
+            model%general%  ewn, &
+            model%general%  nsn)
+
+       call geomders(model%numerics, &
+            model%geometry% usrf, &
+            model%geomderv% stagthck,&
+            model%geomderv% dusrfdew, &
+            model%geomderv% dusrfdns)
+
+       call geomders(model%numerics, &
+            model%geometry% thck, &
+            model%geomderv% stagthck,&
+            model%geomderv% dthckdew, &
+            model%geomderv% dthckdns)
 
   contains
     subroutine generate_row(ewm,ew,ewp,nsm,ns,nsp)

@@ -268,6 +268,8 @@ module glide_types
     real(dp),dimension(:,:)  ,pointer :: ubas  => null() !*FD 
     real(dp),dimension(:,:)  ,pointer :: vbas  => null() !*FD 
     real(dp),dimension(:,:)  ,pointer :: btrc  => null() !*FD 
+    real(dp),dimension(:,:)  ,pointer :: tau_x => null() !*FD basal shear stress, x-dir
+    real(dp),dimension(:,:)  ,pointer :: tau_y => null() !*FD basal shear stress, y-dir
   end type glide_velocity
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -554,6 +556,8 @@ contains
     allocate(model%velocity%btrc(ewn-1,nsn-1));       model%velocity%btrc = 0.0d0
     allocate(model%velocity%ubas(ewn-1,nsn-1));       model%velocity%ubas = 0.0d0
     allocate(model%velocity%vbas(ewn-1,nsn-1));       model%velocity%vbas = 0.0d0
+    allocate(model%velocity%tau_x(ewn-1,nsn-1));      model%velocity%tau_x = 0.0d0
+    allocate(model%velocity%tau_y(ewn-1,nsn-1));      model%velocity%tau_y = 0.0d0
 
     allocate(model%climate%acab(ewn,nsn));            model%climate%acab = 0.0
     allocate(model%climate%artm(ewn,nsn));            model%climate%artm = 0.0
@@ -616,6 +620,8 @@ contains
     deallocate(model%velocity%btrc)
     deallocate(model%velocity%ubas)
     deallocate(model%velocity%vbas)
+    deallocate(model%velocity%tau_x)
+    deallocate(model%velocity%tau_y)
 
     deallocate(model%climate%acab)
     deallocate(model%climate%artm)
