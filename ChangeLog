@@ -1,3 +1,6 @@
+2004-12-17 Magnus Hagdorn
+ * isostasy.f90: moved lithosphere calculations to its own subroutine
+	
 2004-12-16 Magnus Hagdorn
  * combinded eis and EISMINT climate drivers in a new library: libclimate.a
  * eis_forcing.f90: cosmetic change

@@ -106,12 +106,7 @@ contains
 
     ! update load if necessary
     if (model%isos%new_load) then
-       if (model%isos%lithosphere .eq. 0) then
-          ! local lithosphere
-          model%isos%load = model%isos%load_factors
-       else if (model%isos%lithosphere .eq. 1) then
-          call calc_elastic(model%isos%rbel,model%isos%load,model%isos%load_factors)
-       end if
+       call isos_lithosphere(model,model%isos%load,model%isos%load_factors)
        ! update bed rock with (non-viscous) fluid mantle
        if (model%isos%asthenosphere .eq. 0) then
           model%geometry%topg = model%isos%relx - model%isos%load
@@ -123,6 +118,21 @@ contains
        call relaxing_mantle(model)
     end if
   end subroutine isos_isostasy
+
+  subroutine isos_lithosphere(model,load,load_factors)
+    use glide_types
+    implicit none
+    type(glide_global_type) :: model
+    real(kind=dp), dimension(:,:), intent(out) :: load !*FD loading effect due to load_factors
+    real(kind=dp), dimension(:,:), intent(in)  :: load_factors !*FD load mass divided by mantle density
+
+    if (model%isos%lithosphere .eq. 0) then
+       ! local lithosphere
+       load = load_factors
+    else if (model%isos%lithosphere .eq. 1) then
+       call calc_elastic(model%isos%rbel,load,load_factors)
+    end if
+  end subroutine isos_lithosphere
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! private subroutines
