@@ -124,7 +124,9 @@ class PrintVars:
         """Write a warning message to stream"""
 
         self.stream.write("%s\n"%(80*self.comment))
-        self.stream.write("%s WARNING: this file was automatically generated on\n! %s\n! from %s.in\n"%(self.comment,time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.gmtime()), self.canhandle))
+        self.stream.write("%s WARNING: this file was automatically generated on\n%s %s\n%s from %s.in\n"%(self.comment,
+                                                                                                          self.comment,time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.gmtime()),
+                                                                                                          self.comment, self.canhandle))
         self.stream.write("%s\n\n"%(80*self.comment))
         
     def print_var(self, var):
@@ -147,6 +149,27 @@ class PrintVars:
                 self.stream.write("%s"%l)
         self.infile.close()
         self.stream.close()
+
+class PrintDoc(PrintVars):
+    """Process varlist.tex"""
+    canhandle = 'varlist.tex'
+    comment = '%'
+
+    def print_var(self, var):
+        """Write single variable block to stream for ncdf_params."""
+
+        # skip variables associated with dimension 
+        if not is_dimvar(var) and not isspot(var):
+            load = ''
+            if 'load' in var:
+                if var['load'].lower() in ['1','true','t']:
+                    load = '$^\\ast$'
+
+            self.stream.write("\\texttt{%s}%s & %s & %s\\\\\n"%(var['name'],load,var['long_name'],
+                                                    var['units'].replace('_','\_')))
+            if 'standard_name' in var:
+                self.stream.write("&CF name: \\texttt{%s}&\\\\\n"%(var['standard_name'].replace('_','\_')))
+            self.stream.write("\\hline\n")
 
 class PrintNCDF(PrintVars):
     """Process ncdf.f90"""
@@ -212,9 +235,9 @@ class PrintNCDF_PARAMS(PrintVars):
         # skip variables associated with dimension 
         if not is_dimvar(var):
             if isspot(var):
-                self.stream.write("    if (index(vars,' %s ').ne.0 .and. handle_output%%nc%%do_spot) then\n"%(var['name'].upper()))
+                self.stream.write("    if (index(vars,' %s ').ne.0 .and. handle_output%%nc%%do_spot) then\n"%(var['name']))
             else:
-                self.stream.write("    if (index(vars,' %s ').ne.0) then\n"%(var['name'].upper()))
+                self.stream.write("    if (index(vars,' %s ').ne.0) then\n"%(var['name']))
             self.stream.write("       handle_output%%nc%%do_var(%s) = .true.\n"%var_type(var))
             self.stream.write("    end if\n\n")
 
@@ -417,6 +440,7 @@ HandleFile['ncdf.f90.in'] = PrintNCDF
 HandleFile['ncdf_file.f90.in'] = PrintNCDF_FILE
 HandleFile['ncdf_infile.f90.in'] = PrintNCDF_INFILE
 HandleFile['ncdf_params.f90.in'] = PrintNCDF_PARAMS
+HandleFile['varlist.tex.in'] = PrintDoc
 
 if __name__ == '__main__':
 

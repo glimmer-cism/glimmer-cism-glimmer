@@ -16,6 +16,15 @@ glimmer.pdf:	glimmer_pdf.dvi
 glimmer.ps:	glimmer_ps.dvi
 	dvips -o glimmer.ps glimmer_ps.dvi
 
+ug_ps.dvi:	ug_ps.tex
+	cd ug; $(MAKE)
+	latex $<
+	latex $<
+ug_pdf.dvi:	ug_pdf.tex
+	cd ug; $(MAKE)
+	latex $<
+	latex $<
+
 .tex.dvi::
 	latex $<
 	latex $<

@@ -1,3 +1,8 @@
+2004-06-04 Magnus Hagdorn
+ * made variable names case sensitive (g_land.glw, generate_ncvars.py)
+ * split up user guide into individual sections
+ * added netCDF and config file documentation
+	
 2004-06-03 Magnus Hagdorn
  * found some more unused filenames and removed out_stem with ncfile
 

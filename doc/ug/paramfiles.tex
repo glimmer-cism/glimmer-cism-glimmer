@@ -1,0 +1,401 @@
+\section{Namelist files}
+%
+This section contains information about the contents of the namelist files
+used to configure GLIMMER.
+%
+\subsection{Top-level GLIMMER configuration file}
+%
+The top-level configuration file contains the following elements in the
+following order:
+\begin{center}
+\begin{tabular}{l}
+\texttt{timesteps} namelist \\
+\texttt{file\_paras} namelist \\
+List of instance-specific configuration files \\
+\end{tabular}
+\end{center}
+%
+\subsubsection {Possible \texttt{timesteps} namelist entry}
+%
+\begin{center}
+\begin{tabular}{|c|c|c|l|}
+\hline
+Name & Type & Default & Description (units) \\
+\hline
+\hline
+\texttt{tinc} & real & 1.0 & Main model time-step (years) \\
+\hline
+\end{tabular}
+\end{center}
+%
+\subsubsection{Possible \texttt{file\_params} namelist entry}
+\begin{center}
+\begin{tabular}{|c|c|c|l|}
+\hline
+Name & Type & Default & Description (units) \\
+\hline
+\hline
+\texttt{ninst} & integer & 1 & Number of ice model instances \\
+\hline 
+\end{tabular}
+\end{center}
+%
+\subsubsection{List of instance-specific configuration files}
+%
+These filenames are given relative to the working directory of the climate
+model. They must not be longer than 70 characters, though this may be altered
+by changing the value of the parameter \texttt{fname\_length} in file
+\texttt{glimmer\_global.f90}. The filenames should be given as plain text,
+without quotation marks, and separated by newlines. 
+%
+\subsection{Instance-specific configuration files}
+%
+The instance-specific configuration files contain the following elements in
+the following order:
+\begin{center}
+\begin{tabular}{l}
+netCDF configuration file \\
+\texttt{sizs} namelist \\
+\texttt{prj} namelist \\
+Name of sigma file \\
+\texttt{opts} namelist \\
+\texttt{nums} namelist \\
+\texttt{pars} namelist \\
+\texttt{dats} namelist \\
+\texttt{cons} namelist \\
+\texttt{forc} namelist \\
+\end{tabular}
+\end{center}
+%
+\subsubsection{netCDF configuration file}
+%
+As noted above, netCDF I/O is controlled by a separate configuration file. The configuration file is described on detail in Section \ref{ug.sec.ncconf}. Each model instance needs to be supplied with its own netCDF configuration file.
+%
+\subsubsection{Possible \texttt{sizs} namelist entries}
+%
+The \texttt{sizs} namelist specifies the model domain,
+and may contain these elements:
+%
+\begin{center}
+\begin{tabular}{|c|c|c|l|}
+\hline
+Name & Type & Default & Description (units) \\
+\hline
+\hline
+\texttt{ewn} & integer & -- & Number of grid-points in the east-west
+direction \\
+\texttt{nsn} & integer & -- & Number of grid-points in the north-south
+direction \\
+\texttt{upn} & integer & 11 & Number of model levels \\
+\hline
+\end{tabular}
+\end{center}
+%
+\subsubsection{Possible \texttt{prj} namelist entries}
+%
+The \texttt{prj} namelist specifies the parameters of the map projection, and
+may contain these elements:
+%
+\begin{center}
+\begin{tabular}{|c|c|c|l|}
+\hline
+Name & Type & Default & Description (units) \\
+\hline
+\hline
+\texttt{p\_type} & integer & 1 & Type of projection: \\
+ & & & 1) Lambert Equal Area \\
+ & & & 2) Spherical polar \\
+ & & & 3) Spherical stereographic (oblique) \\
+ & & & 4) Spherical stereographic (equatorial) \\
+\hline  
+\texttt{lonc} & real & -- & Longitide of projection centre (degrees east) \\
+\texttt{latc} & real & -- & Latitude of projection centre (degrees)\\
+\texttt{cpx} & real & -- & Local $x$-coordinate of projection centre
+(grid-points) \\
+\texttt{cpy} & real & -- & Local $y$-coordinate of projection centre
+(grid-points) \\
+\hline
+\end{tabular}
+\end{center}
+%
+\subsubsection{Name of sigma file}
+%
+Conforms to the same rules as other filenames.
+%
+\subsubsection{Possible \texttt{opts} namelist entries}
+%
+The \texttt{opts} namelist specifies various ice model options, and may
+contain these elements:
+%
+\begin{center}
+    \tablefirsthead{%
+    \hline
+Name & Type & Default & Description (units)\\
+    \hline
+\hline}
+  \tablehead{%
+    \hline
+    \multicolumn{4}{|p{0.98\textwidth}|}{\emph{\small continued from previous page}}\\
+    \hline
+Name & Type & Default & Description (units)\\
+    \hline
+\hline}
+  \tabletail{%
+    \hline
+    \multicolumn{4}{|r|}{\emph{\small continued on next page}}\\
+    \hline}
+  \tablelasttail{\hline}
+
+
+\begin{supertabular}{|c|c|c|p{8.5cm}|}
+\texttt{whichtemp} & integer & 1 & {\raggedright
+ Method of ice temperature calculation: \\
+ \begin{tabular}{lp{7cm}}
+  0 & Set column to surface air temperature \\
+  1 & Do full temperature solution (also finds vertical velocity and apparent vertical velocity).
+ \end{tabular}}\\
+\hline
+\texttt{whichartm} & integer & 3 & {\raggedright
+Method of calculation of surface air temperature:\\ 
+ \begin{tabular}{lp{7cm}}
+ 0 & Linear function of surface elevation\\
+ 1 & Cubic function of distance from domain centre\\
+ 2 & Linear function of distance from domain centre\\
+ 3 & Greenland conditions (function of surface elevation and latitude) including forcing\\
+ 4 & Antarctic conditions (sea-level air temperature -- function of position)\\
+ 5 & Uniform temperature, zero range (temperature set in \texttt{cons} namelist) \\
+ 6 & Uniform temperature, corrected for height, zero range.\\
+ 7 & Use large-scale temperature and range.\\
+ \end{tabular}}
+\\
+\hline
+\texttt{whichthck} & integer & 4 & {\raggedright
+Source of initial conditions: \\
+\begin{tabular}{lp{7cm}}
+1 & Read from file\\
+2 & Set equal to one time-step of net accumulation (where positive)\\
+3 & Stepped, linear function of distance from domain centre\\
+4 & Read from file\\
+5-7& Unknown\\
+\end{tabular}}\\
+\hline
+\texttt{whichflwa} & integer & 0 & {\raggedright Method for calculating flow factor $A$:\\
+\begin{tabular}{lp{7cm}}
+0 & \emph{Patterson and Budd} relationship\\
+1 & \emph{Patterson and Budd} relationship, with temperature set to $-10^{\circ}\mathrm{C}$ \\
+2 & Set equal to $1\times 10^{-16}\,\mathrm{yr}^{-1}\,\mathrm{Pa}^{-n}$\\
+\end{tabular}}\\
+\hline
+\texttt{whichisot} & integer & 1 & {\raggedright
+Bedrock elevation: \\
+\begin{tabular}{lp{7cm}}
+0 & Fixed at input values\\
+1 & Local function of ice loading history (ODE)\\
+2 & Local function of ice loading history (ODE) with flexure\\
+\end{tabular}}\\
+\hline 
+\texttt{whichslip} & integer & 4 & {\raggedright
+Horizontal bed velocity: \\
+\begin{tabular}{lp{7cm}}
+0 & Linear function of gravitational driving stress\\
+1-3 & Unknown\\
+4 & Set to zero everywhere\\
+\end{tabular}}\\
+\hline
+\texttt{whichbwat} & integer & 2 &{\raggedright
+ Basal water depth: \\
+\begin{tabular}{lp{7cm}}
+0 & Calculated from local basal water balance\\
+1 & as (0), including constant horizontal flow\\
+2 & Set to zero everywhere\\
+\end{tabular}}\\
+\hline
+\texttt{whichmarn} & integer & 0 &{\raggedright
+ Ice thickness: \\
+\begin{tabular}{lp{7cm}}
+0 & Set thickness to zero if relaxed bedrock is more than certain water depth (??) \\
+1 &  Set thickness to zero if floating \\
+2 &  No action \\
+\end{tabular}}\\
+\hline
+\texttt{whichbtrc} & integer & 1 & {\raggedright
+Basal slip coefficient: \\
+\begin{tabular}{lp{7cm}}
+0 & \texttt{tanh} function of basal water depth\\
+1 &  Set equal to zero everywhere\\
+\end{tabular}}\\
+\hline
+\texttt{whichacab} & integer & 2 &{\raggedright
+ Net accumulation: \\
+\begin{tabular}{lp{7cm}}
+0 & EISMINT moving margin \\
+1 & PDD mass-balance model [recommended] \\
+2 & Accumulation only\\
+\end{tabular}}\\
+\hline
+\texttt{whichstrs} & integer & 2 & {\raggedright
+Stress solution: \\
+\begin{tabular}{lp{7cm}}
+0 & Zeroth-order\\
+1 & First-order\\
+2 & Vertically-integrated first-order\\
+3 & No action (use when velocity found elsewhere)\\
+\end{tabular}}\\
+\hline
+\texttt{whichefvs} & integer & ? & ?? \\
+\hline
+\texttt{whichbabc} & integer & 0 &  {\raggedright Basal boundary condition? No options!}\\
+\hline
+\texttt{whichevol} & integer & 0 & {\raggedright
+Thickness evolution method:\\
+\begin{tabular}{lp{7cm}}
+0 & Pseudo-diffusion approach \\
+2 & Diffusion approach (also calculates velocities)\\
+\end{tabular}}\\
+\hline 
+\texttt{whichwvel} & integer & 0 & Vertical velocities: \\
+ & & & 0) Usual vertical integration \\
+ & & & 1) Vertical integration constrained so that \\
+ & & & upper kinematic B.C. obeyed \\
+\hline 
+\texttt{whichmask} & integer & 0 & ?? \\
+\hline
+\texttt{whichprecip} & integer & 0 & {\raggedright
+Source of precipitation:\\
+\begin{tabular}{lp{7cm}}
+0 & Uniform precipitation rate (set internally at present)\\
+1 & Use large-scale precipitation rate\\
+2 & Use parameterization of \emph{Roe and Lindzen}\\
+\end{tabular}}\\
+\hline
+\end{supertabular}
+\end{center}
+%
+\subsubsection{Possible \texttt{nums} namelist entries}
+%
+\begin{center}
+\begin{tabular}{|c|c|c|l|}
+\hline
+Name & Type & Default & Description (units)\\
+\hline
+\hline
+\texttt{ntem}    & real & 1 & Length of temperature time-step as \\
+ & & & a multiple of main timestep \\
+\hline
+\texttt{nvel}    & real & 1 & Length of velocity time-step as \\
+ & & & a multiple of main time-step\\
+\hline
+\texttt{niso}    & real & 1 & Length of isostasy time-step as \\
+ & & & a multiple of main time-step\\
+\hline
+\texttt{nout(3)} & real & (1,10,10) & Time between outputs for time-series, \\
+ & & & 2D and 3D fields (years)\\
+\hline
+\texttt{nstr}    & real & & Start-time for 2D and 3D output (years) \\
+\hline
+\texttt{thklim} & real & 100 & Lower limit for 3D ice calculations (m?) \\
+\hline
+\texttt{mlimit} & real & -- & ? \\
+\hline
+\texttt{dew} & real & -- & Horizontal grid spacing in east-west direction (m)
+\\
+\hline
+\texttt{dns} & real & -- & Horizontal grid spacing in north-south direction (m) \\
+\hline
+\end{tabular}
+\end{center}
+%
+\subsubsection{Possible \texttt{pars} namelist entries}
+%
+\begin{center}
+\begin{tabular}{|c|c|c|l|}
+\hline
+Name & Type & Default & Description (units)\\
+\hline
+\hline
+\texttt{geot} & real & $-5\times 10^{-2}$ & Geothermal heat flux
+($\mathrm{Wm}^{-2}$) \\
+\hline
+\texttt{fiddle} & real & 3.0 & Multiplier for flow factor \\
+\hline
+\texttt{airt(2)} & real & (-3.15,-0.01) & Air temperature parameterization
+factors \\
+ & & & (K, $\mathrm{K}\,\mathrm{km}^{-3}$) \\
+\hline
+\texttt{nmsb(3)} & real & (0.5, $1.05\times 10^{-5}$,  & Net accumulation
+factors used in \\
+ & & $4.5\times 10^{5}$) & combination with $\mathtt{whichthck}=2,3$ \\
+ & & & ($\mathrm{m}\,\mathrm{yr}^{-1}$, $\mathrm{yr}^{-1}$, m) \\
+\hline
+\texttt{hydtim} & real & 1000 & 1) Basal hydrology time constant (When \\
+ & & & $\mathtt{whichbwat}=0$) (yr)\\
+ & & & 2) Basal hydrology advection velocity (When \\
+ & & & $\mathtt{whichbwat}=1$) ($\mathrm{m}\,\mathrm{yr}^{-1}$)\\
+\hline
+\texttt{isotim} & real & 3000 & Isostasy time-constant (used in combination \\
+ & & & with \texttt{whichisot} (yr) \\
+\hline 
+\texttt{bpar(5)} & real & (2.0, 10.0, 10.0, & Basal traction factors (used in \\
+ & & 0.0, 1.0) & combination with \texttt{whichbtrc}). These describe the \\
+ & & & form of the $B=\tanh(W)$ function: \\
+ & & & (1) Width of tanh curve \\
+ & & & (2) $W$ at midpoint of tanh curve (m) \\
+ & & & (3) $B$ minimum ($\mathrm{m}\,\mathrm{yr}^{-1}\,\mathrm{Pa}^{-1}$) \\
+ & & & (4) $B$ maximum ($\mathrm{m}\,\mathrm{yr}^{-1}\,\mathrm{Pa}^{-1}$) \\
+ & & & (5) multiplier for marine sediments \\
+\hline
+\end{tabular}
+\end{center}
+%
+\subsubsection{Possible \texttt{dats} namelist entries}
+%
+\begin{center}
+\begin{tabular}{|c|c|c|l|}
+\hline
+Name & Type & Default & Description (units)\\
+\hline
+\hline
+& & & \\
+\hline
+\end{tabular}
+\end{center}
+%
+\subsubsection{Possible \texttt{cons} namelist entries}
+%
+\begin{center}
+\begin{tabular}{|c|c|c|l|}
+\hline
+Name & Type & Default & Description (units)\\
+\hline
+\hline
+\texttt{lapse\_rate} & real & -8.0 & Lapse rate used when adjusting \\
+ & & & air temperature for elevation ($\mathrm{K}\,\mathrm{km}^{-1}$) \\
+\hline
+\texttt{precip\_rate} & real & 0.5 & Uniform precipitation rate,
+\\
+ & & & used in conjuction with \texttt{whichprecip}=0 \\
+ & & & ($\mathrm{m}\,\mathrm{yr}^{-1}$ water equivalent) \\
+\hline
+\texttt{air\_temp} & real & -20.0 & Uniform surface air temperature, \\
+ & & & used in conjunction with \texttt{whichsurftemp}=0,1 ($^{\circ}\mathrm{C}$) \\
+\hline
+\texttt{albedo} & real & 0.4 & Ice albedo \\
+\hline
+\end{tabular}
+\end{center}
+%
+\subsection{Possible \texttt{forc} namelist entries}
+%
+\begin{center}
+\begin{tabular}{|c|c|c|l|}
+\hline
+Name & Type & Default & Description (units)\\
+\hline
+\hline
+\texttt{trun} & real & -- & Length of model run (years).\\
+ & & & {\bf N.B.} This variable {\em does not} control the length of \\
+ & & & the model run --- it is used in the case when \texttt{whichartm}=3 \\
+ & & & to tell the forcing initialisation how long the run is going to be. \\
+\hline
+\end{tabular}
+\end{center}
