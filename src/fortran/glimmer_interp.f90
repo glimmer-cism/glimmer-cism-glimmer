@@ -84,7 +84,9 @@ module glimmer_interp
 
 contains
 
-  subroutine new_downscale(downs,proj,lons,lats)
+  subroutine new_downscale(downs,proj,grid)
+
+    use glimmer_global_grid
 
     !*FD Initialises a downscale variable,
     !*FD according to given projected and global grids
@@ -93,9 +95,7 @@ contains
 
     type(downscale),intent(out)      :: downs   !*FD Downscaling variable to be set
     type(projection),intent(in)      :: proj    !*FD Projection to use
-    real(rk),intent(in),dimension(:) :: lats    !*FD Latitudes of global grid points (degrees).
-                                                !*FD As in all cases, latitudes begin at north pole.
-    real(rk),intent(in),dimension(:) :: lons    !*FD Longitude of global grid points (degrees)
+    type(global_grid),intent(in)     :: grid    !*FD Global grid to use
 
     ! Internal variables
 
@@ -113,7 +113,7 @@ contains
 
     ! index local boxes
 
-    call index_local_boxes(downs%il,downs%ilp,downs%jl,downs%jlp,lons,lats,proj)
+    call index_local_boxes(downs%il,downs%ilp,downs%jl,downs%jlp,grid%lons,grid%lats,proj)
 
     ! Find lats and lons
 
@@ -289,18 +289,18 @@ contains
 
     ! Argument declarations
 
-    type(projection),intent(in)         :: proj                !*FD Target map projection
-    real(rk),dimension(:,:),intent(in)  :: global              !*FD Global field (input)
-    real(rk),dimension(:),intent(in)    :: lats                !*FD Latitudes of global gridpoints 
-    real(rk),dimension(:),intent(in)    :: lons                !*FD Longitudes of global gridpoints 
-    real(sp),dimension(:,:),intent(out),optional :: localsp   !*FD Local field on projected grid (output) sp
-    real(dp),dimension(:,:),intent(out),optional :: localdp   !*FD Local field on projected grid (output) dp
-    real(sp),optional :: global_fn                            !*FD Function returning values in global field. This  
-                                                               !*FD may be used as an alternative to passing the
-                                                               !*FD whole array in \texttt{global} if, for instance the
-                                                               !*FD data-set is in a large file, being accessed point by point.
-                                                               !*FD In these circumstances, \texttt{global}
-                                                               !*FD may be of any size, and its contents are irrelevant.
+    type(projection),                intent(in)  :: proj      !*FD Target map projection
+    real(rk),dimension(:,:),         intent(in)  :: global    !*FD Global field (input)
+    real(rk),dimension(:),           intent(in)  :: lats      !*FD Latitudes of global gridpoints 
+    real(rk),dimension(:),           intent(in)  :: lons      !*FD Longitudes of global gridpoints 
+    real(sp),dimension(:,:),optional,intent(out) :: localsp   !*FD Local field on projected grid (output) sp
+    real(dp),dimension(:,:),optional,intent(out) :: localdp   !*FD Local field on projected grid (output) dp
+    real(sp),optional                            :: global_fn !*FD Function returning values in global field. This  
+                                                              !*FD may be used as an alternative to passing the
+                                                              !*FD whole array in \texttt{global} if, for instance the
+                                                              !*FD data-set is in a large file, being accessed point by point.
+                                                              !*FD In these circumstances, \texttt{global}
+                                                              !*FD may be of any size, and its contents are irrelevant.
 
     integer :: nxg,nyg,i,j,xbox,ybox
     real(rk) :: lat,lon,x,y
@@ -654,7 +654,9 @@ contains
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine new_upscale(ups,glon,glat,glon_bound,glat_bound,proj)
+  subroutine new_upscale(ups,grid,proj)
+
+    use glimmer_global_grid
 
     !*FD Compiles an index of which global grid box contains a given
     !*FD grid box on the projected grid, and sets derived type \texttt{ups}
@@ -663,14 +665,7 @@ contains
     ! Arguments
 
     type(upscale),         intent(out) :: ups        !*FD Upscaling type to be set
-    real(rk),dimension(:), intent(in)  :: glon       !*FD Longitudinal location of global 
-                                                     !*FD grid points (degrees)
-    real(rk),dimension(:), intent(in)  :: glat       !*FD Latitudinal location of global 
-                                                     !*FD grid points (degrees)
-    real(rk),dimension(:), intent(in)  :: glon_bound !*FD Longitudinal boundaries of global 
-                                                     !*FD grid boxes (degrees)
-    real(rk),dimension(:), intent(in)  :: glat_bound !*FD Latitudinal boundaries of global 
-                                                     !*FD grid boxes (degrees)
+    type(global_grid),     intent(in)  :: grid       !*FD Global grid to be used
     type(projection),      intent(in)  :: proj       !*FD Projection being used
     
     ! Internal variables
@@ -687,10 +682,10 @@ contains
 
     allocate(ups%gboxx(proj%nx,proj%ny))
     allocate(ups%gboxy(proj%nx,proj%ny))     
-    allocate(ups%gboxn(size(glon),size(glat)))
+    allocate(ups%gboxn(grid%nx,grid%ny))
 
-    gnx=size(glon) ; gny=size(glat)
-    nx=proj%nx ; ny=proj%ny
+    gnx=grid%nx ; gny=grid%ny
+    nx =proj%nx ; ny =proj%ny
 
     ups%gboxx=0 ; ups%gboxy=0
 
@@ -704,7 +699,7 @@ contains
             print*,'global index failure'
             stop
           endif  
-          if (lon_between(glon_bound(ii),glon_bound(ii+1),plon)) exit
+          if (lon_between(grid%lon_bound(ii),grid%lon_bound(ii+1),plon)) exit
           ii=ii+1
         enddo
 
@@ -716,7 +711,7 @@ contains
             print*,'global index failure'
             stop
           endif  
-          if ((glat_bound(jj)>=plat).and.(plat>glat_bound(jj+1))) exit
+          if ((grid%lat_bound(jj)>=plat).and.(plat>grid%lat_bound(jj+1))) exit
           jj=jj+1
         enddo
 

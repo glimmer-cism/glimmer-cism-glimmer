@@ -48,6 +48,7 @@ module glimmer_main
 
   use glimmer_global
   use glimmer_object
+  use glimmer_global_grid
 
   ! ------------------------------------------------------------
   ! GLIMMER_PARAMS derived type definition
@@ -58,35 +59,13 @@ module glimmer_main
   
     !*FD Derived type containing parameters relevant to all instances of 
     !*FD the model - i.e. those parameters which pertain to the global model. 
+  
+    ! Global grids used ----------------------------------------
 
-    ! Global grid dimensions -----------------------------------
+    type(global_grid) :: g_grid      !*FD The main global grid, used for 
+                                     !*FD input and most outputs
+    type(global_grid) :: g_grid_orog !*FD Global grid used for orography output.
 
-    integer :: nxg  = 0 !*FD Number of grid-points in $x$-direction, global input fields.
-    integer :: nyg  = 0 !*FD Number of grid-points in $x$-direction, global input fields.
-    integer :: nxgo = 0 !*FD Number of grid-points in $x$-direction, global output orography.
-    integer :: nygo = 0 !*FD Number of grid-points in $x$-direction, global output orography.
-                     
-    ! Arrays holding global grid-box information ---------------
-                                                     
-    real(rk),pointer,dimension(:) :: glat       => null() !*FD Latitudinal locations of 
-                                                          !*FD data-points in global fields (degrees)
-    real(rk),pointer,dimension(:) :: glon       => null() !*FD Longitudinal locations of 
-                                                          !*FD data-points in global fields (degrees)
-    real(rk),pointer,dimension(:) :: glat_bound => null() !*FD Latitudinal boundaries of 
-                                                          !*FD data-points in global fields (degrees)
-    real(rk),pointer,dimension(:) :: glon_bound => null() !*FD Longitudinal boundaries of 
-                                                          !*FD data-points in global fields (degrees)
-
-    ! Arrays holding global output orography grid information ---------------
-                                                     
-    real(rk),pointer,dimension(:) :: glat_orog   => null() !*FD Latitudinal locations of 
-                                                           !*FD data-points in output orography (degrees)
-    real(rk),pointer,dimension(:) :: glon_orog   => null() !*FD Longitudinal locations of 
-                                                           !*FD data-points in output orography (degrees)
-    real(rk),pointer,dimension(:) :: glat_b_orog => null() !*FD Latitudinal boundaries of 
-                                                           !*FD data-points in output orography (degrees)
-    real(rk),pointer,dimension(:) :: glon_b_orog => null() !*FD Longitudinal boundaries of 
-                                                           !*FD data-points in output orography (degrees)
     ! Ice model instances --------------------------------------
 
     integer                                     :: ninstances = 1       !*FD Number of ice model instances
@@ -134,12 +113,10 @@ module glimmer_main
   end type glimmer_params
 
   ! ------------------------------------------------------------
-  ! End of GLIMMER_PARAMS definition
+  ! global parameters/constants
   ! ------------------------------------------------------------
 
-  ! global parameters/constants ---------------------------------
-
-  integer,parameter  :: days_in_year=360                   !*FD The number of days in a year  
+  integer, parameter :: days_in_year=360                   !*FD The number of days in a year  
   real(rk),parameter :: pi=3.141592654                     !*FD The value of pi
   real(rk),parameter :: years2hours=24.0*days_in_year      !*FD Years to hours conversion factor
   real(rk),parameter :: hours2years=1/years2hours          !*FD Hours to years conversion factor
@@ -178,19 +155,23 @@ contains
 
     call glimmer_init_common(params%logf_unit,params)
 
-    ! Set up constants and arrays in the parameter structure
+    ! Set up constants and arrays in the parameter structure --------
 
     params%paramfile = paramfile
-    params%nxg       = size(longs)
-    params%nyg       = size(lats)
-    params%nxgo      = params%nxg
-    params%nygo      = params%nyg
+ 
+    ! Initialise main global grid -----------------------------------
 
-    ! Allocate arrays
+    call new_global_grid(params%g_grid,longs,lats)
+
+    ! Initialise orography grid identically at the moment -----------
+
+    call new_global_grid(params%g_grid_orog,longs,lats)
+
+    ! Allocate arrays -----------------------------------------------
 
     call glimmer_allocate_arrays(params)
 
-    ! Initialise arrays
+    ! Initialise arrays ---------------------------------------------
 
     params%g_av_precip  = 0.0
     params%g_av_temp    = 0.0
@@ -199,22 +180,6 @@ contains
     params%g_temp_range = 0.0
     params%g_av_zonwind = 0.0
     params%g_av_merwind = 0.0
-
-    ! Copy lats and lons over
-
-    params%glat=lats
-    params%glon=longs
-    params%glat_orog=lats
-    params%glon_orog=longs
-
-    ! ---------------------------------------------------------------
-    ! Calculate box boundaries
-    ! ---------------------------------------------------------------
-
-    call calc_bounds(params%glon,params%glat,params%glon_bound,params%glat_bound)
-   
-    params%glat_b_orog=params%glat_bound
-    params%glon_b_orog=params%glon_bound
 
     ! ---------------------------------------------------------------
     ! Open the namelist file and read in the parameters for each run,
@@ -255,10 +220,7 @@ contains
                                 fnamelist(i),        &
                                 params%instances(i), &
                                 params%radea,        &
-                                params%glon,         &
-                                params%glat,         &
-                                params%glon_bound,   &
-                                params%glat_bound,   &
+                                params%g_grid,       &
                                 params%tstep_main)
 
       params%total_coverage = params%total_coverage &
@@ -407,8 +369,8 @@ contains
                           params%logf_unit,             &
                           time*hours2years,             &
                           params%instances(i),          &
-                          params%glat,                  &
-                          params%glon,                  &
+                          params%g_grid%lats,                  &
+                          params%g_grid%lons,                  &
                           params%g_av_temp,             &
                           params%g_temp_range,          &
                           params%g_av_precip,           &
@@ -530,8 +492,8 @@ contains
       return
     endif
 
-    if (size(coverage,1).ne.params%nxg.or. &
-        size(coverage,2).ne.params%nyg) then
+    if (size(coverage,1).ne.params%g_grid%nx.or. &
+        size(coverage,2).ne.params%g_grid%ny) then
       glimmer_coverage_map=2
       return
     endif
@@ -595,12 +557,12 @@ contains
 
     open(unit,file=filename,form='unformatted')
     
-    write(unit) params% nxg
-    write(unit) params% nyg
-    write(unit) params% glat
-    write(unit) params% glon
-    write(unit) params% glat_bound
-    write(unit) params% glon_bound
+!    write(unit) params% nxg
+!    write(unit) params% nyg
+!    write(unit) params% glat
+!    write(unit) params% glon
+!    write(unit) params% glat_bound
+!    write(unit) params% glon_bound
     write(unit) params% ninstances
     write(unit) params% radea
     write(unit) params% tstep_main
@@ -649,10 +611,10 @@ contains
 
     integer :: i
 
-    if (associated(params%glat))           deallocate(params%glat)
-    if (associated(params%glon))           deallocate(params%glon)
-    if (associated(params%glat_bound))     deallocate(params%glat_bound)
-    if (associated(params%glon_bound))     deallocate(params%glon_bound)
+!    if (associated(params%glat))           deallocate(params%glat)
+!    if (associated(params%glon))           deallocate(params%glon)
+!    if (associated(params%glat_bound))     deallocate(params%glat_bound)
+!    if (associated(params%glon_bound))     deallocate(params%glon_bound)
     if (associated(params%instances))      deallocate(params%instances)
     if (associated(params%g_av_precip))    deallocate(params%g_av_precip)
     if (associated(params%g_av_temp))      deallocate(params%g_av_temp)
@@ -668,15 +630,15 @@ contains
 
     open(unit,file=filename,form='unformatted')
 
-    read(unit) params% nxg
-    read(unit) params% nyg
+!    read(unit) params% nxg
+!    read(unit) params% nyg
 
     call glimmer_allocate_arrays(params)
 
-    read(unit) params% glat
-    read(unit) params% glon
-    read(unit) params% glat_bound
-    read(unit) params% glon_bound
+!    read(unit) params% glat
+!    read(unit) params% glon
+!    read(unit) params% glat_bound
+!    read(unit) params% glon_bound
     read(unit) params% ninstances
     read(unit) params% radea
     read(unit) params% tstep_main
@@ -699,7 +661,7 @@ contains
     allocate(params%instances(params%ninstances))
 
     do i=1,params%ninstances
-      call glimmer_i_read_restart(params%instances(i),unit,params%nxg,params%nyg)
+!      call glimmer_i_read_restart(params%instances(i),unit,params%nxg,params%nyg)
     enddo  
 
     close(unit)
@@ -725,63 +687,57 @@ contains
     real(dp),dimension(:),optional,intent(in)    :: lonb   !*FD Global grid-box boundaries in longitude (degrees)
     real(dp),dimension(:),optional,intent(in)    :: latb   !*FD Global grid-box boundaries in latitude (degrees)
 
-    integer :: i
- 
-    ! Setup sizes
+    integer :: i, args
 
-    params%nxgo=size(lons) ; params%nygo=size(lats)
+    ! Reset grid variable - the call varies according to the optional arguments
 
-    ! Deallocate arrays if necessary
+    args=0
 
-    if (associated(params%glat_orog))   deallocate(params%glat_orog)
-    if (associated(params%glon_orog))   deallocate(params%glon_orog)
-    if (associated(params%glat_b_orog)) deallocate(params%glat_b_orog)
-    if (associated(params%glon_b_orog)) deallocate(params%glon_b_orog)
+    if (present(lonb)) args=args+1
+    if (present(latb)) args=args+2
+
+    select case(args)
+    case(0)
+      call new_global_grid(params%g_grid_orog,lons,lats)
+    case(1)
+      call new_global_grid(params%g_grid_orog,lons,lats,lonb=lonb)
+    case(2)
+      call new_global_grid(params%g_grid_orog,lons,lats,latb=latb)
+    case(3)
+      call new_global_grid(params%g_grid_orog,lons,lats,lonb=lonb,latb=latb)
+    end select
+
+    ! Deallocate and reallocate coverage maps
 
     if (associated(params%total_cov_orog)) deallocate(params%total_cov_orog)
     if (associated(params%cov_norm_orog))  deallocate(params%cov_norm_orog)
 
-    ! Allocate necessary arrays in top-level parameters type
-
-    allocate(params%glat_orog  (params%nygo))
-    allocate(params%glon_orog  (params%nxgo))
-    allocate(params%glat_b_orog(params%nygo+1))
-    allocate(params%glon_b_orog(params%nxgo+1))
-
-    allocate(params%total_cov_orog(params%nxgo,params%nygo))
-    allocate(params%cov_norm_orog (params%nxgo,params%nygo))
-   
-    ! Calculate boundaries by 'halfway' method, if either boundary
-    ! array is absent
-
-    if (.not.present(lonb).or..not.present(latb)) then
-      call calc_bounds(lons,lats,params%glon_b_orog,params%glat_b_orog)
-    endif
-
-    ! Now copy in any boundary array that is present
-
-    if (present(lonb)) params%glon_b_orog=lonb
-    if (present(latb)) params%glat_b_orog=latb
+    allocate(params%total_cov_orog(params%g_grid_orog%nx,params%g_grid_orog%ny))
+    allocate(params%cov_norm_orog (params%g_grid_orog%nx,params%g_grid_orog%ny))
 
     ! Index global boxes
 
     params%total_cov_orog=0.0
 
     do i=1,params%ninstances
+
       call new_upscale(params%instances(i)%ups_orog, &
-                       lons,lats,params%glon_b_orog, &
-                       params%glat_b_orog,params%instances(i)%proj)
+                       params%g_grid_orog, &
+                       params%instances(i)%proj)
+
       if (associated(params%instances(i)%frac_cov_orog)) &
                              deallocate(params%instances(i)%frac_cov_orog)
-      allocate(params%instances(i)%frac_cov_orog(params%nxgo,params%nygo))
+      allocate(params%instances(i)%frac_cov_orog(params%g_grid_orog%nx,params%g_grid_orog%ny))
+
       call calc_coverage(params%instances(i)%proj, &
                          params%instances(i)%ups_orog,&             ! Calculate coverage map
-                         real(360.0/size(params%glon_orog),rk), &
-                         params%glat_b_orog, &
+                         real(360.0/params%g_grid_orog%nx,rk), &
+                         params%g_grid_orog%lat_bound, &
                          params%instances(i)%proj%dx, &
                          params%instances(i)%proj%dy, &
                          params%radea, &
                          params%instances(i)%frac_cov_orog)
+
       params%total_cov_orog = params%total_cov_orog &
                    + params%instances(i)%frac_cov_orog
 
@@ -804,25 +760,19 @@ contains
 
     type(glimmer_params),intent(inout) :: params !*FD ice model parameters
 
-    allocate(params%glat        (params%nyg))
-    allocate(params%glon        (params%nxg))
-    allocate(params%glat_bound  (params%nyg+1))
-    allocate(params%glon_bound  (params%nxg+1))
-    allocate(params%glat_orog   (params%nygo))
-    allocate(params%glon_orog   (params%nxgo))
-    allocate(params%glat_b_orog (params%nygo+1))
-    allocate(params%glon_b_orog (params%nxgo+1))
-    allocate(params%g_av_precip (params%nxg,params%nyg))
-    allocate(params%g_av_temp   (params%nxg,params%nyg))
-    allocate(params%g_max_temp  (params%nxg,params%nyg))
-    allocate(params%g_min_temp  (params%nxg,params%nyg))
-    allocate(params%g_temp_range(params%nxg,params%nyg))
-    allocate(params%g_av_zonwind(params%nxg,params%nyg))
-    allocate(params%g_av_merwind(params%nxg,params%nyg))
-    allocate(params%total_coverage(params%nxg,params%nyg))
-    allocate(params%cov_normalise(params%nxg,params%nyg))
-    allocate(params%total_cov_orog(params%nxgo,params%nygo))
-    allocate(params%cov_norm_orog(params%nxgo,params%nygo))
+    allocate(params%g_av_precip (params%g_grid%nx,params%g_grid%ny))
+    allocate(params%g_av_temp   (params%g_grid%nx,params%g_grid%ny))
+    allocate(params%g_max_temp  (params%g_grid%nx,params%g_grid%ny))
+    allocate(params%g_min_temp  (params%g_grid%nx,params%g_grid%ny))
+    allocate(params%g_temp_range(params%g_grid%nx,params%g_grid%ny))
+    allocate(params%g_av_zonwind(params%g_grid%nx,params%g_grid%ny))
+    allocate(params%g_av_merwind(params%g_grid%nx,params%g_grid%ny))
+
+    allocate(params%total_coverage(params%g_grid%nx,params%g_grid%ny))
+    allocate(params%cov_normalise (params%g_grid%nx,params%g_grid%ny))
+
+    allocate(params%total_cov_orog(params%g_grid_orog%nx,params%g_grid_orog%ny))
+    allocate(params%cov_norm_orog (params%g_grid_orog%nx,params%g_grid_orog%ny))
 
   end subroutine glimmer_allocate_arrays
 

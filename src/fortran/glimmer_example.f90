@@ -182,6 +182,7 @@ program glimmer_example
     call glimmer(ice_sheet,time,temp,precip,zonwind,merwind,orog, &
                  orog_out=orog_out,albedo=albedo,output_flag=out, &
                  ice_frac=ice_frac,fw_flux=fw) 
+    print*,out
   enddo
   call end_glimmer(ice_sheet)
 
