@@ -46,6 +46,7 @@ module glint_mbal
   use glimmer_daily_pdd
   use glimmer_enmabal
   use glimmer_global
+  use smb_mecons
 
   implicit none
 
@@ -54,6 +55,7 @@ module glint_mbal
   type glint_mbal_params
     type(glimmer_pdd_params),      pointer :: annual_pdd => null() !*FD Pointer to annual PDD params
     type(glimmer_daily_pdd_params),pointer :: daily_pdd => null()  !*FD Pointer to daily PDD params
+    type(smb_params),              pointer :: smb => null()        !*FD Pointer to SMB params
     integer :: which !*FD Flag for chosen mass-balance type
     integer :: tstep !*FD Timestep of mass-balance scheme in hours
   end type glint_mbal_params
@@ -80,6 +82,7 @@ contains
   
     if (associated(params%annual_pdd)) deallocate(params%annual_pdd)
     if (associated(params%daily_pdd))  deallocate(params%daily_pdd)
+    if (associated(params%smb))        deallocate(params%smb)
 
     ! Allocate desired type and initialise
     ! Also check we have a valid value of which
@@ -93,8 +96,11 @@ contains
       params%tstep=years2hours
     case(3)
       ! The energy-balance model will go here...
+      allocate(params%smb)
+!      call SMBInitWrapper(params%smb,nx,ny,dx,mindt,'smb_config/online')
       call enmabal_init
       call write_log('Energy-balance mass-balance model not implemented yet',GM_FATAL,__FILE__,__LINE__)
+      ! timestep is 30 mins
       params%tstep=1
     case(4)
       allocate(params%daily_pdd)
@@ -130,6 +136,9 @@ contains
        acab = prcp
     case(3)
        ! The energy-balance model will go here...
+       ! NB SLM will be thickness array...
+!       call SMBStepWrapper(params%smb,totacc,totrn,totcon,totoff,massbal, &
+!            SLM,Ta,prec,U10m,V10m,hum,SWdown,LWdown,Psurf)
        call enmabal
        call write_log('Energy-balance mass-balance model not implemented yet',GM_FATAL,__FILE__,__LINE__)
     case(4)
