@@ -1,3 +1,8 @@
+2004-06-18 Magnus Hagdorn
+ * glimmer_CFproj.f90: make a distinction between polar_stereographic and 
+   general stereographic projections. Add a standard parallel to 
+   polar_stereographic
+
 2004-06-16 Magnus Hagdorn
  * minor documentation fixes
 
