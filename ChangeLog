@@ -1,3 +1,10 @@
+2004-08-13 Magnus Hagdorn
+ * fixed bug in glimmer_thck.f90: size of opvrew,opvrns is different from ipvr so where
+   construct cannot be used
+ * fixed bug in glimmer_velo.f90: last row/column of calculations was missed
+ * fixed bug where constant was only set on first pass (glimmer_temp.f90, glimmer_modu.f90)
+ * fixed bug in glide_pdd.f90: sp is already loaded
+	
 2004-08-12 Ian Rutt
  * Added comments to several files: glide_pdd.f90, glimmer_CFproj.f90,
    glimmer_config.f90, glimmer_example.f90.

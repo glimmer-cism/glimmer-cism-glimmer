@@ -1058,7 +1058,7 @@ contains
       blim = (/ 0.00001 / thk0, 0.001 / thk0 /)
 
     real(dp), parameter :: smthf = 0.01d0 
-    real(dp) :: estimate, dwphidew, dwphidns, dwphi, watvel, pmpt, bave
+    real(dp) :: estimate, dwphidew, dwphidns, dwphi, pmpt, bave
     real(dp), dimension(:,:), allocatable :: wphi, bwatu, bwatv, fluxew, fluxns, bint, smth
   
     integer :: t_wat,ns,ew
@@ -1121,8 +1121,8 @@ contains
   
       if (model%tempwk%first5) then
     
-        watvel = model%paramets%hydtim * tim0 / (scyr * len0)
-        estimate = (0.2d0 * watvel) / min(model%numerics%dew,model%numerics%dns)
+        model%tempwk%watvel = model%paramets%hydtim * tim0 / (scyr * len0)
+        estimate = (0.2d0 * model%tempwk%watvel) / min(model%numerics%dew,model%numerics%dns)
         call find_dt_wat(model%numerics%dttem,estimate,model%tempwk%dt_wat,model%tempwk%nwat) 
 
         write(outtxt,*) model%numerics%dttem*tim0/scyr, model%tempwk%dt_wat*tim0/scyr, model%tempwk%nwat
@@ -1181,7 +1181,7 @@ contains
               dwphidew = (wphi(ew+1,ns) - wphi(ew-1,ns)) / model%tempwk%c(3)       
               dwphidns = (wphi(ew,ns+1) - wphi(ew,ns-1)) / model%tempwk%c(4)  
 
-              dwphi = - watvel / sqrt(dwphidew**2 + dwphidns**2)
+              dwphi = - model%tempwk%watvel / sqrt(dwphidew**2 + dwphidns**2)
   
               bwatu(ew,ns) = dwphi * dwphidew  
               bwatv(ew,ns) = dwphi * dwphidns  

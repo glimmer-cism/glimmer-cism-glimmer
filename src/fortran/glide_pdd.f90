@@ -320,8 +320,6 @@ contains
     !*FD \exp\left(\frac{-(T_a-T_{a}')^2}{2\sigma^2}\right)\,dTdt
     !*FD \end{equation}
 
-    use glimmer_global, only : sp
-         
     implicit none
 
     real(sp), intent(in) :: artm      !*FD The annual mean air temperature (degC)

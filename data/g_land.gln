@@ -11,7 +11,7 @@ latc=71.0
 lonc=321.0/
 g_land.gls
 &opts
-whichtemp = 0
+whichtemp = 1
 whichartm = 3
 whichthck = 4
 whichflwa = 1

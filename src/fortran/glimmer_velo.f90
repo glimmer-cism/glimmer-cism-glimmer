@@ -495,7 +495,7 @@ contains
     ! Get some values for the domain size by checking sizes of input arrays
     !------------------------------------------------------------------------------------
 
-    upn=size(uvel,1) ; ewn=size(uvel,2)-1 ; nsn=size(uvel,3)-1
+    upn=size(uvel,1) ; ewn=size(uvel,2) ; nsn=size(uvel,3)
 
     !------------------------------------------------------------------------------------
     ! Do initial set-up, if not already done before

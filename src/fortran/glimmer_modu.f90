@@ -525,6 +525,7 @@ module glimmer_types
     real(dp) :: dupn        = 0.0
     real(dp) :: wmax        = 0.0
     real(dp) :: dt_wat      = 0.0
+    real(dp) :: watvel      = 0.0
     integer  :: nwat        = 0
     logical  :: first1      = .true.
     logical  :: first2      = .true.

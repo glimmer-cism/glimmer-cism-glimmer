@@ -317,6 +317,7 @@ contains
     real(dp), intent(in), dimension(:,:) :: ipvr, stagthck
 
     real(dp) :: dew2, dns2 
+    integer :: ew,ns,ewn,nsn
 
     ! Obviously we don't need to do this every time,
     ! but will do so for the moment.
@@ -324,13 +325,20 @@ contains
     dew2 = 2.0d0 * numerics%dew
     dns2 = 2.0d0 * numerics%dns
 
-    where (stagthck /= 0.0d0)
-      opvrew = (cshift(cshift(ipvr,1,2),1,1) + cshift(ipvr,1,1) - ipvr - cshift(ipvr,1,2)) / dew2
-      opvrns = (cshift(cshift(ipvr,1,2),1,1) + cshift(ipvr,1,2) - ipvr - cshift(ipvr,1,1)) / dns2
-    elsewhere
-      opvrew = 0.0d0
-      opvrns = 0.0d0
-    end where
+    ewn=size(ipvr,1)
+    nsn=size(ipvr,2)
+ 	 
+    do ns=1,nsn-1
+       do ew = 1,ewn-1
+          if (stagthck(ew,ns) /= 0.0d0) then
+             opvrew(ew,ns) = (ipvr(ew+1,ns+1)+ipvr(ew+1,ns)-ipvr(ew,ns)-ipvr(ew,ns+1)) * dew2
+             opvrns(ew,ns) = (ipvr(ew+1,ns+1)+ipvr(ew,ns+1)-ipvr(ew,ns)-ipvr(ew+1,ns)) * dns2
+          else
+             opvrew(ew,ns) = 0.
+             opvrns(ew,ns) = 0.
+          end if
+       end do
+    end do
 
   end subroutine geomders
 
