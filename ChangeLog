@@ -1,3 +1,6 @@
+2005-02-28 Magnus Hagdorn
+ * g_land.config: renamed I/O section
+
 2005-02-26 Magnus Hagdorn
  * bumped version to 0.3
  * physics.tex: removed mb section since Ian resurrected it elsewhere
