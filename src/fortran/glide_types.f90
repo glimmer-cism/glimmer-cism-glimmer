@@ -292,6 +292,7 @@ module glide_types
     real(sp) :: grid    = 0.0    !*FD
     integer  :: tpt     = 0      !*FD Pointer to time series data
     logical  :: first1  = .true. !*FD
+    logical  :: newtemps = .false. !*FD new temperatures
   end type glide_temper
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

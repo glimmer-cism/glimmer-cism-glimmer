@@ -122,8 +122,9 @@ contains
 
   end subroutine glide_initialise
   
-  subroutine glide_tstep(model,time)
-    !*FD Performs time-step of an ice model instance.
+  subroutine glide_tstep_p1(model,time)
+    !*FD Performs first part of time-step of an ice model instance.
+    !*FD calculate velocity and temperature
     use glimmer_global, only : rk
     use glimmer_ncfile
     use glide_isot
@@ -137,14 +138,9 @@ contains
     type(glide_global_type) :: model        !*FD model instance
     real(rk),  intent(in)   :: time         !*FD Current time in years
 
-    ! local variables
-    logical :: newtemps
-
     ! Update internal clock
     model%numerics%time=time  
-    ! and possibly write to file
-    call writeall(model)
-    newtemps = .false.
+    model%temper%newtemps = .false.
 
     ! ------------------------------------------------------------------------ 
     ! Calculate various derivatives...
@@ -212,8 +208,30 @@ contains
     ! ------------------------------------------------------------------------ 
     if ( model%numerics%tinc >  mod(model%numerics%time,model%numerics%ntem)) then
        call timeevoltemp(model, model%options%whichtemp)
-       newtemps = .true.
+       model%temper%newtemps = .true.
     end if
+  end subroutine glide_tstep_p1
+
+
+  subroutine glide_tstep_p2(model)
+    !*FD Performs second part of time-step of an ice model instance.
+    !*FD write data and move ice
+    use glimmer_global, only : rk
+    use glimmer_ncfile
+    use glide_isot
+    use glide_thck
+    use glide_velo
+    use glide_setup
+    use glide_temp
+    use glide_mask
+    implicit none
+
+    type(glide_global_type) :: model        !*FD model instance
+
+    ! ------------------------------------------------------------------------ 
+    ! write to netCDF file
+    ! ------------------------------------------------------------------------ 
+    call writeall(model)
 
     ! ------------------------------------------------------------------------ 
     ! Calculate flow evolution by various different methods
@@ -243,7 +261,7 @@ contains
 
     case(2) ! Use non-linear calculation that incorporates velocity calc -----
 
-       call nonlevolthck(model, 0, newtemps, 6) !magi a hack, someone explain what whichthck=5 does
+       call nonlevolthck(model, 0, model%temper%newtemps, 6) !magi a hack, someone explain what whichthck=5 does
 
     end select
 
@@ -282,7 +300,7 @@ contains
     call glide_calclsrf(model%geometry%thck, model%geometry%topg, model%climate%eus, model%geometry%lsrf)
     model%geometry%usrf = max(0.d0,model%geometry%thck + model%geometry%lsrf)
 
-  end subroutine glide_tstep
+  end subroutine glide_tstep_p2
 
   subroutine glide_finalise(model)
     !*FD finalise GLIDE model instance

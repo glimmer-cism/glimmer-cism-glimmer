@@ -258,6 +258,11 @@ contains
        instance%model%climate%acab = 0.0
     end if
 
+    ! ------------------------------------------------------------------------
+    ! do the first part of the glide time step
+    ! ------------------------------------------------------------------------
+    call glide_tstep_p1(instance%model,time)
+    
     ! write glint data to file
     call glint_writeall(instance)
 
@@ -333,8 +338,11 @@ contains
        t_wout = sum(ablat_temp)*f1*1000.0*instance%proj%dx*instance%proj%dy
     endif
 
-    ! do the glide time step
-    call glide_tstep(instance%model,time)
+    ! ------------------------------------------------------------------------
+    ! do the second part of the glide time step
+    ! ------------------------------------------------------------------------
+    call glide_tstep_p2(instance%model)
+
 
     ! ------------------------------------------------------------------------ 
     ! Upscaling of output
