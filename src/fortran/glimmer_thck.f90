@@ -563,12 +563,12 @@ contains
 
     implicit none 
 
-    type(glimmer_thckwk) :: thckwk
-    real(dp), intent(out), dimension(:,:) :: opvr 
-    real(dp), intent(in), dimension(:,:) :: ipvr
-    real(sp), intent(in) :: time 
-    integer, intent(in), dimension(:,:) :: mask
-    integer, intent(in) :: which
+    type(glimmer_thckwk),   intent(inout) :: thckwk
+    real(dp),dimension(:,:),intent(in)    :: ipvr
+    real(dp),dimension(:,:),intent(out)   :: opvr 
+    integer, dimension(:,:),intent(in)    :: mask
+    real(sp),               intent(in)    :: time 
+    integer,                intent(in)    :: which
 
     where (mask /= 0)
        opvr = conv * (ipvr - thckwk%olds(:,:,which)) / (time - thckwk%oldtime)
@@ -592,6 +592,7 @@ contains
     use paramets, only : len0
 
     use glide_pdd
+    use glide_enmabal
     use glimmer_types
     use glide_messages
 
@@ -647,6 +648,9 @@ contains
        call masbgrn(pddcalc,artm,arng,prcp,lati,ablt,acab) 
     case(2) 
        acab = prcp
+    case(3)
+!       call enmabal
+ 	   call masbgrn(pddcalc,artm,arng,prcp,lati,ablt,acab)
     case default
        call glide_msg(GM_FATAL,__FILE__,__LINE__,'Unrecognised value of whichacab')
     end select

@@ -748,9 +748,6 @@ contains
       do ew = 2,ewn
         if (thck(ew,ns) > numerics%thklim) then
 
-          ! Why are these results stored in wchk? The resulting array is not used
-          ! later on!
-
           wchk(ew,ns) = geomderv%dusrfdtm(ew,ns) &
                       - acab(ew,ns) &
                       + (sum(uvel(ew-1:ew,ns-1:ns)) * sum(geomderv%dusrfdew(ew-1:ew,ns-1:ns)) &

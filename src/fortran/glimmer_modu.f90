@@ -180,6 +180,7 @@ module glimmer_types
     !*FD \item[0] EISMINT moving margin 
     !*FD \item[1] PDD mass-balance model [recommended] 
     !*FD \item[2] Accumulation only 
+    !*FD \item[3] Energy-mass-balance model
     !*FD \end{description}
 
     integer :: whichevol = 0
@@ -315,6 +316,9 @@ module glimmer_types
                                                           !*FD should be considered or ignored 
                                                           !*FD when upscaling data for output. 
                                                           !*FD 1 means use, 0 means ignore.
+    real(sp),dimension(:,:),pointer :: prcp_save => null() !*FD used to accumulate precip
+ 	  real(sp),dimension(:,:),pointer :: ablt_save => null() !*FD used to accumulate ablation
+ 	  real(sp),dimension(:,:),pointer :: acab_save => null() !*FD used to accumulate mass-balance
     real(sp) :: uprecip_rate =   0.5 !*FD Uniform precipitaion rate in m/a
     real(sp) :: usurftemp    = -20.0 !*FD Uniform surface temperature in $^{\circ}$C.
     real(sp) :: ice_albedo   =   0.4 !*FD Ice albedo. (fraction)
@@ -375,8 +379,13 @@ module glimmer_types
 
     !*FD Parameters relating to the model numerics.
 
+    ! Note that ntem, nvel and niso are specified as multiples of the main timestep in
+    ! the configuration file, but the variables are initialise with the actual value of
+    ! the timestep in hours.
+
     real(sp) :: time   =    0.0   !*FD main loop counter in years
     real(sp) :: tinc   =   20.0   !*FD time step of main loop in years 
+    real(sp) :: tinc_mbal = 1.0   !*FD mass-balance scheme timestep in years (set internally)
     real(sp) :: ntem   =    1.0   !*FD temperature time step in years
     real(sp) :: nvel   =    1.0   !*FD velocity time step in years
     real(sp) :: niso   =    1.0   !*FD flexure time step in years

@@ -95,6 +95,12 @@ module glimmer_object
     
     !*FD Fractional coverage of each global gridbox by the projected grid (orography).
 
+    ! Accumulation information --------------------------------------------------
+ 	 
+    real(rk) :: accum_start = 0.0 ! Time when mass-balance accumulation started
+    logical  :: first_accum = .true.  ! First time accumulation (difference from first, since
+                                      ! that relates to first dynamics step)
+
   end type glimmer_instance
 
   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -117,8 +123,8 @@ module glimmer_object
 
 contains
 
-  subroutine glimmer_i_initialise(unit,nmlfile,instance,radea,grid,time_step,start_time)
-
+  subroutine glimmer_i_initialise(unit,nmlfile,instance,radea,grid,time_step,tstep_mbal,start_time)
+ 
     !*FD Initialise an ice model (glimmer) instance
 
     use glimmer_setup
@@ -136,6 +142,7 @@ contains
     real(rk),              intent(in)    :: radea       !*FD Radius of the earth (m).
     type(global_grid),     intent(in)    :: grid        !*FD Global grid to use
     real(rk),              intent(in)    :: time_step   !*FD Model time-step (years).
+    real(rk),              intent(out)   :: tstep_mbal  !*FD Mass-balance time-step (years).
     real(rk),optional,     intent(in)    :: start_time  !*FD Start time of model (years).
 
     ! Internal variables
@@ -172,7 +179,8 @@ contains
 
     call openall_out(instance%model)                            ! Initialise output files
     call writeall(instance%model)
-
+    tstep_mbal=instance%model%numerics%tinc_mbal      ! Initialise the mass-balance timestep
+ 	 
   end subroutine glimmer_i_initialise
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -225,7 +233,7 @@ contains
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine glimmer_i_tstep(unit,logunit,time,instance,lats,lons,g_temp,g_temp_range, &
+  subroutine glimmer_i_tstep(unit,logunit,time,instance,g_temp,g_temp_range, &
                           g_precip,g_zonwind,g_merwind,g_orog,g_orog_out,g_albedo,g_ice_frac,&
                           g_water_in,g_water_out,t_win,t_wout,ice_vol,out_f)
 
@@ -255,8 +263,6 @@ contains
     integer,                intent(in)   :: logunit      !*FD Unit for log file
     real(rk),               intent(in)   :: time         !*FD Current time in years
     type(glimmer_instance), intent(inout):: instance     !*FD Model instance
-    real(rk),dimension(:),  intent(in)   :: lats         !*FD Latitudes of global grid points (degrees north)
-    real(rk),dimension(:),  intent(in)   :: lons         !*FD Longitudes of global grid points (degrees east)
     real(rk),dimension(:,:),intent(in)   :: g_temp       !*FD Global mean surface temperature field ($^{\circ}$C)
     real(rk),dimension(:,:),intent(in)   :: g_temp_range !*FD Global surface temperature half-range field ($^{\circ}$C)
     real(rk),dimension(:,:),intent(in)   :: g_precip     !*FD Global precip field total (mm)
