@@ -85,4 +85,15 @@ clean :
 f90_dep.mak: *.f90
 	python ../python/f90_dependencies.py -o $@ $^
 
+#some special rules for automatically generating ncdf src code	 
+# ncdf.f90:       ncdf_vars.def ncdf.f90.in	 
+#                 python ../python/generate_ncvars.py $< $@.in        	 
+# ncdf_file.f90:  ncdf_vars.def ncdf_file.f90.in	 
+#                 python ../python/generate_ncvars.py $< $@.in        	 
+# ncdf_infile.f90:        ncdf_vars.def ncdf_infile.f90.in	 
+#                 python ../python/generate_ncvars.py $< $@.in        	 
+# ncdf_params.f90:        ncdf_vars.def ncdf_params.f90.in	 
+#                 python ../python/generate_ncvars.py $< $@.in        
+
 include f90_dep.mak 
+
