@@ -133,10 +133,11 @@ contains
                                                                 ! This may be redundant, though.
     call new_upscale(instance%ups,grid,instance%proj)           ! Index global boxes
 
-    call calc_coverage(instance%proj,instance%ups,&             ! Calculate coverage map
-                       dlon,grid%lat_bound, &
-                       instance%proj%dx,instance%proj%dy, &
-                       radea,instance%frac_coverage)
+    call calc_coverage(instance%proj, &                         ! Calculate coverage map
+                       instance%ups,  &             
+                       grid,          &
+                       radea,         &
+                       instance%frac_coverage)
 
     call copy_upscale(instance%ups,instance%ups_orog)    ! Set upscaling for orog output to same as for 
                                                          ! other fields.
@@ -723,7 +724,7 @@ contains
     ! Arguments
 
     type(glimmer_global_type),intent(inout) :: model !*FD Model to be tidyed-up.
-    integer,               intent(in)    :: unit  !*FD Logical file unit to use for writing.
+    integer,                  intent(in)    :: unit  !*FD Logical file unit to use for writing.
 
     ! Beginning of code
 
@@ -750,9 +751,9 @@ contains
 
     ! Arguments
 
-    integer,            intent(in)    :: unit     !*FD Logical file unit to use
+    integer,               intent(in)    :: unit     !*FD Logical file unit to use
     type(glimmer_instance),intent(inout) :: instance !*FD Instance being initialised
-    character(*),       intent(in)    :: filename !*FD Filename of namelist file
+    character(*),          intent(in)    :: filename !*FD Filename of namelist file
 
     ! Internal variables
 
@@ -784,40 +785,36 @@ contains
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine calc_coverage(proj,ups,dlon,latb,dx,dy,radea,frac_coverage)
+  subroutine calc_coverage(proj,ups,grid,radea,frac_coverage)
 
     !*FD Calculates the fractional
     !*FD coverage of the global grid-boxes by the ice model
     !*FD domain.
 
     use glimmer_project
+    use glimmer_global_grid
     use gmt, only: D2R
 
     ! Arguments
 
-    type(projection),       intent(in)  :: proj         !*FD Projection to be used
-    type(upscale),          intent(in)  :: ups          !*FD Upscaling used
-    real(rk),dimension(:),  intent(in)  :: latb         !*FD Latitudinal boundaries of grid-boxes (degrees)
-    real(rk),               intent(in)  :: dlon         !*FD Longitudinal grid-box size (degrees)
-    real(rk),               intent(in)  :: dx           !*FD $x$-size of grid-boxes
-    real(rk),               intent(in)  :: dy           !*FD $y$-size of grid-boxes
-    real(rk),               intent(in)  :: radea        !*FD Radius of the earth (m)
-    real(rk),dimension(:,:),intent(out) :: frac_coverage !*FD Map of fractional coverage of global by local grid-boxes
-
+    type(projection),       intent(in)  :: proj          !*FD Projection to be used
+    type(upscale),          intent(in)  :: ups           !*FD Upscaling used
+    type(global_grid),      intent(in)  :: grid          !*FD Global grid used
+    real(rk),               intent(in)  :: radea         !*FD Radius of the earth (m)
+    real(rk),dimension(:,:),intent(out) :: frac_coverage !*FD Map of fractional 
+                                                         !*FD coverage of global by local grid-boxes.
     ! Internal variables
 
-    integer,dimension(size(ups%gboxx,1),size(ups%gboxx,2)) :: tempmask
-    integer :: nxg,nyg,i,j
+    integer,dimension(proj%nx,proj%ny) :: tempmask
+    integer :: i,j
     real(rk) :: stm
 
     ! Beginning of code
 
-    nxg=size(frac_coverage,1) ; nyg=size(frac_coverage,2)
-
     tempmask=0
 
-    do i=1,nxg
-      do j=1,nyg
+    do i=1,grid%nx
+      do j=1,grid%ny
         where (ups%gboxx==i.and.ups%gboxy==j)
           tempmask=1
         elsewhere
@@ -827,20 +824,19 @@ contains
         if (stm==0) then
           frac_coverage(i,j)=0.0
         else
-          frac_coverage(i,j)=stm*dx*dy
-          frac_coverage(i,j)=frac_coverage(i,j)/ &
-                 (dlon*D2R*radea**2*    &
-                 (sin(latb(j)*D2R)-sin(latb(j+1)*D2R)))
+          frac_coverage(i,j)=(stm*proj%dx*proj%dy)/ &
+                 ((grid%lon_bound(i+1)-grid%lon_bound(i))*D2R*radea**2*    &
+                 (sin(grid%lat_bound(j)*D2R)-sin(grid%lat_bound(j+1)*D2R)))
         endif
       enddo
     enddo  
 
-    ! Fix points that should be 1.0 by checking thir surroundings
+    ! Fix points that should be 1.0 by checking their surroundings
 
     ! Interior points first
 
-    do i=2,nxg-1
-      do j=2,nyg-1
+    do i=2,grid%nx-1
+      do j=2,grid%ny-1
         if ((frac_coverage(i,j).ne.0).and. &
             (frac_coverage(i+1,j).ne.0).and. &
             (frac_coverage(i,j+1).ne.0).and. &
@@ -852,57 +848,57 @@ contains
 
     ! top and bottom edges
 
-    do i=2,nxg/2
+    do i=2,grid%nx/2
       if ((frac_coverage(i,1).ne.0).and. &
           (frac_coverage(i+1,1).ne.0).and. &
           (frac_coverage(i,2).ne.0).and. &
           (frac_coverage(i-1,1).ne.0).and. &
-          (frac_coverage(i+nxg/2,1).ne.0)) &
+          (frac_coverage(i+grid%nx/2,1).ne.0)) &
                       frac_coverage(i,1)=1.0
     enddo
 
-    do i=nxg/2+1,nxg-1
+    do i=grid%nx/2+1,grid%nx-1
       if ((frac_coverage(i,1).ne.0).and. &
           (frac_coverage(i+1,1).ne.0).and. &
           (frac_coverage(i,2).ne.0).and. &
           (frac_coverage(i-1,1).ne.0).and. &
-          (frac_coverage(i-nxg/2,1).ne.0)) &
+          (frac_coverage(i-grid%nx/2,1).ne.0)) &
                       frac_coverage(i,1)=1.0
     enddo
 
-    do i=2,nxg/2
-      if ((frac_coverage(i,nyg).ne.0).and. &
-          (frac_coverage(i+1,nyg).ne.0).and. &
-          (frac_coverage(i+nxg/2,nyg).ne.0).and. &
-          (frac_coverage(i-1,nyg).ne.0).and. &
-          (frac_coverage(i,nyg-1).ne.0)) &
-                      frac_coverage(i,nyg)=1.0
+    do i=2,grid%nx/2
+      if ((frac_coverage(i,grid%ny).ne.0).and. &
+          (frac_coverage(i+1,grid%ny).ne.0).and. &
+          (frac_coverage(i+grid%nx/2,grid%ny).ne.0).and. &
+          (frac_coverage(i-1,grid%ny).ne.0).and. &
+          (frac_coverage(i,grid%ny-1).ne.0)) &
+                      frac_coverage(i,grid%ny)=1.0
     enddo
 
-    do i=nxg/2+1,nxg-1
-      if ((frac_coverage(i,nyg).ne.0).and. &
-          (frac_coverage(i+1,nyg).ne.0).and. &
-          (frac_coverage(i-nxg/2,nyg).ne.0).and. &
-          (frac_coverage(i-1,nyg).ne.0).and. &
-          (frac_coverage(i,nyg-1).ne.0)) &
-                      frac_coverage(i,nyg)=1.0
+    do i=grid%nx/2+1,grid%nx-1
+      if ((frac_coverage(i,grid%ny).ne.0).and. &
+          (frac_coverage(i+1,grid%ny).ne.0).and. &
+          (frac_coverage(i-grid%nx/2,grid%ny).ne.0).and. &
+          (frac_coverage(i-1,grid%ny).ne.0).and. &
+          (frac_coverage(i,grid%ny-1).ne.0)) &
+                      frac_coverage(i,grid%ny)=1.0
     enddo
  
     ! left and right edges
 
-    do j=2,nyg-1
+    do j=2,grid%ny-1
       if ((frac_coverage(1,j).ne.0).and. &
           (frac_coverage(2,j).ne.0).and. &
           (frac_coverage(1,j+1).ne.0).and. &
-          (frac_coverage(nxg,j).ne.0).and. &
+          (frac_coverage(grid%nx,j).ne.0).and. &
           (frac_coverage(1,j-1).ne.0)) &
                       frac_coverage(1,j)=1.0
-      if ((frac_coverage(nxg,j).ne.0).and. &
+      if ((frac_coverage(grid%nx,j).ne.0).and. &
           (frac_coverage(1,j).ne.0).and. &
-          (frac_coverage(nxg,j+1).ne.0).and. &
-          (frac_coverage(nxg-1,j).ne.0).and. &
-          (frac_coverage(nxg,j-1).ne.0)) &
-                      frac_coverage(nxg,j)=1.0
+          (frac_coverage(grid%nx,j+1).ne.0).and. &
+          (frac_coverage(grid%nx-1,j).ne.0).and. &
+          (frac_coverage(grid%nx,j-1).ne.0)) &
+                      frac_coverage(grid%nx,j)=1.0
     enddo
 
     ! corners
@@ -910,30 +906,30 @@ contains
     if ((frac_coverage(1,1).ne.0).and. &
         (frac_coverage(2,1).ne.0).and. &
         (frac_coverage(1,2).ne.0).and. &
-        (frac_coverage(nxg,1).ne.0).and. &
-        (frac_coverage(nxg/2+1,1).ne.0)) &
+        (frac_coverage(grid%nx,1).ne.0).and. &
+        (frac_coverage(grid%nx/2+1,1).ne.0)) &
                     frac_coverage(1,1)=1.0
 
-    if ((frac_coverage(1,nyg).ne.0).and. &
-        (frac_coverage(2,nyg).ne.0).and. &
-        (frac_coverage(nxg/2+1,nyg).ne.0).and. &
-        (frac_coverage(nxg,nyg).ne.0).and. &
-        (frac_coverage(1,nyg-1).ne.0)) &
-                    frac_coverage(1,nyg)=1.0
+    if ((frac_coverage(1,grid%ny).ne.0).and. &
+        (frac_coverage(2,grid%ny).ne.0).and. &
+        (frac_coverage(grid%nx/2+1,grid%ny).ne.0).and. &
+        (frac_coverage(grid%nx,grid%ny).ne.0).and. &
+        (frac_coverage(1,grid%ny-1).ne.0)) &
+                    frac_coverage(1,grid%ny)=1.0
 
-    if ((frac_coverage(nxg,1).ne.0).and. &
+    if ((frac_coverage(grid%nx,1).ne.0).and. &
         (frac_coverage(1,1).ne.0).and. &
-        (frac_coverage(nxg,2).ne.0).and. &
-        (frac_coverage(nxg-1,1).ne.0).and. &
-        (frac_coverage(nxg/2,1).ne.0)) &
-                   frac_coverage(nxg,1)=1.0
+        (frac_coverage(grid%nx,2).ne.0).and. &
+        (frac_coverage(grid%nx-1,1).ne.0).and. &
+        (frac_coverage(grid%nx/2,1).ne.0)) &
+                   frac_coverage(grid%nx,1)=1.0
 
-    if ((frac_coverage(nxg,nyg).ne.0).and. &
-        (frac_coverage(1,nyg).ne.0).and. &
-        (frac_coverage(nxg/2,nyg).ne.0).and. &
-        (frac_coverage(nxg-1,nyg).ne.0).and. &
-        (frac_coverage(nxg,nyg-1).ne.0)) &
-                   frac_coverage(nxg,nyg)=1.0
+    if ((frac_coverage(grid%nx,grid%ny).ne.0).and. &
+        (frac_coverage(1,grid%ny).ne.0).and. &
+        (frac_coverage(grid%nx/2,grid%ny).ne.0).and. &
+        (frac_coverage(grid%nx-1,grid%ny).ne.0).and. &
+        (frac_coverage(grid%nx,grid%ny-1).ne.0)) &
+                   frac_coverage(grid%nx,grid%ny)=1.0
 
     ! Finally fix any rogue points > 1.0
 

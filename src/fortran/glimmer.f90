@@ -715,33 +715,42 @@ contains
     allocate(params%total_cov_orog(params%g_grid_orog%nx,params%g_grid_orog%ny))
     allocate(params%cov_norm_orog (params%g_grid_orog%nx,params%g_grid_orog%ny))
 
-    ! Index global boxes
+    ! Set total coverage to zero
 
     params%total_cov_orog=0.0
 
+    ! Loop over instances
+
     do i=1,params%ninstances
+
+      ! Initialise upscaling
 
       call new_upscale(params%instances(i)%ups_orog, &
                        params%g_grid_orog, &
                        params%instances(i)%proj)
 
+      ! Deallocate fractional coverage if necessary, and reallocate
+
       if (associated(params%instances(i)%frac_cov_orog)) &
                              deallocate(params%instances(i)%frac_cov_orog)
       allocate(params%instances(i)%frac_cov_orog(params%g_grid_orog%nx,params%g_grid_orog%ny))
 
+      ! Calculate fractional coverage
+
       call calc_coverage(params%instances(i)%proj, &
                          params%instances(i)%ups_orog,&             ! Calculate coverage map
-                         real(360.0/params%g_grid_orog%nx,rk), &
-                         params%g_grid_orog%lat_bound, &
-                         params%instances(i)%proj%dx, &
-                         params%instances(i)%proj%dy, &
+                         params%g_grid_orog, &
                          params%radea, &
                          params%instances(i)%frac_cov_orog)
+
+      ! Add to total
 
       params%total_cov_orog = params%total_cov_orog &
                    + params%instances(i)%frac_cov_orog
 
     enddo
+
+    ! Copy to normalisation, and check not greater than 1
 
     params%cov_norm_orog=params%total_cov_orog
     where (params%total_cov_orog>1.0) params%total_cov_orog=1.0

@@ -1,3 +1,8 @@
+2004-05-06 Ian Rutt
+ * Rationalisation of calc_coverage (glimmer_object.f90), with 
+	global grid objects.
+ * Minor formatting changes
+
 2004-05-05 Ian Rutt
  * Realised several crucial aspects of the orography output were
 	missing, so added them. Produces orography as expected now,
