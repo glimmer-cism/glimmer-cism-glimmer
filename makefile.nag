@@ -20,7 +20,7 @@ F77=f95
 # http://www.unidata.ucar.edu/packages/netcdf/index.html
 
 NETCDF_LIB=-lnetcdf
-NETCDF_PREFIX=/home/mhagdorn/gnu-Linux
+#NETCDF_PREFIX=/home/mhagdorn/gnu-Linux
 
 # compilation flags for fortran compiler ---------------------------------
 

@@ -20,7 +20,7 @@ OBJECTS = glide_pdd.$(OBJ_EXT) glimmer_isot.$(OBJ_EXT) glimmer_setup.$(OBJ_EXT) 
           glimmer_utils.$(OBJ_EXT) gmt.$(OBJ_EXT) glimmer_global_grid.$(OBJ_EXT) \
           ncdf.$(OBJ_EXT) ncdf_file.$(OBJ_EXT) ncdf_params.$(OBJ_EXT) \
           ncdf_infile.$(OBJ_EXT) glimmer_config.$(OBJ_EXT) glimmer_CFproj.$(OBJ_EXT) \
-          glide_messages.$(OBJ_EXT) glide_enmabal.$(OBJ_EXT)
+          glide_messages.$(OBJ_EXT) glide_enmabal.$(OBJ_EXT) glimmer_routing.$(OBJ_EXT)
 
 SOURCES = glide_pdd.f90 glimmer_isot.f90 glimmer_setup.f90 \
           glimmer_modu.f90 glimmer_outp.f90 glimmer_paramets.f90 glimmer_physcon.f90 \
@@ -29,7 +29,7 @@ SOURCES = glide_pdd.f90 glimmer_isot.f90 glimmer_setup.f90 \
           glimmer_object.f90 glimmer_proj.f90 glimmer_utils.f90 gmt.f90 \
           glimmer_global_grid.f90 glimmer_config.f90 glimmer_CFproj.f90 \
           glide_messages.f90 ncdf.f90 ncdf_file.f90 ncdf_infile.f90 ncdf_params.f90 \
-          glide_enmabal.f90
+          glide_enmabal.f90 glimmer_routing.f90
 
 INCLUDE_FILES=
 

@@ -1,3 +1,6 @@
+2005-02-08 Magnus Hagdorn
+ * fixed Makefile to include flow router
+
 2005-02-08 Ian Rutt
  * Removed NAG-non-compliant section and value name checking from glimmer_setup.f90
 
