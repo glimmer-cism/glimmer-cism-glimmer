@@ -1,3 +1,11 @@
+2004-11-21 Magnus Hagdorn
+ * glide.f90: hooked up new linear and non-linear solvers
+ * glide_types.f90: allocate elements for sparse matrix at 
+   model start
+ * glimmer_thck.f90: removed old solvers, added new linear 
+   and non-linear sovler
+ * glimmer_velo.f90: split up zerovelo into several subroutines
+
 2004-11-18 Magnus Hagdorn
  started temporary ChangeLog for GLINT-GLIDE_eismint branch
  this is the first round of changes to make EISMINT work

@@ -47,15 +47,24 @@ module glide_velo
   !*FD velocities, etc.
 
   use glide_types
+  use glimmer_global, only : dp
+  use physcon, only : rhoi, grav, gn
+  use paramets, only : thk0, len0, vis0, vel0
 
   private vertintg, patebudd, calcbtrc
+
+  ! some private parameters
+  integer, private, parameter :: p1 = gn+1
+  integer, private, parameter :: p2 = gn-1
+  integer, private, parameter :: p3 = 2*gn+1
+  integer, private, parameter :: p4 = gn+2
+  real(dp),private, parameter :: c = -2.0d0*vis0*(rhoi*grav)**gn*thk0**p3/(8.0d0*vel0*len0**gn)
 
 contains
 
   subroutine init_velo(model)
     !*FD initialise velocity module
-    use physcon, only : arrmll, arrmlh, gascon, actenl, actenh, gn,scyr 
-    use paramets, only : vis0, thk0, vel0, len0
+    use physcon, only : arrmll, arrmlh, gascon, actenl, actenh,scyr 
     implicit none
     type(glide_global_type) :: model
 
@@ -111,14 +120,160 @@ contains
 
   end subroutine init_velo
 
+  !*****************************************************************************
+  ! new velo functions come here
+  !*****************************************************************************
+
+  subroutine velo_integrate_flwa(velowk,stagthck,flwa)
+    
+    !*FD this routine calculates the part of the vertically averaged velocity 
+    !*FD field which solely depends on the temperature
+
+    use glimmer_utils, only : hsum4
+    implicit none
+
+    !------------------------------------------------------------------------------------
+    ! Subroutine arguments
+    !------------------------------------------------------------------------------------
+    type(glide_velowk),     intent(inout) :: velowk           
+    real(dp),dimension(:,:),  intent(in)    :: stagthck       !*FD ice thickness on staggered grid
+    real(dp),dimension(:,:,:),intent(in)    :: flwa           !*FD ice flow factor
+
+    !------------------------------------------------------------------------------------
+    ! Internal variables
+    !------------------------------------------------------------------------------------
+    real(dp),dimension(size(flwa,1)) :: hrzflwa, intflwa 
+    integer :: ew,ns,up,ewn,nsn,upn
+
+    upn=size(flwa,1) ; ewn=size(flwa,2) ; nsn=size(flwa,3)
+
+    do ns = 1,nsn-1
+       do ew = 1,ewn-1
+          if (stagthck(ew,ns) /= 0.0d0) then
+             
+             hrzflwa = hsum4(flwa(:,ew:ew+1,ns:ns+1))  
+             intflwa(upn) = 0.0d0
+
+             do up = upn-1, 1, -1
+                intflwa(up) = intflwa(up+1) + velowk%depth(up) * (hrzflwa(up)+hrzflwa(up+1))
+             end do
+
+             velowk%dintflwa(ew,ns) = c * vertintg(velowk,intflwa)
+
+          else 
+
+             velowk%dintflwa(ew,ns) = 0.0d0
+
+          end if
+       end do
+    end do
+  end subroutine velo_integrate_flwa
+
+  subroutine velo_calc_diffu(velowk,stagthck,dusrfdew,dusrfdns,diffu)
+
+    !*FD calculate diffusivities
+
+    implicit none
+    
+    !------------------------------------------------------------------------------------
+    ! Subroutine arguments
+    !------------------------------------------------------------------------------------
+    type(glide_velowk),     intent(inout) :: velowk
+    real(dp),dimension(:,:),  intent(in)    :: stagthck
+    real(dp),dimension(:,:),  intent(in)    :: dusrfdew
+    real(dp),dimension(:,:),  intent(in)    :: dusrfdns
+    real(dp),dimension(:,:),  intent(out)   :: diffu
+
+    integer :: ew,ns,ewn,nsn
+
+    ewn=size(stagthck,1) ; nsn=size(stagthck,2)
+
+    where (stagthck(1:ewn,1:nsn) .ne. 0.)
+       diffu(1:ewn,1:nsn) = velowk%dintflwa(1:ewn,1:nsn) * stagthck(1:ewn,1:nsn)**p4 * &
+            sqrt(dusrfdew(1:ewn,1:nsn)**2 + dusrfdns(1:ewn,1:nsn)**2)**p2 
+    elsewhere
+       diffu(1:ewn,1:nsn) = 0.0d0
+    end where
+  end subroutine velo_calc_diffu
+
+  subroutine velo_calc_velo(velowk,stagthck,dusrfdew,dusrfdns,flwa,diffu,ubas,vbas,uvel,vvel,uflx,vflx)
+
+    !*FD calculate 3D horizontal velocity field and 2D flux field from diffusivity
+    use glimmer_utils, only : hsum4
+    implicit none
+
+    !------------------------------------------------------------------------------------
+    ! Subroutine arguments
+    !------------------------------------------------------------------------------------
+    type(glide_velowk),     intent(inout) :: velowk
+    real(dp),dimension(:,:),  intent(in)    :: stagthck
+    real(dp),dimension(:,:),  intent(in)    :: dusrfdew
+    real(dp),dimension(:,:),  intent(in)    :: dusrfdns
+    real(dp),dimension(:,:,:),intent(in)    :: flwa
+    real(dp),dimension(:,:),  intent(in)    :: diffu
+    real(dp),dimension(:,:),  intent(in)    :: ubas
+    real(dp),dimension(:,:),  intent(in)    :: vbas
+    real(dp),dimension(:,:,:),intent(out)   :: uvel
+    real(dp),dimension(:,:,:),intent(out)   :: vvel
+    real(dp),dimension(:,:),  intent(out)   :: uflx
+    real(dp),dimension(:,:),  intent(out)   :: vflx
+    !------------------------------------------------------------------------------------
+    ! Internal variables
+    !------------------------------------------------------------------------------------
+    real(dp),dimension(size(flwa,1)) :: hrzflwa
+    real(dp) :: factor
+    real(dp),dimension(3)           :: const
+    integer :: ew,ns,up,ewn,nsn,upn
+
+    upn=size(flwa,1) ; ewn=size(stagthck,1) ; nsn=size(stagthck,2)
+    
+    do ns = 1,nsn
+       do ew = 1,ewn
+          if (stagthck(ew,ns) /= 0.0d0) then
+
+             vflx(ew,ns) = diffu(ew,ns) * dusrfdns(ew,ns) + vbas(ew,ns) * stagthck(ew,ns)
+             uflx(ew,ns) = diffu(ew,ns) * dusrfdew(ew,ns) + ubas(ew,ns) * stagthck(ew,ns)
+
+             uvel(upn,ew,ns) = ubas(ew,ns)
+             vvel(upn,ew,ns) = vbas(ew,ns)
+
+             hrzflwa = hsum4(flwa(:,ew:ew+1,ns:ns+1))  
+
+             factor = velowk%dintflwa(ew,ns)*stagthck(ew,ns)
+             if (factor /= 0.0d0) then
+                const(2) = c * diffu(ew,ns) / factor
+                const(3) = const(2) * dusrfdns(ew,ns)  
+                const(2) = const(2) * dusrfdew(ew,ns) 
+             else
+                const(2:3) = 0.0d0
+             end if
+
+             do up = upn-1, 1, -1
+                const(1) = velowk%depth(up) * (hrzflwa(up)+hrzflwa(up+1))
+                uvel(up,ew,ns) = uvel(up+1,ew,ns) + const(1) * const(2)
+                vvel(up,ew,ns) = vvel(up+1,ew,ns) + const(1) * const(3) 
+             end do
+
+          else 
+
+             uvel(:,ew,ns) = 0.0d0
+             vvel(:,ew,ns) = 0.0d0
+             uflx(ew,ns) = 0.0d0
+             vflx(ew,ns) = 0.0d0 
+
+          end if
+       end do
+    end do
+  end subroutine velo_calc_velo
+
+  !*****************************************************************************
+  ! old velo functions come here
+  !*****************************************************************************
   subroutine slipvelo(numerics,velowk,geomderv,flag,bwat,btrc,relx,ubas,vbas)
 
     !*FD Calculate the basal slip velocity and the value of $B$, the free parameter
     !*FD in the basal velocity equation (though I'm not sure that $B$ is used anywhere 
     !*FD else).
-
-    use glimmer_global, only : dp
-    use physcon, only : rhoi, grav
 
     implicit none
 
@@ -147,7 +302,7 @@ contains
     ! Internal variables
     !------------------------------------------------------------------------------------
 
-    real(dp), parameter :: c = - rhoi * grav
+    real(dp), parameter :: rhograv = - rhoi * grav
     integer :: nsn,ewn
 
     ! Get array sizes -------------------------------------------------------------------
@@ -166,10 +321,10 @@ contains
       call calcbtrc(velowk,flag(2),bwat,relx,btrc(1:ewn-1,1:nsn-1))
 
       where (numerics%thklim < geomderv%stagthck(1:ewn-1,1:nsn-1))
-        ubas(1:ewn-1,1:nsn-1) = btrc(1:ewn-1,1:nsn-1) * c * &
+        ubas(1:ewn-1,1:nsn-1) = btrc(1:ewn-1,1:nsn-1) * rhograv * &
                                 geomderv%stagthck(1:ewn-1,1:nsn-1) * &
                                 geomderv%dusrfdew(1:ewn-1,1:nsn-1)
-        vbas(1:ewn-1,1:nsn-1) = btrc(1:ewn-1,1:nsn-1) * c * &
+        vbas(1:ewn-1,1:nsn-1) = btrc(1:ewn-1,1:nsn-1) * rhograv * &
                                 geomderv%stagthck(1:ewn-1,1:nsn-1) * &
                                 geomderv%dusrfdns(1:ewn-1,1:nsn-1)
       elsewhere
@@ -184,7 +339,7 @@ contains
 
       call calcbtrc(velowk,flag(2),bwat,relx,btrc(1:ewn-1,1:nsn-1))
 
-      velowk%fslip(1:ewn-1,1:nsn-1) = c * btrc(1:ewn-1,1:nsn-1)
+      velowk%fslip(1:ewn-1,1:nsn-1) = rhograv * btrc(1:ewn-1,1:nsn-1)
 
     case(2)
 
@@ -229,10 +384,7 @@ contains
     !*FD Performs the velocity calculation. This subroutine is called with
     !*FD different values of \texttt{flag}, depending on exactly what we want to calculate.
 
-    use glimmer_global, only : dp
     use glimmer_utils, only : hsum4
-    use physcon, only : rhoi, grav, gn
-    use paramets, only : thk0, len0, vis0, vel0
 
     implicit none
 
@@ -259,11 +411,7 @@ contains
     ! Internal variables
     !------------------------------------------------------------------------------------
 
-    integer, parameter :: p1 = gn+1
-    integer, parameter :: p2 = gn-1
-    integer, parameter :: p3 = 2*gn+1
-    integer, parameter :: p4 = gn+2
-    real(dp),parameter :: c = -2.0d0*vis0*(rhoi*grav)**gn*thk0**p3/(8.0d0*vel0*len0**gn)
+    
     real(dp),dimension(size(sigma)) :: hrzflwa, intflwa 
     real(dp),dimension(3)           :: const
 
@@ -380,7 +528,7 @@ contains
             hrzflwa = hsum4(flwa(:,ew:ew+1,ns:ns+1))  
 
             if (velowk%dintflwa(ew,ns) /= 0.0d0) then
-               const(2) = c * diffu(ew,ns) / velowk%dintflwa(ew,ns)
+               const(2) = c * diffu(ew,ns) / velowk%dintflwa(ew,ns)/stagthck(ew,ns)
                const(3) = const(2) * dusrfdns(ew,ns)  
                const(2) = const(2) * dusrfdew(ew,ns) 
             else
@@ -421,7 +569,6 @@ contains
     !*FD \]
     !*FD Compare this with equation A1 in {\em Payne and Dongelmans}.
 
-    use glimmer_global, only : dp
     use glimmer_utils, only: hsum4 
 
     implicit none 
@@ -490,7 +637,6 @@ contains
     !*FD (This is equation 13 in {\em Payne and Dongelmans}.) Note that this is only 
     !*FD done if the thickness is greater than the threshold given by \texttt{numerics\%thklim}.
 
-    use glimmer_global, only : dp
     use glimmer_utils, only : hsum4 
 
     implicit none
@@ -601,9 +747,7 @@ contains
     !*FD \textbf{I'm unsure how this ties in with the documentation, since}
     !*FD \texttt{fiddle}\ \textbf{is set to 3.0. This needs checking} 
 
-    use glimmer_global, only : dp
-    use physcon, only : grav, rhoi, pmlt
-    use paramets, only : thk0
+    use physcon, only : pmlt
 
     implicit none
 
@@ -705,7 +849,7 @@ contains
     !*FD Constrain the vertical velocity field to obey a kinematic upper boundary 
     !*FD condition.
 
-    use glimmer_global, only : dp, sp 
+    use glimmer_global, only : sp 
 
     implicit none
 
@@ -779,7 +923,6 @@ contains
     !*FD Performs a depth integral using the trapezium rule.
     !*RV The value of in integrated over depth.
 
-    use glimmer_global, only : dp 
 
     implicit none
 
@@ -838,7 +981,6 @@ contains
     !*FD temperature, $T_0$ is the triple point of water, $\rho$ is the ice density, and 
     !*FD $\Phi$ is the (constant) rate of change of melting point temperature with pressure.
 
-    use glimmer_global, only : dp
     use physcon, only : trpt
 
     implicit none
