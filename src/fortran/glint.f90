@@ -114,6 +114,10 @@ module glint_main
      logical :: first = .true. !*FD Set if this is the first call to glimmer - make sure we set up
                                !*FD start times correctly.
 
+     ! Accumulation/averaging flags -----------------------------
+
+     logical :: need_winds=.false. !*FD Set if we need the winds to be accumulated/downscaled
+
   end type glint_params
 
   ! Private names -----------------------------------------------
@@ -287,7 +291,7 @@ contains
        ! initialise the single instance
 
        call write_log(trim(paramfile))
-       call glint_i_initialise(global_config,params%instances(1),params%g_grid,params%g_grid_orog,mbts(1))
+       call glint_i_initialise(global_config,params%instances(1),params%g_grid,params%g_grid_orog,mbts(1),params%need_winds)
        call write_log('')
 
        ! Update the coverage and normalisation fields
@@ -314,7 +318,7 @@ contains
           call GetValue(section,'name',instance_fname)
           call write_log(trim(instance_fname))
           call ConfigRead(instance_fname,instance_config)
-          call glint_i_initialise(instance_config,params%instances(i),params%g_grid,params%g_grid_orog,mbts(i))
+          call glint_i_initialise(instance_config,params%instances(i),params%g_grid,params%g_grid_orog,mbts(i),params%need_winds)
 
           params%total_coverage = params%total_coverage + params%instances(i)%frac_coverage
           params%total_cov_orog = params%total_cov_orog + params%instances(i)%frac_cov_orog
@@ -405,7 +409,7 @@ contains
   subroutine glint(params,time,temp,precip,zonwind,merwind,orog, &
        output_flag,orog_out,albedo,ice_frac,water_in, &
        water_out,total_water_in,total_water_out, &
-       ice_volume)
+       ice_volume,new_orog)
 
     !*FD Main Glimmer subroutine.
     !*FD
@@ -445,6 +449,7 @@ contains
     real(rk),               optional,intent(inout) :: total_water_in  !*FD Area-integrated water flux in (kg)
     real(rk),               optional,intent(inout) :: total_water_out !*FD Area-integrated water flux out (kg)
     real(rk),               optional,intent(inout) :: ice_volume      !*FD Total ice volume (m$^3$)
+    logical,                optional,intent(in)    :: new_orog        !*FD Set to false if global orog is unchanged
 
     ! Internal variables ----------------------------------------------------------------------------
 
@@ -452,6 +457,15 @@ contains
     real(rk),dimension(:,:),allocatable :: albedo_temp,if_temp,wout_temp,orog_out_temp,win_temp
     real(rk) :: twin_temp,twout_temp,icevol_temp
     type(output_flags) :: out_f
+    logical :: orogflag
+    
+    ! Find out if we're lucky enough not to need to downscale the orography
+
+    if (present(new_orog)) then
+       orogflag=new_orog
+    else
+       orogflag=.true.
+    end if
 
     ! Set averaging start if necessary and return if this is not a mass-balance timestep
     ! Still not sure if this is the correct solution, but should prevent averaging of one-
@@ -474,8 +488,9 @@ contains
 
     params%g_av_temp    = params%g_av_temp    + temp
     params%g_av_precip  = params%g_av_precip  + precip
-    params%g_av_zonwind = params%g_av_zonwind + zonwind
-    params%g_av_merwind = params%g_av_merwind + merwind
+
+    if (params%need_winds) params%g_av_zonwind = params%g_av_zonwind + zonwind
+    if (params%need_winds) params%g_av_merwind = params%g_av_merwind + merwind
 
     ! Ranges of temperature
 
@@ -570,9 +585,9 @@ contains
        ! since last model timestep.
 
        params%g_av_temp    = params%g_av_temp   /real(params%av_steps)
-       params%g_av_zonwind = params%g_av_zonwind/real(params%av_steps)
-       params%g_av_merwind = params%g_av_merwind/real(params%av_steps)
        params%g_av_precip  = params%g_av_precip /real(params%av_steps)
+       if (params%need_winds) params%g_av_zonwind = params%g_av_zonwind/real(params%av_steps)
+       if (params%need_winds) params%g_av_merwind = params%g_av_merwind/real(params%av_steps)
 
        ! Calculate total accumulated precipitation - multiply
        ! by time since last model timestep
@@ -602,7 +617,8 @@ contains
                twin_temp,                    &
                twout_temp,                   &
                icevol_temp,                  &
-               out_f)
+               out_f,                        &
+               orogflag)
 
           ! Add this contribution to the output orography
 

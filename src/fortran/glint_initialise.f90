@@ -51,7 +51,7 @@ module glint_initialise
 
 contains
 
-  subroutine glint_i_initialise(config,instance,grid,grid_orog,mbts)
+  subroutine glint_i_initialise(config,instance,grid,grid_orog,mbts,need_winds)
 
     !*FD Initialise a GLINT ice model instance
 
@@ -68,6 +68,7 @@ contains
     type(global_grid),     intent(in)    :: grid        !*FD Global grid to use
     type(global_grid),     intent(in)    :: grid_orog   !*FD Global grid to use for orography
     integer,               intent(out)   :: mbts        !*FD mass-balance time-step (hours)
+    logical,               intent(inout) :: need_winds  !*FD Set if this instance needs wind input
 
     ! initialise model
 
@@ -120,6 +121,8 @@ contains
                        grid_orog,     &
                        instance%out_mask, &
                        instance%frac_cov_orog)
+
+    if (instance%whichprecip==2) need_winds=.true.
 
   end subroutine glint_i_initialise
 

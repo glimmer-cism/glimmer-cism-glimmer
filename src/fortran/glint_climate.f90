@@ -88,7 +88,7 @@ contains
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine glint_downscaling(instance,g_temp,g_temp_range,g_precip,g_orog,g_zonwind,g_merwind)
+  subroutine glint_downscaling(instance,g_temp,g_temp_range,g_precip,g_orog,g_zonwind,g_merwind,orogflag)
 
     use glint_interp
 
@@ -101,13 +101,16 @@ contains
     real(rk),dimension(:,:),intent(in)   :: g_orog       !*FD Input global orography (m)
     real(rk),dimension(:,:),intent(in)   :: g_zonwind    !*FD Global mean surface zonal wind (m/s)
     real(rk),dimension(:,:),intent(in)   :: g_merwind    !*FD Global mean surface meridonal wind (m/s)
+    logical,                intent(in)   :: orogflag
 
     call interp_to_local(instance%proj,g_temp,      instance%downs,localsp=instance%artm)
     call interp_to_local(instance%proj,g_temp_range,instance%downs,localsp=instance%arng)
     call interp_to_local(instance%proj,g_precip,    instance%downs,localsp=instance%prcp)
-    call interp_to_local(instance%proj,g_orog,      instance%downs,localdp=instance%global_orog)
+
+    if (orogflag) call interp_to_local(instance%proj,g_orog,instance%downs,localdp=instance%global_orog)
     
-    call interp_wind_to_local(instance%proj,g_zonwind,g_merwind,instance%downs,instance%xwind,instance%ywind)
+    if (instance%whichprecip==2) &
+         call interp_wind_to_local(instance%proj,g_zonwind,g_merwind,instance%downs,instance%xwind,instance%ywind)
 
   end subroutine glint_downscaling
 

@@ -52,7 +52,7 @@ contains
 
   subroutine glint_i_tstep(time,instance,g_temp,g_temp_range, &
                           g_precip,g_zonwind,g_merwind,g_orog,g_orog_out,g_albedo,g_ice_frac,&
-                          g_water_in,g_water_out,t_win,t_wout,ice_vol,out_f)
+                          g_water_in,g_water_out,t_win,t_wout,ice_vol,out_f,orogflag)
 
     !*FD Performs time-step of an ice model instance. Note that this 
     !*FD code will need to be altered to take account of the 
@@ -90,7 +90,8 @@ contains
     real(rk),               intent(out)  :: t_win        !*FD Total water input (kg)
     real(rk),               intent(out)  :: t_wout       !*FD Total water output (kg)
     real(rk),               intent(out)  :: ice_vol      !*FD Output ice volume (m$^3$)
-    type(output_flags),     intent(in)   :: out_f        !*FD Flags to tell us whether to do output       
+    type(output_flags),     intent(in)   :: out_f        !*FD Flags to tell us whether to do output   
+    logical,                intent(in)   :: orogflag     !*FD Set if we have new global orog
 
     ! ------------------------------------------------------------------------  
     ! Internal variables
@@ -117,7 +118,7 @@ contains
 
     ! Downscale input fields -------------------------------------------------
 
-    call glint_downscaling(instance,g_temp,g_temp_range,g_precip,g_orog,g_zonwind,g_merwind)
+    call glint_downscaling(instance,g_temp,g_temp_range,g_precip,g_orog,g_zonwind,g_merwind,orogflag)
 
     ! ------------------------------------------------------------------------  
     ! Sort out some local orography and remove bathymetry. This relies on the 
