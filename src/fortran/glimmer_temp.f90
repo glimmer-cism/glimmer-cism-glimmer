@@ -169,8 +169,6 @@ contains
           estimate = 0.2d0 / model%paramets%hydtim
           call find_dt_wat(model%numerics%dttem,estimate,model%tempwk%dt_wat,model%tempwk%nwat) 
           
-          ! ** print *, model%numerics%dttem*tim0/scyr, model%tempwk%dt_wat*tim0/scyr, model%tempwk%nwat
-
           model%tempwk%c = (/ model%tempwk%dt_wat, 1.0d0 - 0.5d0 * model%tempwk%dt_wat * model%paramets%hydtim, &
                1.0d0 + 0.5d0 * model%tempwk%dt_wat * model%paramets%hydtim, 0.0d0, 0.0d0, 0.0d0, 0.0d0, 0.0d0 /) 
        case(1)
@@ -383,11 +381,13 @@ contains
 
        model%temper%niter = model%temper%niter + iter 
 
-       ! set temperature of thin ice to the air temperature
+       ! set temperature of thin ice to the air temperature and set ice free nodes to zero
        do ns = 1,model%general%nsn
           do ew = 1,model%general%ewn
              if (is_thin(model%geometry%thkmask(ew,ns))) then
                 model%temper%temp(:,ew,ns) = min(0.0d0,dble(model%climate%artm(ew,ns)))
+             else if (model%geometry%thkmask(ew,ns)<0) then
+                model%temper%temp(:,ew,ns) = 0.0d0
              end if
           end do
        end do
@@ -593,6 +593,7 @@ contains
     real(dp), dimension(size(model%numerics%sigma)) :: weff
     real(dp) :: slterm
     integer ewp,nsp
+    integer slide_count
 
     fact(1) = VERT_DIFF*model%tempwk%cons(1) / thck**2
     fact(2) = VERT_ADV*model%tempwk%cons(2) / thck
@@ -617,22 +618,12 @@ contains
          + diagadvt(2:model%general%upn-1)
 
     if (iter == 0) then
-
        model%tempwk%inittemp(2:model%general%upn-1,ew,ns) = temp(2:model%general%upn-1) * &
             (2.0d0 - diag(2:model%general%upn-1)) &
             - temp(1:model%general%upn-2) * subd(2:model%general%upn-1) &
             - temp(3:model%general%upn) * supd(2:model%general%upn-1) & 
             - model%tempwk%initadvt(2:model%general%upn-1,ew,ns) &
             + model%tempwk%dissip(2:model%general%upn-1,ew,ns)
-
-       ! *tp* model%tempwk%inittemp(2:model%general%upn-1,ew,ns) = temp(2:model%general%upn-1) &
-       ! *tp*                           - model%tempwk%initadvt(2:model%general%upn-1,ew,ns) + model%tempwk%dissip(2:model%general%upn-1,ew,ns)  
-
-       ! *tp* model%tempwk%inittemp(model%general%upn,ew,ns) = temp(model%general%upn) &
-       ! *tp*                       - cons(3) / (thck * dupnp1) &
-       ! *tp*                       + cons(4) * (wvel(model%general%upn) - wgrd(model%general%upn)) &
-       ! *tp*                       - model%tempwk%initadvt(model%general%upn,ew,ns) + model%tempwk%dissip(model%general%upn,ew,ns)  
-
     end if
 
     ! upper boundary condition
@@ -659,34 +650,29 @@ contains
        rhsd(model%general%upn) = model%tempwk%inittemp(model%general%upn,ew,ns)
     else 
 
-       !*MH dupnp1 = model%tempwk%zbed / thck  
        supd(model%general%upn) = 0.0d0 
-       !*MH subd(model%general%upn) = - model%tempwk%cons(1) / (thck**2 * model%tempwk%dupn * dupnp1)
        subd(model%general%upn) = -0.5*fact(1)/(model%tempwk%dupn**2)
        diag(model%general%upn) = 1.0d0 - subd(model%general%upn) + diagadvt(model%general%upn)
 
        if (iter == 0) then
-!*MH        model%tempwk%inittemp(model%general%upn,ew,ns) = temp(model%general%upn) * &
-!*MH             (2.0d0 - diag(model%general%upn)) &
-!*MH             - temp(model%general%upn-1) * subd(model%general%upn) &
-!*MH             - model%tempwk%cons(3) / (thck * dupnp1) &
-!*MH             + model%tempwk%cons(4) * weff(model%general%upn) & 
-!*MH             - model%tempwk%initadvt(model%general%upn,ew,ns)  &
-!*MH             + model%tempwk%dissip(model%general%upn,ew,ns)
-
           ! sliding contribution to basal heat flux
           slterm = 0.
+          slide_count = 0
           ! only include sliding contrib if temperature node is surrounded by sliding velo nodes
-          if (all(abs(model%velocity%ubas(ns-1:ns,ew-1:ew)).gt.0.000001) .or.  &
-               all(abs(model%velocity%vbas(ns-1:ns,ew-1:ew)).gt.0.000001)) then
-             do nsp = ns-1,ns
-                do ewp = ew-1,ew
+          do nsp = ns-1,ns
+             do ewp = ew-1,ew
+                if (abs(model%velocity%ubas(ewp,nsp)).gt.0.000001 .or. abs(model%velocity%vbas(ewp,nsp)).gt.0.000001) then
+                   slide_count = slide_count + 1
                    slterm = slterm + (&
                         model%geomderv%dusrfdew(ewp,nsp) * model%velocity%ubas(ewp,nsp) + &
                         model%geomderv%dusrfdns(ewp,nsp) * model%velocity%vbas(ewp,nsp))
-                end do
+                end if
              end do
+          end do
+          if (slide_count.ge.4) then
              slterm = 0.25*slterm
+          else
+             slterm = 0.
           end if
           model%tempwk%inittemp(model%general%upn,ew,ns) = temp(model%general%upn) * &
                (2.0d0 - diag(model%general%upn)) &
@@ -729,7 +715,6 @@ contains
     ! 2. find dissipation at H-pts by averaging quantities from u-pts
     ! 2. works best for eismint divide (symmetry) but 1 likely to be better for full expts
 
-    !DEAD! if (.true.) then
 
     model%tempwk%dissip = 0.0d0
     
@@ -746,32 +731,6 @@ contains
           end if
        end do
     end do
-
-    !DEAD!else
-    !DEAD!
-    !DEAD!   ! old method based on u pts
-    !DEAD!
-    !DEAD!
-    !DEAD!   model%tempwk%dissip = 0.0d0
-    !DEAD!
-    !DEAD!   do ns = 2, model%general%nsn-1
-    !DEAD!      do ew = 2, model%general%ewn-1
-    !DEAD!         if (thck(ew,ns) > model%numerics%thklim) then
-    !DEAD!
-    !DEAD!            do ins = ns-1,ns
-    !DEAD!               do iew = ew-1,ew
-    !DEAD!                  c2 = (stagthck(iew,ins) * dsqrt(dusrfdew(iew,ins)**2 + dusrfdns(iew,ins)**2))**p1                        
-    !DEAD!                  model%tempwk%dissip(:,ew,ns) = model%tempwk%dissip(:,ew,ns) + c2 * hsum(flwa(:,iew:iew+1,ins:ins+1))
-    !DEAD!               end do
-    !DEAD!            end do
-    !DEAD!
-    !DEAD!           model%tempwk%dissip(:,ew,ns) = model%tempwk%c1 * model%tempwk%dissip(:,ew,ns)
-    !DEAD!
-    !DEAD!         end if
-    !DEAD!      end do
-    !DEAD!   end do
-    !DEAD!
-    !DEAD!end if
 
   end subroutine finddisp
 
@@ -836,10 +795,6 @@ contains
                         model%tempwk%f(1) * ( (temp(up-2,ew,ns) - pmptemp(up-2)) * model%tempwk%dupa(up) &
                         + (temp(up-1,ew,ns) - pmptemp(up-1)) * model%tempwk%dupb(up) ) / thck(ew,ns)) 
                 end if
-
-                ! first-order version
-                ! newmlt + (f(1) * (temp(up-1,ew,ns) - pmptemp(up-1))) / ((model%numerics%sigma(up) - &
-                ! model%numerics%sigma(up-1)) * thck(ew,ns))
 
              else
 
