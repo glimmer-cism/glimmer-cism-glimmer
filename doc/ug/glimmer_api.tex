@@ -15,7 +15,7 @@ parameter \texttt{rk}, which may be altered in the file \texttt{glimmer\_globals
   subroutine initialise_glimmer(params,lats,longs,paramfile)
 \end{verbatim}
 %
-\paragraph{Arguments}
+\paragraph{Mandatory arguments}
 %
 \begin{center}
 \begin{tabular}{llll}
@@ -31,12 +31,32 @@ top-level GLIMMER \\
 \end{tabular}
 \end{center}
 %
+\paragraph{Optional arguments}
+%
+\begin{center}
+\begin{tabular}{llll}
+\texttt{latb(:)} & \texttt{real(rk)} & \texttt{intent(in)} & Latitudinal
+locations of  \\
+ & & & grid-box boundaries in global data (given in $^{\circ}\mathrm{N}$)\\
+\texttt{lonb(:)} & \texttt{real(rk)} & \texttt{intent(in)} & Longitudinal
+locations of  \\
+ & & & grid-box boundaries in global data (given in $^{\circ}\mathrm{E}$)\\
+\end{tabular}
+\end{center}
+
 \paragraph{Additional notes}
 %
 \begin{itemize}
 \item The ice model determines the size of the global domain from the sizes of
   the arrays \texttt{lats} and \texttt{longs}.
-\item The latitudes contained in \texttt{lats} must be in descending order, so
+\item If the optional arguments \texttt{latb} and \texttt{lonb} are absent,
+  the model will site the grid-box boundaries halfway between the
+  grid-points. 
+\item If present, \texttt{latb} and \texttt{lonb} must respectively have one more
+  element each than \texttt{lats} and \texttt{longs}.
+\item Either boundary array may be supplied individually without the other.
+\item The latitudes contained in \texttt{lats} (and in \texttt{latb}, if
+  present) must be in descending order, so
   that $\mathtt{lats(i)}>\mathtt{lats(i+1)}$ for $1\leq \mathtt{i} \leq
   \mathtt{size(lats)}$.
 \end{itemize}
@@ -66,9 +86,8 @@ parameters for this run \\
 (hours) \\
 \texttt{temp(:,:)} & \texttt{real(rk)} & \texttt{intent(in)} & Daily mean surface
 temperature field ($^{\circ}\mathrm{C}$) \\
-\texttt{precip(:,:)} & \texttt{real(rk)} & \texttt{intent(in)} & Daily
-precipitation \\
- & & & field (mm/day) \\
+\texttt{precip(:,:)} & \texttt{real(rk)} & \texttt{intent(in)} & Precipitation
+rate ($\mathrm{mm}\,\mathrm{s}^{-1}$) \\
 \texttt{zonwind(:,:)} & \texttt{real(rk)} & \texttt{intent(in)} & Zonal
 component of the wind field \\
  & & & ($\mathrm{ms}^{-1}$) \\
@@ -94,12 +113,19 @@ orography (m)\\
 albedo \\
 \texttt{ice\_frac(:,:)} & \texttt{real(rk)} & \texttt{intent(inout)} &
 Fractional ice coverage \\
-\texttt{fw\_flux(:,:)} & \texttt{real(rk)} & \texttt{intent(inout)} & The
-fresh-water flux (mm/a) \\
- & & & This is simply the ablation calculated by the \\
- & & & model, scaled up to the global grid. It is up \\
- & & & to the global model to then  deal with it \\
- & & & (route it to the oceans, land scheme, etc.) \\
+\texttt{water\_in(:,:)} & \texttt{real(rk)} & \texttt{intent(inout)} & The
+input freshwater flux ($\mathrm{ms}^{-1}$) \\
+\texttt{water\_out(:,:)} & \texttt{real(rk)} & \texttt{intent(inout)} & The
+output freshwater flux ($\mathrm{ms}^{-1}$) \\
+\texttt{elapsed\_time} & \texttt{real(rk)} & \texttt{intent(inout)} & The time
+over which \\
+ & & & the output is valid (hours) \\
+\texttt{total\_water\_in} & \texttt{real(rk)} & \texttt{intent(inout)} & The
+total freshwater input to the model (kg) \\
+\texttt{total\_water\_out} & \texttt{real(rk)} & \texttt{intent(inout)} & The
+total freshwater output from the model (kg) \\
+\texttt{ice\_volume} & \texttt{real(rk)} & \texttt{intent(inout)} & The total
+ice volume (m$^3$) \\
 \end{tabular}
 \end{center}
 \paragraph{Additional notes}

@@ -88,71 +88,70 @@ must be called:
 %
 
 \subsection{Parameter Files}
-\subsubsection{Namelists}
+\subsubsection{Format}
 %
+All parameter configuration files in GLIMMER use a custom, easily
+understood file format, similar to Windows \texttt{.ini} files. The format is
+described in full in section \ref{dg.sec.config_file}. 
+
 Global parameters, applicable to all instances of the ice model are contained
 in the file specified by \texttt{paramfile} in the call to
-\texttt{initialise\_glimmer}. An example namelist file is given below (it is
+\texttt{initialise\_glimmer}. An example configuration file is given below (it is
 the file \texttt{example.glp}):
 %
 \begin{verbatim}
-&timesteps
-tinc = 1.0/
-&file_paras
-ninst=1/
-g_land.gln
+[parameters]
+time-step = 1.0
+instance filenames:  g_land.gli
 \end{verbatim}
 %
-In FORTRAN, a namelist begins with \texttt{\&}, followed by that namelist's
-label, and a list of variable names and their values, separated by either
-commas or newlines. Note that not all the members of a namelist need be
-present, nor do they have to appear in the order declared in the code. 
-The namelist ends with a \texttt{/} character. As you can see, the GLIMMER
-parameter namelist file contains two namelists, each containing a single
-variable, and ends with a field of plain text (in this case, `\texttt{g\_land.gln}').
+The file contains only one section, \texttt{parameters}, which has two
+name-value pairs: \texttt{time-step} and \texttt{instance filenames}. The
+first of these is the main ice model time-step, in years. The second namelist
+is a list of configuration files for each ice model instance. GLIMMER will
+create ice model instances for each of the filenames listed here, without the
+need to explicitly specify how many instances there are to be.
 
-The first namelist, \texttt{timesteps} contains the main ice model time-step,
-\texttt{tinc}, in years. The second namelist, \texttt{file\_paras} contains
-the number of ice model instances, \texttt{ninst}. After the two namelists are
-the filenames of the namelists of parameters for each ice model
-instance. Thus, there should be a number of filenames equal to the value of \texttt{ninst}.
-
-For each instance of the model, a namelist file with instance-specific
+For each instance of the model, a configuration file with instance-specific
 parameters must be supplied. The names of these files are given in the main
-GLIMMER namelist, as described above. The namelist file for an individual
-instance is fairly long, so only a summary of the different namelists
+GLIMMER configuration file, as described above. The configuration file for an individual
+instance is fairly long, so only a summary of the different sections
 contained in it is given below. For an example this kind of file, see
-\texttt{g\_land.gln} in the Inputs directory.
+\texttt{g\_land.gli} in the \texttt{data} directory.
 
-Namelists in an instance-specific file:
+Sections in an instance-specific file:
 %
 \begin{itemize}
-\item The first line of the instance-specific file contains the name of the configuration file controlling netCDF I/O. In the case of the example file
-  \texttt{g\_land.gln}, the netCDF control file is \texttt{g\_land}, see Section \ref{ug.sec.ncconf}.
-\item \texttt{sizs} Model grid parameters -- number of grid points in $x$ and
+\item \texttt{[output]} Configuration of model output -- contains the name of
+  the configuration file controlling netCDF I/O. In the case of the example file
+  \texttt{g\_land.gli}, the netCDF control file is \texttt{g\_land.glw}; see
+  Section \ref{ug.sec.ncconf}. In addition, the file specified here also
+  contains the name of the input file used (this will be changed in future).
+\item \texttt{[domain size]} Model grid parameters -- number of grid points in $x$ and
   $y$ dimensions, and number of levels in the vertical.
-\item \texttt{prj} Details of the projection used in the instance -- type of
+\item \texttt{[projection]} Details of the projection used in the instance -- type of
   projection, and necessary parameters.
-\item Next, there follows a field of plain text, specifying the name of a
+\item \texttt{[sigma coordinates]} -- contains the name of a
   sigma-coordinates file (see below)
-\item \texttt{opts} Flags specifying various model integration options, such
+\item \texttt{[options]} Flags specifying various model integration options, such
   as which of various schemes to use, etc.
-\item \texttt{nums} Parameters relevant to the model numerics -- time-steps and
-  things.
-\item \texttt{pars} Physical parameters for the model, such as isostatic
+\item \texttt{[time-steps]} The lengths of the various model time-steps
+  relative to the main time-step.
+\item \texttt{[grid-lengths]} The grid-lengths of the ice model domain.
+\item \texttt{[parameters]} Physical parameters for the model, such as isostatic
   relaxation timescale.
-\item \texttt{cons} Constants used by some parts of the model.
-\item \texttt{forc} Parameters used by the forcing which may be used to run
+\item \texttt{[forcing]} Parameters used by the forcing which may be used to run
   the model in stand-alone mode.
+\item \texttt{[constants]} Constants used in the interface with the global
+  model.
+\item \texttt{[PDD scheme]} Parameters for the positive degree-day mass
+  balance scheme.
 \end{itemize}
-%
-The contents of the namelist files is likely to be altered in the future, and
-they may also be replaced by XML files.
 %
 \subsubsection{The Sigma coordinate file}
 %
 The name of the file containg the sigma variable is specified in
-the instance-specific namelist file. This file consists of a
+the instance-specific configuration file. This file consists of a
 list of numbers in ascending order, between 0.0 and 1.0, specifying the
 heights of the model levels in sigma space. The number of entries must be the
 same as the number of model levels specified. An example file is
@@ -163,128 +162,22 @@ The model requires at least one field as input -- the height of the bedrock
 topography (including bathymetry, if appropriate). If the bedrock is not in a relaxed state, then
 the height of the relaxed topography must also be supplied. The bedrock is assumed to be relaxed 
 if no relaxed topography field is supplied. Furthermore, the uppser surface of the ice sheet at the 
-start of the run can be specified.
+start of the run can be specified. These must be supplied as fields in a
+netCDF file, whose name is given in the configuration file specified in the
+\texttt{[output]} section of the main instance configuration file (see
+above). A sample input file is supplied (\texttt{g\_land.input.nc}) - use
+\texttt{ncdump} to determine the names of variables, dimensions and attributes.
 
-Each model instance can save specific variables to different netCDF files with different time intervals.
-
-\subsection{Viewing the output}
-%
-To view output from glimmer, a set of Matlab routines is supplied. Assuming
-that you have Matlab configured to search for the \texttt{.m} files in the
-right place, the results may be loaded into Matlab using one of the following
-functions:
-%
-\begin{itemize}
-\item \texttt{glim0d(pathname,stem);} Returns an array of diagnostic
-  data. \emph{Not ready for use yet\ldots}
-\item \texttt{glim2d(time,pathname,stem);} Returns a structure containing
-  two-dimensional data. For example use, see below.
-\item \texttt{glim3d(time,pathname,stem);} Returns a structure containing
-  three-dimensional data. \emph{Not ready for use yet\ldots}
-\end{itemize}
-%
-In these function calls:
-\begin{itemize}
-\item \texttt{pathname} specifies the location of the file
-to be read. If the file is in the current working directory, then
-\texttt{pathname} should be set to \texttt{'.'}
-\item \texttt{stem} is the output filename stem specified in the
-  instance-specific namelist file (see above). In the case of the example
-  given above, \texttt{stem} would be set to \texttt{'g\_land'}
-\item \texttt{time} is the time in years for which data is required.
-\end{itemize}
-%
-For example, the 1000-year two-dimensional fields output by the model when initialised
-by the supplied example namelist files may be read into a Matlab structure
-\texttt{a} with the command:
-%
-\begin{verbatim}
->> a=glim2d(1000,'.','g_land');
-\end{verbatim}
-%
-If the function finds corresponding data, it outputs a list of the fields
-obtained. A typical list looks like this:
-%
-\begin{verbatim}
-got uq - scale 1000000
-got vq - scale 1000000
-got df - scale 100000000
-got bx - scale 25
-got bu - scale 500
-got bv - scale 500
-got th - scale 2000
-got up - scale 2000
-got lw - scale 2000
-got to - scale 2000
-got ac - scale 5
-got bm - scale 5
-got bw - scale 2000
-got at - scale 1
-got bt - scale 1
-got ar - scale 1
-got pc - scale 5
-got ab - scale 5
-got ds - scale 5
-\end{verbatim}
-% 
-You don't need to worry what the `scale' field means. What
-matters is the list of two-letter codes for the model fields now residing in
-memory. A full list is given in the reference section below, but in this
-example we'll consider \texttt{up}, which is the upper surface height --
-i.e. the elevation of the ice surface or the topography where no ice is
-present, taking into account the presence of ocean. To plot this upper
-surface, either do so with the \texttt{surf} function
-%
-\begin{verbatim}
->> surf(a.up);
-\end{verbatim}
-%
-or with one of the contour plotting functions:
-%
-\begin{verbatim}
->> contourf(a.up,20);
-\end{verbatim}
-%
-And that's all there is to it.
-%
-\subsection{Two-dimensional output files -- Matlab two-letter codes}
-%
-The two letter variable names contained in the structure returned by
-\texttt{glim2d} have the following meanings:
-%
-\begin{center}
-\begin{tabular}{|c|l|c|}
-\hline
-Code & Description & units \\
-\hline
-\hline
-\texttt{uq} & flux in $x$ direction & $\mathrm{m}^2\mathrm{yr}^{-1}$ \\
-\texttt{vq} & flux in $y$ direction & $\mathrm{m}^2\mathrm{yr}^{-1}$ \\
-\texttt{df} & apparent diffusivity & $\mathrm{m}^2\mathrm{yr}^{-1}$ \\
-\texttt{bx} & basal slip coefficient & $\mathrm{m\,Pa^{-1}\,yr^{-1}}$ \\
-\texttt{bu} & basal slip velocity in $x$ direction & $\mathrm{m\,yr^{-1}}$\\
-\texttt{bv} & basal slip velocity in $y$ direction & $\mathrm{m\,yr^{-1}}$\\
-\texttt{th} & thickness & m \\
-\texttt{up} & ice upper surface elevation & m \\
-\texttt{lw} & ice lower surface elevation & m \\
-\texttt{to} & bedrock topography & m \\
-\texttt{ac} & accumulation-ablation rate & $\mathrm{m\,yr^{-1}}$ \\
-\texttt{bm} & basal melt rate & $\mathrm{m\,yr^{-1}}$ \\
-\texttt{bw} & basal water depth & m \\
-\texttt{at} & annual mean air temperature & $^{\circ}\mathrm{C}$ \\
-\texttt{bt} & basal ice temperature & $^{\circ}\mathrm{C}$ \\
-\texttt{ar} & annual air temperature range & $^{\circ}\mathrm{C}$ \\
-\texttt{pc} & precipitation & $\mathrm{m\,yr^{-1}}$ \\
-\texttt{ab} & ablation rate & $\mathrm{m\,yr^{-1}}$ \\
-\texttt{ds} & rate of upper ice surface elevation change &
-$\mathrm{m\,yr^{-1}}$ \\
-\hline
-\end{tabular}
-\end{center}
+Model output is controlled by the file listed in the \texttt{[output]} section
+of the main instance-specific configuration file. Each model instance can save
+specific variables to different netCDF files with different time intervals.
 %
 \subsection{Restarts}
 %
-GLIMMER provides two routines to handle restarts,
+{\bf N.B. GLIMMER does not currently have a functioning restart
+  mechanism. This documentation is provided for information only at this stage.}
+
+GLIMMER will provide two routines to handle restarts,
 \texttt{glimmer\_write\_restart}, and \texttt{glimmer\_read\_restart}. The
 former writes the entire model state to a single file, while the latter will
 restore the model state from a previously created

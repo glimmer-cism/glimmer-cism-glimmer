@@ -1,3 +1,6 @@
+2004-08-26 Ian Rutt
+ * More documentation updating - also changed font size
+
 2004-08-25 Ian Rutt
  * Fixed problem with reading arrays from config files in
    glimmer_setup.f90
