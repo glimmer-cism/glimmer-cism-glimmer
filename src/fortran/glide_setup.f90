@@ -269,7 +269,7 @@ contains
 
 !-------------------------------------------------------------------------
 
-  subroutine glide_marinlim(which,whicht,thck,usrf,relx,topg,lati,mlimit)
+  subroutine glide_marinlim(which,whicht,thck,usrf,relx,topg,lati,mlimit,eus)
 
     !*FD Removes non-grounded ice, according to one of two altenative
     !*FD criteria, and sets upper surface of non-ice-covered points 
@@ -302,6 +302,7 @@ contains
     real(dp)                              :: mlimit  !*FD Lower limit on topography elevation for
                                                      !*FD ice to be present (scaled). Used with 
                                                      !*FD $\mathtt{which}=0$.
+    real, intent(in) :: eus                          !*FD eustatic sea level
 
     !---------------------------------------------------------------------
 
@@ -310,7 +311,7 @@ contains
     case(0) ! Set thickness to zero if relaxed bedrock is below a 
             ! given level
 
-      where (relx < mlimit)
+      where (relx < mlimit+eus)
         thck = 0.0d0
         usrf = max(0.0d0,topg)
       end where

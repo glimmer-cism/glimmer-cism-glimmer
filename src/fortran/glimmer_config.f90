@@ -55,7 +55,7 @@ module glimmer_config
   use glimmer_global, only : dp
   private :: handle_section, handle_value, InsertSection, InsertValue, dp
 
-  integer, parameter :: namelen=20
+  integer, parameter :: namelen=50
   integer, parameter :: valuelen=200
   integer, parameter :: linelen=250
 

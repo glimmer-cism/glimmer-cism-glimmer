@@ -24,19 +24,30 @@ These drivers are described in some detail here.
     \hline}
   \tablelasttail{\hline}
   \begin{supertabular}{|l|p{11cm}|}
-%%%% 
+%%%% EISMINT-1 fixed margin
     \hline
-    \multicolumn{2}{|l|}{\texttt{[simple]}}\\
+    \multicolumn{2}{|l|}{\texttt{[EISMINT-1 fixed margin]}}\\
     \hline
-    \multicolumn{2}{|p{0.98\textwidth}|}{EISMINT type configuration.}\\
+    \multicolumn{2}{|p{0.98\textwidth}|}{EISMINT 1 fixed margin scenario.}\\
     \hline
-    \texttt{temperature} & (real(2)) \\
-    \texttt{massbalance} & (real(3)) \\
+    \texttt{temperature} & (real(2)) Temperature forcing $$T_{\mbox{surface}}=t_1+t_2d$$ where $$d=\max\{|x-x_{\mbox{summit}}|,|y-y_{\mbox{summit}}|\}$$\\
+    \texttt{massbalance} & (real) Mass balance forcing \\
+    \texttt{period} & (real) period of time--dependent forcing (switched off when set to 0) $$\Delta T=10\sin\frac{2\pi t}{T}$$ and $$\Delta M=0.2sin\frac{2\pi t}{T}$$\\
+    \hline
+%%%% EISMINT-1 moving margin
+    \hline
+    \multicolumn{2}{|l|}{\texttt{[EISMINT-1 moving margin]}}\\
+    \hline
+    \multicolumn{2}{|p{0.98\textwidth}|}{EISMINT 1 moving margin scenario.}\\
+    \hline
+    \texttt{temperature} & (real(2)) Temperature forcing $$T_{\mbox{surface}}=t_1-t_2H$$ where $H$ is the ice thickness\\
+    \texttt{massbalance} & (real(3)) Mass balance forcing $$M=\min\{m_1,m_2(m_3-d)\}$$ where $$d=\sqrt{(x-x_{\mbox{summit}})^2+(y-y_{\mbox{summit}})^2}$$\\
+    \texttt{period} & (real) period of time--dependent forcing (switched off when set to 0) $$\Delta T=10\sin\frac{2\pi t}{T}$$ and $$M=\min\left\{m_1,m_2\left(m_3+100sin\frac{2\pi t}{T}-d\right)\right\}$$\\
     \hline
   \end{supertabular}
 \end{center}
 
-\newpage
+
 \subsection{EIS Driver}
 \subsubsection{Configuration}
 \begin{center}

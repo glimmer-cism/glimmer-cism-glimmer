@@ -247,7 +247,8 @@ contains
          model%geometry% relx,      &
          model%geometry% topg,      &
          model%climate%  lati,      &
-         model%numerics%mlimit)
+         model%numerics%mlimit,     &
+         model%climate%eus)
 
     ! ------------------------------------------------------------------------ 
     ! Calculate the lower surface elevation

@@ -593,8 +593,8 @@ contains
     !*FD \texttt{fiddle}\ \textbf{is set to 3.0. This needs checking} 
 
     use glimmer_global, only : dp
-    use physcon, only : grav, rhoi, pmlt
-    use paramets, only : thk0
+    use physcon, only : grav, rhoi, pmlt,scyr
+    use paramets, only : thk0,vis0
 
     implicit none
 
@@ -683,7 +683,7 @@ contains
       ! option means A=10^-16 yr^-1 Pa^-n, but I'm not sure how this squares with
       ! the value of fiddle, which is currently set to three.
 
-      flwa = fiddle
+      flwa = 1.d-16/(scyr*vis0)*fiddle
   
     end select
 
