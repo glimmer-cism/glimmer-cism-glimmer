@@ -1,4 +1,10 @@
 2005-03-01 Magnus Hagdorn
+ * glide_velo.f90: new subroutine for handling vetical velo in case of periodic EW BC
+ * glide_temp.f90: hooked up this subroutine
+ * glide_thck.f90: modified BC for periodic BC
+ * documented the lot
+
+2005-03-01 Magnus Hagdorn
  * documentation gets version from configure
  * glide_velo.f90: fixed bug with loop over grid and avoid unnecessary memory allocation
 

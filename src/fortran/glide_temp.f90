@@ -313,6 +313,10 @@ contains
                model%geometry%thck,                        &
                model%climate% acab)
        end select
+       ! apply periodic ew BC
+       if (model%options%periodic_ew.eq.1) then
+          call wvel_ew(model)
+       end if
 
        model%tempwk%inittemp = 0.0d0
        model%tempwk%initadvt = 0.0d0

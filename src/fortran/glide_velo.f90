@@ -738,6 +738,17 @@ contains
 
   end subroutine wvelintg
 
+  subroutine wvel_ew(model)
+    !*FD set periodic EW boundary conditions
+    implicit none
+    type(glide_global_type),intent(inout) :: model       !*FD Ice model parameters.
+
+    model%velocity%wgrd(:,1,:)                  = model%velocity%wgrd(:,model%general%ewn-1,:)
+    model%velocity%wgrd(:,model%general%ewn,:) = model%velocity%wgrd(:,2,:)
+    model%velocity%wvel(:,1,:)                  = model%velocity%wvel(:,model%general%ewn-1,:)
+    model%velocity%wvel(:,model%general%ewn,:) = model%velocity%wvel(:,2,:)
+  end subroutine wvel_ew
+
 !------------------------------------------------------------------------------------------
 
   subroutine calcflwa(numerics,velowk,fiddle,flwa,temp,thck,flag)

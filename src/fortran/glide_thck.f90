@@ -320,13 +320,13 @@ contains
           do ns=2,model%general%nsn-1
              ew = 1
              if (model%geometry%mask(ew,ns) /= 0) then
-                call findsums(model%general%ewn-1,ew,ns-1,ns)
-                call generate_row(model%general%ewn-1,ew,ew+1,ns-1,ns,ns+1)
+                call findsums(model%general%ewn-2,model%general%ewn-1,ns-1,ns)
+                call generate_row(model%general%ewn-2,ew,ew+1,ns-1,ns,ns+1)
              end if
              ew=model%general%ewn
              if (model%geometry%mask(ew,ns) /= 0) then
-                call findsums(ew-1,1,ns-1,ns)
-                call generate_row(ew-1,ew,2,ns-1,ns,ns+1)
+                call findsums(1,2,ns-1,ns)
+                call generate_row(ew-1,ew,3,ns-1,ns,ns+1)
              end if
           end do
        else
