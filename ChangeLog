@@ -1,3 +1,10 @@
+2005-03-07 Magnus Hagdorn
+ * glide_thck.f90: only print warning about empty thck field when compiled with -DDEBUG
+ * glide_launch.py: write extra fields to result file, date, glimmer version, glimmer FCFLAGS
+ * add simple test directory
+ * configure.in: change default behaviour of FCFLAGS (now empty instead of -g), hook up tests
+ * INSTALL: mention tests directory
+
 2005-03-04 Magnus Hagdorn
  * glint_example.f90: renamed program to glint_example, fixed minor prob 
    with NAG f95 compiler

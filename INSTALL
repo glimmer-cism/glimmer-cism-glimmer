@@ -72,3 +72,9 @@ glimmer/mod directory.
 Remember that if you want to move the library files (libslap.a and
 libglimmer.a), the .mod files need to be moved as well (or the compiler told
 where to find them)
+
+Tests
+=====
+There are a few very basic tests in the tests directory. The idea is that these
+tests should be very short so that it does not take too long to run these.
+You can run the tests by running configure with the the flag --enable-tests.

@@ -86,8 +86,9 @@ contains
     if (model%geometry%empty) then
 
        model%geometry%thck = dmax1(0.0d0,model%geometry%thck + model%climate%acab * model%pcgdwk%fc2(2))
+#ifdef DEBUG       
        print *, "* thck empty - net accumulation added", model%numerics%time
-
+#endif
     else
 
        ! calculate basal velos
@@ -163,8 +164,9 @@ contains
     if (model%geometry%empty) then
 
        model%geometry%thck = dmax1(0.0d0,model%geometry%thck + model%climate%acab * model%pcgdwk%fc2(2))
+#ifdef DEBUG
        print *, "* thck empty - net accumulation added", model%numerics%time
-
+#endif
     else
 
        ! calculate basal velos
