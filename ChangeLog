@@ -1,3 +1,8 @@
+2005-02-24 Ian Rutt
+ * Updated GLINT documetation, resurrected some old stuff about using
+   GLINT, and added a diagram about timestepping. This is perhaps a bit big
+   atm...
+
 2005-02-23 Ian Rutt
  * Renamed modules of mass-balance schemes to glimmer_*
  * Completed implementation of renaming scheme

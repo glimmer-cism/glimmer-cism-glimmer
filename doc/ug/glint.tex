@@ -1,0 +1,228 @@
+\newpage
+\subsection{GLINT driver}
+\subsubsection{Overview}
+%
+GLINT is the most complex of the drivers supplied as part of GLIMMER. It was
+originally developed as an interface between GLIDE and the GENIE Earth-system
+model, but is designed to be flexible enough to be used with a wide range of
+global climate models. Perhaps the most distinctive feature of GLINT is the
+way it uses the object-oriented GLIDE architecture to enable multiple ice
+models to be coupled to the same climate model. The means that regional ice
+models can be run at high resolution over several parts of the globe, but
+without the expense of running a global ice model.
+
+GLINT automates the processes required in coupling regional models to a global
+model, particularly the down- and up-scaling of the fields that form the
+interface between the two models. The user may specify map projection
+parameters for each of the ice models (known as \emph{instances}), and choose
+one of several alternative mass-balance schemes to use in the coupling. The
+differing time-steps of global model, mass-balance scheme, and ice model are
+handled automatically by temporal averaging or accumulation of quantities (as
+appropriate). This is illustrated schematically in figure~\ref{ug.figs.glint_timesteps}.  
+%
+\begin{figure}[htbp]
+  \centering
+  \epsfig{file=\dir/figs/glint_timesteps.eps,width=0.6\textwidth}
+  \caption{Relationship between the timesteps in GLINT. The filled circles
+  represent timesteps, the rectangles represent averaging/accumulation, and the arrows,
+  flow of coupling fields.}
+  \label{ug.fig.glint_timesteps}
+\end{figure}
+%
+\subsubsection{Prerequisites}
+%
+In order to use GLIMMER, the following should be borne in mind:
+%
+\begin{itemize}
+\item Global input fields must be supplied on a latitude-longitude
+  grid. The grid does not have to be uniform in latitude, meaning that
+  Gaussian grids may be used. Irregular grids (e.g. icosahedral grids) are not
+  supported currently. The boundaries of the grid boxes may be specified; if
+  not, they are assumed to lie half-way between the grid-points in lat-lon space.
+\item In the global field arrays, latitude must be indexed from north to south
+  -- i.e. the first row of the array is the northern-most one. Again, some
+  flexibility might be introduced into this in the future.
+\item The global grid must not have grid points at either of the
+  poles. This restriction is not expected to be permanent, but in the meantime
+  can probably be overcome by moving the location of the polar points to be
+  fractionally short of the pole (e.g. at 89.9$^{\circ}$ and -89.9$^{\circ}$).
+\end{itemize}
+%
+\subsubsection{Initialising and calling}
+
+The easiest way to learn how GLINT is used is by way of an
+example. GLINT should be built automatically as part of GLIMMER, and we assume
+here that this has been achieved successfully.
+
+Typically, GLINT will be called from the main program body of a
+climate model. To make this possible, the compiler needs to be told to use the
+GLINT code. Use statements appear at the very beginning of f90 program
+units, before even \texttt{implicit none}:
+%
+\begin{verbatim}
+  use glint_main
+\end{verbatim}
+%
+The next task is to declare a variable of type \texttt{glint\_params}, which
+holds everything relating to the model, including any number of ice-sheet
+instances:
+%
+\begin{verbatim}
+  type(glint_params) :: ice_sheet
+\end{verbatim}
+%
+Before the ice-sheet model may be called from the climate model, it must be
+initialised. This is done with the following subroutine call:
+%
+\begin{verbatim}
+  call initialise_glint(ice_sheet,lats,lons,paramfile)
+\end{verbatim}
+%
+In this call, the arguments are as follows:
+%
+\begin{itemize}
+\item \texttt{ice\_sheet} is the variable of type \texttt{glint\_params}
+ defined above;
+\item \texttt{lats} and \texttt{lons} are one-dimensional arrays giving the
+  locations of the global grid-points in latitude and longitude, respectively; 
+\item \texttt{paramfile} is the name of the GLINT configuration file.
+\end{itemize}
+%
+The contents of the namelist files will be dealt with later. Having
+initialised the model, it may now be called as part of the main climate
+model time-step loop:
+%
+\begin{verbatim}
+    call glint(ice_sheet,time,temp,precip,zonwind,merwind,orog)
+\end{verbatim} 
+%
+The arguments given in this example are the compulsory ones only; a number of
+optional arguments may be specified -- these are detailed in the reference
+section below. The compulsory arguments are:
+%
+\begin{itemize}
+\item \texttt{ice\_sheet} is the variable of type \texttt{glint\_params}
+ defined above;
+\item \texttt{time} is the current model time, in hours;
+\item \texttt{temp} is the daily mean $2\,\mathrm{m}$ global air temperature field, in
+  $^{\circ}\mathrm{C}$;
+\item \texttt{precip} is the global daily accumulated precipitation field,
+  in $\mathrm{mm}$ (water equivalent, making no distinction
+  between rain, snow, etc.);
+\item \texttt{zonwind} and \texttt{merwind} are the daily mean global zonal and
+  meridional components of the $10\,\mathrm{m}$ wind field, in
+  $\mathrm{ms}^{-1}$;
+\item \texttt{orog} is the global orography field, in $\mathrm{m}$.
+\end{itemize}
+%
+For the positive degree-day mass-balance routine, which is currently the only
+mass-balance model included with GLINT, the daily quantities given above are
+necessary, and, as such, GLINT should be called once per day. With the
+energy-balance mass-balance model currently being developed in the RAPID
+project, hourly calls will be necessary. 
+%
+\subsubsection{Finishing off}
+%
+After the desired number of time-steps have been run, GLINT may have some
+tidying up to do. To accomplish this, the subroutine \texttt{end\_glint}
+must be called:
+%
+\begin{verbatim}
+  call end_glint(ice_sheet)
+\end{verbatim}
+%
+\subsubsection{API}
+%
+A detailed description of the GLINT API will form an appendix to this document
+at some point.
+%
+\subsubsection{Configuration}
+%
+GLINT uses the same configuration file format as the rest of GLIMMER. In the
+case where only one GLIDE instance is used, all the configuration data for
+GLINT and GLIDE can reside in the same file. Where two or more instances are
+used, a top-level file specifies the number of model instances and the name of
+a configuration file for each one. Possible configuration sections specific to
+GLINT are as follows:
+\begin{center}
+  \tablefirsthead{%
+    \hline
+  }
+  \tablehead{%
+    \hline
+    \multicolumn{2}{|p{0.98\textwidth}|}{\emph{\small continued from previous page}}\\
+    \hline
+  }
+  \tabletail{%
+    \hline
+    \multicolumn{2}{|r|}{\emph{\small continued on next page}}\\
+    \hline}
+  \tablelasttail{\hline}
+  \begin{supertabular}{|l|p{11cm}|}
+%%%% 
+    \hline
+    \multicolumn{2}{|l|}{\texttt{[GLINT global]}}\\
+    \hline
+    \multicolumn{2}{|p{0.98\textwidth}|}{Section specifying number of instances.}\\
+    \hline
+    \texttt{n\_instance} & (integer) Number of instances (default=1)\\
+    \hline
+%%%% 
+    \hline
+    \multicolumn{2}{|l|}{\texttt{[GLINT instance]}}\\
+    \hline
+    \multicolumn{2}{|p{0.98\textwidth}|}{Specifies the name of an
+    instance-specific configuration file. Unnecessary if we only have one
+    instance whose configuration data is in the main config file.}\\
+    \hline
+    \texttt{name} & Name of instance-sepcific config file (required).\\
+    \hline
+%%%% 
+    \hline
+    \multicolumn{2}{|l|}{\texttt{[GLINT projection]}}\\
+    \hline
+    \multicolumn{2}{|p{0.98\textwidth}|}{Projection info}\\
+    \hline
+    \texttt{projection} & {\raggedright (integer) type of projection:\\
+       \begin{tabular}{lp{10cm}}
+	 1 & Lambert Equal Area \\
+	 2 & Spherical polar \\
+	 3 & Spherical stereographic (oblique)\\
+	 4 & Spherical stereographic (equatorial)\\
+       \end{tabular}}\\
+    \texttt{lonc} & Longitide of projection centre (degrees east)\\
+    \texttt{latc} & Latitude of projection centre (degrees north)\\
+    \texttt{cpx} & Local $x$-coordinate of projection centre (grid-points)\\
+    \texttt{cpy} & Local $y$-coordinate of projection centre (grid-points)\\
+    \texttt{std parallel} & Standard parallel of projection (degrees
+    north). Only relevant when \texttt{projection}=3 (default=90.0)\\
+    \texttt{earth\_radius} & Radius of the Earth (m) (default=$6.37\times10^6$)\\
+    \hline
+%%%% 
+    \hline
+    \multicolumn{2}{|l|}{\texttt{[GLINT climate]}}\\
+    \hline
+    \multicolumn{2}{|p{0.98\textwidth}|}{GLINT climate configuration}\\
+    \hline
+    \texttt{precip\_mode} & {\raggedright
+      Method of precipitation downscaling: \\
+      \begin{tabular}{lp{10cm}}
+        {\bf 1} & Use large-scale precipitation rate\\
+        2 & Use parameterization of \emph{Roe and Lindzen}\\
+      \end{tabular}}\\
+    \texttt{acab\_mode} & {\raggedright
+      Mass-balance model to use:\\
+      \begin{tabular}{lp{7cm}}
+        {\bf 1} & Annual PDD mass-balance model \\
+        2 & Annual accumulation only\\
+	3 & Hourly energy-balance model (RAPID - not yet available) \\
+      \end{tabular}}\\
+    \texttt{ice\_albedo} & Albedo of ice --- used for coupling to climate
+    model (default=0.4) \\
+    \texttt{lapse\_rate} & Atmospheric temperature lapse-rate, used to correct
+    the atmospheric temperature onto the ice model orography. This should be
+    \emph{positive} for temperature falling with height
+    ($\mathrm{K}\,\mathrm{km}^{-1}$) (default=8.0) \\
+    \hline
+  \end{supertabular}
+\end{center}
