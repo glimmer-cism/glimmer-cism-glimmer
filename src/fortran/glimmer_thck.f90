@@ -589,6 +589,7 @@ contains
     ! ablation and mass-balance to zero. This is to prevent accumulation of ice below
     ! sea-level.
 
+	! ****** REMOVED THIS BECAUSE I'M NOT SURE IT'S THE RIGHT WAY TO TACKLE THE ISSUE ******
     !where (usrf<=0.0)
     !  ablt=0.0
     !  acab=0.0

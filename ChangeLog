@@ -5,6 +5,7 @@
    been fully integrated into the netcdf structure. That's the next step -
    I thought it wise not to attempt too much at once!
  * The previous unmerged version of the HEAD is tagged as PRE_NETCDF_IO
+ * Added informative comment to glimmer_thck.f90
 	
 2004-06-04 Magnus Hagdorn
  * made variable names case sensitive (g_land.glw, generate_ncvars.py)

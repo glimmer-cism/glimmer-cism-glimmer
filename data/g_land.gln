@@ -12,7 +12,7 @@ lonc=321.0/
 g_land.gls
 &opts
 whichtemp = 0
-whichartm = 6
+whichartm = 3
 whichthck = 4
 whichflwa = 1
 whichisot = 1
@@ -24,7 +24,7 @@ whichacab = 1
 whichstrs = 4
 whichevol = 2
 whichwvel = 0
-whichprecip = 0/
+whichprecip = 3/
 &nums      
 ntem = 10.0
 nvel = 20.0

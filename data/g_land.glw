@@ -16,7 +16,7 @@ comment:   spots are taken at nodes
 [output]
 name:      g_land.1000a.nc
 frequency: 1000
-variables: thk topg ablt acab arng bmlt btemp btrc diffu
+variables: thk topg ablt acab arng bmlt btemp btrc diffu usurf
 
 [input]
 name: g_land.input.nc
