@@ -936,6 +936,7 @@ contains
        velowk%c(2)   = (velowk%trcmax - velowk%trcmin) / 2.0d0
        velowk%c(3)   = velowk%watwd * thk0 / 4.0d0
        velowk%c(4)   = velowk%watct * 4.0d0 / thk0 
+       velowk%btrac_const = params%btrac_const/velowk%trc0/scyr
        velowk%first6 = .false. 
     end if
 
@@ -943,13 +944,13 @@ contains
 
     select case(flag)
     case(1)
-       btrc = params%btrac_const
+       btrc = velowk%btrac_const
     case(2)
        do ns = 1,nsn-1
           do ew = 1,ewn-1
              stagbwat = sum(bwat(ew:ew+1,ns:ns+1))
              if (0.0d0 < stagbwat) then
-                btrc(ew,ns) = params%btrac_const
+                btrc(ew,ns) = velowk%btrac_const
              else
                 btrc(ew,ns) = 0.0d0
              end if

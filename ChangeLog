@@ -1,4 +1,7 @@
 2004-08-12 Magnus Hagdorn
+ * forgot to scale basal traction constant (glide_types.f90, glimmer_velo.f90)
+
+2004-08-12 Magnus Hagdorn
  * simple_forcing.f90: add EISMINT-2 forcing 
  * added constant basal traction/basal traction where water exists
    (glide_setup.f90, glide_types.f90, glimmer_velo.f90)

@@ -347,6 +347,7 @@ module glide_types
     real(dp) :: trcmin = 0.0d0
     real(dp) :: marine = 1.0d0
     real(dp) :: trcmax = 10.0d0
+    real(dp) :: btrac_const = 0.0d0
 
     ! Initialisation flags ---------------------------------------
 
