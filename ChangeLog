@@ -1,3 +1,8 @@
+2004-08-20 Magnus Hagdorn
+ * changed vis0 scale to match EISMINT-1 cases (glimmer_velo.f90)
+ * added module holding variable scales (ncdf.f90.in)
+ * initialise and use new scales (glide.f90, ncdf_file.f90.in, ncdf_infile.f90.in, ncdf_vars.def)
+
 2004-08-18 Magnus Hagdorn
  * some variables are time-dep again which makes visualisation easier (ncdf_vars.def)
 

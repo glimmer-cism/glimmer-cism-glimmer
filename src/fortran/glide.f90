@@ -60,11 +60,15 @@ contains
     use glide_temp
     use glimmer_log
     use glimmer_config
+    use glimmer_scales
     implicit none
     type(glide_global_type) :: model        !*FD model instance
     type(ConfigSection), pointer :: config  !*FD structure holding sections of configuration file
    
     type(ConfigSection), pointer :: ncconfig
+
+    ! initialise scales
+    call glimmer_init_scales
     ! read configuration file
     call glide_readconfig(model,config)
     call glide_printconfig(model)

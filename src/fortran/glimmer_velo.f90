@@ -264,7 +264,6 @@ contains
     integer, parameter :: p3 = 2*gn+1
     integer, parameter :: p4 = gn+2
     real(dp),parameter :: c = -2.0d0*vis0*(rhoi*grav)**gn*thk0**p3/(8.0d0*vel0*len0**gn)
-
     real(dp),dimension(size(sigma)) :: hrzflwa, intflwa 
     real(dp),dimension(3)           :: const
 
@@ -698,7 +697,7 @@ contains
       ! option means A=10^-16 yr^-1 Pa^-n, but I'm not sure how this squares with
       ! the value of fiddle, which is currently set to three.
 
-      flwa = 1.d-16/(scyr*vis0)*fiddle
+      flwa = fiddle
   
     end select
 
