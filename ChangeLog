@@ -2,6 +2,12 @@
  * Added doc comments to gmt.f90
  * Updated return value documentation throughout to !*RV
  * Other minor documentation and formatting changes
+ * Moved glimmer_params initialisation to type definition
+	in line with move to f95, and added null 
+	initialisation for pointer arrays. (glimmer.f90)
+ * Checked all elements of glimmer_params correctly
+	included in restart routines and in consistent
+	order. This should work OK, but hasn't been tested...
 
 2004-04-26 Ian Rutt
  * Merged port_to_nag branch into HEAD

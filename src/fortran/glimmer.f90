@@ -49,60 +49,85 @@ module glimmer_main
   use glimmer_global
   use glimmer_object
 
-! Derived type definitions
+  ! ------------------------------------------------------------
+  ! GLIMMER_PARAMS derived type definition
+  ! This is where default values are set.
+  ! ------------------------------------------------------------
 
-! the glimmer_params type contains parameters relevant to all instances of
-! the model - i.e. those parameters which pertain to the global model 
+  type glimmer_params 
+  
+    !*FD Derived type containing parameters relevant to all instances of 
+    !*FD the model - i.e. those parameters which pertain to the global model. 
 
-! quantities which vary between instances are contained in the glimmer_instance object
+    ! Global grid dimensions -----------------------------------
 
-  type glimmer_params !*FD derived type containing parameters 
-                      !*FD relevant to all instances of the model - i.e. those 
-                      !*FD parameters which pertain to the global model. 
+    integer :: nxg = 0 !*FD Number of grid-points in $x$-direction, global input fields.
+    integer :: nyg = 0 !*FD Number of grid-points in $x$-direction, global input fields.
+                     
+    ! Arrays holding global grid-box information ---------------
+                                                     
+    real(rk),pointer,dimension(:) :: glat       => null() !*FD Latitudinal locations of 
+                                                          !*FD data-points in global fields (degrees)
+    real(rk),pointer,dimension(:) :: glon       => null() !*FD Longitudinal locations of 
+                                                          !*FD data-points in global fields (degrees)
+    real(rk),pointer,dimension(:) :: glat_bound => null() !*FD Latitudinal boundaries of 
+                                                          !*FD data-points in global fields (degrees)
+    real(rk),pointer,dimension(:) :: glon_bound => null() !*FD Longitudinal boundaries of 
+                                                          !*FD data-points in global fields (degrees)
+    ! Ice model instances --------------------------------------
 
-    integer :: nxg,nyg                                     !*FD Dimensions of the global input fields
-                                                           !*FD (grid-points)
-    real(rk),pointer,dimension(:) :: glat,glon             !*FD Locations of data-points in global fields (degrees)
-    real(rk),pointer,dimension(:) :: glat_bound,glon_bound !*FD Boundaries of grid boxes latitudinally
-                                                           !*FD and longitudinally (degrees)
-    integer :: ninstances                                  !*FD Number of ice model instances
-    character(fname_length) :: paramfile                   !*FD Name of global parameter file
-    type(glimmer_instance),pointer,dimension(:) :: instances  !*FD Array of glimmer\_instances
-    real(rk) :: radea                                      !*FD Radius of the earth (m)
+    integer                                     :: ninstances = 1       !*FD Number of ice model instances
+    type(glimmer_instance),pointer,dimension(:) :: instances  => null() !*FD Array of glimmer\_instances
 
-    real(rk) :: tstep_main                                 !*FD Main timestep (years)
+    ! Global model parameters ----------------------------------
 
-    real(rk) :: av_start_time                              !*FD Holds the value of time from the last occasion
-                                                           !*FD averaging was restarted.
-    integer :: av_steps                                    !*FD Holds the number of times glimmer has been
-                                                           !*FD called in current round of averaging
+    real(rk) :: radea      = 6.37e6 !*FD Radius of the earth (m)
+    real(rk) :: tstep_main = 1.0    !*FD Main timestep (years)
 
-    real(rk),pointer,dimension(:,:) :: g_av_precip         !*FD globally averaged precip
-    real(rk),pointer,dimension(:,:) :: g_av_temp           !*FD globally averaged temperature 
-    real(rk),pointer,dimension(:,:) :: g_max_temp          !*FD global maximum temperature
-    real(rk),pointer,dimension(:,:) :: g_min_temp          !*FD global minimum temperature
-    real(rk),pointer,dimension(:,:) :: g_temp_range        !*FD global temperature range
-    real(rk),pointer,dimension(:,:) :: g_av_zonwind        !*FD globally averaged zonal wind 
-    real(rk),pointer,dimension(:,:) :: g_av_merwind        !*FD globally averaged meridional wind 
+    ! Averaging parameters -------------------------------------
 
-    real(rk),pointer,dimension(:,:) :: total_coverage      !*FD fractional coverage by all ice model instances
-    logical :: coverage_calculated                         !*FD have we calculated this yet?
-    real(rk),pointer,dimension(:,:) :: cov_normalise       !*FD normalisation values for coverage calculation
+    real(rk) :: av_start_time = 0.0 !*FD Holds the value of time from 
+                                    !*FD the last occasion averaging was restarted.
+    integer  :: av_steps      = 0   !*FD Holds the number of times glimmer has 
+                                    !*FD been called in current round of averaging.
+    ! Averaging arrays -----------------------------------------
 
-    integer :: file_unit                                   !*FD File unit to use for all ouput operations
-    integer :: logf_unit                                   !*FD File unit for logging. Could be confusing
-                                                           !*FD as the same unit is used by all model instances...
+    real(rk),pointer,dimension(:,:) :: g_av_precip  => null() !*FD globally averaged precip
+    real(rk),pointer,dimension(:,:) :: g_av_temp    => null() !*FD globally averaged temperature 
+    real(rk),pointer,dimension(:,:) :: g_max_temp   => null() !*FD global maximum temperature
+    real(rk),pointer,dimension(:,:) :: g_min_temp   => null() !*FD global minimum temperature
+    real(rk),pointer,dimension(:,:) :: g_temp_range => null() !*FD global temperature range
+    real(rk),pointer,dimension(:,:) :: g_av_zonwind => null() !*FD globally averaged zonal wind 
+    real(rk),pointer,dimension(:,:) :: g_av_merwind => null() !*FD globally averaged meridional wind 
 
+    ! Fractional coverage information --------------------------
+
+    real(rk),pointer,dimension(:,:) :: total_coverage  => null()     !*FD Fractional coverage by 
+                                                                     !*FD all ice model instances.
+    real(rk),pointer,dimension(:,:) :: cov_normalise   => null()     !*FD Normalisation values 
+                                                                     !*FD for coverage calculation.
+    logical                         :: coverage_calculated = .false. !*FD Have we calculated the
+                                                                     !*FD coverage map yet?
+    ! File information -----------------------------------------
+
+    character(fname_length) :: paramfile      !*FD Name of global parameter file
+    integer                 :: file_unit = 20 !*FD File unit to use for all ouput operations
+    integer                 :: logf_unit = 21 !*FD File unit for logging. Could be confusing
+                                              !*FD as the same unit is used by all model instances...
   end type glimmer_params
 
-! global parameters/constants
+  ! ------------------------------------------------------------
+  ! End of GLIMMER_PARAMS definition
+  ! ------------------------------------------------------------
+
+  ! global parameters/constants ---------------------------------
 
   integer,parameter  :: days_in_year=360                   !*FD The number of days in a year  
   real(rk),parameter :: pi=3.141592654                     !*FD The value of pi
   real(rk),parameter :: years2hours=24.0*days_in_year      !*FD Years to hours conversion factor
   real(rk),parameter :: hours2years=1/years2hours          !*FD Hours to years conversion factor
 
-! Private names
+  ! Private names -----------------------------------------------
 
   private glimmer_allocate_arrays,glimmer_init_common
   private get_globals,get_fnamelist,calc_bounds,pi
@@ -544,7 +569,6 @@ contains
     write(unit) params% glat_bound
     write(unit) params% glon_bound
     write(unit) params% ninstances
-    write(unit) params% paramfile
     write(unit) params% radea
     write(unit) params% tstep_main
     write(unit) params% av_start_time
@@ -557,8 +581,9 @@ contains
     write(unit) params% g_av_zonwind
     write(unit) params% g_av_merwind
     write(unit) params% total_coverage 
-    write(unit) params% coverage_calculated
     write(unit) params% cov_normalise
+    write(unit) params% coverage_calculated
+    write(unit) params% paramfile
     write(unit) params% file_unit
     write(unit) params% logf_unit
 
@@ -620,7 +645,6 @@ contains
     read(unit) params% glat_bound
     read(unit) params% glon_bound
     read(unit) params% ninstances
-    read(unit) params% paramfile
     read(unit) params% radea
     read(unit) params% tstep_main
     read(unit) params% av_start_time
@@ -633,8 +657,9 @@ contains
     read(unit) params% g_av_zonwind
     read(unit) params% g_av_merwind
     read(unit) params% total_coverage 
-    read(unit) params% coverage_calculated
     read(unit) params% cov_normalise
+    read(unit) params% coverage_calculated
+    read(unit) params% paramfile
     read(unit) params% file_unit
     read(unit) params% logf_unit
 
@@ -694,15 +719,6 @@ contains
 
     ! THIS IS WHERE INITIALISATION THAT IS NEEDED REGARDLESS
     ! OF WHETHER WE ARE RESTARTING BELONGS!!!
-
-    params%ninstances=1
-    params%radea=6.37e6     
-    params%tstep_main=1.0
-    params%av_start_time=0.0
-    params%av_steps=0
-    params%coverage_calculated=.false.
-    params%file_unit=20
-    params%logf_unit=21
 
     ! Set up tau0 - this a moved from a the glimmer init subroutine
 
