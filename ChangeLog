@@ -1,3 +1,12 @@
+2004-06-28 Magnus Hagdorn
+ * added time series support (glimmer_ts.f90) and a test program (test_ts.f90)
+ * added eustatic sea level (glide_types.f90)
+ * output starts at start time (ncdf_file.f90.in)
+ * Edinburgh Ice Sheet model ELA forcing (eis_ela.f90)
+ * Edinburgh Ice Sheet model temperature forcing (eis_temp.f90)
+ * Edinburgh Ice Sheet model driver (eis_forcing.f90, eis_glide.f90)
+ * example Fennoscandian ice sheet setup (fennscan1.config, europe.20km.nc, mb.data, s10.data)
+	
 2004-06-25 Magnus Hagdorn
  * added some more simple experiments
  * glide_setup.f90: calculate sigma if no sigma file given

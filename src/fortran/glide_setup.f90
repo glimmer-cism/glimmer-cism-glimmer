@@ -587,6 +587,7 @@ contains
        stop
     end if
     write(message,*) 'marine_margin           : ', model%options%whichmarn, marine_margin(model%options%whichmarn)
+    call write_log(message)
     if (model%options%whichbtrc.lt.0 .or. model%options%whichbtrc.ge.size(slip_coeff)) then
        write(*,*) 'Error, slip_coeff out of range'
        stop

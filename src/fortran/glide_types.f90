@@ -251,6 +251,7 @@ module glide_types
      real(sp),dimension(:,:),pointer :: artm     => null() !*FD Annual mean air temperature
      real(sp),dimension(:,:),pointer :: lati     => null() !*FD Latitudes of model grid points
      real(sp),dimension(:,:),pointer :: loni     => null() !*FD Longitudes of model grid points
+     real(sp) :: eus = 0.                                  !*FD eustatic sea level
   end type glide_climate
 
   type glide_temper

@@ -9,8 +9,8 @@ GLIMMERFLAGS=$(F77FLAGS) $(GLIMMERPRECOPT)
 #
 SUBDIRS = SLAP_library
 LIBS = libglimmer.a libglide.a
-PROGS = glimmer_example bin2ncdf input2ncdf relaxed simple_glide
-TESTS = test_config test_setup
+PROGS = glimmer_example bin2ncdf input2ncdf relaxed simple_glide eis_glide
+TESTS = test_config test_setup test_ts
 DATA = ncdf_vars.def
 
 AUTOGEN = ncdf.f90 ncdf_file.f90 ncdf_infile.f90 ncdf_params.f90
@@ -28,6 +28,10 @@ SOURCES = glimmer_degd.f90 glimmer_isot.f90 glimmer_setup.f90 \
           glimmer.f90 glimmer_global.f90 glimmer_interp.f90 glimmer_mbal.f90 \
           glimmer_object.f90 glimmer_proj.f90 glimmer_utils.f90 gmt.f90 \
           glimmer_global_grid.f90 glimmer_config.f90 glimmer_CFproj.f90 $(AUTOGEN)
+
+EIS = eis_glide.o eis_forcing.o eis_ela.o eis_temp.o
+
+SIMPLE = simple_forcing.o simple_glide.o
 
 INCLUDE_FILES=
 
@@ -47,13 +51,16 @@ libglimmer.a: $(OBJECTS) $(INCLUDE_FILES)
 	if [ "$(RANLIB)" != "" ] ; then $(RANLIB) $@ ; fi
 
 libglide.a:	glide.o glide_setup.o glide_types.o glimmer_temp.o glimmer_isot.o glimmer_thck.o glimmer_velo.o\
-	glimmer_paramets.o glimmer_CFproj.o glimmer_config.o glimmer_global.o glimmer_physcon.o glimmer_utils.o glimmer_log.o \
+	glimmer_paramets.o glimmer_CFproj.o glimmer_config.o glimmer_global.o glimmer_physcon.o glimmer_utils.o glimmer_log.o glimmer_ts.o\
 	ncdf.o ncdf_params.o ncdf_file.o ncdf_infile.o 
 		ar rcv $@ $^
 		if [ "$(RANLIB)" != "" ] ; then $(RANLIB) $@ ; fi
 
-simple_glide:	simple_forcing.o simple_glide.o libglide.a SLAP_library
-		$(F77) -o $@ simple_forcing.o simple_glide.o libglide.a SLAP_library/libslap.a $(LD_FLAGS)
+eis_glide:	$(EIS) libglide.a SLAP_library
+		$(F77) -o $@ $(EIS) libglide.a SLAP_library/libslap.a $(LD_FLAGS)
+
+simple_glide:	$(SIMPLE) libglide.a SLAP_library
+		$(F77) -o $@ $(SIMPLE) libglide.a SLAP_library/libslap.a $(LD_FLAGS)
 
 glimmer_example :  glimmer_example.o SLAP_library libglimmer.a
 	$(F77) $(GLIMMERFLAGS) -o $@ $< libglimmer.a SLAP_library/libslap.a $(LD_FLAGS)
@@ -73,6 +80,9 @@ test_config:	test_config.o glimmer_config.o
 	$(F77) -o $@ $^ $(LD_FLAGS)
 
 test_setup:	glimmer_config.o glide_types.o glide_setup.o test_setup.o
+		$(F77) -o $@ $^ $(LD_FLAGS)
+
+test_ts:	glimmer_ts.o glimmer_log.o test_ts.o
 		$(F77) -o $@ $^ $(LD_FLAGS)
 
 # install glimmer

@@ -62,7 +62,7 @@ contains
     oc=>model%funits%out_first
     do while(associated(oc))
        call glimmer_nc_createfile(oc,model)
-       oc%next_write=model%numerics%time
+       oc%next_write=model%numerics%tstart
        oc=>oc%next
     end do
   end subroutine openall_out
