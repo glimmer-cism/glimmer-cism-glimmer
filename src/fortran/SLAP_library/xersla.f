@@ -37,9 +37,10 @@ c                 handling package', sand82-0800, sandia laboratories,
 c                 1982.
 c***routines called  (none)
 c***end prologue  xerabt
-      dimension messg(nmessg)
+      character(*) messg
+
 c***first executable statement  xerabt
-      Print*,"Some problem in XERABT"
+      Print*,"Some problem in XERABT", messg
       stop
 !      call exit(1)
       end

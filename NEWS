@@ -1,0 +1,3 @@
+Changes in Version 0.2
+======================
+* use autotools for generating Makefiles

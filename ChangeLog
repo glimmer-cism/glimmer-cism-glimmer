@@ -1,3 +1,8 @@
+2005-02-02 Magnus Hagdorn
+ * change to autotools
+ * fixed minor bug in xersla.f
+ * glimmer_global.f90: bumped version to 0.2
+
 2005-01-28 Magnus Hagdorn
  * documented profiling and added python script to visualise profile
 

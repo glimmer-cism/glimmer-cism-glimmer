@@ -1,5 +1,5 @@
 PSTEX = scale.pstex_t grid.pstex_t
-EPS   = 
+EPS   = thick_evo.eps
 
 all:		$(PSTEX) $(EPS)
 
@@ -13,7 +13,10 @@ all:		$(PSTEX) $(EPS)
 .fig.eps:
 		fig2dev -Lps -m 1.000000 -n $*.eps $< $*.eps
 
-.SUFFIXES:	.fig .pstex .pstex_t .eps
+.dia.eps:
+		dia -e $@ $<
+
+.SUFFIXES:	.fig .pstex .pstex_t .eps .dia
 
 clean:
 		rm *.pstex *.pstex_t *.eps
