@@ -8,15 +8,19 @@ include $(ARC_FILE)
 GLIMMERFLAGS=$(F77FLAGS) $(GLIMMERPRECOPT)
 #
 SUBDIRS = SLAP_library
-LIBS = libglimmer.a
+LIBS = libglimmer.$(LIB_EXT)
 PROGS = glimmer_example bin2ncdf input2ncdf relaxed test_config
 
-OBJECTS = glide_pdd.o glimmer_isot.o glimmer_setup.o \
-          glimmer_modu.o glimmer_outp.o glimmer_paramets.o glimmer_physcon.o glimmer_restart.o \
-          glimmer_temp.o glimmer_thck.o glimmer_velo.o glimmer.o glimmer_global.o \
-          glimmer_interp.o glimmer_mbal.o glimmer_object.o glimmer_proj.o \
-          glimmer_utils.o gmt.o glimmer_global_grid.o ncdf.o ncdf_file.o ncdf_params.o \
-          ncdf_infile.o glimmer_config.o glimmer_CFproj.o glide_messages.o
+OBJECTS = glide_pdd.$(OBJ_EXT) glimmer_isot.$(OBJ_EXT) glimmer_setup.$(OBJ_EXT) \
+          glimmer_modu.$(OBJ_EXT) glimmer_outp.$(OBJ_EXT) glimmer_paramets.$(OBJ_EXT) \
+          glimmer_physcon.$(OBJ_EXT) glimmer_restart.$(OBJ_EXT) \
+          glimmer_temp.$(OBJ_EXT) glimmer_thck.$(OBJ_EXT) glimmer_velo.$(OBJ_EXT) \
+          glimmer.$(OBJ_EXT) glimmer_global.$(OBJ_EXT) glimmer_interp.$(OBJ_EXT) \
+          glimmer_mbal.$(OBJ_EXT) glimmer_object.$(OBJ_EXT) glimmer_proj.$(OBJ_EXT) \
+          glimmer_utils.$(OBJ_EXT) gmt.$(OBJ_EXT) glimmer_global_grid.$(OBJ_EXT) \
+          ncdf.$(OBJ_EXT) ncdf_file.$(OBJ_EXT) ncdf_params.$(OBJ_EXT) \
+          ncdf_infile.$(OBJ_EXT) glimmer_config.$(OBJ_EXT) glimmer_CFproj.$(OBJ_EXT) \
+          glide_messages.$(OBJ_EXT) glide_enmabal.$(OBJ_EXT)
 
 SOURCES = glide_pdd.f90 glimmer_isot.f90 glimmer_setup.f90 \
           glimmer_modu.f90 glimmer_outp.f90 glimmer_paramets.f90 glimmer_physcon.f90 \
@@ -24,7 +28,8 @@ SOURCES = glide_pdd.f90 glimmer_isot.f90 glimmer_setup.f90 \
           glimmer.f90 glimmer_global.f90 glimmer_interp.f90 glimmer_mbal.f90 \
           glimmer_object.f90 glimmer_proj.f90 glimmer_utils.f90 gmt.f90 \
           glimmer_global_grid.f90 glimmer_config.f90 glimmer_CFproj.f90 \
-          glide_messages.f90 ncdf.f90 ncdf_file.f90 ncdf_infile.f90 ncdf_params.f90
+          glide_messages.f90 ncdf.f90 ncdf_file.f90 ncdf_infile.f90 ncdf_params.f90 \
+          glide_enmabal.f90
 
 INCLUDE_FILES=
 
@@ -40,24 +45,29 @@ $(SUBDIRS):
 		$(MAKE) -C $@
 
 
-libglimmer.a: $(OBJECTS) $(OTHER_FILES) $(INCLUDE_FILES)
+libglimmer.$(LIB_EXT): $(OBJECTS) $(OTHER_FILES) $(INCLUDE_FILES)
 	ar rcv $@ $(OBJECTS)
 	if [ "$(RANLIB)" != "" ] ; then $(RANLIB) $@ ; fi
 
-glimmer_example :  glimmer_example.o SLAP_library libglimmer.a
-	$(F77) $(GLIMMERFLAGS) -o $@ $< libglimmer.a SLAP_library/libslap.a $(LD_FLAGS)
+glimmer_example :  glimmer_example.$(OBJ_EXT) SLAP_library libglimmer.$(LIB_EXT)
+	$(F77) $(GLIMMERFLAGS) $(OUT_FLAG)$@ $< libglimmer.$(LIB_EXT) \
+        SLAP_library/libslap.$(LIB_EXT) $(LD_FLAGS)
 
-bin2ncdf: bin2ncdf.o glimmer_global.o  ncdf.o ncdf_file.o glimmer_modu.o glimmer_physcon.o glimmer_paramets.o glimmer_CFproj.o glide_messages.o
-	$(F77) -o $@ $^ $(LD_FLAGS)
+bin2ncdf: bin2ncdf.$(OBJ_EXT) glimmer_global.$(OBJ_EXT)  ncdf.$(OBJ_EXT) ncdf_file.$(OBJ_EXT) \
+        glimmer_modu.$(OBJ_EXT) glimmer_physcon.$(OBJ_EXT) glimmer_paramets.$(OBJ_EXT) \
+        glimmer_CFproj.$(OBJ_EXT) glide_messages.$(OBJ_EXT)
+	$(F77) $(OUT_FLAG)$@ $^ $(LD_FLAGS)
 
-input2ncdf:	input2ncdf.o glimmer_global.o  ncdf.o ncdf_file.o glimmer_modu.o glimmer_paramets.o  glimmer_CFproj.o glide_messages.o
-	$(F77) -o $@ $^ $(LD_FLAGS) $(GLIMMERFLAGS)
+input2ncdf:	input2ncdf.$(OBJ_EXT) glimmer_global.$(OBJ_EXT)  ncdf.$(OBJ_EXT) ncdf_file.$(OBJ_EXT) \
+        glimmer_modu.$(OBJ_EXT) glimmer_paramets.$(OBJ_EXT)  glimmer_CFproj.$(OBJ_EXT) glide_messages.$(OBJ_EXT)
+	$(F77) $(OUT_FLAG)$@ $^ $(LD_FLAGS) $(GLIMMERFLAGS)
 
-relaxed: relaxed.o  SLAP_library libglimmer.a
-	$(F77) -o $@ $< libglimmer.a SLAP_library/libslap.a $(LD_FLAGS) 
+relaxed: relaxed.$(OBJ_EXT)  SLAP_library libglimmer.$(LIB_EXT)
+	$(F77) $(OUT_FLAG)$@ $< libglimmer.$(LIB_EXT) SLAP_library/libslap.$(LIB_EXT) \
+        $(LD_FLAGS) 
 
-test_config:	test_config.o glimmer_config.o glide_messages.o
-	$(F77) -o $@ $^ $(LD_FLAGS)
+test_config:	test_config.$(OBJ_EXT) glimmer_config.$(OBJ_EXT) glide_messages.$(OBJ_EXT)
+	$(F77) $(OUT_FLAG)$@ $^ $(LD_FLAGS)
 
 # install glimmer
 install:	install-mod install-libs install-progs
@@ -77,7 +87,7 @@ install-progs:	$(PROGS)
 
 # clean up
 clean : 
-	rm -f *.o *.mod f90_dep.mak $(PROGS) $(LIBS)
+	rm -f *.$(OBJ_EXT) *.mod f90_dep.mak $(PROGS) $(LIBS)
 	for dir in $(SUBDIRS); do \
 	  $(MAKE) -C $$dir clean; \
 	done
