@@ -331,9 +331,9 @@ module glimmer_types
     character(fname_length) :: presusrffile                    !*FD Present-day surface file
     character(fname_length) :: forcfile                        !*FD Temperature forcing file
     character(fname_length) :: output_stem                     !*FD output filename stem
-    character(fname_length) :: b0dfile,b2dfile,b3dfile         !*FD output filenames
-    character(fname_length) :: outfile                         !*FD configuration file for outputs
+    character(fname_length) :: ncfile                          !*FD configuration file for netCDF I/O
     type(glimmer_nc_output),pointer :: out_first=>NULL()       !*FD first element of linked list defining netCDF outputs
+    type(glimmer_nc_input), pointer :: in_first=>NULL()        !*FD first element of linked list defining netCDF inputs
     character(fname_length) :: latifile                        !*FD File containing latitudes of all points
   end type glimmer_funits
 
@@ -536,10 +536,7 @@ contains
     params%funits%relxfile       = 'none'
     params%funits%sigfile        = ''
     params%funits%output_stem    = 'untitled'
-    params%funits%b0dfile        = ''
-    params%funits%b2dfile        = ''
-    params%funits%b3dfile        = ''
-    params%funits%outfile        = ''
+    params%funits%ncfile         = ''
 
     params%numerics%time         = 0.0
 !    params%numerics%tinc         = 20.0  ! We don't want to touch this...

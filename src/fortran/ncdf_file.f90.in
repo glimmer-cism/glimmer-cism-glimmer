@@ -83,12 +83,29 @@ contains
 
     oc=>model%funits%out_first
     do while(associated(oc))
-       if (model%numerics%time.ge.oc%next_write .or. forcewrite) then
+       if (model%numerics%time.ge.oc%next_write .or. (forcewrite.and.model%numerics%time.gt.oc%next_write-oc%freq)) then
           call glimmer_nc_write(oc,model)
        end if
        oc=>oc%next
     end do
   end subroutine writeall
+
+  subroutine closeall_out(model)
+    !*FD close all netCDF files for output
+    use glimmer_types
+    use glimmer_ncdf
+    implicit none
+    type(glimmer_global_type) :: model
+    
+    ! local variables
+    type(glimmer_nc_output), pointer :: oc
+
+    oc=>model%funits%out_first
+    do while(associated(oc))
+       oc=>delete(oc)
+    end do
+    model%funits%out_first=>NULL()
+  end subroutine closeall_out
 
   subroutine glimmer_nc_createfile(outfile,model)
     !*FD create a new netCDF file

@@ -64,6 +64,7 @@ dimensions:    time, y1, x1
 units:         degreeN
 long_name:     Latitude
 data:          model%climate%lati
+load:          1
 
 [relx]
 dimensions:    time, y1, x1
@@ -71,6 +72,7 @@ units:         meter
 long_name:     relaxed bedrock topography
 data:          model%geometry%relx
 factor:        thk0
+load:          1
 
 [presprcp]
 dimensions:    time, y1, x1
@@ -78,6 +80,7 @@ units:         meter/year
 long_name:     present day precipitation
 data:          model%climate%prcp
 factor:        scyr * acc0
+load:          1
 
 [presusrf]
 dimensions:    time, y1, x1
@@ -85,6 +88,7 @@ units:         meter
 long_name:     present day surface of the ice-sheet
 data:          model%climate%presusrf
 factor:        thk0
+load:          1
 
 [uflx]
 dimensions:    time, y0, x0
@@ -141,6 +145,7 @@ units:         meter
 long_name:     ice upper surface elevation
 data:          model%geometry%usrf
 factor:        thk0
+load:          1
 
 [lsurf]
 dimensions:    time, y1, x1
@@ -155,6 +160,7 @@ units:         meter
 long_name:     bedrock topography
 data:          model%geometry%topg
 factor:        thk0
+load:          1
 
 [acab]
 dimensions:    time, y1, x1

@@ -99,7 +99,6 @@ contains
     use glimmer_temp
     use glimmer_velo
     use glimmer_ncfile
-    use glimmer_ncparams
     ! Arguments
 
     integer,              intent(in)    :: unit        !*FD Filename unit to use when opening namelist file.
@@ -131,7 +130,6 @@ contains
     call new_downscale(instance%downs,instance%proj,lons,lats)  ! Initialise the downscaling
     call glimmer_i_allocate(instance,size(lons),size(lats))        ! Allocate arrays appropriately
     call glimmer_load_sigma(instance%model,unit)                   ! Load the sigma file
-    call ReadNCParams(instance%model)                           ! Read output file configuration
     call openall_out(instance%model)                            ! Initialise output files
     call calc_lats(instance%proj,instance%model%climate%lati)   ! Initialise the local latitude array. 
                                                                 ! This may be redundant, though.
@@ -713,6 +711,7 @@ contains
 
     use glimmer_setup
     use glimmer_ncfile
+    use glimmer_ncinfile
 
     ! Arguments
 
@@ -722,6 +721,8 @@ contains
     ! Beginning of code
 
     call writeall(model,.true.)
+    call closeall_out(model)
+    call closeall_in(model)
 
   end subroutine glimmer_i_end
 

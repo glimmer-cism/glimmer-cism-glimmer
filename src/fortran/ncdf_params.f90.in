@@ -58,10 +58,11 @@ contains
     type(ConfigSection), pointer :: config
     type(ConfigSection), pointer :: section
     type(glimmer_nc_output), pointer :: output
+    type(glimmer_nc_input), pointer :: input
 
     ! read configuration
-    model%funits%outfile  = trim(model%funits%output_stem) // '.glw'
-    config => ConfigRead(model%funits%outfile)
+    model%funits%ncfile  = trim(model%funits%output_stem) // '.glw'
+    config => ConfigRead(model%funits%ncfile)
 
     ! setup outputs
     section => GetSection(config,'output')
@@ -72,6 +73,17 @@ contains
           model%funits%out_first => output
        end if
        section => GetSection(section%next,'output')
+    end do
+
+    ! setup inputs
+    section => GetSection(config,'input')
+    do while(associated(section))
+       write(*,*)
+       input => handle_input(section,input)
+       if (.not.associated(model%funits%in_first)) then
+          model%funits%in_first => input
+       end if
+       section => GetSection(section%next,'input')
     end do
 
   end subroutine ReadNCParams
@@ -108,4 +120,29 @@ contains
     ! select which variables should be written
     !GENVARS!
   end function handle_output
+  
+  function handle_input(section, input)
+    use glimmer_ncdf
+    use glimmer_config
+    implicit none
+    type(ConfigSection), pointer :: section
+    type(glimmer_nc_input), pointer :: input
+    type(glimmer_nc_input), pointer :: handle_input
+
+    ! local variables
+    character(len=210) vars
+
+    handle_input=>add(input)
+    
+    ! get filename
+    call GetValue(section,'name',handle_input%nc%filename)
+    call GetValue(section,'time',handle_input%get_time_slice)
+    
+    handle_input%current_time = handle_input%get_time_slice
+
+    if (handle_input%nc%filename(1:1).eq.' ') then
+       write(*,*) 'Error, no file name specified [netCDF input]'
+       stop
+    end if
+  end function handle_input
 end module glimmer_ncparams

@@ -9,13 +9,13 @@ GLIMMERFLAGS=$(F77FLAGS) $(GLIMMERPRECOPT)
 #
 LIBNAME = libglimmer
 
-AUTOGEN = ncdf.f90 ncdf_file.f90 ncdf_params.f90
+AUTOGEN = ncdf.f90 ncdf_file.f90 ncdf_infile.f90 ncdf_params.f90
 
 OBJECTS = glimmer_degd.o glimmer_isot.o glimmer_setup.o \
           glimmer_modu.o glimmer_outp.o glimmer_paramets.o glimmer_physcon.o glimmer_restart.o \
           glimmer_temp.o glimmer_thck.o glimmer_velo.o glimmer.o glimmer_global.o \
           glimmer_interp.o glimmer_mbal.o glimmer_object.o glimmer_proj.o \
-          glimmer_utils.o gmt.o ncdf.o ncdf_file.o ncdf_params.o glimmer_config.o
+          glimmer_utils.o gmt.o ncdf.o ncdf_file.o ncdf_params.o ncdf_infile.o glimmer_config.o
 
 SOURCES = glimmer_degd.f90 glimmer_isot.f90 glimmer_setup.f90 \
           glimmer_modu.f90 glimmer_outp.f90 glimmer_paramets.f90 glimmer_physcon.f90 \
@@ -60,6 +60,8 @@ code_doc: $(SOURCES) $(OTHER_FILES)
 ncdf.f90:	ncdf_vars.def ncdf.f90.in
 		python ../python/generate_ncvars.py $< $@.in	
 ncdf_file.f90:	ncdf_vars.def ncdf_file.f90.in
+		python ../python/generate_ncvars.py $< $@.in	
+ncdf_infile.f90:	ncdf_vars.def ncdf_infile.f90.in
 		python ../python/generate_ncvars.py $< $@.in	
 ncdf_params.f90:	ncdf_vars.def ncdf_params.f90.in
 		python ../python/generate_ncvars.py $< $@.in	

@@ -58,7 +58,7 @@ contains
     use paramets, only: acc0,thk0,tim0,len0
     use glimmer_types
     use glimmer_project
-
+    use glimmer_ncparams
     implicit none
 
     ! Subroutine arguments
@@ -335,6 +335,9 @@ contains
 
     model%numerics%mlimit = model%numerics%mlimit / thk0
 
+    ! Read output file configuration
+    call ReadNCParams(model)
+    
 100 format(A)
 
   end subroutine initial
@@ -357,7 +360,7 @@ contains
     use glimmer_outp
     use glimmer_temp
     use glimmer_thck
-   
+    use glimmer_ncinfile
     implicit none
 
     ! Subroutine arguments
@@ -369,74 +372,50 @@ contains
     ! Internal variables
 
     real(sp),dimension(:,:),allocatable :: arng
+    type(glimmer_nc_input), pointer :: ic
+    logical found_precip,found_presurf,found_usurf
 
-    ! -------------------------------------------------------------------
-    ! read latitude file if required - overwrites pre-calculated data
-    ! -------------------------------------------------------------------
+    ! open all netCDF input files
+    call openall_in(model)
 
-    if (trim(adjustl(model%funits%latifile)) .ne. 'none') then
-      Print*,'Reading Latitudes ',trim(model%funits%latifile)
-      model%climate%lati = rplanout(model%funits%latifile, &
-                                     unit, &
-                                     model%general%ewn, &
-                                     model%general%nsn)
-    end if
+    ic=>model%funits%in_first
+    found_precip = .false.
+    found_presurf = .false.
+    found_usurf = .false.
+    do while(associated(ic))
+       ! read present-day precip file if required      
+       if (model%options%whichprecip==3) then
+          if (ic%nc%do_var(NC_B_PRESPRCP)) then
+             found_precip = .true.
+          end if
+       else
+          ic%nc%do_var(NC_B_PRESPRCP) = .false.
+       end if
 
-    ! -------------------------------------------------------------------
-    ! read topography file if required
-    ! -------------------------------------------------------------------
+       if ((model%options%whichartm.eq.0).or. (model%options%whichartm.eq.1).or. &
+            (model%options%whichartm.eq.2).or. (model%options%whichartm.eq.3).or. &
+            (model%options%whichartm.eq.4)) then
+          if (ic%nc%do_var(NC_B_PRESUSRF)) then
+             found_presurf = .true.
+          else
+             ic%nc%do_var(NC_B_PRESUSRF) = .false.
+          end if
+       end if
 
-    if (trim(adjustl(model%funits%topgfile)) .ne. 'none') then
-      Print*,'Reading topography ',trim(model%funits%topgfile)
-      model%geometry%topg = rplanout(model%funits%topgfile, &
-                                     unit, &
-                                     model%general%ewn, &
-                                     model%general%nsn) / thk0
-    end if
-     
-    ! -------------------------------------------------------------------
-    ! read relaxed topography file if required
-    ! -------------------------------------------------------------------
+       if (ic%nc%do_var(NC_B_USURF)) then
+          found_usurf = .true.
+       end if
 
-    if (trim(adjustl(model%funits%relxfile)) .ne. 'none') then
-      Print*,'Reading relaxed topography ',trim(model%funits%relxfile)
-      model%geometry%relx = rplanout(model%funits%relxfile, &
-                                     unit, &
-                                     model%general%ewn, &
-                                     model%general%nsn) / thk0
-    end if
-  
-    ! -------------------------------------------------------------------
-    ! read surface file if required
-    ! -------------------------------------------------------------------
+       ic=>ic%next
+    end do
 
-    if (trim(adjustl(model%funits%usrffile)) .ne. 'none') then
-      Print*,'Reading surface file ',trim(model%funits%usrffile)
-      model%geometry%usrf = rplanout(model%funits%usrffile, &
-                                     unit, &
-                                     model%general%ewn, &
-                                     model%general%nsn) / thk0
-    else
-      model%geometry%usrf = model%geometry%topg
-    end if
-
-    ! -------------------------------------------------------------------
-    ! read present-day precip file if required
-    ! -------------------------------------------------------------------
-
-    if (model%options%whichprecip==3) then
-      if (trim(adjustl(model%funits%prcpfile)) .ne. 'none') then
-        model%climate%presprcp = rplanout(model%funits%prcpfile, &
-                                          unit, &
-                                          model%general%ewn, &
-                                          model%general%nsn) &
-                                        / (scyr * acc0)
-      else
-        print*,"To run with whichprecip=3, you need to supply a"
-        print*,"forcing filename..."
-        stop
-      endif
+    if (model%options%whichprecip==3 .and. .not. found_precip) then
+       print*,"To run with whichprecip=3, you need to supply a"
+       print*,"forcing filename..."
+       stop
     endif
+
+    call readall(model)
 
     ! -------------------------------------------------------------------
     ! Read in forcing file, if required, or set up simple forcing
@@ -456,91 +435,77 @@ contains
     ! the present-day surface temperature from it.
     ! -------------------------------------------------------------------
 
-    if ((trim(adjustl(model%funits%presusrffile)) .ne. 'none').and.( &
-         (model%options%whichartm.eq.0).or. &
-         (model%options%whichartm.eq.1).or. &
-         (model%options%whichartm.eq.2).or. &
-         (model%options%whichartm.eq.3).or. &
-         (model%options%whichartm.eq.4))) then
+    if (found_presurf) then
 
-      ! Load the present day surface of the ice-sheet
+       ! Allocate arng array, passed to calcartm for air temperature range
+       
+       allocate(arng(size(model%climate%presartm,1),size(model%climate%presartm,2)))
 
-      model%climate%presusrf = rplanout(model%funits%presusrffile, &
-                                        unit, &
-                                        model%general%ewn, &
-                                        model%general%nsn) / thk0
-
-      ! Allocate arng array, passed to calcartm for air temperature range
-
-      allocate(arng(size(model%climate%presartm,1), &
-                    size(model%climate%presartm,2)))
-
-      !----------------------------------------------------------------------
-      ! Calculate the present-day mean air temperature and range, based on
-      ! surface elevation and latitude
-      !----------------------------------------------------------------------
-
-      call calcartm(model,                  &
-                    3,                      &
-                    model%climate%presusrf, &
-                    model%climate%lati,     &
-                    model%climate%presartm, &  !** OUTPUT
-                    arng)                      !** OUTPUT
-     
-      !----------------------------------------------------------------------
-      ! Calculate present-day mass-balance based on present-day elevation,
-      ! temperature, temperature range, and PDD method.
-      !----------------------------------------------------------------------
-
-      call calcacab(model%numerics,         &
-                    model%paramets,         &
-                    model%pddcalc,          &
-                    1,                      &
-                    model%geometry%usrf,  &
-                    model%climate%presartm, &
-                    arng,                   &
-                    model%climate%presprcp, &
-                    model%climate%ablt,     &
-                    model%climate%lati,     &
-                    model%climate%acab)     
-
-      ! Set ice thickness to be mass-balance*time-step, where positive
-
-      model%geometry%thck = max(0.0d0,model%climate%acab*model%numerics%dt)
-
-      ! Calculate the elevation of the lower ice surface
-
-      call calclsrf(model%geometry%thck,model%geometry%topg,model%geometry%lsrf)
-
-      ! Calculate the elevation of the upper ice surface by adding thickness
-      ! onto the lower surface elevation.
-
-      model%geometry%usrf = model%geometry%thck + model%geometry%lsrf
-
-      first=.false.
-
-      deallocate(arng) 
-
+       !----------------------------------------------------------------------
+       ! Calculate the present-day mean air temperature and range, based on
+       ! surface elevation and latitude
+       !----------------------------------------------------------------------
+       
+       call calcartm(model, 3, &
+            model%climate%presusrf, &
+            model%climate%lati,     &
+            model%climate%presartm, &  !** OUTPUT
+            arng)                      !** OUTPUT
+       
+       !----------------------------------------------------------------------
+       ! Calculate present-day mass-balance based on present-day elevation,
+       ! temperature, temperature range, and PDD method.
+       !----------------------------------------------------------------------
+       
+       call calcacab(model%numerics,         &
+            model%paramets,         &
+            model%pddcalc,          &
+            1,                      &
+            model%geometry%usrf,  &
+            model%climate%presartm, &
+            arng,                   &
+            model%climate%presprcp, &
+            model%climate%ablt,     &
+            model%climate%lati,     &
+            model%climate%acab)     
+       
+       ! Set ice thickness to be mass-balance*time-step, where positive
+       
+       model%geometry%thck = max(0.0d0,model%climate%acab*model%numerics%dt)
+       
+       ! Calculate the elevation of the lower ice surface
+       
+       call calclsrf(model%geometry%thck,model%geometry%topg,model%geometry%lsrf)
+       
+       ! Calculate the elevation of the upper ice surface by adding thickness
+       ! onto the lower surface elevation.
+       
+       model%geometry%usrf = model%geometry%thck + model%geometry%lsrf
+       
+       first=.false.
+       
+       deallocate(arng) 
+       
     else    
-  
-      ! -----------------------------------------------------------------
-      ! Calculate the lower and upper surfaces of the ice-sheet 
-      ! -----------------------------------------------------------------
-
-      call calclsrf(model%geometry%thck,model%geometry%topg,model%geometry%lsrf)
-      model%geometry%usrf = model%geometry%thck + model%geometry%lsrf
-
-    endif 
+       
+       ! -----------------------------------------------------------------
+       ! Calculate the lower and upper surfaces of the ice-sheet 
+       ! -----------------------------------------------------------------
+       
+       call calclsrf(model%geometry%thck,model%geometry%topg,model%geometry%lsrf)
+       model%geometry%usrf = model%geometry%thck + model%geometry%lsrf
+       
+    endif
 
     ! -------------------------------------------------------------------
     ! Calculate the upper surface, if necessary, otherwise calculates
     ! the thickness
     ! -------------------------------------------------------------------
-
-    if (trim(adjustl(model%funits%usrffile)) .ne. 'none') then
-      model%geometry%thck = model%geometry%usrf - model%geometry%lsrf
+    
+    if (found_usurf) then
+       model%geometry%thck = model%geometry%usrf - model%geometry%lsrf
     endif
-
+    
   end subroutine testinisthk
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

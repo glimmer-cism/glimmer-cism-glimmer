@@ -186,10 +186,7 @@ contains
     write(unit) instance%model%funits% relxfile
     write(unit) instance%model%funits% sigfile
     write(unit) instance%model%funits% output_stem
-    write(unit) instance%model%funits% b0dfile
-    write(unit) instance%model%funits% b2dfile
-    write(unit) instance%model%funits% b3dfile
-    write(unit) instance%model%funits% outfile
+    write(unit) instance%model%funits% ncfile
 
     ! numerics
 
@@ -527,10 +524,7 @@ contains
     read(unit) instance%model%funits% relxfile
     read(unit) instance%model%funits% sigfile
     read(unit) instance%model%funits% output_stem
-    read(unit) instance%model%funits% b0dfile
-    read(unit) instance%model%funits% b2dfile
-    read(unit) instance%model%funits% b3dfile
-    read(unit) instance%model%funits% outfile
+    read(unit) instance%model%funits% ncfile
 
     ! numerics
 

@@ -97,10 +97,10 @@ module glimmer_ncdf
 
   type glimmer_nc_output
      !*FD element of linked list describing netCDF output file
-     
+
      type(glimmer_nc_stat) :: nc
      !*FD structure containg file info
-     integer :: freq=1
+     integer :: freq=1000
      !*FD frequency at which data is written to file
      integer :: next_write=0
      !*FD next time step at which data is dumped
@@ -113,16 +113,33 @@ module glimmer_ncdf
      !*FD previous element in list
   end type glimmer_nc_output
 
+  type glimmer_nc_input
+     !*FD element of linked list describing netCDF input file
+
+     type(glimmer_nc_stat) :: nc
+     !*FD structure containg file info
+     integer, pointer, dimension(:) :: times => NULL()     
+     !*FD pointer to array holding times
+     integer                        :: nt, current_time=1
+     !*FDnumber of elements in times and current time index
+     integer                        :: get_time_slice = 1     
+     !*FD -1 if all times should be loaded, > 0 to load particular slice and then close file
+
+     type(glimmer_nc_input), pointer :: next=>NULL()
+     !*FD next element in list
+     type(glimmer_nc_input), pointer :: previous=>NULL()
+     !*FD previous element in list
+  end type glimmer_nc_input
+
   interface delete
-     module procedure delete_output
+     module procedure delete_output, delete_input
   end interface
 
   interface add
-     module procedure add_output
+     module procedure add_output, add_input
   end interface
 
 contains
-  
   function delete_output(oc, cf)
     !*FD remove element from linked list
     implicit none
@@ -156,27 +173,80 @@ contains
        deallocate(oc)
     end if
   end function delete_output
+  
+  function delete_input(ic,cf)
+    !*FD remove element from linked list
+    implicit none
+    type(glimmer_nc_input), pointer :: delete_input
+    type(glimmer_nc_input), pointer :: ic
+    logical, intent(in), optional :: cf
+
+    ! local variables
+    logical closefile
+    integer status
+
+    if (present(cf)) then
+       closefile = cf
+    else
+       closefile = .true.
+    end if
+
+    if (associated(ic)) then
+       if (associated(ic%previous)) then
+          ic%previous%next => ic%next
+       end if
+       if (associated(ic%next)) then
+          ic%next%previous => ic%previous
+          delete_input => ic%next
+       else
+          delete_input => NULL()
+       end if
+       if (closefile) then
+          status = nf90_close(ic%nc%id)
+          write(*,*) 'Closing input file ', trim(ic%nc%filename)
+       end if
+       deallocate(ic%times)
+       deallocate(ic)
+    end if
+  end function delete_input
 
   function add_output(oc)
     !*FD add new element to linked list
     implicit none
     type(glimmer_nc_output), pointer :: add_output
     type(glimmer_nc_output), pointer :: oc
-    ! local variables
-    type(glimmer_nc_output), pointer :: new_output
 
-    allocate(new_output)
-    new_output%nc%do_var(:) = .false.
-    add_output => new_output
+    allocate(add_output)
+    add_output%nc%do_var(:) = .false.
+
     if (associated(oc)) then
-       new_output%previous => oc
+       add_output%previous => oc
        if (associated(oc%next)) then
-          new_output%next => oc%next
-          oc%next%previous => new_output
+          add_output%next => oc%next
+          oc%next%previous => add_output
        end if
-       oc%next => new_output
+       oc%next => add_output
     end if
   end function add_output
+
+  function add_input(ic)
+    !*FD add new element to linked list
+    implicit none
+    type(glimmer_nc_input), pointer :: add_input
+    type(glimmer_nc_input), pointer :: ic
+
+    allocate(add_input)
+    add_input%nc%do_var(:) = .false.
+
+    if (associated(ic)) then
+       add_input%previous => ic
+       if (associated(ic%next)) then
+          add_input%next => ic%next
+          ic%next%previous => add_input
+       end if
+       ic%next => add_input
+    end if
+  end function add_input
 
   subroutine check_vars(nc,unit)
     !*FD print netCDF variables handled by nc to unit

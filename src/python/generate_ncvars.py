@@ -26,6 +26,10 @@ def spotname(name):
     """Return name of spotvariable."""
     return "%s_spot"%name
 
+def isspot(var):
+    """Return True if variable is a spot variable."""
+    return '_spot' in var['name']
+
 def is_dimvar(var):
     """Return True if variable is associated with a dimension.
 
@@ -252,7 +256,7 @@ class PrintNCDF_FILE(PrintVars):
                                                                                              ))
         self.stream.write("%s    call nc_errorhandle(__FILE__,__LINE__,status)\n"%(spaces*' '))
         for attrib in var:
-            if attrib not in ['name','dimensions','data','factor']:
+            if attrib not in ['name','dimensions','data','factor','load']:
                 self.stream.write("%s    status = nf90_put_att(NC%%id, %s, '%s', &\n%s           '%s')\n"%(spaces*' ',
                                                                                                            id,
                                                                                                            attrib,
@@ -303,6 +307,66 @@ class PrintNCDF_FILE(PrintVars):
                 self.stream.write("       end do\n")
             self.stream.write("    end if\n\n")
 
+class PrintNCDF_INFILE(PrintVars):
+    """Process ncdf_infile.f90"""
+    canhandle = 'ncdf_infile.f90'
+
+    def __init__(self,filename):
+        """Initialise.
+
+        filename: name of file to be processed."""
+
+        PrintVars.__init__(self,filename)
+
+        self.handletoken['!GENVAR_READ!'] = self.print_var_read
+
+    def print_var(self, var):
+        """Write single variable block to stream for ncdf_infile."""
+
+        if 'load' in var and not isspot(var) and not is_dimvar(var):
+            if var['load'].lower() in ['1','true','t']:
+                self.stream.write("       case('%s')\n"%var['name'])
+                self.stream.write("          NC%%do_var(%s) = .true.\n"%var_type(var))
+                self.stream.write("          NC%%varids(%s) = i\n"%var_type(var))
+
+    def print_var_read(self, var):
+        """Write single variable block to stream for ncdf_infile."""
+
+        if 'load' in var and not isspot(var) and not is_dimvar(var):
+            if var['load'].lower() in ['1','true','t']:
+                dims = string.split(var['dimensions'],',')
+                dims.reverse()
+                for i in range(0,len(dims)):
+                    dims[i] = dims[i].strip()
+                self.stream.write("    if (NC%%do_var(%s)) then\n"%(var_type(var)))
+                self.stream.write("       write(*,*) '  Loading %s'\n"%var['name'])
+                dimstring = ''
+                spaces = ''
+                for i in range(0,len(dims)):
+                    if i > 0:
+                        dimstring = dimstring + ','
+                    if dims[i] == 'time':
+                        dimstring = dimstring + 'infile%current_time'
+                    elif dims[i] == 'level':
+                        dimstring = dimstring + 'up'
+                    else:
+                        dimstring = dimstring + '1'
+
+                if  'level' in dims:
+                    # handle 3D fields
+                    spaces = ' '*3
+                    self.stream.write("       do up=1,model%general%upn\n")
+
+                self.stream.write("%s       status = nf90_get_var(NC%%id, %s, &\n%s            %s, (/%s/))\n"%(spaces,'NC%%varids(%s)'%var_type(var),
+                                                                                                               spaces,var['data'], dimstring))
+                self.stream.write("%s       call nc_errorhandle(__FILE__,__LINE__,status)\n"%(spaces))
+                if 'factor' in var:
+                    self.stream.write("%s       %s = %s/(%s)\n"%(spaces,var['data'],var['data'],var['factor']))
+
+                if  'level' in dims:
+                    self.stream.write("       end do\n")
+                self.stream.write("    end if\n\n")
+                
             
 def var_type(var):
     """Map variable to type parameter."""
@@ -318,7 +382,11 @@ def usage():
     print 'outfile.in: output template to be processed'
     print 'print variables if no templates are given'
 
-HandleFile = {'ncdf.f90.in' : PrintNCDF, 'ncdf_file.f90.in' : PrintNCDF_FILE, 'ncdf_params.f90.in' : PrintNCDF_PARAMS}
+HandleFile={}
+HandleFile['ncdf.f90.in'] = PrintNCDF
+HandleFile['ncdf_file.f90.in'] = PrintNCDF_FILE
+HandleFile['ncdf_infile.f90.in'] = PrintNCDF_INFILE
+HandleFile['ncdf_params.f90.in'] = PrintNCDF_PARAMS
 
 if __name__ == '__main__':
 

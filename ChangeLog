@@ -1,4 +1,8 @@
 2004-05-14 Magnus Hagdorn
+ netCDF input, Round 1
+ * add netCDF input capabilities, removed old I/O bits
+	
+2004-05-14 Magnus Hagdorn
  netCDF output, Round 1
  * glimmer/data: output file configuration format changed to something similar to Windows .ini files (g_land.glw)
                  added a new directory containg test data files (test/test_config.conf)
