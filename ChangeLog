@@ -1,4 +1,12 @@
 2004-06-24 Magnus Hagdorn
+ * fixed problem with time derivative, where we divide by zero at the first time step
+   now we set the derivative to zero (glimmer_thck.f90)
+ * fixed problem with gradient where the mask array was of a different size than the
+   array of which the derivatives are taken. We now just calculate the gradient for
+   every point (glimmer_thck.f90)
+ * glide.f90: reflects these changes
+	
+2004-06-24 Magnus Hagdorn
  * glimmer_CFproj.f90: renamed scale_factor_at_projection_origin to scale_at_orig in order to
    avoid problems with the SUN compiler
  * glimmer_isot.f90: renamed glimmer_ to glide_ 

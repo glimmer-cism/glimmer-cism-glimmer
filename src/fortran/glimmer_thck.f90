@@ -296,7 +296,7 @@ contains
   
 !---------------------------------------------------------------------------------
 
-  subroutine geomders(numerics,ipvr,stagthck,opvrew,opvrns)
+  subroutine geomders(numerics,ipvr,opvrew,opvrns)
 
     use glimmer_global, only : dp
 
@@ -304,24 +304,19 @@ contains
 
     type(glide_numerics) :: numerics
     real(dp), intent(out), dimension(:,:) :: opvrew, opvrns
-    real(dp), intent(in), dimension(:,:) :: ipvr, stagthck
+    real(dp), intent(in), dimension(:,:) :: ipvr
 
     real(dp) :: dew2, dns2 
 
     ! Obviously we don't need to do this every time,
     ! but will do so for the moment.
 
-    dew2 = 2.0d0 * numerics%dew
-    dns2 = 2.0d0 * numerics%dns
+    dew2 = 1.d0/(2.0d0 * numerics%dew)
+    dns2 = 1.d0/(2.0d0 * numerics%dns)
 
-    where (stagthck /= 0.0d0)
-      opvrew = (cshift(cshift(ipvr,1,2),1,1) + cshift(ipvr,1,1) - ipvr - cshift(ipvr,1,2)) / dew2
-      opvrns = (cshift(cshift(ipvr,1,2),1,1) + cshift(ipvr,1,2) - ipvr - cshift(ipvr,1,1)) / dns2
-    elsewhere
-      opvrew = 0.0d0
-      opvrns = 0.0d0
-    end where
-
+    opvrew = (cshift(cshift(ipvr,1,2),1,1) + cshift(ipvr,1,1) - ipvr - cshift(ipvr,1,2)) * dew2
+    opvrns = (cshift(cshift(ipvr,1,2),1,1) + cshift(ipvr,1,2) - ipvr - cshift(ipvr,1,1)) * dns2
+    
   end subroutine geomders
 
 !---------------------------------------------------------------------------------
@@ -507,11 +502,19 @@ contains
     integer, intent(in), dimension(:,:) :: mask
     integer, intent(in) :: which
 
-    where (mask /= 0)
-      opvr = conv * (ipvr - thckwk%olds(:,:,which)) / (time - thckwk%oldtime)
-    elsewhere
-      opvr = 0.0d0
-    end where
+    real(sp) :: factor
+
+    factor = (time - thckwk%oldtime)
+    if (factor .eq.0) then
+       opvr = 0.0d0
+    else
+       factor = 1./factor
+       where (mask /= 0)
+          opvr = conv * (ipvr - thckwk%olds(:,:,which)) * factor
+       elsewhere
+          opvr = 0.0d0
+       end where
+    end if
 
     thckwk%olds(:,:,which) = ipvr
 

@@ -129,13 +129,11 @@ contains
 
     call geomders(model%numerics, &
          model%geometry% usrf, &
-         model%geometry% thck, & ! model%geomderv% stagthck, &
          model%geomderv% dusrfdew, &
          model%geomderv% dusrfdns)
 
     call geomders(model%numerics, &
          model%geometry% thck, &
-         model%geometry% thck, & ! model%geomderv% stagthck, &
          model%geomderv% dthckdew, &
          model%geomderv% dthckdns)
 
@@ -183,7 +181,7 @@ contains
     ! ------------------------------------------------------------------------ 
     ! Calculate temperature evolution and Glenn's A, if necessary
     ! ------------------------------------------------------------------------ 
-    if ( model%numerics%tinc >  mod(model%numerics%time,model%numerics%ntem) .and. time.gt.0) then
+    if ( model%numerics%tinc >  mod(model%numerics%time,model%numerics%ntem)) then
        call timeevoltemp(model, model%options%whichtemp)
        newtemps = .true.
     end if
