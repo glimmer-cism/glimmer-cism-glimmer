@@ -1,3 +1,6 @@
+2005-01-18 Ian Rutt
+ * Plumbed in flow-routing code (and corrected a bug)
+
 2005-01-17 Ian Rutt
  * Added flow-routing code for run-off calculation. Not connected yet. Removed 
    old (unused) routing code.

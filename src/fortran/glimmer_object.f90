@@ -253,6 +253,7 @@ contains
     use glimmer_ncfile
     use glimmer_interp
     use glimmer_mbal
+    use glimmer_routing
     use glide_messages
     use paramets
 
@@ -285,6 +286,7 @@ contains
     ! ------------------------------------------------------------------------  
 
     real(rk),dimension(:,:),allocatable :: upscale_temp  ! temporary array for upscaling
+    real(rk),dimension(:,:),allocatable :: routing_temp  ! temporary array for flow routing
     real(rk),dimension(:,:),allocatable :: accum_temp    ! temporary array for accumulation
     real(rk),dimension(:,:),allocatable :: ablat_temp    ! temporary array for ablation
     integer, dimension(:,:),allocatable :: fudge_mask    ! temporary array for fudging
@@ -449,6 +451,7 @@ contains
     ! Allocate temporary upscaling array -------------------------------------
 
     allocate(upscale_temp(instance%model%general%ewn,instance%model%general%nsn))
+    allocate(routing_temp(instance%model%general%ewn,instance%model%general%nsn))
     allocate(accum_temp(instance%model%general%ewn,instance%model%general%nsn))
     allocate(ablat_temp(instance%model%general%ewn,instance%model%general%nsn))
     allocate(fudge_mask(instance%model%general%ewn,instance%model%general%nsn))
@@ -727,7 +730,7 @@ contains
 
     endif
 
-    ! Now water output (i.e. ablation)
+    ! Now water output (i.e. ablation) - and do routing
 
     if (out_f%water_out) then
 
@@ -737,9 +740,16 @@ contains
         upscale_temp=0.0
       endwhere
 
+      call flow_router(instance%model%geometry%usrf, &
+                       upscale_temp, &
+                       routing_temp, &
+                       instance%model%climate%out_mask, &
+                       instance%proj%dx, &
+                       instance%proj%dy)
+
       call mean_to_global(instance%proj,  &
                           instance%ups,   &
-                          upscale_temp,   &
+                          routing_temp,   &
                           g_water_out,    &
                           instance%model%climate%out_mask)
 
@@ -757,7 +767,7 @@ contains
 
     ! Tidy up ----------------------------------------------------------------
 
-    deallocate(upscale_temp,accum_temp,ablat_temp,fudge_mask)
+    deallocate(upscale_temp,accum_temp,ablat_temp,fudge_mask,routing_temp)
     instance%first=.false.
  
   end subroutine glimmer_i_tstep

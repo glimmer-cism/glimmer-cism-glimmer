@@ -229,8 +229,8 @@ contains
     call indexx(vect,ind)
 
     do k=1,nn
-      sorted(k,1)=floor(real(ind(k)-1)/real(nx))+1
-      sorted(k,2)=mod(ind(k)-1,nx)+1
+      sorted(k,1)=floor(real(ind(k)-1)/real(ny))+1
+      sorted(k,2)=mod(ind(k)-1,ny)+1
     enddo
 
     do k=1,nn
