@@ -122,6 +122,13 @@ contains
     ! ...for the forcing
 
     real(sp) :: trun ! The total time for the run.
+    real(sp) :: pfac ! The temperature scaling factor for precip (with whichprecip=3)
+    
+    ! ...for the PDD calculation
+
+    real(sp) :: wmax
+    real(dp) :: pddfac_ice
+    real(dp) :: pddfac_snow
 
     ! Error handling
 
@@ -141,7 +148,8 @@ contains
     namelist / pars / geot, fiddle, airt, nmsb, hydtim, isotim, bpar
     namelist / dats / forcfile
     namelist / cons / lapse_rate,precip_rate,air_temp,albedo
-    namelist / forc / trun
+    namelist / forc / trun, pfac
+    namelist / pdd  / wmax,pddfac_ice,pddfac_snow
 
     ! -------------------------------------------------------------------
     ! Copy default values of namelist parameters here
@@ -214,6 +222,13 @@ contains
     ! For the forcing
 
     trun        = model%forcdata%trun
+    pfac        = model%climate%pfac
+
+    ! For PDD calculations
+
+    wmax        = model%pddcalc%wmax
+    pddfac_ice  = model%pddcalc%pddfac_ice
+    pddfac_snow = model%pddcalc%pddfac_snow
 
     ! -------------------------------------------------------------------
     ! Load the namelist, having first checked that it exists
@@ -233,6 +248,7 @@ contains
       read(unit,nml=dats)
       read(unit,nml=cons)
       read(unit,nml=forc)
+      read(unit,nml=pdd)
       close(unit)
     else
       write(errtxt,*)'Error opening namelist file ',trim(nmlfile),' - it doesn''t exist!'
@@ -311,6 +327,13 @@ contains
     ! Forcing
 
     model%forcdata%trun = trun
+    model%climate%pfac  = pfac
+
+    ! PDD
+
+    model%pddcalc%wmax        = wmax
+    model%pddcalc%pddfac_ice  = pddfac_ice
+    model%pddcalc%pddfac_snow = pddfac_snow
 
     ! back to original code
 
@@ -681,7 +704,7 @@ contains
     !*FD equal to the topographic height, or sea-level, whichever is higher.
 
     use glimmer_global, only : dp, sp
-    use paramets, only : f  
+    use physcon, only : f  
 
     implicit none
 

@@ -44,7 +44,7 @@
 module paramets
 
   use glimmer_global, only : sp, dp
-  use physcon, only : scyr,rhoi,rhow,rhoo,pddfac_ice,pddfac_snow
+  use physcon, only : scyr
 
   implicit none; save
 
@@ -58,32 +58,6 @@ module paramets
   real(dp) :: tau0                        ! Pa note cannot define here as f90 wont allow
                                           ! parameters with noninteger powers in - look
                                           ! in initial in blah.f90 (not sure this applies now...)
-
-  ! These values originally held in PDD code:
-
-  ! andreas values for pdd coeffs
-  ! pddfs 0.005 and pddfi 0.016
-  ! eismint pddfs 0.003 and pddfi 0.008
-  ! ritz et al 1997 pddfs 0.005 and pddfi 0.016
-
-  real(sp), parameter :: pddfs = (rhow / rhoi) * pddfac_snow / (acc0 * scyr)
-  real(sp), parameter :: pddfi = (rhow / rhoi) * pddfac_ice  / (acc0 * scyr)
-  real(sp), parameter :: wmax = 0.6  !*FD Fraction of melted snow that refreezes
-
-  ! original pfac value 1.0533 from eismint
-  ! new value from ritz et al 1997 1.081 is equiv to
-  ! their exp(0.078x)
-  ! newer value from huybrechts 2002 1.0725 is equiv
-  ! to his exp(0.169x/2.4)
-
-  real(sp), parameter :: pfac = 1.000
-
-  ! originally a saved variable in subroutine marinlim
-
-  real(dp), parameter :: f = - rhoo / rhoi
-
-  ! originally in timeders
-
   real(sp), parameter :: conv = tim0 / scyr
 
 end module paramets

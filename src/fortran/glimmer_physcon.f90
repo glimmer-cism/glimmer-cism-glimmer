@@ -61,6 +61,7 @@ module physcon
   real(dp),parameter :: rhom = 3300.0d0          !*FD The density of magma(?) (kg m$^{-3}$)
   real(dp),parameter :: rhoo = 1028.0d0          !*FD The density of the ocean (kg m$^{-3}$)
   real(dp),parameter :: rhow = 1000.0d0          !*FD The density of fresh water (kg m$^{-3}$)
+  real(dp),parameter :: f = - rhoo / rhoi
 
   real(dp),parameter :: grav = 9.81              !*FD The acceleration due to gravity (m s$^{-2}$)
 
@@ -82,8 +83,5 @@ module physcon
 
   real(dp),parameter :: pmlt = 9.7456d-8         !*FD Factor for dependence of melting point on pressure (K Pa$^{-1}$)
   real(dp),parameter :: trpt = 273.15d0          !*FD Triple point of water (K)
-
-  real(dp),parameter :: pddfac_ice  = 0.008      !*FD PDD factor for ice (m day$^{-1}$ $^{\circ}C$^{-1}$)
-  real(dp),parameter :: pddfac_snow = 0.003      !*FD PDD factor for snow (m day$^{-1}$ $^{\circ}C$^{-1}$)
 
 end module physcon

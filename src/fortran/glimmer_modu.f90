@@ -316,6 +316,15 @@ module glimmer_types
     real(sp) :: ice_albedo   =   0.4 !*FD Ice albedo. (fraction)
     real(sp) :: ulapse_rate  =  -8.0 !*FD Uniform lapse rate in deg C/km 
                                      !*FD (N.B. This should be \emph{negative}!)
+
+    ! original pfac value 1.0533 from eismint
+    ! new value from ritz et al 1997 1.081 is equiv to
+    ! their exp(0.078x)
+    ! newer value from huybrechts 2002 1.0725 is equiv
+    ! to his exp(0.169x/2.4)
+
+    real(sp) :: pfac = 1.081 !*FD Temperature-depencence factor for use with whichprecip=3
+
   end type glimmer_climate
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -421,6 +430,19 @@ module glimmer_types
     real(sp),dimension(:,:),pointer :: pddtab  => null() 
     
     !*FD PDD table - must be allocated with dimensions nx,ny.
+
+    ! Parameters for the PDD calculation
+
+    real(sp) :: pddfs               !*FD Later set to \texttt{(rhow / rhoi) * pddfac\_snow / (acc0 * scyr)}
+    real(sp) :: pddfi               !*FD Later set to \texttt{(rhow / rhoi) * pddfac\_ice  / (acc0 * scyr)}
+    real(sp) :: wmax        = 0.6   !*FD Fraction of melted snow that refreezes
+    real(dp) :: pddfac_ice  = 0.008 !*FD PDD factor for ice (m day$^{-1}$ $^{\circ}C$^{-1}$)
+    real(dp) :: pddfac_snow = 0.003 !*FD PDD factor for snow (m day$^{-1}$ $^{\circ}C$^{-1}$)
+
+    ! andreas values for pdd coeffs
+    ! pddfs 0.005 and pddfi 0.016
+    ! eismint pddfs 0.003 and pddfi 0.008
+    ! ritz et al 1997 pddfs 0.005 and pddfi 0.016
 
  end type glimmer_pddcalc
 

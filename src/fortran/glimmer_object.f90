@@ -416,8 +416,8 @@ contains
               ! adjusted for temperature
 
       instance%model%climate%prcp = instance%model%climate%presprcp * &
-             pfac ** (instance%model%climate%artm - &
-                      instance%model%climate%presartm)
+             instance%model%climate%pfac ** (instance%model%climate%artm - &
+                                             instance%model%climate%presartm)
 
     end select
 

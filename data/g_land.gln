@@ -11,7 +11,7 @@ latc=71.0
 lonc=321.0/
 g_land.gls
 &opts
-whichtemp = 1
+whichtemp = 0
 whichartm = 3
 whichthck = 4
 whichflwa = 1
@@ -50,4 +50,9 @@ lapse_rate=10.0
 precip_rate=0.5
 air_temp=-20.0/
 &forc
-trun=50000.0/
+trun=50000.0
+pfac=1.081/
+&pdd
+wmax=0.6
+pddfac_ice=0.008
+pddfac_snow=0.003/

@@ -79,7 +79,6 @@ contains
     !*FD positive-degree-day method.
 
     use glimmer_global, only : sp
-    use paramets, only : pddfs, pddfi, wmax
 
     implicit none 
  
@@ -179,12 +178,12 @@ contains
           ! this is the depth of superimposed ice that would need to be
           ! melted before runoff can occur (prcp is already scaled)
 
-          wfrac = wmax * prcp(ew,ns)
+          wfrac = pddcalc%wmax * prcp(ew,ns)
 
           ! this is the total potential ablation of SNOW
           ! note we convert to scaled ablation
     
-          pablt = pdd * pddfs
+          pablt = pdd * pddcalc%pddfs
 
           ! if the total snow ablation is less than the depth of 
           ! superimposed ice - no runoff occurs
@@ -207,7 +206,7 @@ contains
           else if(pablt > wfrac .and.pablt <= prcp(ew,ns)) then   
             ablt(ew,ns) = pablt - wfrac 
           else
-            ablt(ew,ns) = prcp(ew,ns) - wfrac + pddfi*(pdd-prcp(ew,ns)/pddfs) 
+            ablt(ew,ns) = prcp(ew,ns) - wfrac + pddcalc%pddfi*(pdd-prcp(ew,ns)/pddcalc%pddfs) 
           end if
 
           ! Finally, mass-balance is difference between accumulation and
@@ -232,6 +231,8 @@ contains
     !*FD Initialises the positive-degree-day-table.
 
     use glimmer_global, only: sp
+    use paramets, only: scyr, acc0
+    use physcon, only: rhoi,rhow
     use glide_messages
 
     implicit none
@@ -245,6 +246,11 @@ contains
     real(sp)           :: fac
     integer            :: mfin
     integer  :: kx,ky
+
+    ! Initialise a couple of constants
+
+    pddcalc%pddfs = (rhow / rhoi) * pddcalc%pddfac_snow / (acc0 * scyr)
+    pddcalc%pddfi = (rhow / rhoi) * pddcalc%pddfac_ice  / (acc0 * scyr)
 
     !--------------------------------------------------------------------
     ! Main loops:

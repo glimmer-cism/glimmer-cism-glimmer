@@ -1,3 +1,8 @@
+2004-08-19 Ian Rutt
+ * Moved PDD and precip forcing parameters into the namelist, and slightly
+   reorganized glimmer_paramets.f90 and glimmer_physcon.f90. Would like to
+   get rid of both these files eventually.
+
 2004-08-18 Magnus Hagdorn
  * Brown Paper Back: only applied half the patch to glimmer_thck.f90
    derivatives should be devided by 2*grid_length rather than multiplied
