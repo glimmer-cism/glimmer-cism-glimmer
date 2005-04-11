@@ -1,4 +1,9 @@
 2005-04-11 Magnus Hagdorn
+ * glimmer_CFproj.f90: rename attribute back to scale_factor_at_projection_origin in order to
+   adhere to CF standard
+ * glint_vars.def: add standard names to a few variables
+
+2005-04-11 Magnus Hagdorn
  * glint_global_interp.f90: real constants have to be double precision, changed
    masko==.false. to .not.masko
  * glint_example_clim.f90: initialise pointers to NULL(), dummy arguments which might be

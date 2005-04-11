@@ -381,7 +381,7 @@ contains
     call nc_errorhandle(__FILE__,__LINE__,status)
     status = nf90_get_att(ncid,mapid,'latitude_of_projection_origin',CFproj_get_stere%latitude_of_projection_origin)
     call nc_errorhandle(__FILE__,__LINE__,status)
-    status = nf90_get_att(ncid,mapid,'scale_factor_at_proj_origin',CFproj_get_stere%scale_factor_at_proj_origin)
+    status = nf90_get_att(ncid,mapid,'scale_factor_at_projection_origin',CFproj_get_stere%scale_factor_at_proj_origin)
     call nc_errorhandle(__FILE__,__LINE__,status)
 
   end function CFproj_get_stere
@@ -406,7 +406,7 @@ contains
     status = nf90_get_att(ncid,mapid,'straight_vertical_longitude_from_pole',CFproj_get_stere_polar%longitude_of_central_meridian)
     call nc_errorhandle(__FILE__,__LINE__,status)
     CFproj_get_stere_polar%latitude_of_projection_origin = 90.
-    status = nf90_get_att(ncid,mapid,'scale_factor_at_proj_origin',dummy)
+    status = nf90_get_att(ncid,mapid,'scale_factor_at_projection_origin',dummy)
     if (status.eq.NF90_NOERR) then
        CFproj_get_stere_polar%scale_factor_at_proj_origin = dummy
     end if
@@ -579,10 +579,10 @@ contains
        if (stere%standard_parallel.ne.0) then
           status = nf90_put_att(ncid,mapid,'standard_parallel',stere%standard_parallel)
        else
-          status = nf90_put_att(ncid,mapid,'scale_factor_at_proj_origin',stere%scale_factor_at_proj_origin)
+          status = nf90_put_att(ncid,mapid,'scale_factor_at_projection_origin',stere%scale_factor_at_proj_origin)
        end if
     else
-       status = nf90_put_att(ncid,mapid,'scale_factor_at_proj_origin',stere%scale_factor_at_proj_origin)
+       status = nf90_put_att(ncid,mapid,'scale_factor_at_projection_origin',stere%scale_factor_at_proj_origin)
     end if
     call nc_errorhandle(__FILE__,__LINE__,status)
   end subroutine CFproj_put_stere
