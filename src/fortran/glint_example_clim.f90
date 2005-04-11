@@ -216,7 +216,8 @@ contains
     type(global_grid),      pointer :: grid
 
     real(rk),dimension(:),allocatable :: dim1,dim2
-    real(rk),dimension(:),pointer :: lonbound,latbound
+    real(rk),dimension(:),pointer :: lonbound => NULL()
+    real(rk),dimension(:),pointer :: latbound => NULL()
 
     integer  :: ncerr     ! NetCDF error 
     integer  :: ncid      ! NetCDF file id
@@ -290,7 +291,8 @@ contains
     type(global_grid),        pointer :: grid
 
     real(rk),dimension(:),allocatable :: dim1,dim2,dim3
-    real(rk),dimension(:),pointer :: lonbound,latbound
+    real(rk),dimension(:),pointer :: lonbound => NULL()
+    real(rk),dimension(:),pointer :: latbound => NULL()
 
     integer  :: ncerr     ! NetCDF error 
     integer  :: ncid      ! NetCDF file id
@@ -501,7 +503,8 @@ contains
 
     type(global_grid),        pointer :: grid
     logical :: lonb_present,latb_present
-    real(rk),dimension(:) :: dim1,dim2,lonbound,latbound
+    real(rk),dimension(:) :: dim1,dim2
+    real(rk), dimension(:), pointer :: lonbound,latbound
     integer :: args
 
     ! Construct grid type

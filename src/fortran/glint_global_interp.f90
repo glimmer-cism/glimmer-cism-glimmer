@@ -411,7 +411,7 @@ contains
           do jj=j1,j2
              slatmx=max(alat(jj),alat(jj+1))
              slatmn=min(alat(jj),alat(jj+1))
-             wlat=max(sin(min(amxlto,slatmx)*api/180.)-sin(max(amnlto,slatmn)*api/180.),0.0)
+             wlat=max(sin(min(amxlto,slatmx)*api/180.)-sin(max(amnlto,slatmn)*api/180.),0.d0)
              if (wlat.ne.0.0) then
                 do iii=i1,i2
                    slon=dln
@@ -427,7 +427,7 @@ contains
                       slonp=slonp+alon(iip)
                       slonmx=max(slon,slonp)
                       slonmn=min(slon,slonp)
-                      delon=max(min(amxlno,slonmx)-max(amnlno,slonmn),0.0)
+                      delon=max(min(amxlno,slonmx)-max(amnlno,slonmn),0.d0)
                       wt=wt+wlat*delon
                       avg=avg+a(ii,jj)*wlat*delon
                    endif
@@ -460,7 +460,7 @@ contains
 
     ! Check if output masko is all false.
 
-    if (all(masko==.false.)) ier=-2
+    if (all(.not.masko)) ier=-2
 
     ! Copy outputs if necessary
 

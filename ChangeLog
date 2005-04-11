@@ -1,3 +1,9 @@
+2005-04-11 Magnus Hagdorn
+ * glint_global_interp.f90: real constants have to be double precision, changed
+   masko==.false. to .not.masko
+ * glint_example_clim.f90: initialise pointers to NULL(), dummy arguments which might be
+   unassociated have to be pointers
+
 2005-04-11 Ian Rutt
  * Added asynchronous coupling of mass-balance to ice model in glint
 
