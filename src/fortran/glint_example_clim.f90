@@ -51,6 +51,12 @@ module glint_example_clim
   implicit none
 
   type glex_climate
+     ! Mass-balance coupling timing parameters --------------------------
+     integer                 :: total_years=10    ! Length of run in years
+     integer                 :: initial_years=1   ! Initial number of years (for mass-balance)
+     integer                 :: years_ratio=10    ! Number of ice model years pre mass-balance calculation
+     integer                 :: climate_tstep=6   ! Climate time-step in hours
+     real(rk)                :: diurnal_cycle=0.0 ! Imposed Diurnal cycle (degC)
      ! Filenames --------------------------------------------------------
      character(fname_length) :: precip_file = 'monthly_precip_mean_1974-2003.nc' !*FD Name of precip file
      character(fname_length) :: stemp_file  = 'surf_temp_6h_1974-2003.nc'        !*FD Name of surface temp file
@@ -122,16 +128,17 @@ contains
     if (params%orog_grid==params%all_grid) then
        params%orog_clim=params%orog_load
     else
+       print*,'Interpolating orography'
        call global_interp(params%orog_grid,params%orog_load,params%all_grid,params%orog_clim,error=ierr)
        if (ierr>0) call interp_error(ierr,__LINE__)
     end if
          
     ! Precip
 
-    print*,'Debug...9'
     if (params%precip_grid==params%all_grid) then
        params%precip_clim=params%pclim_load
     else
+       Print*,'Interpolating precip'
        do i=1,size(params%pclim_load,3)
           call global_interp(params%precip_grid,params%pclim_load(:,:,i),params%all_grid,params%precip_clim(:,:,i),error=ierr)
           if (ierr>0) call interp_error(ierr,__LINE__)
@@ -140,10 +147,10 @@ contains
 
     ! Temperature
 
-    print*,'Debug...10'
     if (params%temp_grid==params%all_grid) then
        params%surftemp_clim=params%stclim_load
     else
+       Print*,'Interpolating temperature'
        do i=1,size(params%stclim_load,3)
           call global_interp(params%temp_grid,params%stclim_load(:,:,i),params%all_grid,params%surftemp_clim(:,:,i),error=ierr)
           if (ierr>0) call interp_error(ierr,__LINE__)
@@ -152,14 +159,11 @@ contains
 
     ! Deallocate unneeded input data
 
-    print*,'Debug...11'
     deallocate(params%orog_load,params%pclim_load,params%stclim_load)
 
     ! Fix up a few things
 
-    print*,'Debug...12'
     params%surftemp_clim=params%surftemp_clim-273.15       ! Convert temps to degreesC
-    print*,'Debug...13'
 
   end subroutine glex_clim_init
 
@@ -191,6 +195,11 @@ contains
     call GetSection(config,section,'GLEX climate')
     if (associated(section)) then
        call GetValue(section,'days_in_year',params%days_in_year)
+       call GetValue(section,'total_years',params%total_years)
+       call GetValue(section,'initial_years',params%initial_years)
+       call GetValue(section,'years_ratio',params%years_ratio)
+       call GetValue(section,'climate_tstep',params%climate_tstep)
+       call GetValue(section,'diurnal_cycle',params%diurnal_cycle)
        params%hours_in_year=params%days_in_year*24
     end if
 
@@ -535,6 +544,8 @@ contains
 
   subroutine example_climate(params,precip,temp,time)
 
+    use glimmer_log
+
     type(glex_climate) :: params
     real(rk),dimension(:,:),intent(out)  :: precip,temp
     real(rk),intent(in) :: time
@@ -543,6 +554,7 @@ contains
     real(rk) :: tsp,tst
     real(rk) :: pos
     integer :: lower,upper
+    character(150) :: msg
 
     ntemp   = size(params%surftemp_clim,3)
     nprecip = size(params%precip_clim,3)
@@ -567,6 +579,13 @@ contains
     call fixbounds(lower,1,nprecip)
     call fixbounds(upper,1,nprecip)
     precip=linear_interp(params%precip_clim(:,:,lower),params%precip_clim(:,:,upper),pos)
+
+    ! Add diurnal cycle to temperature. We assume that
+    ! the lowest temperature is at midnight, and the highest at midday.
+    ! Obviously, this probably isn't true...
+
+    if (mod(int(time),24)==0)  temp=temp-params%diurnal_cycle
+    if (mod(int(time),24)==12) temp=temp+params%diurnal_cycle
 
   end subroutine example_climate
 

@@ -1,3 +1,6 @@
+2005-04-11 Ian Rutt
+ * Added asynchronous coupling of mass-balance to ice model in glint
+
 2005-04-05 Ian Rutt
  * New climate driver for glint_example.f90, called
    glint_example_clim.f90, now handles netcdf input files more flexibly.

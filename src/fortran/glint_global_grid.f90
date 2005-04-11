@@ -224,27 +224,38 @@ contains
 
   !-----------------------------------------------------------------------------
 
-  subroutine print_grid(grid)
+  subroutine print_grid(grid,no_gp)
 
     type(global_grid),intent(in)  :: grid
+    logical,optional,intent(in) :: no_gp
+
+    logical :: ng
+
+    if (present(no_gp)) then
+       ng=no_gp
+    else
+       ng=.false.
+    end if
 
     print*,'Grid parameters:'
     print*,'----------------'
     print*
     print*,'nx=',grid%nx
     print*,'ny=',grid%ny
-    print*
-    print*,'longitudes:'
-    print*,grid%lons
-    print*
-    print*,'latitudes:'
-    print*,grid%lats
-    print*
-    print*,'longitude boundaries:'
-    print*,grid%lon_bound
-    print*
-    print*,'latitude boundaries:'
-    print*,grid%lat_bound
+    if (.not.ng) then
+       print*
+       print*,'longitudes:'
+       print*,grid%lons
+       print*
+       print*,'latitudes:'
+       print*,grid%lats
+       print*
+       print*,'longitude boundaries:'
+       print*,grid%lon_bound
+       print*
+       print*,'latitude boundaries:'
+       print*,grid%lat_bound
+    end if
 
   end subroutine print_grid
   
@@ -495,8 +506,8 @@ contains
 
     if (any(a%lats.ne.b%lats).or. &
          any(a%lons.ne.b%lons).or. &
-         any(a%lat_bound.ne.b%lat_bound).or. &
-         any(a%lon_bound.ne.b%lon_bound).or. &
+!         any(a%lat_bound.ne.b%lat_bound).or. &
+!         any(a%lon_bound.ne.b%lon_bound).or. &
          any(a%box_areas.ne.b%box_areas)) then
        grid_equiv=.false.
        return

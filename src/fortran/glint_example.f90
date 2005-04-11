@@ -60,7 +60,6 @@ program glint_example
   type(glex_climate)      :: climate     ! Climate parameters and fields
   character(fname_length) :: paramfile   ! Name of the top-level configuration file
   character(fname_length) :: climatefile ! Name of climate configuration file
-  integer                 :: total_years ! Length of run in years
 
   ! Arrays which hold the global fields used as input to GLIMMER ------------------------
 
@@ -184,20 +183,47 @@ program glint_example
     stop
   endif
 
-  ! Get run length -------------------------------------------------------------------------
+  ! Do initial timesteps ---------------------------------------------------------------------------
 
-  Print*,'* Enter length of run in years:'
-  Read*,total_years
+  time=0
 
-  ! Do timesteps ---------------------------------------------------------------------------
-
-  do time=0,total_years*climate%hours_in_year+6,6
+  do
      call example_climate(climate,precip,temp,real(time,rk))
      call glint(ice_sheet,time,temp,precip,zonwind,merwind,orog, &
           orog_out=orog_out,   albedo=albedo,         output_flag=out, &
           ice_frac=ice_frac,   water_out=fw,          water_in=fw_in, &
           total_water_in=twin, total_water_out=twout, ice_volume=ice_vol) 
-     call write_log_div ! Print a row of stars
+     time=time+climate%climate_tstep
+     if (time>climate%initial_years*climate%hours_in_year) exit
+  end do
+
+  ! Do main loop
+
+  do
+     do i=1,climate%hours_in_year,climate%climate_tstep
+        call example_climate(climate,precip,temp,real(time,rk))
+        call glint(ice_sheet,time,temp,precip,zonwind,merwind,orog, &
+             orog_out=orog_out,   albedo=albedo,         output_flag=out, &
+             ice_frac=ice_frac,   water_out=fw,          water_in=fw_in, &
+             total_water_in=twin, total_water_out=twout, ice_volume=ice_vol)
+        time=time+climate%climate_tstep
+        if (time>climate%total_years*climate%hours_in_year) exit
+     end do
+
+     if (time>climate%total_years*climate%hours_in_year) exit
+     time=time+climate%hours_in_year-climate%climate_tstep
+
+     do i=1,climate%years_ratio-1
+        call glint(ice_sheet,time,temp,precip,zonwind,merwind,orog, &
+             orog_out=orog_out,   albedo=albedo,         output_flag=out, &
+             ice_frac=ice_frac,   water_out=fw,          water_in=fw_in, &
+             total_water_in=twin, total_water_out=twout, ice_volume=ice_vol, &
+             skip_mbal=.true.)
+        time=time+climate%hours_in_year
+     end do
+
+     time=time-climate%hours_in_year+climate%climate_tstep
+     if (time>climate%total_years*climate%hours_in_year) exit
   enddo
 
   ! Finalise/tidy up everything ------------------------------------------------------------
