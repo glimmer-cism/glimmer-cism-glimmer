@@ -65,7 +65,7 @@ coordinates:   lon lat
 [local_orog]
 dimensions:    time, y1, x1
 units:	       meter
-long_name:     orographic elevation provided by global model
+long_name:     orographic elevation provided by local model
 standard_name: surface_altitude
 data:	       data%local_orog
 coordinates:   lon lat

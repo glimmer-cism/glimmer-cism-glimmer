@@ -4,7 +4,8 @@
    selected at compile-time by defining preprocessor symbol GLEX_COM_LINE.
    Needed to do this to facilitate batch processing of glint runs on
    our Beowulf cluster, but obviously it's non-ideal.
-
+ * Corrected error in comment in glint_vars.def
+	
 2005-04-11 Magnus Hagdorn
  * glimmer_CFproj.f90: rename attribute back to scale_factor_at_projection_origin in order to
    adhere to CF standard
