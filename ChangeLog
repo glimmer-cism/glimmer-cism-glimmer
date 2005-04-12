@@ -1,3 +1,10 @@
+2005-04-12 Ian Rutt
+ * Added optional command-line interface to glint_example.f90. Uses
+   non-standard Fortran extensions in the intel compiler - can be
+   selected at compile-time by defining preprocessor symbol GLEX_COM_LINE.
+   Needed to do this to facilitate batch processing of glint runs on
+   our Beowulf cluster, but obviously it's non-ideal.
+
 2005-04-11 Magnus Hagdorn
  * glimmer_CFproj.f90: rename attribute back to scale_factor_at_projection_origin in order to
    adhere to CF standard

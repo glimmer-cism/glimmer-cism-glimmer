@@ -110,11 +110,29 @@ program glint_example
   ! Executable code starts here - Basic initialisation
   ! -------------------------------------------------------------------------------------
 
-  Print*,'Enter name of climate configuration file:'
-  read*,climatefile
+#ifdef GLEX_COM_LINE
 
-  Print*,'Enter name of ice model configuration file:'
-  read*,paramfile
+  ! Non-f95-standard command-line interface using Intel Compiler
+  ! features - possibly portable to other compilers, but untested
+
+  if (nargs().eq.3) then
+     call getarg(1,climatefile)
+     call getarg(2,paramfile)
+     Print*,'Using climate configuration: ',climatefile
+     Print*,'Using ice-model configuration: ',paramfile
+  else
+
+#endif
+
+     ! These are the default inputs
+     Print*,'Enter name of climate configuration file:'
+     read*,climatefile
+     Print*,'Enter name of ice model configuration file:'
+     read*,paramfile
+
+#ifdef GLEX_COM_LINE
+  endif
+#endif
 
   ! Initialise climate
 
