@@ -1,3 +1,6 @@
+2005-04-15 Magnus Hagdorn
+ * glide.tex: added documentation for isostasy
+
 2005-04-12 Ian Rutt
  * Added optional command-line interface to glint_example.f90. Uses
    non-standard Fortran extensions in the intel compiler - can be
