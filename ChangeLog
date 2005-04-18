@@ -1,3 +1,9 @@
+2005-04-18 Magnus Hagdorn
+ * configure.in: bump version to 0.5.2
+ * definitions.tex: changed doc date to today
+ * make_doc.rules: fix problem with dia where fonts are tiny
+ * updated NEWS
+
 2005-04-15 Magnus Hagdorn
  * glide.tex: added documentation for isostasy
 
