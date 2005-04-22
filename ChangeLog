@@ -1,3 +1,8 @@
+2005-04-22 Magnus Hagdorn
+ * glimmer_ncio.f90: add sanity checking to make sure input netCDF file have the same
+   grid size as the one specified in config file
+ * glimmer_ts.f90: fail gracefully when the input file cannot be opened
+
 2005-04-18 Magnus Hagdorn
  * configure.in: bump version to 0.5.2
  * definitions.tex: changed doc date to today

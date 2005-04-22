@@ -66,6 +66,7 @@ contains
   
   subroutine glimmer_read_ts(ts,fname,numv)
     !*FD read time series from file
+    use glimmer_log
     implicit none
     type(glimmer_tseries) :: ts           !*FD time series data
     character(len=*), intent(in) :: fname !*FD read from this file
@@ -81,8 +82,12 @@ contains
        ts%numv = 1
     end if
 
-    open(99,file=trim(fname),status='old')
+    open(99,file=trim(fname),status='old',iostat=ios)
     
+    if (ios.ne.0) then
+       call write_log('Error opening file: '//trim(fname),type=GM_FATAL)
+    end if
+
     ! find number of times
     ios=0
     do

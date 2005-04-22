@@ -101,7 +101,7 @@ contains
 
     ! local variables
     integer status
-    integer i,mapid
+    integer mapid
     character(len=msglen) message
 
     ! create new netCDF file
@@ -236,6 +236,7 @@ contains
     use glide_types
     use glimmer_cfproj
     use glimmer_log
+    use paramets, only: len0
     implicit none
     type(glimmer_nc_input), pointer :: infile
     !*FD structure containg input netCDF descriptor
@@ -243,9 +244,8 @@ contains
     !*FD the model instance
 
     ! local variables
-    character(len=50) varname
-    integer nvars
-    integer i, dimsize
+    integer dimsize, dimid, varid
+    real, dimension(2) :: delta
     integer status    
     character(len=msglen) message
     
@@ -274,6 +274,87 @@ contains
 
     ! setting the size of the level dimension
     NCI%nlevel = model%general%upn
+
+    ! checking if dimensions and grid spacing are the same as in the configuration file
+    ! x1
+    status = nf90_inq_dimid(NCI%id,'x1',dimid)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    status = nf90_inquire_dimension(NCI%id,dimid,len=dimsize)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    if (dimsize.ne.model%general%ewn) then
+       write(message,*) 'Dimension x1 of file '//trim(NCI%filename)//' does not match with config dimension: ',&
+            dimsize, model%general%ewn
+       call write_log(message,type=GM_FATAL)
+    end if
+    status = nf90_inq_varid(NCI%id,'x1',varid)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    status = nf90_get_var(NCI%id,varid,delta)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    if (delta(2)-delta(1) .ne. model%numerics%dew*len0) then
+       write(message,*) 'deltax1 of file '//trim(NCI%filename)//' does not match with config deltax: ',&
+            delta(2)-delta(1),model%numerics%dew*len0
+       call write_log(message,type=GM_FATAL)
+    end if
+
+    ! x0
+    status = nf90_inq_dimid(NCI%id,'x0',dimid)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    status = nf90_inquire_dimension(NCI%id,dimid,len=dimsize)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    if (dimsize.ne.model%general%ewn-1) then
+       write(message,*) 'Dimension x0 of file ',trim(NCI%filename),' does not match with config dimension: ', &
+            dimsize, model%general%ewn-1
+       call write_log(message,type=GM_FATAL)
+    end if
+    status = nf90_inq_varid(NCI%id,'x0',varid)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    status = nf90_get_var(NCI%id,varid,delta)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    if (delta(2)-delta(1) .ne. model%numerics%dew*len0) then
+       write(message,*) 'deltax0 of file '//trim(NCI%filename)//' does not match with config deltax: ', &
+            delta(2)-delta(1),model%numerics%dew*len0
+       call write_log(message,type=GM_FATAL)
+    end if
+
+    ! y1
+    status = nf90_inq_dimid(NCI%id,'y1',dimid)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    status = nf90_inquire_dimension(NCI%id,dimid,len=dimsize)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    if (dimsize.ne.model%general%nsn) then
+       write(message,*) 'Dimension y1 of file '//trim(NCI%filename)//' does not match with config dimension: ',&
+            dimsize, model%general%nsn
+       call write_log(message,type=GM_FATAL)
+    end if
+    status = nf90_inq_varid(NCI%id,'y1',varid)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    status = nf90_get_var(NCI%id,varid,delta)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    if (delta(2)-delta(1) .ne. model%numerics%dns*len0) then
+       write(message,*) 'deltay1 of file '//trim(NCI%filename)//' does not match with config deltay: ',&
+            delta(2)-delta(1),model%numerics%dns*len0
+       call write_log(message,type=GM_FATAL)
+    end if
+    
+    ! y0
+    status = nf90_inq_dimid(NCI%id,'y0',dimid)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    status = nf90_inquire_dimension(NCI%id,dimid,len=dimsize)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    if (dimsize.ne.model%general%nsn-1) then
+       write(message,*) 'Dimension y0 of file '//trim(NCI%filename)//' does not match with config dimension: ',&
+            dimsize, model%general%nsn-1
+       call write_log(message,type=GM_FATAL)
+    end if
+    status = nf90_inq_varid(NCI%id,'y0',varid)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    status = nf90_get_var(NCI%id,varid,delta)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    if (delta(2)-delta(1) .ne. model%numerics%dns*len0) then
+       write(message,*) 'deltay0 of file '//trim(NCI%filename)//' does not match with config deltay: ',&
+            delta(2)-delta(1),model%numerics%dns*len0
+       call write_log(message,type=GM_FATAL)
+    end if
   end subroutine glimmer_nc_openfile
 
   subroutine glimmer_nc_checkread(infile,model)
