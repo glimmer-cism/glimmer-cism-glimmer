@@ -27,7 +27,11 @@ AC_PROG_FC
 FCFLAGS=$glimmer_FCFLAGS
 AC_LANG_PUSH(Fortran)
 AC_FC_SRCEXT(f90)
-FCFLAGS="$FCFLAGS -fpp"
+if test "$FC" == gfortran; then
+  FCFLAGS="$FCFLAGS -x f95-cpp-input"
+else
+  FCFLAGS="$FCFLAGS -fpp"
+fi
 
 dnl Checking for python
 AM_PATH_PYTHON([2.3],,[AC_MSG_RESULT(need at least python 2.3)])
