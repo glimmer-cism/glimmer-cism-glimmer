@@ -174,7 +174,7 @@ contains
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine interp_to_local(proj,global,downs,localsp,localdp,global_fn)
+  subroutine interp_to_local(proj,global,downs,localsp,localdp,localrk,global_fn)
 
     !*FD Interpolate a global scalar field
     !*FD onto a projected grid. 
@@ -196,6 +196,7 @@ contains
     type(downscale),         intent(in)           :: downs     !*FD Downscaling parameters
     real(sp),dimension(:,:), intent(out),optional :: localsp   !*FD Local field on projected grid (output) sp
     real(dp),dimension(:,:), intent(out),optional :: localdp   !*FD Local field on projected grid (output) dp
+    real(rk),dimension(:,:), intent(out),optional :: localrk   !*FD Local field on projected grid (output) rk
     real(sp),optional,external                    :: global_fn !*FD Function returning values in global field. This  
                                                                !*FD may be used as an alternative to passing the
                                                                !*FD whole array in \texttt{global} if, for instance the
@@ -211,7 +212,7 @@ contains
 
     ! check we have one output at least...
 
-    if (.not.(present(localsp).or.present(localdp))) then
+    if (.not.(present(localsp).or.present(localdp).or.present(localrk))) then
       call write_log('Interp_to_local has no output',GM_WARNING,__FILE__,__LINE__)
     endif
 
@@ -238,6 +239,7 @@ contains
 
         if (present(localsp)) localsp(i,j)=bilinear_interp(downs%xfrac(i,j),downs%yfrac(i,j),f)
         if (present(localdp)) localdp(i,j)=bilinear_interp(downs%xfrac(i,j),downs%yfrac(i,j),f)
+        if (present(localrk)) localrk(i,j)=bilinear_interp(downs%xfrac(i,j),downs%yfrac(i,j),f)
 
       enddo
     enddo

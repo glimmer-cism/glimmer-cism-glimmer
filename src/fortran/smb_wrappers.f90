@@ -1,4 +1,4 @@
-! $Id: smb_wrappers.f90,v 1.1.2.1 2005-03-20 20:11:28 gethinw Exp $
+! $Id: smb_wrappers.f90,v 1.1.2.2 2005-05-12 10:09:24 icrutt Exp $
 !
 
 !! Temporary wrapper for init driven from file
@@ -148,9 +148,7 @@ subroutine SMBForceLoopWrapper(smb_p, &
 end subroutine SMBForceLoopWrapper
 
 !! Wrapper for on-line main-loop routine
-subroutine SMBStepWrapper(smb_p,   &
-     totacc,totrn,totcon,totoff,massbal, &
-     SLM,Ta,prec,U10m,V10m,hum,SWdown,LWdown,Psurf)   !MB wspeed replaced with U10m and V10m
+subroutine SMBStepWrapper(smb_p,massbal,SLM,Ta,prec,U10m,V10m,hum,SWdown,LWdown,Psurf)   !MB wspeed replaced with U10m and V10m
   
   use smb_mecons
   use smb_const
@@ -158,24 +156,26 @@ subroutine SMBStepWrapper(smb_p,   &
   implicit none
 
   type(smb_params),intent(inout)                      :: smb_p   ! params for SMB scheme
-  real(rk),intent(inout),dimension(smb_p%nx,smb_p%ny) :: totacc  ! total water equivalent snowfall
-  real(rk),intent(inout),dimension(smb_p%nx,smb_p%ny) :: totrn   ! total rainfall
-  real(rk),intent(inout),dimension(smb_p%nx,smb_p%ny) :: totcon  ! if -ve, evap, if +ve, condensation 
-  real(rk),intent(inout),dimension(smb_p%nx,smb_p%ny) :: totoff  ! total runoff
-  real(rk),intent(inout),dimension(smb_p%nx,smb_p%ny) :: massbal ! totacc+totrn+totcon-totof
-  real(rk),intent(in),dimension(smb_p%nx,smb_p%ny)    :: SLM     ! **TODO**
-  real(rk),intent(in),dimension(smb_p%nx,smb_p%ny)    :: Ta      ! air temp
-  real(rk),intent(in),dimension(smb_p%nx,smb_p%ny)    :: prec    ! precip in right units? //MB No: see prmass
-  real(rk),intent(in),dimension(smb_p%nx,smb_p%ny)    :: U10m    ! Dan has written convesrion
-  real(rk),intent(in),dimension(smb_p%nx,smb_p%ny)    :: V10m    ! Dan has written convesrion 
+  real(rk),intent(inout),dimension(smb_p%nx,smb_p%ny) :: massbal ! totacc+totrn+totcon-totof (mm water equivalent)
+  real(rk),intent(in),dimension(smb_p%nx,smb_p%ny)    :: SLM     ! ice thickness (m)
+  real(rk),intent(in),dimension(smb_p%nx,smb_p%ny)    :: Ta      ! air temp (degC)
+  real(rk),intent(in),dimension(smb_p%nx,smb_p%ny)    :: prec    ! precip (mm water equivalent)
+  real(rk),intent(in),dimension(smb_p%nx,smb_p%ny)    :: U10m    ! Ten-metre x-wind (m/s)
+  real(rk),intent(in),dimension(smb_p%nx,smb_p%ny)    :: V10m    ! Ten-metre y-wind (m/s)
   real(rk),intent(in),dimension(smb_p%nx,smb_p%ny)    :: hum     ! Relative humidity (%)
-  real(rk),intent(in),dimension(smb_p%nx,smb_p%ny)    :: SWdown  ! Need to pick apart net// MB Dan should take care of this too.
-  real(rk),intent(in),dimension(smb_p%nx,smb_p%ny)    :: LWdown  ! ditto
-  real(rk),intent(in),dimension(smb_p%nx,smb_p%ny)    :: Psurf   ! surface pressure
+  real(rk),intent(in),dimension(smb_p%nx,smb_p%ny)    :: SWdown  ! Downwelling shortwave (W/m^2)
+  real(rk),intent(in),dimension(smb_p%nx,smb_p%ny)    :: LWdown  ! Downwelling longwave (W/m^2)
+  real(rk),intent(in),dimension(smb_p%nx,smb_p%ny)    :: Psurf   ! surface pressure (Pa)
   
   !local variables
   real(rk),dimension(smb_p%nx,smb_p%ny) :: prmass  ! precip in right units? //MB Yes  
   real(rk),dimension(smb_p%nx,smb_p%ny) :: wspeed  ! recalculated if U and V are provided instead of wspeed (call windcalc)
+
+  ! Dummy arrays, used to be in argument list, but not used
+  real(rk),dimension(smb_p%nx,smb_p%ny) :: totacc  ! total water equivalent snowfall
+  real(rk),dimension(smb_p%nx,smb_p%ny) :: totrn   ! total rainfall
+  real(rk),dimension(smb_p%nx,smb_p%ny) :: totcon  ! if -ve, evap, if +ve, condensation 
+  real(rk),dimension(smb_p%nx,smb_p%ny) :: totoff  ! total runoff
 
 
   ! Processing some input: get wind speed, precip in the right units, and humidity STILL TO FIX!

@@ -23,13 +23,15 @@ module glint_mbal_coupling
 
 contains
 
-  subroutine glint_mbc_init(params,proj,config,whichacab)
+  subroutine glint_mbc_init(params,proj,config,whichacab,nx,ny,dx)
 
     type(glint_mbc)  :: params
     type(projection) :: proj
     type(ConfigSection), pointer :: config !*FD structure holding sections of configuration file
     integer          :: whichacab
     integer          :: whichprcp
+    integer          :: nx,ny  !*FD grid dimensions (for SMB)
+    real(rk)         :: dx     !* Grid length (for SMB)
 
     ! Deallocate if necessary
 
@@ -55,13 +57,14 @@ contains
 
     ! Initialise the mass-balance scheme and other components
 
-    call glint_mbal_init(params%mbal,config,whichacab)
+    call glint_mbal_init(params%mbal,config,whichacab,nx,ny,dx)
 
   end subroutine glint_mbc_init
 
   ! +++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine glint_accumulate(params,artm,arng,prcp,snowd,siced,xwind,ywind,global_orog,local_orog)
+  subroutine glint_accumulate(params,artm,arng,prcp,snowd,siced,xwind,ywind,global_orog,local_orog, &
+       thck,humidity,SWdown,LWdown,Psurf)
 
     type(glint_mbc)  :: params
     real(sp),dimension(:,:),intent(inout) :: artm      !*FD Mean air temperature (degC)
@@ -73,6 +76,11 @@ contains
     real(rk),dimension(:,:),intent(in) :: ywind        !*FD $y$-component of surface winds (m/s)
     real(dp),dimension(:,:),intent(in) :: global_orog  !*FD Global orography (m)
     real(sp),dimension(:,:),intent(in) :: local_orog   !*FD Local orography (m)
+    real(dp),dimension(:,:),intent(in) :: thck         !*FD Ice thickness (m)
+    real(rk),dimension(:,:),intent(in) :: humidity     !*FD Relative humidity (%)
+    real(rk),dimension(:,:),intent(in) :: SWdown       !*FD Downwelling shortwave (W/m^2)
+    real(rk),dimension(:,:),intent(in) :: LWdown       !*FD Downwelling longwave (W/m^2)
+    real(rk),dimension(:,:),intent(in) :: Psurf        !*FD Surface pressure (Pa)
 
     real(sp),dimension(size(artm,1),size(artm,2)) :: ablt,acab
     
@@ -102,7 +110,7 @@ contains
     ! Call mass-balance
 
     call glint_mbal_calc(params%mbal,artm,arng,prcp,(local_orog>0.0),params%snowd, &
-         params%siced,ablt,acab) 
+         params%siced,ablt,acab,thck,xwind,ywind,humidity,SWdown,LWdown,Psurf) 
 
     ! Accumulate
 

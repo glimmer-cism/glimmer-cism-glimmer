@@ -1,5 +1,5 @@
 !
-! $Id: smb_netcdf.f90,v 1.1.2.1 2005-03-20 20:11:28 gethinw Exp $
+! $Id: smb_netcdf.f90,v 1.1.2.2 2005-05-12 10:09:24 icrutt Exp $
 !
 
 module smb_netcdf
@@ -198,7 +198,7 @@ contains
     type(varInfo_1d),intent(inout),dimension(:) :: coords
     type(varInfo_2d),intent(inout),dimension(:) :: vars
     ! locals
-    integer :: ii
+    integer :: ii,iid
     integer :: status
     integer,pointer,dimension(:) :: dimIDs
 
@@ -219,9 +219,11 @@ contains
 
     ! define the coordinates
     do ii=1,size(coords)
+       iid=dims(ii)%id
        status = nf90_def_var(ncid,coords(ii)%name, &
-            coords(ii)%xtype, (/dims(ii)%id/), coords(ii)%id)
+            coords(ii)%xtype, (/iid/), coords(ii)%id)
        if (status /= nf90_noerr) call handle_err(status)
+       dims(ii)%id=iid
        dimIDs(ii) = dims(ii)%id
     end do
 

@@ -75,6 +75,10 @@ module glint_type
     real(sp),dimension(:,:),pointer :: siced       => null() !*FD Superimposed ice depth (m)
     real(rk),dimension(:,:),pointer :: xwind       => null() !*FD $x$-component of surface winds (m/s)
     real(rk),dimension(:,:),pointer :: ywind       => null() !*FD $y$-component of surface winds (m/s)
+    real(rk),dimension(:,:),pointer :: humid       => null() !*FD Surface humidity (%)
+    real(rk),dimension(:,:),pointer :: lwdown      => null() !*FD Downwelling longwave (W/m^2)
+    real(rk),dimension(:,:),pointer :: swdown      => null() !*FD Downwelling shortwave (W/m^2)
+    real(rk),dimension(:,:),pointer :: airpress    => null() !*FD Surface air pressure (Pa)
     real(dp),dimension(:,:),pointer :: global_orog => null() !*FD Global orography (m)
     real(sp),dimension(:,:),pointer :: local_orog  => null() !*FD Local orography (m)
  
@@ -181,6 +185,10 @@ contains
     if (associated(instance%siced))         deallocate(instance%siced)
     if (associated(instance%xwind))         deallocate(instance%xwind)
     if (associated(instance%ywind))         deallocate(instance%ywind)
+    if (associated(instance%humid))         deallocate(instance%humid)
+    if (associated(instance%lwdown))        deallocate(instance%lwdown)
+    if (associated(instance%swdown))        deallocate(instance%swdown)
+    if (associated(instance%airpress))      deallocate(instance%airpress)
     if (associated(instance%global_orog))   deallocate(instance%global_orog) 
     if (associated(instance%local_orog))    deallocate(instance%local_orog)
 
@@ -208,6 +216,10 @@ contains
     allocate(instance%siced(ewn,nsn));       instance%siced       = 0.0
     allocate(instance%xwind(ewn,nsn));       instance%xwind       = 0.0
     allocate(instance%ywind(ewn,nsn));       instance%ywind       = 0.0
+    allocate(instance%humid(ewn,nsn));       instance%humid       = 0.0
+    allocate(instance%lwdown(ewn,nsn));      instance%lwdown      = 0.0
+    allocate(instance%swdown(ewn,nsn));      instance%swdown      = 0.0
+    allocate(instance%airpress(ewn,nsn));    instance%airpress    = 0.0
     allocate(instance%global_orog(ewn,nsn)); instance%global_orog = 0.0
     allocate(instance%local_orog(ewn,nsn));  instance%local_orog  = 0.0
 

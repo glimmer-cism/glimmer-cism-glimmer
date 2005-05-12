@@ -92,6 +92,10 @@ module glint_main
      real(rk),pointer,dimension(:,:) :: g_temp_range => null() !*FD global temperature range
      real(rk),pointer,dimension(:,:) :: g_av_zonwind => null() !*FD globally averaged zonal wind 
      real(rk),pointer,dimension(:,:) :: g_av_merwind => null() !*FD globally averaged meridional wind 
+     real(rk),pointer,dimension(:,:) :: g_av_humid   => null() !*FD globally averaged humidity (%)
+     real(rk),pointer,dimension(:,:) :: g_av_lwdown  => null() !*FD globally averaged downwelling longwave (W/m^2)
+     real(rk),pointer,dimension(:,:) :: g_av_swdown  => null() !*FD globally averaged downwelling shortwave (W/m^2)
+     real(rk),pointer,dimension(:,:) :: g_av_airpress => null() !*FD globally averaged surface air pressure (Pa)
 
      ! Fractional coverage information --------------------------
 
@@ -117,6 +121,7 @@ module glint_main
      ! Accumulation/averaging flags -----------------------------
 
      logical :: need_winds=.false. !*FD Set if we need the winds to be accumulated/downscaled
+     logical :: enmabal=.false.    !*FD Set if we're using the energy balance mass balance model anywhere
 
   end type glint_params
 
@@ -241,6 +246,10 @@ contains
     params%g_temp_range = 0.0
     params%g_av_zonwind = 0.0
     params%g_av_merwind = 0.0
+    params%g_av_humid   = 0.0
+    params%g_av_lwdown  = 0.0
+    params%g_av_swdown  = 0.0
+    params%g_av_airpress = 0.0
 
     ! ---------------------------------------------------------------
     ! Open the global configuration file and read in the parameters
@@ -291,7 +300,8 @@ contains
        ! initialise the single instance
 
        call write_log(trim(paramfile))
-       call glint_i_initialise(global_config,params%instances(1),params%g_grid,params%g_grid_orog,mbts(1),params%need_winds)
+       call glint_i_initialise(global_config,params%instances(1),params%g_grid,params%g_grid_orog, &
+            mbts(1),params%need_winds,params%enmabal)
        call write_log('')
 
        ! Update the coverage and normalisation fields
@@ -318,7 +328,8 @@ contains
           call GetValue(section,'name',instance_fname)
           call write_log(trim(instance_fname))
           call ConfigRead(instance_fname,instance_config)
-          call glint_i_initialise(instance_config,params%instances(i),params%g_grid,params%g_grid_orog,mbts(i),params%need_winds)
+          call glint_i_initialise(instance_config,params%instances(i),params%g_grid,params%g_grid_orog, &
+               mbts(i),params%need_winds,params%enmabal)
 
           params%total_coverage = params%total_coverage + params%instances(i)%frac_coverage
           params%total_cov_orog = params%total_cov_orog + params%instances(i)%frac_cov_orog
@@ -407,6 +418,7 @@ contains
   !================================================================================
 
   subroutine glint(params,time,temp,precip,zonwind,merwind,orog, &
+       humid,lwdown,swdown,airpress, &
        output_flag,orog_out,albedo,ice_frac,water_in, &
        water_out,total_water_in,total_water_out, &
        ice_volume)
@@ -429,6 +441,7 @@ contains
     use glimmer_utils
     use glint_interp
     use glint_timestep
+    use glimmer_log
     implicit none
 
     ! Subroutine argument declarations -------------------------------------------------------------
@@ -440,6 +453,10 @@ contains
     real(rk),dimension(:,:),         intent(in)    :: zonwind,merwind !*FD Zonal and meridional components 
     !*FD of the wind field         (m/s)
     real(rk),dimension(:,:),         intent(inout) :: orog            !*FD The large-scale orography (m)
+    real(rk),dimension(:,:),optional,intent(in)    :: humid           !*FD Surface humidity (%)
+    real(rk),dimension(:,:),optional,intent(in)    :: lwdown          !*FD Downwelling longwave (W/m^2)
+    real(rk),dimension(:,:),optional,intent(in)    :: swdown          !*FD Downwelling shortwave (W/m^2)
+    real(rk),dimension(:,:),optional,intent(in)    :: airpress        !*FD surface air pressure (Pa)
     logical,                optional,intent(out)   :: output_flag     !*FD Set true if outputs set
     real(rk),dimension(:,:),optional,intent(inout) :: orog_out        !*FD The fed-back, output orography (m)
     real(rk),dimension(:,:),optional,intent(inout) :: albedo          !*FD surface albedo
@@ -456,6 +473,14 @@ contains
     real(rk),dimension(:,:),allocatable :: albedo_temp,if_temp,wout_temp,orog_out_temp,win_temp
     real(rk) :: twin_temp,twout_temp,icevol_temp
     type(output_flags) :: out_f
+
+    ! Check we have necessary input fields ----------------------------------------------------------
+
+    if (params%enmabal) then
+       if (.not.(present(humid).and.present(lwdown).and. &
+            present(swdown).and.present(airpress))) &
+            call write_log('Necessary fields not supplied for Energy Balance Mass Balance model',GM_FATAL,__FILE__,__LINE__)
+    end if
 
     ! Set averaging start if necessary and return if this is not a mass-balance timestep
     ! Still not sure if this is the correct solution, but should prevent averaging of one-
@@ -481,6 +506,13 @@ contains
 
     if (params%need_winds) params%g_av_zonwind = params%g_av_zonwind + zonwind
     if (params%need_winds) params%g_av_merwind = params%g_av_merwind + merwind
+
+    if (params%enmabal) then
+       params%g_av_humid    = params%g_av_humid    + humid
+       params%g_av_lwdown   = params%g_av_lwdown   + lwdown
+       params%g_av_swdown   = params%g_av_swdown   + swdown
+       params%g_av_airpress = params%g_av_airpress + airpress
+    endif
 
     ! Ranges of temperature
 
@@ -578,6 +610,12 @@ contains
        params%g_av_precip  = params%g_av_precip /real(params%av_steps)
        if (params%need_winds) params%g_av_zonwind = params%g_av_zonwind/real(params%av_steps)
        if (params%need_winds) params%g_av_merwind = params%g_av_merwind/real(params%av_steps)
+       if (params%enmabal) then
+          params%g_av_humid    = params%g_av_humid   /real(params%av_steps)
+          params%g_av_lwdown   = params%g_av_lwdown  /real(params%av_steps)
+          params%g_av_swdown   = params%g_av_swdown  /real(params%av_steps)
+          params%g_av_airpress = params%g_av_airpress/real(params%av_steps)
+       endif
 
        ! Calculate total accumulated precipitation - multiply
        ! by time since last model timestep
@@ -598,6 +636,10 @@ contains
                params%g_av_precip,           &
                params%g_av_zonwind,          &
                params%g_av_merwind,          &
+               params%g_av_humid,            &
+               params%g_av_lwdown,           &
+               params%g_av_swdown,           &
+               params%g_av_airpress,         &
                orog,                         &
                orog_out_temp,                &
                albedo_temp,                  &
@@ -666,6 +708,10 @@ contains
        params%g_av_precip  = 0.0
        params%g_av_zonwind = 0.0
        params%g_av_merwind = 0.0
+       params%g_av_humid   = 0.0
+       params%g_av_lwdown  = 0.0
+       params%g_av_swdown  = 0.0
+       params%g_av_airpress = 0.0
        params%g_temp_range = 0.0
        params%g_max_temp   = -1000.0
        params%g_min_temp   = 1000.0
@@ -760,6 +806,10 @@ contains
     allocate(params%g_temp_range(params%g_grid%nx,params%g_grid%ny))
     allocate(params%g_av_zonwind(params%g_grid%nx,params%g_grid%ny))
     allocate(params%g_av_merwind(params%g_grid%nx,params%g_grid%ny))
+    allocate(params%g_av_humid  (params%g_grid%nx,params%g_grid%ny))
+    allocate(params%g_av_lwdown (params%g_grid%nx,params%g_grid%ny))
+    allocate(params%g_av_swdown (params%g_grid%nx,params%g_grid%ny))
+    allocate(params%g_av_airpress(params%g_grid%nx,params%g_grid%ny))
 
     allocate(params%total_coverage(params%g_grid%nx,params%g_grid%ny))
     allocate(params%cov_normalise (params%g_grid%nx,params%g_grid%ny))

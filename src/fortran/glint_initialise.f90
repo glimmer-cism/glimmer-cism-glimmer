@@ -51,7 +51,7 @@ module glint_initialise
 
 contains
 
-  subroutine glint_i_initialise(config,instance,grid,grid_orog,mbts,need_winds)
+  subroutine glint_i_initialise(config,instance,grid,grid_orog,mbts,need_winds,enmabal)
 
     !*FD Initialise a GLINT ice model instance
 
@@ -70,6 +70,7 @@ contains
     type(global_grid),     intent(in)    :: grid_orog   !*FD Global grid to use for orography
     integer,               intent(out)   :: mbts        !*FD mass-balance time-step (hours)
     logical,               intent(inout) :: need_winds  !*FD Set if this instance needs wind input
+    logical,               intent(inout) :: enmabal     !*FD Set if this instance uses the energy balance mass-bal model
 
     ! initialise model
 
@@ -120,7 +121,8 @@ contains
 
     ! initialise the mass-balance accumulation
 
-    call glint_mbc_init(instance%mbal_accum,instance%proj,config,instance%whichacab)
+    call glint_mbc_init(instance%mbal_accum,instance%proj,config,instance%whichacab, &
+         instance%proj%nx,instance%proj%ny,instance%proj%dx)
     instance%mbal_tstep=instance%mbal_accum%mbal%tstep
     mbts=instance%mbal_tstep
 
@@ -129,6 +131,10 @@ contains
     call glint_io_writeall(instance,instance%model)
 
     if (instance%whichprecip==2) need_winds=.true.
+    if (instance%whichacab==3) then
+       need_winds=.true.
+       enmabal=.true.
+    end if
 
   end subroutine glint_i_initialise
 
