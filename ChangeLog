@@ -1,3 +1,10 @@
+2005-05-13 Magnus Hagdorn
+ * cvs_version.py: script used to parse CVS/Entries file to get date and branch of
+   the most recently checked-out file
+ * glimmer_version.f90.in renamed to glimmer_version.f90.in.in
+ * Makefile.am generates glimmer_version.f90 from glimmer_version.f90.in using cvs_version.py
+ * configure.in: add CVS date to version string if we compile from CVS sources
+
 2005-05-11 Ian Rutt
  * configure.in: added rule to enable preprocessor in gfortran. Note that
  gfortran can't actually compile glimmer at the moment, but hopefully will
