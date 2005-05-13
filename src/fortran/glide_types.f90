@@ -360,6 +360,8 @@ module glide_types
     real(dp) :: marine = 1.0d0
     real(dp) :: trcmax = 10.0d0
     real(dp) :: btrac_const = 0.0d0
+    real(dp) :: btrac_slope = 0.0d0
+    real(dp) :: btrac_max = 0.d0
   end type glide_velowk
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -432,6 +434,8 @@ module glide_types
   type glide_paramets
     real(dp),dimension(5) :: bpar = (/ 2.0d0, 10.0d0, 10.0d0, 0.0d0, 1.0d0 /)
     real(dp) :: btrac_const = 0.d0 ! m yr^{-1} Pa^{-1} (gets scaled during init)
+    real(dp) :: btrac_slope = 0.0d0 ! Pa^{-1} (gets scaled during init)
+    real(dp) :: btrac_max = 0.d0  !  m yr^{-1} Pa^{-1} (gets scaled during init)
     real(dp) :: geot   = -5.0d-2  ! W m^{-2}
     real(dp) :: fiddle = 3.0d0    ! -
     real(dp) :: hydtim = 1000.0d0 ! yr^{-1} converted to s^{-1} and scaled, 

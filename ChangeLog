@@ -1,4 +1,13 @@
 2005-05-13 Magnus Hagdorn
+ * glide_velo.f90: simplify API of calcbtrc, add sliding param depending on basal melt;
+   simplify API of slipvelo
+ * glide_thck.f90: hook-up new slipvelo
+ * glide.f90: hook-up new slipvelo; write glimmer version to log
+ * glide_types.f90: add new params to deal with new sliding parameterisation
+ * glide_setup.f90: read new params for configuration file
+ * tests/Makefile.am: tell make which files to delete on make clean
+
+2005-05-13 Magnus Hagdorn
  * cvs_version.py: script used to parse CVS/Entries file to get date and branch of
    the most recently checked-out file
  * glimmer_version.f90.in renamed to glimmer_version.f90.in.in

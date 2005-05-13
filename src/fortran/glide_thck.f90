@@ -93,25 +93,17 @@ contains
 
        ! calculate basal velos
        if (newtemps) then
-          call slipvelo(model%numerics,                &
-               model%velowk,                  &
-               model%geomderv,                &
+          call slipvelo(model,                &
                1,model%options%whichbtrc,     &
-               model%temper%   bwat,          &
                model%velocity% btrc,          &
-               model%isos% relx,          &
                model%velocity% ubas,          &
                model%velocity% vbas)
           ! calculate Glen's A if necessary
           call velo_integrate_flwa(model%velowk,model%geomderv%stagthck,model%temper%flwa)
        end if
-       call slipvelo(model%numerics,                &
-            model%velowk,                  &
-            model%geomderv,                &
+       call slipvelo(model,                &
             2,model%options%whichbtrc,     &
-            model%temper%   bwat,          &
             model%velocity% btrc,          &
-            model%isos% relx,          &
             model%velocity% ubas,          &
             model%velocity% vbas)
 
@@ -123,13 +115,9 @@ contains
        call thck_evolve(model,logunit,.true.,model%geometry%thck,model%geometry%thck)
 
        ! calculate horizontal velocity field
-       call slipvelo(model%numerics,                &
-            model%velowk,                  &
-            model%geomderv,                &
+       call slipvelo(model,                &
             3,model%options%whichbtrc,     &
-            model%temper%bwat,             &
             model%velocity%btrc,           &
-            model%isos%relx,           &
             model%velocity%ubas,           &
             model%velocity%vbas)
        call velo_calc_velo(model%velowk,model%geomderv%stagthck,model%geomderv%dusrfdew, &
@@ -171,13 +159,9 @@ contains
 
        ! calculate basal velos
        if (newtemps) then
-          call slipvelo(model%numerics,                &
-               model%velowk,                  &
-               model%geomderv,                &
+          call slipvelo(model,                &
                1,model%options%whichbtrc,     &
-               model%temper%   bwat,          &
                model%velocity% btrc,          &
-               model%isos% relx,          &
                model%velocity% ubas,          &
                model%velocity% vbas)
           ! calculate Glen's A if necessary
@@ -190,13 +174,9 @@ contains
        do p=1,pmax
           model%thckwk%oldthck2 = model%geometry%thck
 
-          call slipvelo(model%numerics,                &
-               model%velowk,                  &
-               model%geomderv,                &
+          call slipvelo(model,                &
                2,model%options%whichbtrc,     &
-               model%temper%   bwat,          &
                model%velocity% btrc,          &
-               model%isos% relx,          &
                model%velocity% ubas,          &
                model%velocity% vbas)
 
@@ -223,13 +203,9 @@ contains
 #endif
 
        ! calculate horizontal velocity field
-       call slipvelo(model%numerics,                &
-            model%velowk,                  &
-            model%geomderv,                &
+       call slipvelo(model,                &
             3,model%options%whichbtrc,     &
-            model%temper%bwat,             &
             model%velocity%btrc,           &
-            model%isos%relx,           &
             model%velocity%ubas,           &
             model%velocity%vbas)
        call velo_calc_velo(model%velowk,model%geomderv%stagthck,model%geomderv%dusrfdew, &
