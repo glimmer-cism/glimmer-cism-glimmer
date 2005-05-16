@@ -51,8 +51,9 @@ module glint_timestep
 contains
 
   subroutine glint_i_tstep(time,instance,g_temp,g_temp_range, &
-                          g_precip,g_zonwind,g_merwind,g_orog,g_orog_out,g_albedo,g_ice_frac,&
-                          g_water_in,g_water_out,t_win,t_wout,ice_vol,out_f,orogflag,mbal_skip)
+                          g_precip,g_zonwind,g_merwind,g_humid,g_lwdown,g_swdown,g_airpress, &
+                          g_orog,g_orog_out,g_albedo,g_ice_frac,g_water_in,g_water_out,t_win,&
+                          t_wout,ice_vol,out_f,orogflag,mbal_skip)
 
     !*FD Performs time-step of an ice model instance. Note that this 
     !*FD code will need to be altered to take account of the 
@@ -82,6 +83,10 @@ contains
     real(rk),dimension(:,:),intent(in)   :: g_precip     !*FD Global precip field total (mm)
     real(rk),dimension(:,:),intent(in)   :: g_zonwind    !*FD Global mean surface zonal wind (m/s)
     real(rk),dimension(:,:),intent(in)   :: g_merwind    !*FD Global mean surface meridonal wind (m/s)
+    real(rk),dimension(:,:),intent(in)   :: g_humid      !*FD Global surface humidity (%)
+    real(rk),dimension(:,:),intent(in)   :: g_lwdown     !*FD Global downwelling longwave (W/m^2)
+    real(rk),dimension(:,:),intent(in)   :: g_swdown     !*FD Global downwelling shortwave (W/m^2)
+    real(rk),dimension(:,:),intent(in)   :: g_airpress   !*FD Global surface air pressure (Pa)
     real(rk),dimension(:,:),intent(in)   :: g_orog       !*FD Input global orography (m)
     real(rk),dimension(:,:),intent(out)  :: g_orog_out   !*FD Output orography (m)
     real(rk),dimension(:,:),intent(out)  :: g_albedo     !*FD Output surface albedo 
@@ -111,7 +116,8 @@ contains
 
        ! Downscale input fields -------------------------------------------------
 
-       call glint_downscaling(instance,g_temp,g_temp_range,g_precip,g_orog,g_zonwind,g_merwind,orogflag)
+       call glint_downscaling(instance,g_temp,g_temp_range,g_precip,g_orog,g_zonwind,g_merwind, &
+            g_humid,g_lwdown,g_swdown,g_airpress,orogflag)
 
        ! ------------------------------------------------------------------------  
        ! Sort out some local orography and remove bathymetry. This relies on the 
@@ -138,7 +144,8 @@ contains
 
        call glint_accumulate(instance%mbal_accum,instance%artm,instance%arng,instance%prcp, &
             instance%snowd,instance%siced,instance%xwind,instance%ywind,instance%global_orog, &
-            instance%local_orog)
+            instance%local_orog,instance%model%geometry%thck,instance%humid,instance%swdown,instance%lwdown, &
+            instance%airpress)
 
     end if
 

@@ -88,7 +88,8 @@ contains
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine glint_downscaling(instance,g_temp,g_temp_range,g_precip,g_orog,g_zonwind,g_merwind,orogflag)
+  subroutine glint_downscaling(instance,g_temp,g_temp_range,g_precip,g_orog,g_zonwind, &
+       g_merwind,g_humid,g_lwdown,g_swdown,g_airpress,orogflag)
 
     use glint_interp
 
@@ -101,15 +102,26 @@ contains
     real(rk),dimension(:,:),intent(in)   :: g_orog       !*FD Input global orography (m)
     real(rk),dimension(:,:),intent(in)   :: g_zonwind    !*FD Global mean surface zonal wind (m/s)
     real(rk),dimension(:,:),intent(in)   :: g_merwind    !*FD Global mean surface meridonal wind (m/s)
+    real(rk),dimension(:,:),intent(in)   :: g_humid      !*FD Global surface humidity (%)
+    real(rk),dimension(:,:),intent(in)   :: g_lwdown     !*FD Global downwelling longwave (W/m^2)
+    real(rk),dimension(:,:),intent(in)   :: g_swdown     !*FD Global downwelling shortwave (W/m^2)
+    real(rk),dimension(:,:),intent(in)   :: g_airpress   !*FD Global surface air pressure (Pa)
     logical,                intent(in)   :: orogflag
 
     call interp_to_local(instance%proj,g_temp,      instance%downs,localsp=instance%artm)
     call interp_to_local(instance%proj,g_temp_range,instance%downs,localsp=instance%arng)
     call interp_to_local(instance%proj,g_precip,    instance%downs,localsp=instance%prcp)
 
+    if (instance%whichacab==3) then
+       call interp_to_local(instance%proj,g_humid,   instance%downs,localrk=instance%humid)
+       call interp_to_local(instance%proj,g_lwdown,  instance%downs,localrk=instance%lwdown)
+       call interp_to_local(instance%proj,g_swdown,  instance%downs,localrk=instance%swdown)
+       call interp_to_local(instance%proj,g_airpress,instance%downs,localrk=instance%airpress)
+    end if
+
     if (orogflag) call interp_to_local(instance%proj,g_orog,instance%downs,localdp=instance%global_orog)
     
-    if (instance%whichprecip==2) &
+    if (instance%whichprecip==2.or.instance%whichacab==3) &
          call interp_wind_to_local(instance%proj,g_zonwind,g_merwind,instance%downs,instance%xwind,instance%ywind)
 
   end subroutine glint_downscaling

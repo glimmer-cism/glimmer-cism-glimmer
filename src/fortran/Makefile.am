@@ -15,7 +15,7 @@ CLEANFILES = $(BUILT_SOURCES) f90_dep.mak
 
 libglimmer_a_SOURCES = glimmer_version.f90 glimmer_CFproj.f90 glimmer_config.f90 glimmer_global.f90 glimmer_utils.f90 glimmer_log.f90 glimmer_ts.f90 \
                 glimmer_ncdf.f90 glimmer_ncio.f90 glimmer_ncparms.f90 glimmer_paramets.f90 glimmer_physcon.f90 kelvin.f90 profile.f90 \
-                glimmer_enmabal.f90 glimmer_pdd.f90 glimmer_routing.f90 glimmer_daily_pdd.f90 glint_global_interp.f90
+                glimmer_pdd.f90 glimmer_routing.f90 glimmer_daily_pdd.f90 glint_global_interp.f90
 nodist_libglimmer_a_SOURCES = glimmer_version.f90
 libglide_a_SOURCES = glide.f90 glide_setup.f90 glide_types.f90 glide_temp.f90 glide_thck.f90 glide_velo.f90 glide_mask.f90 glide_stop.f90 glide_io.f90 \
                 glide_nc_custom.f90 isostasy.f90 isostasy_el.f90 isostasy_setup.f90 isostasy_types.f90
