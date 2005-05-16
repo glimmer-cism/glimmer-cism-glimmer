@@ -1,8 +1,101 @@
+2005-05-16 Ian Rutt
+ * Merged latest HEAD revisions into SMB branch
+
+2005-05-13 Magnus Hagdorn
+ * glide_velo.f90: simplify API of calcbtrc, add sliding param depending on basal melt;
+   simplify API of slipvelo
+ * glide_thck.f90: hook-up new slipvelo
+ * glide.f90: hook-up new slipvelo; write glimmer version to log
+ * glide_types.f90: add new params to deal with new sliding parameterisation
+ * glide_setup.f90: read new params for configuration file
+ * tests/Makefile.am: tell make which files to delete on make clean
+
+2005-05-13 Magnus Hagdorn
+ * cvs_version.py: script used to parse CVS/Entries file to get date and branch of
+   the most recently checked-out file
+ * glimmer_version.f90.in renamed to glimmer_version.f90.in.in
+ * Makefile.am generates glimmer_version.f90 from glimmer_version.f90.in using cvs_version.py
+ * configure.in: add CVS date to version string if we compile from CVS sources
+
 2005-05-12 Ian Rutt
  * Plumbed in Marion's Energy-balance mass-balance model. Needs testing,
  though.
  * Fixed compile bug in smb_netcdf.f90
 
+2005-05-11 Ian Rutt
+ * configure.in: added rule to enable preprocessor in gfortran. Note that
+ gfortran can't actually compile glimmer at the moment, but hopefully will
+ be able to one day.
+	
+2005-04-22 Magnus Hagdorn
+ * glimmer_ncio.f90: add sanity checking to make sure input netCDF file have the same
+   grid size as the one specified in config file
+ * glimmer_ts.f90: fail gracefully when the input file cannot be opened
+
+2005-04-18 Magnus Hagdorn
+ * configure.in: bump version to 0.5.2
+ * definitions.tex: changed doc date to today
+ * make_doc.rules: fix problem with dia where fonts are tiny
+ * updated NEWS
+
+2005-04-15 Magnus Hagdorn
+ * glide.tex: added documentation for isostasy
+
+2005-04-12 Ian Rutt
+ * Added optional command-line interface to glint_example.f90. Uses
+   non-standard Fortran extensions in the intel compiler - can be
+   selected at compile-time by defining preprocessor symbol GLEX_COM_LINE.
+   Needed to do this to facilitate batch processing of glint runs on
+   our Beowulf cluster, but obviously it's non-ideal.
+ * Corrected error in comment in glint_vars.def
+	
+2005-04-11 Magnus Hagdorn
+ * glimmer_CFproj.f90: rename attribute back to scale_factor_at_projection_origin in order to
+   adhere to CF standard
+ * glint_vars.def: add standard names to a few variables
+
+2005-04-11 Magnus Hagdorn
+ * glint_global_interp.f90: real constants have to be double precision, changed
+   masko==.false. to .not.masko
+ * glint_example_clim.f90: initialise pointers to NULL(), dummy arguments which might be
+   unassociated have to be pointers
+
+2005-04-11 Ian Rutt
+ * Added asynchronous coupling of mass-balance to ice model in glint
+
+2005-04-05 Ian Rutt
+ * New climate driver for glint_example.f90, called
+   glint_example_clim.f90, now handles netcdf input files more flexibly.
+ * Added error-handling code to glint_global_interp.f90
+ * Added various operator overloadings to glint_global_grid.f90
+	
+2005-04-04 Magnus Hagdorn
+ * glide_velo.f90: grr, used wrong derivatives for basal shear calcs,
+   fixed
+
+2005-04-04 Magnus Hagdorn
+ * glide_thck.f90: move surface and horiz deriv calculations to
+   thck_evolve
+ * glide_types.f90: added basal shear stress variables
+ * glide_vars.def: ditto
+ * glide_velo.f90: added shear stress calculations
+ * glide.f90: indicated where basal shear stress cals might go
+ 
+2005-03-24 Ian Rutt
+ * Changed glint_global_interp to use global grid types to define
+   input and output grids
+ * Changed glint_example ncdf handling code to use global grid types
+ * Changed glint_global_interp to real(rk)
+ * Generally simplified glint_example and tidied it up
+	
+2005-03-23 Ian Rutt
+ * Extended length of variables used to construct log messages to 150
+   chars
+ * Fixed problem with single-precision compilation
+ * Converted awi.f to f90 (glint_global_interp.f90) - needs a bit more
+   work, but functions correctly.
+	
+>>>>>>> 1.173
 2005-03-17 Ian Rutt
  * Removed printing of ierr after calling awi.f
  * Released at version 0.5.1
