@@ -1,7 +1,8 @@
 2005-05-16 Ian Rutt
  * Removed dummy code glimmer_enmabal.f90
  * Merged in changes to allow use of RAPID energy-balance mass-balance
- model (not released yet). These are activated with -DUSE_ENMABAL
+ model (not released yet). These are activated using the --with-enmabal
+ flag in configure. 
 
 2005-05-13 Magnus Hagdorn
  * glide_velo.f90: simplify API of calcbtrc, add sliding param depending on basal melt;

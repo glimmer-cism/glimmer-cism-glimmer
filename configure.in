@@ -81,6 +81,18 @@ fi
 AC_CHECK_LIB(netcdf,NF_INQ_LIBVERS)
 AC_MSG_CHECKING([for f90 netCDF interface])
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([],[use netcdf])],AC_MSG_RESULT([yes]),AC_MSG_FAILURE([no]))
+#AC_LANG_POP(Fortran)
+
+# checking for ENMABAL
+AC_ARG_WITH(enmabal,AS_HELP_STRING([--with-enmabal],[location ENMABAL library]),[ac_cv_enmabal_prefix=$withval])
+if test "$ac_cv_enmabal_prefix" != ""; then
+  LIBS="$LIBS -lsmb"
+  AC_MSG_RESULT(enmabal location: $ac_cv_enmabal_prefix)
+  FCFLAGS="$FCFLAGS -I$ac_cv_enmabal_prefix -DUSE_ENMABAL"
+  LDFLAGS="$LDFLAGS -L$ac_cv_enmabal_prefix"
+  AC_MSG_CHECKING([for f90 ENMABAL interface])
+  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([],[use smb_mecons])],AC_MSG_RESULT([yes]),AC_MSG_FAILURE([no]))
+fi
 AC_LANG_POP(Fortran)
 
 # some options
