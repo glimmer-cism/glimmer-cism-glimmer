@@ -140,6 +140,20 @@ factor:        scale2d_f5
 standard_name: land_ice_basal_y_velocity
 load:          1
 
+[taux]
+dimensions:    time, y0, x0
+units:         pascal
+long_name:     basal shear stress in x direction
+data:          data%velocity%tau_x
+factor:        thk0*thk0/len0
+
+[tauy]
+dimensions:    time, y0, x0
+units:         pascal
+long_name:     basal shear stress in y direction
+data:          data%velocity%tau_y
+factor:        thk0*thk0/len0
+
 [thk]
 dimensions:    time, y1, x1
 units:         meter

@@ -95,7 +95,6 @@
  * Converted awi.f to f90 (glint_global_interp.f90) - needs a bit more
    work, but functions correctly.
 	
->>>>>>> 1.173
 2005-03-17 Ian Rutt
  * Removed printing of ierr after calling awi.f
  * Released at version 0.5.1

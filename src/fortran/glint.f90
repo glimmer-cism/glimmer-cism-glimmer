@@ -127,7 +127,7 @@ module glint_main
 
   ! Private names -----------------------------------------------
 
-  private glint_allocate_arrays
+  private glint_allocate_arrays,pi
   private glint_readconfig, calc_bounds
 
 contains
@@ -421,7 +421,7 @@ contains
        humid,lwdown,swdown,airpress, &
        output_flag,orog_out,albedo,ice_frac,water_in, &
        water_out,total_water_in,total_water_out, &
-       ice_volume)
+       ice_volume,skip_mbal)
 
     !*FD Main Glimmer subroutine.
     !*FD
@@ -466,6 +466,7 @@ contains
     real(rk),               optional,intent(inout) :: total_water_in  !*FD Area-integrated water flux in (kg)
     real(rk),               optional,intent(inout) :: total_water_out !*FD Area-integrated water flux out (kg)
     real(rk),               optional,intent(inout) :: ice_volume      !*FD Total ice volume (m$^3$)
+    logical,                optional,intent(in)    :: skip_mbal       !*FD Set to skip mass-balance accumulation
 
     ! Internal variables ----------------------------------------------------------------------------
 
@@ -473,6 +474,13 @@ contains
     real(rk),dimension(:,:),allocatable :: albedo_temp,if_temp,wout_temp,orog_out_temp,win_temp
     real(rk) :: twin_temp,twout_temp,icevol_temp
     type(output_flags) :: out_f
+    logical :: skmb
+
+    if (present(skip_mbal)) then
+       skmb=skip_mbal
+    else
+       skmb=.false.
+    end if
 
     ! Check we have necessary input fields ----------------------------------------------------------
 
@@ -650,7 +658,8 @@ contains
                twout_temp,                   &
                icevol_temp,                  &
                out_f,                        &
-               .true.)
+               .true.,                       &
+               skmb)
 
           ! Add this contribution to the output orography
 

@@ -11,7 +11,7 @@
 		$(FIG2DEV) -Lps -m 1.000000 -n $*.eps $< $*.eps
 
 .dia.eps:
-		$(DIA) -n -e $@ $<
+		$(DIA) -t eps-builtin -n -e $@ $<
 
 .gp.eps:
 		$(GNUPLOT) $<

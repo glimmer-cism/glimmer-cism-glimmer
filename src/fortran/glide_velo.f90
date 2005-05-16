@@ -49,7 +49,7 @@ module glide_velo
   use glide_types
   use glimmer_global, only : dp
   use physcon, only : rhoi, grav, gn
-  use paramets, only : thk0, len0, vis0, vel0
+  use paramets, only : thk0, len0, vis0, vel0, acc0
 
   private vertintg, patebudd, calcbtrc
 
@@ -117,6 +117,8 @@ contains
     model%velowk%c(3)   = model%velowk%watwd * thk0 / 4.0d0
     model%velowk%c(4)   = model%velowk%watct * 4.0d0 / thk0 
     model%velowk%btrac_const = model%paramets%btrac_const/model%velowk%trc0/scyr
+    model%velowk%btrac_max = model%paramets%btrac_max/model%velowk%trc0/scyr
+    model%velowk%btrac_slope = model%paramets%btrac_slope*acc0/model%velowk%trc0
 
   end subroutine init_velo
 
@@ -265,7 +267,7 @@ contains
   !*****************************************************************************
   ! old velo functions come here
   !*****************************************************************************
-  subroutine slipvelo(numerics,velowk,geomderv,flag1,flag2,bwat,btrc,relx,ubas,vbas)
+  subroutine slipvelo(model,flag1,flag2,btrc,ubas,vbas)
 
     !*FD Calculate the basal slip velocity and the value of $B$, the free parameter
     !*FD in the basal velocity equation (though I'm not sure that $B$ is used anywhere 
@@ -277,20 +279,14 @@ contains
     ! Subroutine arguments
     !------------------------------------------------------------------------------------
 
-    type(glide_numerics), intent(in)    :: numerics !*FD Ice model numerics parameters
-    type(glide_velowk),   intent(inout) :: velowk   !*FD Velocity work arrays.
-    type(glide_geomderv), intent(in)    :: geomderv !*FD Horizontal and temporal derivatives of 
-                                                      !*FD ice model thickness and upper surface
-                                                      !*FD elevation.
+    type(glide_global_type) :: model                  !*FD model instance
     integer, intent(in)                 :: flag1,flag2!*FD \texttt{flag1} sets the calculation
                                                       !*FD method to use for the basal velocity
                                                       !*FD (corresponds to \texttt{whichslip} elsewhere
                                                       !*FD in the model. \texttt{flag2} controls the
                                                       !*FD calculation of the basal slip coefficient $B$,
                                                       !*FD which corresponds to \texttt{whichbtrc} elsewhere.
-    real(dp),dimension(:,:),intent(in)    :: bwat     !*FD Basal melt rate.
     real(dp),dimension(:,:),intent(out)   :: btrc     !*FD The basal slip coefficient.
-    real(dp),dimension(:,:),intent(in)    :: relx     !*FD The relaxed topography (scaled)
     real(dp),dimension(:,:),intent(out)   :: ubas     !*FD The $x$ basal velocity (scaled)
     real(dp),dimension(:,:),intent(out)   :: vbas     !*FD The $y$ basal velocity (scaled)
 
@@ -314,11 +310,11 @@ contains
     
       ! Linear function of gravitational driving stress ---------------------------------
 
-      call calcbtrc(velowk,flag2,bwat,relx,btrc)
+      call calcbtrc(model,flag2,btrc)
 
-      where (numerics%thklim < geomderv%stagthck)
-        ubas = btrc * rhograv * geomderv%stagthck * geomderv%dusrfdew
-        vbas = btrc * rhograv * geomderv%stagthck * geomderv%dusrfdns
+      where (model%numerics%thklim < model%geomderv%stagthck)
+        ubas = btrc * rhograv * model%geomderv%stagthck * model%geomderv%dusrfdew
+        vbas = btrc * rhograv * model%geomderv%stagthck * model%geomderv%dusrfdns
       elsewhere
         ubas = 0.0d0
         vbas = 0.0d0
@@ -329,9 +325,9 @@ contains
       ! *tp* option to be used in picard iteration for thck
       ! *tp* start by find constants which dont vary in iteration
 
-      call calcbtrc(velowk,flag2,bwat,relx,btrc)
+      call calcbtrc(model,flag2,btrc)
 
-      velowk%fslip = rhograv * btrc
+      model%velowk%fslip = rhograv * btrc
 
     case(2)
 
@@ -339,8 +335,8 @@ contains
       ! *tp* called once per non-linear iteration, set uvel to ub * H /(ds/dx) which is
       ! *tp* a diffusivity for the slip term (note same in x and y)
 
-      where (numerics%thklim < geomderv%stagthck)
-        ubas = velowk%fslip * geomderv%stagthck**2  
+      where (model%numerics%thklim < model%geomderv%stagthck)
+        ubas = model%velowk%fslip * model%geomderv%stagthck**2  
       elsewhere
         ubas = 0.0d0
       end where
@@ -350,9 +346,9 @@ contains
       ! *tp* option to be used in picard iteration for thck
       ! *tp* finally calc ub and vb from diffusivities
 
-      where (numerics%thklim < geomderv%stagthck)
-        vbas = ubas *  geomderv%dusrfdns / geomderv%stagthck
-        ubas = ubas *  geomderv%dusrfdew / geomderv%stagthck
+      where (model%numerics%thklim < model%geomderv%stagthck)
+        vbas = ubas *  model%geomderv%dusrfdns / model%geomderv%stagthck
+        ubas = ubas *  model%geomderv%dusrfdew / model%geomderv%stagthck
       elsewhere
         ubas = 0.0d0
         vbas = 0.0d0
@@ -1001,30 +997,14 @@ contains
 
 !------------------------------------------------------------------------------------------
 
-  subroutine calcbtrc(velowk,flag,bwat,relx,btrc)
-
+  subroutine calcbtrc(model,flag,btrc)
     !*FD Calculate the value of $B$ used for basal sliding calculations.
-
     use glimmer_global, only : dp 
-
     implicit none
 
-    !------------------------------------------------------------------------------------
-    ! Subroutine arguments
-    !------------------------------------------------------------------------------------
-
-    type(glide_velowk),   intent(inout) :: velowk   !*FD Work arrays for this module.
+    type(glide_global_type) :: model        !*FD model instance
     integer,                intent(in)    :: flag     !*FD Flag to select method of
-    !*FD calculation. $\mathtt{flag}=0$ means
-    !*FD use full calculation, otherwise set $B=0$.
-    real(dp),dimension(:,:),intent(in)    :: bwat     !*FD Basal melt-rate (scaled?)
-    real(dp),dimension(:,:),intent(in)    :: relx     !*FD Elevation of relaxed topography
-    !*FD (scaled?)
     real(dp),dimension(:,:),intent(out)   :: btrc     !*FD Array of values of $B$.
-    !*FD {\bf N.B. This array is smaller
-    !*FD in each dimension than the other two}
-    !*FD (\texttt{bwat} and \texttt{relx}) {\bf by
-    !*FD one.} So its dimensions are (ewn-1,nsn-1).
 
     !------------------------------------------------------------------------------------
     ! Internal variables
@@ -1035,35 +1015,52 @@ contains
 
     !------------------------------------------------------------------------------------
 
-    ewn=size(bwat,1) ; nsn=size(bwat,2)
+    ewn=model%general%ewn
+    nsn=model%general%nsn
 
     !------------------------------------------------------------------------------------
 
     select case(flag)
     case(1)
-       btrc = velowk%btrac_const
+       ! constant everywhere
+       btrc = model%velowk%btrac_const
     case(2)
+       ! constant where basal melt water is present
        do ns = 1,nsn-1
           do ew = 1,ewn-1
-             stagbwat = sum(bwat(ew:ew+1,ns:ns+1))
+             stagbwat = sum(model%temper%bwat(ew:ew+1,ns:ns+1))
              if (0.0d0 < stagbwat) then
-                btrc(ew,ns) = velowk%btrac_const
+                btrc(ew,ns) = model%velowk%btrac_const
              else
                 btrc(ew,ns) = 0.0d0
              end if
           end do
        end do
     case(3)
+       ! function of basal water depth
        do ns = 1,nsn-1
           do ew = 1,ewn-1
-             stagbwat = sum(bwat(ew:ew+1,ns:ns+1))
+             stagbwat = sum(model%temper%bwat(ew:ew+1,ns:ns+1))
 
              if (0.0d0 < stagbwat) then
-                btrc(ew,ns) = velowk%c(2) * tanh(velowk%c(3) * &
-                     (stagbwat - velowk%c(4))) + velowk%c(1)
-                if (0.0d0 > sum(relx(ew:ew+1,ns:ns+1))) then
-                   btrc(ew,ns) = btrc(ew,ns) * velowk%marine  
+                btrc(ew,ns) = model%velowk%c(2) * tanh(model%velowk%c(3) * &
+                     (stagbwat - model%velowk%c(4))) + model%velowk%c(1)
+                if (0.0d0 > sum(model%isos%relx(ew:ew+1,ns:ns+1))) then
+                   btrc(ew,ns) = btrc(ew,ns) * model%velowk%marine  
                 end if
+             else
+                btrc(ew,ns) = 0.0d0
+             end if
+          end do
+       end do
+    case(4)
+       ! linear function of basal melt rate
+       do ns = 1,nsn-1
+          do ew = 1,ewn-1
+             stagbwat = 0.25*sum(model%temper%bmlt(ew:ew+1,ns:ns+1))
+             
+             if (stagbwat>0.d0) then
+                btrc(ew,ns) = min(model%velowk%btrac_max, model%velowk%btrac_const+model%velowk%btrac_slope*stagbwat)
              else
                 btrc(ew,ns) = 0.0d0
              end if
@@ -1071,9 +1068,22 @@ contains
        end do
 
     case default
+       ! zero everywhere
        btrc = 0.0d0
     end select
 
   end subroutine calcbtrc
+
+  subroutine calc_basal_shear(model)
+    !*FD calculate basal shear stress: tau_{x,y} = -ro_i*g*H*d(H+h)/d{x,y}
+    use physcon, only : rhoi,grav
+    implicit none
+    type(glide_global_type) :: model        !*FD model instance
+
+
+    model%velocity%tau_x = -rhoi*grav*model%geomderv%stagthck
+    model%velocity%tau_y = model%velocity%tau_x * model%geomderv%dusrfdns
+    model%velocity%tau_x = model%velocity%tau_x * model%geomderv%dusrfdew
+  end subroutine calc_basal_shear
 
 end module glide_velo

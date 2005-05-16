@@ -98,8 +98,8 @@ contains
     call new_proj(instance%proj, &                       ! Initialise the projection
                   nx=get_ewn(instance%model), &
                   ny=get_nsn(instance%model), &
-                  dx=get_dew(instance%model), &
-                  dy=get_dns(instance%model))
+                  dx=real(get_dew(instance%model),rk), &
+                  dy=real(get_dns(instance%model),rk))
     call new_downscale(instance%downs,instance%proj,grid)     ! Initialise the downscaling
 
     call glint_i_allocate(instance,grid%nx,grid%ny,grid_orog%nx,grid_orog%ny)           ! Allocate arrays appropriately

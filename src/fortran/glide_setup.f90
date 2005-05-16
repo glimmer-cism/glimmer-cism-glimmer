@@ -556,11 +556,12 @@ contains
          'no ice shelf      ', &
          'threshold         ', &
          'const calving rate' /)
-    character(len=*), dimension(0:3), parameter :: slip_coeff = (/ &
+    character(len=*), dimension(0:4), parameter :: slip_coeff = (/ &
          'zero        ', &
          'const       ', &
          'const if T>0', &
-         '~basal water' /)
+         '~basal water', &
+         '~basal melt '/)
     character(len=*), dimension(0:3), parameter :: stress = (/ &
          'zeroth-order                     ', &
          'first-order                      ', &
@@ -662,6 +663,8 @@ contains
        deallocate(temp)
     end if
     call GetValue(section,'basal_tract_const',model%paramets%btrac_const)
+    call GetValue(section,'basal_tract_max',model%paramets%btrac_max)
+    call GetValue(section,'basal_tract_slope',model%paramets%btrac_slope)
   end subroutine handle_parameters
 
   subroutine print_parameters(model)
@@ -683,18 +686,28 @@ contains
     call write_log(message)
     write(message,*) 'basal hydro time const: ',model%paramets%hydtim
     call write_log(message)
-    write(message,*) 'basal traction param  : ',model%paramets%btrac_const
-    call write_log(message)
-    write(message,*) 'basal traction factors: ',model%paramets%bpar(1)
-    call write_log(message)
-    write(message,*) '                        ',model%paramets%bpar(2)
-    call write_log(message)
-    write(message,*) '                        ',model%paramets%bpar(3)
-    call write_log(message)
-    write(message,*) '                        ',model%paramets%bpar(4)
-    call write_log(message)
-    write(message,*) '                        ',model%paramets%bpar(5)
-    call write_log(message)
+    if (model%options%whichbtrc.eq.1 .or. model%options%whichbtrc.eq.2 .or. model%options%whichbtrc.eq.4) then
+       write(message,*) 'basal traction param  : ',model%paramets%btrac_const
+       call write_log(message)
+    end if
+    if (model%options%whichbtrc.eq.4) then
+       write(message,*) 'basal traction max  : ',model%paramets%btrac_max
+       call write_log(message)
+       write(message,*) 'basal traction slope  : ',model%paramets%btrac_slope
+       call write_log(message)
+    end if
+    if (model%options%whichbtrc.eq.3) then
+       write(message,*) 'basal traction factors: ',model%paramets%bpar(1)
+       call write_log(message)
+       write(message,*) '                        ',model%paramets%bpar(2)
+       call write_log(message)
+       write(message,*) '                        ',model%paramets%bpar(3)
+       call write_log(message)
+       write(message,*) '                        ',model%paramets%bpar(4)
+       call write_log(message)
+       write(message,*) '                        ',model%paramets%bpar(5)
+       call write_log(message)
+    end if
     call write_log('')
   end subroutine print_parameters
 

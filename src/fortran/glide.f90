@@ -71,6 +71,9 @@ contains
    
     type(ConfigSection), pointer :: ncconfig
 
+
+    call write_log(glimmer_version)
+
     ! initialise scales
     call glimmer_init_scales
     ! read configuration file
@@ -188,13 +191,9 @@ contains
        if ((model%numerics%tinc > mod(model%numerics%time,model%numerics%nvel) .or. &
             model%numerics%time == model%numerics%tinc)) then
 
-          call slipvelo(model%numerics, &
-               model%velowk,   &
-               model%geomderv, &
+          call slipvelo(model, &
                model%options%whichslip,model%options%whichbtrc, &
-               model%temper%   bwat,     &
-               model%velocity% btrc,     &
-               model%isos% relx,     &
+                model%velocity% btrc,     &
                model%velocity% ubas,     &
                model%velocity% vbas)
 
@@ -340,7 +339,9 @@ contains
 #ifdef PROFILING
     call glide_prof_stop(model,8,'isostasy water')
 #endif
-
+    
+    ! basal shear stress calculations are for now disabled.
+    !call calc_basal_shear(model)
   end subroutine glide_tstep_p2
 
   subroutine glide_tstep_p3(model)

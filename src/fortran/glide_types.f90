@@ -268,6 +268,8 @@ module glide_types
     real(dp),dimension(:,:)  ,pointer :: ubas  => null() !*FD 
     real(dp),dimension(:,:)  ,pointer :: vbas  => null() !*FD 
     real(dp),dimension(:,:)  ,pointer :: btrc  => null() !*FD 
+    real(dp),dimension(:,:)  ,pointer :: tau_x => null() !*FD basal shear stress, x-dir
+    real(dp),dimension(:,:)  ,pointer :: tau_y => null() !*FD basal shear stress, y-dir
   end type glide_velocity
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -358,6 +360,8 @@ module glide_types
     real(dp) :: marine = 1.0d0
     real(dp) :: trcmax = 10.0d0
     real(dp) :: btrac_const = 0.0d0
+    real(dp) :: btrac_slope = 0.0d0
+    real(dp) :: btrac_max = 0.d0
   end type glide_velowk
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -430,6 +434,8 @@ module glide_types
   type glide_paramets
     real(dp),dimension(5) :: bpar = (/ 2.0d0, 10.0d0, 10.0d0, 0.0d0, 1.0d0 /)
     real(dp) :: btrac_const = 0.d0 ! m yr^{-1} Pa^{-1} (gets scaled during init)
+    real(dp) :: btrac_slope = 0.0d0 ! Pa^{-1} (gets scaled during init)
+    real(dp) :: btrac_max = 0.d0  !  m yr^{-1} Pa^{-1} (gets scaled during init)
     real(dp) :: geot   = -5.0d-2  ! W m^{-2}
     real(dp) :: fiddle = 3.0d0    ! -
     real(dp) :: hydtim = 1000.0d0 ! yr^{-1} converted to s^{-1} and scaled, 
@@ -554,6 +560,8 @@ contains
     allocate(model%velocity%btrc(ewn-1,nsn-1));       model%velocity%btrc = 0.0d0
     allocate(model%velocity%ubas(ewn-1,nsn-1));       model%velocity%ubas = 0.0d0
     allocate(model%velocity%vbas(ewn-1,nsn-1));       model%velocity%vbas = 0.0d0
+    allocate(model%velocity%tau_x(ewn-1,nsn-1));      model%velocity%tau_x = 0.0d0
+    allocate(model%velocity%tau_y(ewn-1,nsn-1));      model%velocity%tau_y = 0.0d0
 
     allocate(model%climate%acab(ewn,nsn));            model%climate%acab = 0.0
     allocate(model%climate%artm(ewn,nsn));            model%climate%artm = 0.0
@@ -616,6 +624,8 @@ contains
     deallocate(model%velocity%btrc)
     deallocate(model%velocity%ubas)
     deallocate(model%velocity%vbas)
+    deallocate(model%velocity%tau_x)
+    deallocate(model%velocity%tau_y)
 
     deallocate(model%climate%acab)
     deallocate(model%climate%artm)

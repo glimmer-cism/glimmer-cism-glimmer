@@ -53,7 +53,7 @@ contains
   subroutine glint_i_tstep(time,instance,g_temp,g_temp_range, &
                           g_precip,g_zonwind,g_merwind,g_humid,g_lwdown,g_swdown,g_airpress, &
                           g_orog,g_orog_out,g_albedo,g_ice_frac,g_water_in,g_water_out,t_win,&
-                          t_wout,ice_vol,out_f,orogflag)
+                          t_wout,ice_vol,out_f,orogflag,mbal_skip)
 
     !*FD Performs time-step of an ice model instance. Note that this 
     !*FD code will need to be altered to take account of the 
@@ -98,6 +98,7 @@ contains
     real(rk),               intent(out)  :: ice_vol      !*FD Output ice volume (m$^3$)
     type(output_flags),     intent(in)   :: out_f        !*FD Flags to tell us whether to do output   
     logical,                intent(in)   :: orogflag     !*FD Set if we have new global orog
+    logical,                intent(in)   :: mbal_skip    !*FD set if we are to skip mass-balance accumulation
 
     ! ------------------------------------------------------------------------  
     ! Internal variables
@@ -111,38 +112,40 @@ contains
     real(sp),dimension(:,:),allocatable :: thck_temp     ! temporary array for volume calcs
     real(rk) :: start_volume,end_volume,flux_fudge
 
-    ! Downscale input fields -------------------------------------------------
+    if (.not.mbal_skip) then
 
-    call glint_downscaling(instance,g_temp,g_temp_range,g_precip,g_orog,g_zonwind,g_merwind, &
-         g_humid,g_lwdown,g_swdown,g_airpress,orogflag)
+       call glint_downscaling(instance,g_temp,g_temp_range,g_precip,g_orog,g_zonwind,g_merwind, &
+            g_humid,g_lwdown,g_swdown,g_airpress,orogflag)
 
-    ! ------------------------------------------------------------------------  
-    ! Sort out some local orography and remove bathymetry. This relies on the 
-    ! point 1,1 being underwater. However, it's a better method than just 
-    ! setting all points < 0.0 to zero
-    ! ------------------------------------------------------------------------  
+       ! ------------------------------------------------------------------------  
+       ! Sort out some local orography and remove bathymetry. This relies on the 
+       ! point 1,1 being underwater. However, it's a better method than just 
+       ! setting all points < 0.0 to zero
+       ! ------------------------------------------------------------------------  
 
-    call glide_get_usurf(instance%model,instance%local_orog)
-    call glint_remove_bath(instance%local_orog,1,1)
+       call glide_get_usurf(instance%model,instance%local_orog)
+       call glint_remove_bath(instance%local_orog,1,1)
 
-    ! ------------------------------------------------------------------------  
-    ! Adjust the surface temperatures using the lapse-rate, by reducing to
-    ! sea-level and then back up to high-res orography
-    ! ------------------------------------------------------------------------  
+       ! ------------------------------------------------------------------------  
+       ! Adjust the surface temperatures using the lapse-rate, by reducing to
+       ! sea-level and then back up to high-res orography
+       ! ------------------------------------------------------------------------  
 
-    call glint_lapserate(instance%artm,real(instance%global_orog,rk),real(-instance%lapse_rate,rk))
-    call glint_lapserate(instance%artm,real(instance%local_orog,rk), real(instance%lapse_rate,rk))
+       call glint_lapserate(instance%artm,real(instance%global_orog,rk),real(-instance%lapse_rate,rk))
+       call glint_lapserate(instance%artm,real(instance%local_orog,rk), real(instance%lapse_rate,rk))
  
-    ! Process the precipitation field if necessary ---------------------------
+       ! Process the precipitation field if necessary ---------------------------
 
-    call glint_calc_precip(instance)
+       call glint_calc_precip(instance)
 
-    ! Do accumulation --------------------------------------------------------
+       ! Do accumulation --------------------------------------------------------
 
-    call glint_accumulate(instance%mbal_accum,instance%artm,instance%arng,instance%prcp, &
-         instance%snowd,instance%siced,instance%xwind,instance%ywind,instance%global_orog, &
-         instance%local_orog,instance%model%geometry%thck,instance%humid,instance%swdown,instance%lwdown, &
-         instance%airpress)
+       call glint_accumulate(instance%mbal_accum,instance%artm,instance%arng,instance%prcp, &
+            instance%snowd,instance%siced,instance%xwind,instance%ywind,instance%global_orog, &
+            instance%local_orog,instance%model%geometry%thck,instance%humid,instance%swdown,instance%lwdown, &
+            instance%airpress)
+
+    end if
 
     ! Write output if necessary ----------------------------------------------
 

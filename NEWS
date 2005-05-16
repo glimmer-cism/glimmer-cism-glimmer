@@ -1,3 +1,11 @@
+Changes in Version 0.5.2
+========================
+This is the EGU 2005 special release!
+* improvements of glint
+* updated docs
+* move surface and horiz deriv calculations to thck_evolve 
+  (this changes results slightly!)
+
 Changes in Version 0.5.1
 ========================
 * Bugfix on snow-depth accumulation in GLINT

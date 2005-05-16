@@ -27,6 +27,7 @@ coordinates:   lon lat
 dimensions:    time, y1, x1
 units:         meter/year
 long_name:     mass-balance
+standard_name: land_ice_surface_specific_mass_balance
 data:          data%acab
 coordinates:   lon lat
 
@@ -34,6 +35,7 @@ coordinates:   lon lat
 dimensions:    time, y1, x1
 units:         degreeC
 long_name:     air temperture
+standard_name: surface_temperature
 data:          data%artm
 coordinates:   lon lat
 
@@ -57,12 +59,14 @@ dimensions:    time, y1, x1
 units:	       meter
 long_name:     orographic elevation provided by global model
 data:	       data%global_orog
+standard_name: surface_altitude
 coordinates:   lon lat
 
 [local_orog]
 dimensions:    time, y1, x1
 units:	       meter
-long_name:     orographic elevation provided by global model
+long_name:     orographic elevation provided by local model
+standard_name: surface_altitude
 data:	       data%local_orog
 coordinates:   lon lat
 
@@ -71,6 +75,7 @@ dimensions:    time, y1, x1
 units:         meter
 long_name:     snow depth
 data:          data%snowd
+standard_name: surface_snow_thickness
 load:          1
 hot:           1
 coordinates:   lon lat

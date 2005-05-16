@@ -3,7 +3,7 @@ dnl Process this file with autoconf to produce a configure script.
 dnl set version
 m4_define([glimmer_major_version], [0])
 m4_define([glimmer_minor_version], [5])
-m4_define([glimmer_micro_version], [1])
+m4_define([glimmer_micro_version], [2])
 m4_define([glimmer_version],
 	[glimmer_major_version.glimmer_minor_version.glimmer_micro_version])
 
@@ -27,7 +27,11 @@ AC_PROG_FC
 FCFLAGS=$glimmer_FCFLAGS
 AC_LANG_PUSH(Fortran)
 AC_FC_SRCEXT(f90)
-FCFLAGS="$FCFLAGS -fpp"
+if test "$FC" == gfortran; then
+  FCFLAGS="$FCFLAGS -x f95-cpp-input"
+else
+  FCFLAGS="$FCFLAGS -fpp"
+fi
 
 dnl Checking for python
 AM_PATH_PYTHON([2.3],,[AC_MSG_RESULT(need at least python 2.3)])
@@ -98,9 +102,17 @@ AC_ARG_ENABLE(tests, AS_HELP_STRING([--enable-tests],[Run short tests]),
 esac],[AC_MSG_RESULT([no])])
 AM_CONDITIONAL([RUN_TESTS], [test "$enable_tests" == "yes"])
 
+# Checking if sources are from CVS
+AC_CHECK_FILE(./src/fortran/CVS/Entries,have_cvs_entries="yes",have_cvs_entries="no")
+GLIMMER_CVS_VERS=""
+if test "$have_cvs_entries" == "yes"; then
+   GLIMMER_CVS_VERS=" cvs_vers_string"
+fi
+AC_SUBST(GLIMMER_CVS_VERS)
+AM_CONDITIONAL([HAVE_CVS],[test "$have_cvs_entries" == "yes"])
 
 AC_CONFIG_FILES([Makefile src/Makefile src/python/Makefile src/fortran/Makefile src/fortran/SLAP_library/Makefile \
 		doc/Makefile doc/common/Makefile doc/dg/Makefile doc/dg/figures/Makefile \
 		doc/ug/Makefile doc/ug/figs/Makefile doc/num/Makefile doc/num/figs/Makefile doc/num/gnu/Makefile \
 		tests/Makefile])
-AC_OUTPUT([glimmer-config src/fortran/glimmer_version.f90 doc/common/version.tex])
+AC_OUTPUT([glimmer-config src/fortran/glimmer_version.f90.in doc/common/version.tex])
