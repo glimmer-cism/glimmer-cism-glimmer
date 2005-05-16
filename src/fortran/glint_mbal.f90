@@ -44,9 +44,10 @@ module glint_mbal
 
   use glimmer_pdd
   use glimmer_daily_pdd
-  use glimmer_enmabal
   use glimmer_global
+#ifdef USE_ENMABAL
   use smb_mecons
+#endif
 
   implicit none
 
@@ -55,7 +56,9 @@ module glint_mbal
   type glint_mbal_params
     type(glimmer_pdd_params),      pointer :: annual_pdd => null() !*FD Pointer to annual PDD params
     type(glimmer_daily_pdd_params),pointer :: daily_pdd => null()  !*FD Pointer to daily PDD params
+#ifdef USE_ENMABAL
     type(smb_params),              pointer :: smb => null()        !*FD Pointer to SMB params
+#endif
     integer :: which !*FD Flag for chosen mass-balance type
     integer :: tstep !*FD Timestep of mass-balance scheme in hours
   end type glint_mbal_params
@@ -84,7 +87,9 @@ contains
   
     if (associated(params%annual_pdd)) deallocate(params%annual_pdd)
     if (associated(params%daily_pdd))  deallocate(params%daily_pdd)
+#ifdef USE_ENMABAL
     if (associated(params%smb))        deallocate(params%smb)
+#endif
 
     ! Allocate desired type and initialise
     ! Also check we have a valid value of which
@@ -98,9 +103,13 @@ contains
       params%tstep=years2hours
     case(3)
       ! The energy-balance model will go here...
+#ifdef USE_ENMABAL
       allocate(params%smb)
       params%tstep=1*days2hours
       call SMBInitWrapper(params%smb,nx,ny,nint(dxr),params%tstep*60,'smb_config/online')
+#else
+      call write_log('Glimmer not compiled with EBMB SMB - use -DUSE_ENMABAL',GM_FATAL,__FILE__,__LINE__)
+#endif
     case(4)
       allocate(params%daily_pdd)
       call glimmer_daily_pdd_init(params%daily_pdd,config)
@@ -144,9 +153,13 @@ contains
     case(3)
        ! The energy-balance model will go here...
        ! NB SLM will be thickness array...
+#ifdef USE_ENMABAL
        call SMBStepWrapper(params%smb,acab,real(thck,rk),artm,prcp*1000.0,U10m,V10m,humidity,SWdown,LWdown,Psurf)
        acab=acab/1000.0  ! Convert to metres
        ablt=prcp-acab    ! Construct ablation field (in m)
+#else
+      call write_log('Glimmer not compiled with EBMB SMB - use -DUSE_ENMABAL',GM_FATAL,__FILE__,__LINE__)
+#endif
     case(4)
        call glimmer_daily_pdd_mbal(params%daily_pdd,artm,arng,prcp,snowd,siced,ablt,acab)
     end select
