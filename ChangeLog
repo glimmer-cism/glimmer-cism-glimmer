@@ -1,5 +1,7 @@
 2005-05-17 Ian Rutt
  * Added test example for energy-balance mass-balance scheme
+ * Changed mass-balance schemes to only calculate 'land' points (i.e. mask
+ is passed though) - hopefully might speed things up.
 
 2005-05-16 Ian Rutt
  * Removed dummy code glimmer_enmabal.f90

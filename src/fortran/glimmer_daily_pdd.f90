@@ -141,7 +141,7 @@ contains
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine glimmer_daily_pdd_mbal(params,artm,arng,prcp,snowd,siced,ablt,acab)
+  subroutine glimmer_daily_pdd_mbal(params,artm,arng,prcp,snowd,siced,ablt,acab,landsea)
 
     type(glimmer_daily_pdd_params)        :: params !*FD Daily PDD scheme parameters
     real(sp),dimension(:,:),intent(in)    :: artm   !*FD Daily mean air-temperature ($^{\circ}$C)
@@ -151,6 +151,7 @@ contains
     real(sp),dimension(:,:),intent(inout) :: siced  !*FD Superimposed ice depth (m)
     real(sp),dimension(:,:),intent(out)   :: ablt   !*FD Daily ablation (m)
     real(sp),dimension(:,:),intent(out)   :: acab   !*FD Daily mass-balance (m)
+    logical, dimension(:,:),intent(in)    :: landsea !*FD Land-sea mask (land is TRUE)
 
     real(sp),dimension(size(prcp,1),size(prcp,2)) :: rain ! Daily rain
     real(sp),dimension(size(prcp,1),size(prcp,2)) :: degd ! Degree-day
@@ -170,12 +171,18 @@ contains
 
     do i=1,nx
        do j=1,ny
-          call degdaymodel(params,snowd(i,j),siced(i,j),giced(i,j),degd(i,j),rain(i,j),prcp(i,j)) 
+          if (landsea(i,j)) then
+             call degdaymodel(params,snowd(i,j),siced(i,j),giced(i,j),degd(i,j),rain(i,j),prcp(i,j)) 
+             acab(i,j)=snowd(i,j)+siced(i,j)+giced(i,j)-old_snow(i,j)-old_sice(i,j)
+             ablt(i,j)=prcp(i,j)-acab(i,j)
+          else
+             ablt(i,j)=prcp(i,j)
+             acab(i,j)=0.0
+             snowd(i,j)=0.0
+             siced(i,j)=0.0
+          end if
        end do
     end do
-
-    acab=snowd+siced+giced-old_snow-old_sice
-    ablt=prcp-acab
 
   end subroutine glimmer_daily_pdd_mbal
 

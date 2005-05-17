@@ -133,7 +133,7 @@ contains
 
 !-------------------------------------------------------------------------------
 
-  subroutine glimmer_pdd_mbal(params,artm,arng,prcp,ablt,acab)
+  subroutine glimmer_pdd_mbal(params,artm,arng,prcp,ablt,acab,landsea)
 
     !*FD Calculates mass-balance over the ice model domain, by the
     !*FD positive-degree-day method.
@@ -148,6 +148,7 @@ contains
                                                        !*FD (mm water equivalent)
     real(sp), dimension(:,:), intent(out)   :: ablt    !*FD Annual ablation (mm water equivalent)
     real(sp), dimension(:,:), intent(out)   :: acab    !*FD Annual mass-balance (mm water equivalent)
+    logical,  dimension(:,:), intent(in)    :: landsea !*FD Land-sea mask (land is TRUE)
 
     ! Internal variables
 
@@ -165,6 +166,8 @@ contains
     do ns = 1, nsn
       do ew = 1, ewn 
 
+         if (landsea(ew,ns)) then
+          ! Only calculate mass-balance over 'land'
           ! Find the no. of pdd from the mean annual temp and its range
 
           ky = int((artm(ew,ns)-params%iy)/params%dy)
@@ -244,6 +247,10 @@ contains
           ! ablation.
 
           acab(ew,ns) = prcp(ew,ns) - ablt(ew,ns)
+         else
+            ablt(ew,ns)=prcp(ew,ns)
+            acab(ew,ns)=0.0
+         endif
       end do
     end do
 

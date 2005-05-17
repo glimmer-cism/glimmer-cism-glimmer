@@ -147,7 +147,7 @@ contains
 
     select case(params%which)
     case(1)
-       call glimmer_pdd_mbal(params%annual_pdd,artm,arng,prcp,ablt,acab) 
+       call glimmer_pdd_mbal(params%annual_pdd,artm,arng,prcp,ablt,acab,landsea) 
     case(2) 
        acab = prcp
     case(3)
@@ -157,21 +157,19 @@ contains
        call SMBStepWrapper(params%smb,acab,real(thck,rk),artm,prcp*1000.0,U10m,V10m,humidity,SWdown,LWdown,Psurf)
        acab=acab/1000.0  ! Convert to metres
        ablt=prcp-acab    ! Construct ablation field (in m)
+       ! Fix according to land-sea mask
+       where (.not.landsea)
+          ablt=prcp
+          acab=0.0
+          snowd=0.0
+          siced=0.0
+       end where
 #else
       call write_log('Glimmer not compiled with EBMB SMB - use -DUSE_ENMABAL',GM_FATAL,__FILE__,__LINE__)
 #endif
     case(4)
-       call glimmer_daily_pdd_mbal(params%daily_pdd,artm,arng,prcp,snowd,siced,ablt,acab)
+       call glimmer_daily_pdd_mbal(params%daily_pdd,artm,arng,prcp,snowd,siced,ablt,acab,landsea)
     end select
-
-    ! Fix according to land-sea mask
-
-    where (.not.landsea)
-       ablt=prcp
-       acab=0.0
-       snowd=0.0
-       siced=0.0
-    end where
 
   end subroutine glint_mbal_calc
 
