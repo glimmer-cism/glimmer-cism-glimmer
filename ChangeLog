@@ -1,3 +1,6 @@
+2005-05-17 Ian Rutt
+ * Added test example for energy-balance mass-balance scheme
+
 2005-05-16 Ian Rutt
  * Removed dummy code glimmer_enmabal.f90
  * Merged in changes to allow use of RAPID energy-balance mass-balance
