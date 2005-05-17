@@ -134,8 +134,8 @@ contains
 
     model%tempwk%cons = (/ 2.0d0 * tim0 * model%numerics%dttem * coni / (2.0d0 * rhoi * shci * thk0**2), &
          model%numerics%dttem / 2.0d0, &
-         VERT_DIFF*2.0d0 * tim0 * model%numerics%dttem * model%paramets%geot / (thk0 * rhoi * shci), &
-         VERT_ADV*tim0 * acc0 * model%numerics%dttem * model%paramets%geot / coni /)
+         VERT_DIFF*2.0d0 * tim0 * model%numerics%dttem / (thk0 * rhoi * shci), &
+         VERT_ADV*tim0 * acc0 * model%numerics%dttem / coni /)
 
     model%tempwk%c1 = STRAIN_HEAT *(model%numerics%sigma * rhoi * grav * thk0**2 / len0)**p1 * &
          2.0d0 * vis0 * model%numerics%dttem * tim0 / (16.0d0 * rhoi * shci)
@@ -156,12 +156,9 @@ contains
          up=3,model%general%upn)  /)
     
     model%tempwk%f = (/ tim0 * coni / (thk0**2 * lhci * rhoi), &
-         tim0 * model%paramets%geot / &
-         (thk0 * lhci * rhoi), &
-         tim0 * thk0 * rhoi * shci /  &
-         (thk0 * tim0 * model%numerics%dttem * lhci * rhoi), &
-         tim0 * thk0**2 * vel0 * grav * rhoi / &
-         (4.0d0 * thk0 * len0 * rhoi * lhci) /)
+         tim0 / (thk0 * lhci * rhoi), &
+         tim0 * thk0 * rhoi * shci /  (thk0 * tim0 * model%numerics%dttem * lhci * rhoi), &
+         tim0 * thk0**2 * vel0 * grav * rhoi / (4.0d0 * thk0 * len0 * rhoi * lhci) /)
 
     ! setting up some factors for sliding contrib to basal heat flux
     model%tempwk%slide_f = (/ VERT_DIFF * grav * thk0 * model%numerics%dttem/ shci, & ! vert diffusion
@@ -718,10 +715,10 @@ contains
        model%tempwk%inittemp(model%general%upn,ew,ns) = temp(model%general%upn) * &
             (2.0d0 - diag(model%general%upn)) &
             - temp(model%general%upn-1) * subd(model%general%upn) &
-            - 0.5*model%tempwk%cons(3) / (thck * model%tempwk%dupn) & ! geothermal heat flux (diff)
-            - 0.5*model%tempwk%slide_f(1)*slterm &                    ! sliding heat flux    (diff)
-            - model%tempwk%cons(4) * weff(model%general%upn) &        ! geothermal heat flux (adv)
-            - model%tempwk%slide_f(2)*thck*slterm &                   ! sliding heat flux    (adv)
+            - 0.5*model%tempwk%cons(3) * model%temper%bheatflx(ew,ns) / (thck * model%tempwk%dupn) & ! geothermal heat flux (diff)
+            - 0.5*model%tempwk%slide_f(1)*slterm &                                                   ! sliding heat flux    (diff)
+            - model%tempwk%cons(4) * model%temper%bheatflx(ew,ns) * weff(model%general%upn) &        ! geothermal heat flux (adv)
+            - model%tempwk%slide_f(2)*thck*slterm &                                                  ! sliding heat flux    (adv)
             - model%tempwk%initadvt(model%general%upn,ew,ns)  &
             + model%tempwk%dissip(model%general%upn,ew,ns)
     end if
@@ -828,7 +825,7 @@ contains
                 end do
 
                 bmlt(ew,ns) = 0.0d0
-                newmlt = model%tempwk%f(4) * slterm - model%tempwk%f(2) + model%tempwk%f(3) * &
+                newmlt = model%tempwk%f(4) * slterm - model%tempwk%f(2)*model%temper%bheatflx(ew,ns) + model%tempwk%f(3) * &
                      model%tempwk%dupc(model%general%upn) * &
                      thck(ew,ns) * model%tempwk%dissip(model%general%upn,ew,ns)
 

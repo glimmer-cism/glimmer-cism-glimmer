@@ -107,6 +107,9 @@ contains
        model%isos%relx = model%geometry%topg
     end if
 
+    ! set uniform basal heat flux
+    model%temper%bheatflx = model%paramets%geot
+
     ! open all output files
     call openall_out(model)
     ! create glide variables

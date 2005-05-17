@@ -288,6 +288,7 @@ module glide_types
     !*FD Holds fields relating to temperature.
 
     real(dp),dimension(:,:,:),pointer :: temp => null() !*FD Three-dimensional temperature field.
+    real(dp),dimension(:,:),  pointer :: bheatflx => null() !*FD basal heat flux
     real(dp),dimension(:,:,:),pointer :: flwa => null() !*FD Glenn's $A$.
     real(dp),dimension(:,:),  pointer :: bwat => null() !*FD Basal water depth(?)
     real(dp),dimension(:,:),  pointer :: bmlt => null() !*FD Basal melt-rate(?)
@@ -474,6 +475,7 @@ contains
     !*FD In \texttt{model\%temper}:
     !*FD \begin{itemize}
     !*FD \item \texttt{temp(upn,0:ewn+1,0:nsn+1))}
+    !*FD \item \texttt{bheatflx(ewn,nsn))}
     !*FD \item \texttt{flwa(upn,ewn,nsn))}
     !*FD \item \texttt{bwat(ewn,nsn))}
     !*FD \item \texttt{bmlt(ewn,nsn))}
@@ -547,6 +549,7 @@ contains
 
     allocate(model%temper%temp(upn,0:ewn+1,0:nsn+1)); model%temper%temp = 0.0
     allocate(model%temper%flwa(upn,ewn,nsn))   
+    allocate(model%temper%bheatflx(ewn,nsn));         model%temper%bheatflx = 0.0
     allocate(model%temper%bwat(ewn,nsn));             model%temper%bwat = 0.0
     allocate(model%temper%bmlt(ewn,nsn));             model%temper%bmlt = 0.0
 
@@ -611,6 +614,7 @@ contains
 
     deallocate(model%temper%temp)
     deallocate(model%temper%flwa)
+    deallocate(model%temper%bheatflx)
     deallocate(model%temper%bwat)
     deallocate(model%temper%bmlt)
 

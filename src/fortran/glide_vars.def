@@ -210,6 +210,15 @@ factor:        scale2d_f1
 standard_name: land_ice_surface_specific_mass_balance
 coordinates:   lon lat
 
+[bheatflx]
+dimensions:    time, y1, x1
+units:         watt/meter2
+long_name:     basal heat flux
+data:          data%temper%bheatflx
+load:          1
+hot:           1
+coordinates:   lon lat
+
 [bmlt]
 dimensions:    time, y1, x1
 units:         meter/year
