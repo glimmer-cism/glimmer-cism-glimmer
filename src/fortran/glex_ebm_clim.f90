@@ -141,7 +141,6 @@ contains
 
     ! Fix up a few things
 
-    call write_log('***CONVERTING TEMPERATURES TO DEGREES C (from KELVIN) - NECESSARY???')
     params%surftemp_clim=params%surftemp_clim-273.15       ! Convert temps to degreesC
 
   end subroutine glex_ebm_clim_init

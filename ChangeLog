@@ -10,6 +10,7 @@
  * Added test example for energy-balance mass-balance scheme
  * Changed mass-balance schemes to only calculate 'land' points (i.e. mask
  is passed though) - hopefully might speed things up.
+ * Removed unnecessary log line in glex_ebm_clim.f90 - we do need to convert temperature
 
 2005-05-16 Ian Rutt
  * Removed dummy code glimmer_enmabal.f90
