@@ -1,5 +1,9 @@
 2005-05-18 Ian Rutt
  * Bug-fix changes to couple to Energy-balance mass-balance model
+ * Added instantaneous outputting of mass-balance coupling fields,
+   enables checking of output from mass-balance schemes
+ * Fixed problem with precision change in output from Energy balance
+   mass-balance scheme
 
 2005-05-17 Magnus Hagdorn
  * glide_types.f90: added variable basal heat flux
