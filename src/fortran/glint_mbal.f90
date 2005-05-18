@@ -105,8 +105,8 @@ contains
       ! The energy-balance model will go here...
 #ifdef USE_ENMABAL
       allocate(params%smb)
-      params%tstep=1*days2hours
-      call SMBInitWrapper(params%smb,nx,ny,nint(dxr),params%tstep*60,'smb_config/online')
+      params%tstep=3
+      call SMBInitWrapper(params%smb,nx,ny,nint(dxr),params%tstep*60,'/home/ggicr/work/ggdagw/src/smb/smb_config/online')
 #else
       call write_log('Glimmer not compiled with EBMB SMB - use -DUSE_ENMABAL',GM_FATAL,__FILE__,__LINE__)
 #endif
@@ -137,7 +137,7 @@ contains
     real(sp), dimension(:,:), intent(inout) :: siced   !*FD Superimposed ice depth (m)
     real(sp), dimension(:,:), intent(out)   :: ablt    !*FD Ablation (m)
     real(sp), dimension(:,:), intent(out)   :: acab    !*FD Mass-balance (m)
-    real(dp), dimension(:,:), intent(in)    :: thck    !*FD Ice thickness (m)
+    real(rk), dimension(:,:), intent(in)    :: thck    !*FD Ice thickness (m)
     real(rk), dimension(:,:), intent(in)    :: U10m    !*FD Ten-metre x-wind (m/s)
     real(rk), dimension(:,:), intent(in)    :: V10m    !*FD Ten-metre y-wind (m/s)
     real(rk), dimension(:,:), intent(in)    :: humidity !*FD Relative humidity (%)
@@ -154,7 +154,7 @@ contains
        ! The energy-balance model will go here...
        ! NB SLM will be thickness array...
 #ifdef USE_ENMABAL
-       call SMBStepWrapper(params%smb,acab,real(thck,rk),artm,prcp*1000.0,U10m,V10m,humidity,SWdown,LWdown,Psurf)
+       call SMBStepWrapper(params%smb,real(acab,rk),thck,real(artm,rk),real(prcp*1000.0,rk),U10m,V10m,humidity,SWdown,LWdown,Psurf)
        acab=acab/1000.0  ! Convert to metres
        ablt=prcp-acab    ! Construct ablation field (in m)
        ! Fix according to land-sea mask

@@ -142,6 +142,10 @@ contains
     ! Fix up a few things
 
     params%surftemp_clim=params%surftemp_clim-273.15       ! Convert temps to degreesC
+    params%precip_clim=params%precip_clim*1000.0/21600.0   ! Convert precip to mm/s
+    params%lwdown_clim=params%lwdown_clim/21600.0          ! Convert fluxes to W/m^2
+    params%swdown_clim=params%swdown_clim/21600.0          ! Convert fluxes to W/m^2
+    params%orog_clim=params%orog_clim/9.81                 ! Convert geopotential to m
 
   end subroutine glex_ebm_clim_init
 

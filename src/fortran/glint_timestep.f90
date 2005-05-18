@@ -140,12 +140,23 @@ contains
 
        call glint_calc_precip(instance)
 
+       ! Get ice thickness, if necessary ----------------------------------------
+
+       if (instance%whichacab==3) then
+          allocate(thck_temp(instance%proj%nx,instance%proj%ny))
+          call glide_get_thk(instance%model,thck_temp)
+       endif
+
        ! Do accumulation --------------------------------------------------------
 
        call glint_accumulate(instance%mbal_accum,instance%artm,instance%arng,instance%prcp, &
             instance%snowd,instance%siced,instance%xwind,instance%ywind,instance%global_orog, &
-            instance%local_orog,instance%model%geometry%thck,instance%humid,instance%swdown,instance%lwdown, &
+            instance%local_orog,real(thck_temp,rk),instance%humid,instance%swdown,instance%lwdown, &
             instance%airpress)
+
+       ! Tidy up ----------------------------------------------------------------
+
+      if (allocated(thck_temp)) deallocate(thck_temp)
 
     end if
 

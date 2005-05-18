@@ -76,7 +76,7 @@ contains
     real(rk),dimension(:,:),intent(in) :: ywind        !*FD $y$-component of surface winds (m/s)
     real(dp),dimension(:,:),intent(in) :: global_orog  !*FD Global orography (m)
     real(sp),dimension(:,:),intent(in) :: local_orog   !*FD Local orography (m)
-    real(dp),dimension(:,:),intent(in) :: thck         !*FD Ice thickness (m)
+    real(rk),dimension(:,:),intent(in) :: thck         !*FD Ice thickness (m)
     real(rk),dimension(:,:),intent(in) :: humidity     !*FD Relative humidity (%)
     real(rk),dimension(:,:),intent(in) :: SWdown       !*FD Downwelling shortwave (W/m^2)
     real(rk),dimension(:,:),intent(in) :: LWdown       !*FD Downwelling longwave (W/m^2)
