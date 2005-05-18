@@ -1,3 +1,13 @@
+2005-05-18 Magnus Hagdorn
+ * glide_types.f90: new type for thermal litho
+ * glide_vars.def: add new dimension for layers of lithosphere
+ * glide_nc_custom.f90: fill litho dimension
+ * glide_setup.f90: make sigma layer calculating function public
+ * glide_lithot.f90: new module for thermal diffu calculations of lithosphere
+   currently, this just sets up the dimension variable
+ * glide.f90: add init_lithot to initialisation routines
+ * Makefile.am: add glide_lithot.f90 to glide sources
+
 2005-05-18 Ian Rutt
  * Bug-fix changes to couple to Energy-balance mass-balance model
 

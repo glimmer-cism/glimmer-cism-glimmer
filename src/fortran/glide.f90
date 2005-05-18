@@ -55,6 +55,7 @@ contains
     use glide_setup
     use glimmer_ncparams
     use glimmer_ncio
+    use glide_lithot
     use glide_velo
     use glide_thck
     use glide_temp
@@ -120,6 +121,7 @@ contains
     call init_velo(model)
     call init_temp(model)
     call init_thck(model)
+    call init_lithot(model)
 
     if (model%options%hotstart.ne.1) then
        ! initialise Glen's flow parameter A using an isothermal temperature distribution

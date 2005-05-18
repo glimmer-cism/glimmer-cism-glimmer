@@ -300,6 +300,25 @@ module glide_types
     logical  :: newtemps = .false. !*FD new temperatures
   end type glide_temper
 
+  type glide_lithot_type
+     !*FD holds variables for temperature calculations in the lithosphere
+
+     real(dp),dimension(:,:,:),pointer :: temp => null()    !*FD Three-dimensional temperature field.
+     
+     real(dp), dimension(:), pointer :: deltaz => null()    !*FD array holding grid spacing in z
+     real(dp), dimension(:,:), pointer :: zfactors => null()!*FD array holding factors for finite differences of vertical diffu
+
+     integer :: nlayer = 10     !*FD number of layers in lithosphere
+     real :: rock_base = -2500. !*FD depth below sea-level at which geothermal heat gradient is applied
+     
+     real(dp) :: rho_r = 3300.0d0 !*FD The density of lithosphere (kg m$^{-3}$)
+     real(dp) :: shc_r = 1000.0d0 !*FD specific heat capcity of lithosphere (J kg$^{-1}$ K$^{-1}$)
+     real(dp) :: con_r = 3.3d0    !*FD thermal conductivity of lithosphere (W m$^{-1}$ K$^{-1}$)
+
+     real(dp) :: diffu = 0. !*FD diffusion coefficient
+
+  end type glide_lithot_type
+
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   type glide_funits
@@ -453,6 +472,7 @@ module glide_types
     type(glide_velocity) :: velocity
     type(glide_climate)  :: climate
     type(glide_temper)   :: temper
+    type(glide_lithot_type) :: lithot
     type(glide_funits)   :: funits
     type(glide_numerics) :: numerics
     type(glide_velowk)   :: velowk
@@ -553,6 +573,10 @@ contains
     allocate(model%temper%bwat(ewn,nsn));             model%temper%bwat = 0.0
     allocate(model%temper%bmlt(ewn,nsn));             model%temper%bmlt = 0.0
 
+    allocate(model%lithot%temp(model%lithot%nlayer, 0:ewn+1,0:nsn+1)); model%lithot%temp = 0.0
+    allocate(model%lithot%deltaz(model%lithot%nlayer)); model%lithot%deltaz = 0.0
+    allocate(model%lithot%zfactors(3,model%lithot%nlayer)); model%lithot%zfactors = 0.0
+
     allocate(model%velocity%uvel(upn,ewn-1,nsn-1));   model%velocity%uvel = 0.0d0
     allocate(model%velocity%vvel(upn,ewn-1,nsn-1));   model%velocity%vvel = 0.0d0
     allocate(model%velocity%wvel(upn,ewn,nsn));       model%velocity%wvel = 0.0d0
@@ -617,6 +641,10 @@ contains
     deallocate(model%temper%bheatflx)
     deallocate(model%temper%bwat)
     deallocate(model%temper%bmlt)
+
+    deallocate(model%lithot%temp)
+    deallocate(model%lithot%deltaz)
+    deallocate(model%lithot%zfactors)
 
     deallocate(model%velocity%uvel)
     deallocate(model%velocity%vvel)

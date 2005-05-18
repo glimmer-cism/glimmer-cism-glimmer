@@ -18,7 +18,7 @@ libglimmer_a_SOURCES = glimmer_version.f90 glimmer_CFproj.f90 glimmer_config.f90
                 glimmer_pdd.f90 glimmer_routing.f90 glimmer_daily_pdd.f90 glint_global_interp.f90
 nodist_libglimmer_a_SOURCES = glimmer_version.f90
 libglide_a_SOURCES = glide.f90 glide_setup.f90 glide_types.f90 glide_temp.f90 glide_thck.f90 glide_velo.f90 glide_mask.f90 glide_stop.f90 glide_io.f90 \
-                glide_nc_custom.f90 isostasy.f90 isostasy_el.f90 isostasy_setup.f90 isostasy_types.f90
+                glide_nc_custom.f90 isostasy.f90 isostasy_el.f90 isostasy_setup.f90 isostasy_types.f90 glide_lithot.f90
 libglint_a_SOURCES = glint_climate.f90 glint_initialise.f90 glint_io.f90 glint_timestep.f90 glint_type.f90 \
 		glint.f90 glint_proj.f90 glint_interp.f90 glint_global_grid.f90 glint_precip_param.f90 \
                 glint_mbal.f90 glint_constants.f90 glint_gmt.f90 glint_mbal_coupling.f90 glint_mbal_io.f90 glint_example_clim.f90 glex_ebm_clim.f90

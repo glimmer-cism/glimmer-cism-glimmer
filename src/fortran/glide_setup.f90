@@ -48,7 +48,7 @@ module glide_setup
   private
   public :: glide_readconfig, glide_printconfig, glide_scale_params, &
        glide_calclsrf, glide_marinlim, glide_load_sigma, glide_maskthck, &
-       glide_prof_start, glide_prof_stop
+       glide_prof_start, glide_prof_stop, glide_calc_sigma
 
 contains
   
@@ -405,21 +405,21 @@ contains
     else
        call write_log('Calculating sigma')
        do up=1,upn
-          model%numerics%sigma(up) = f(real(up-1)/real(upn-1),2.)
+          model%numerics%sigma(up) = glide_calc_sigma(real(up-1)/real(upn-1),2.)
        end do
        return
     end if
     
 10  call write_log('something wrong with sigma coord file',GM_FATAL)
     
-  contains
-    function f(x,n)
-      implicit none
-      real :: f,x,n
-      
-      f = (1-(x+1)**(-n))/(1-2**(-n))
-    end function f
   end subroutine glide_load_sigma
+
+  function glide_calc_sigma(x,n)
+      implicit none
+      real :: glide_calc_sigma,x,n
+      
+      glide_calc_sigma = (1-(x+1)**(-n))/(1-2**(-n))
+    end function glide_calc_sigma
 
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
