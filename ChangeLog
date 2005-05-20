@@ -1,3 +1,12 @@
+2005-05-20 Magnus Hagdorn
+ * glimmer_sparse.f90: new module for handling sparse matrices
+ * Makefile.am: added glimmer_sparse.f90 to libglimmer sources
+ * glide_vars.def: added litho temp
+ * glide_types.f90: added sparse matrices and vectors for CG
+ * glide_lithot.f90: calculate sparse matrix and hook up solver
+   doesn't work yet
+ * glide.f90: added lithot calculations
+
 2005-05-18 Magnus Hagdorn
  * glide_types.f90: new type for thermal litho
  * glide_vars.def: add new dimension for layers of lithosphere

@@ -55,6 +55,7 @@ module glide_types
   !*FD Note that this \emph{is} now where the defaults are defined for these
   !*FD variables.
  
+  use glimmer_sparse
   use glimmer_global
   use glimmer_ncdf
   use isostasy_types
@@ -305,8 +306,20 @@ module glide_types
 
      real(dp),dimension(:,:,:),pointer :: temp => null()    !*FD Three-dimensional temperature field.
      
+     ! The sparse matrix and linearised arrays
+     type(sparse_matrix_type) :: fd_coeff, fd_coeff_slap
+     integer :: all_bar_top
+     real(dp), dimension(:), pointer :: rhs
+     real(dp), dimension(:), pointer :: answer
+     
+     ! work arrays for solver
+     real(dp), dimension(:), pointer :: rwork
+     integer, dimension(:), pointer :: iwork
+     integer mxnelt
+
      real(dp), dimension(:), pointer :: deltaz => null()    !*FD array holding grid spacing in z
      real(dp), dimension(:,:), pointer :: zfactors => null()!*FD array holding factors for finite differences of vertical diffu
+     real(dp) :: xfactor,yfactor !*FD factors for finite differences of horizontal diffu
 
      integer :: nlayer = 10     !*FD number of layers in lithosphere
      real :: rock_base = -2500. !*FD depth below sea-level at which geothermal heat gradient is applied
@@ -573,9 +586,16 @@ contains
     allocate(model%temper%bwat(ewn,nsn));             model%temper%bwat = 0.0
     allocate(model%temper%bmlt(ewn,nsn));             model%temper%bmlt = 0.0
 
-    allocate(model%lithot%temp(model%lithot%nlayer, 0:ewn+1,0:nsn+1)); model%lithot%temp = 0.0
+    allocate(model%lithot%temp(1:ewn,1:nsn,model%lithot%nlayer)); model%lithot%temp = 0.0
     allocate(model%lithot%deltaz(model%lithot%nlayer)); model%lithot%deltaz = 0.0
     allocate(model%lithot%zfactors(3,model%lithot%nlayer)); model%lithot%zfactors = 0.0
+    call new_sparse_matrix((model%lithot%nlayer-1)*ewn*nsn*7+ewn*nsn,model%lithot%fd_coeff)
+    call new_sparse_matrix((model%lithot%nlayer-1)*ewn*nsn*7+ewn*nsn,model%lithot%fd_coeff_slap)
+    allocate(model%lithot%rhs(model%lithot%nlayer*ewn*nsn))
+    allocate(model%lithot%answer(model%lithot%nlayer*ewn*nsn))
+    model%lithot%mxnelt = 20 * model%lithot%nlayer*ewn*nsn
+    allocate(model%lithot%rwork(model%lithot%mxnelt))
+    allocate(model%lithot%iwork(model%lithot%mxnelt))
 
     allocate(model%velocity%uvel(upn,ewn-1,nsn-1));   model%velocity%uvel = 0.0d0
     allocate(model%velocity%vvel(upn,ewn-1,nsn-1));   model%velocity%vvel = 0.0d0
@@ -645,6 +665,10 @@ contains
     deallocate(model%lithot%temp)
     deallocate(model%lithot%deltaz)
     deallocate(model%lithot%zfactors)
+    call del_sparse_matrix(model%lithot%fd_coeff)
+    call del_sparse_matrix(model%lithot%fd_coeff_slap)
+    deallocate(model%lithot%rhs)
+    deallocate(model%lithot%answer)
 
     deallocate(model%velocity%uvel)
     deallocate(model%velocity%vvel)

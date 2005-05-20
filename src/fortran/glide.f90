@@ -151,6 +151,7 @@ contains
     use glide_setup
     use glide_temp
     use glide_mask
+    use glide_lithot
     implicit none
 
     type(glide_global_type) :: model        !*FD model instance
@@ -236,6 +237,8 @@ contains
 #ifdef PROFILING
     call glide_prof_stop(model,3,'ice mask 1')
 #endif
+
+    call calc_lithot(model)
 
     ! ------------------------------------------------------------------------ 
     ! Calculate temperature evolution and Glenn's A, if necessary
