@@ -47,6 +47,7 @@ module glide
   use glide_stop
   use glide_nc_custom
   use glide_io
+  use glide_lithot
   integer, private, parameter :: dummyunit=99
 
 contains
@@ -55,7 +56,6 @@ contains
     use glide_setup
     use glimmer_ncparams
     use glimmer_ncio
-    use glide_lithot
     use glide_velo
     use glide_thck
     use glide_temp
@@ -151,7 +151,6 @@ contains
     use glide_setup
     use glide_temp
     use glide_mask
-    use glide_lithot
     implicit none
 
     type(glide_global_type) :: model        !*FD model instance

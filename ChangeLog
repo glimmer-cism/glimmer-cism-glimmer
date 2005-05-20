@@ -1,4 +1,11 @@
 2005-05-20 Magnus Hagdorn
+ * glide_lithot.f90: fixed bug calling CG solver, added routine for
+   calculating geothermal heat flux
+ * glide.f90: glide_lithot is loaded into module
+ * simple_glide.f90: quick hack, need to initialise surf temps before
+   lithosphere is initialised
+
+2005-05-20 Magnus Hagdorn
  * glimmer_sparse.f90: new module for handling sparse matrices
  * Makefile.am: added glimmer_sparse.f90 to libglimmer sources
  * glide_vars.def: added litho temp

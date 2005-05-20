@@ -430,6 +430,34 @@ contains
     end do
   end subroutine init_lithot
 
+  subroutine spinup_lithot(model)
+    use glide_types
+    implicit none
+    type(glide_global_type),intent(inout) :: model       !*FD model instance
+
+    integer i,k,j
+    real(dp) :: factor
+
+    if (model%options%hotstart.ne.1) then
+       ! set initial temp distribution to thermal gradient
+       factor = model%paramets%geot/model%lithot%con_r
+       do k=1,model%lithot%nlayer
+          model%lithot%temp(:,:,k) = model%climate%artm(:,:)+model%lithot%deltaz(k)*factor
+       end do
+    end if
+
+    ! initialise result vector
+    do k=1,model%lithot%nlayer
+       do j=1,model%general%nsn
+          do i=1,model%general%ewn
+             model%lithot%answer(linearise(model,i,j,k)) = model%lithot%temp(i,j,k)
+          end do
+       end do
+    end do
+
+    call calc_geoth(model)
+  end subroutine spinup_lithot
+
   subroutine calc_lithot(model)
     use glide_types
     use glide_mask
@@ -439,7 +467,8 @@ contains
 
     integer i,j,k,r
     real(kind=dp) :: factor
-    integer iter, err
+    integer iter
+    real(dp) err
     real(dp), parameter :: tol = 1.0d-12
     integer, parameter :: isym = 0, itol = 2, itmax = 101
     integer :: ierr
@@ -468,17 +497,17 @@ contains
     end do
 
     ! solve matrix equation
-    !call dslucs(model%general%nsn*model%general%ewn*model%lithot%nlayer, model%lithot%rhs, model%lithot%answer, &
-    !     model%lithot%fd_coeff_slap%n, model%lithot%fd_coeff_slap%col,model%lithot%fd_coeff_slap%row, &
-    !     model%lithot%fd_coeff_slap%val, isym,itol,tol,itmax,iter,err,ierr,0, &
-    !     model%lithot%rwork, model%lithot%mxnelt, model%lithot%iwork, model%lithot%mxnelt)
+    call dslucs(model%general%nsn*model%general%ewn*model%lithot%nlayer, model%lithot%rhs, model%lithot%answer, &
+         model%lithot%fd_coeff_slap%n, model%lithot%fd_coeff_slap%col,model%lithot%fd_coeff_slap%row, &
+         model%lithot%fd_coeff_slap%val, isym,itol,tol,itmax,iter,err,ierr,0, &
+         model%lithot%rwork, model%lithot%mxnelt, model%lithot%iwork, model%lithot%mxnelt)
 
-    !if (ierr /= 0) then
-    !  print *, 'pcg error ', ierr, itmax, iter
-    !  write(*,*) model%numerics%time
-    !  call glide_finalise(model,.true.)
-    !  stop
-    !end if
+    if (ierr /= 0) then
+      print *, 'pcg error ', ierr, itmax, iter
+      write(*,*) model%numerics%time
+      call glide_finalise(model,.true.)
+      stop
+    end if
 
     ! de-linearise results
     do k=1, model%lithot%nlayer
@@ -489,7 +518,21 @@ contains
        end do
     end do
       
+    call calc_geoth(model)
+
   end subroutine calc_lithot
+
+  subroutine calc_geoth(model)
+    !*FD calculate geothermal heat flux
+    use glide_types
+    implicit none
+    type(glide_global_type),intent(inout) :: model       !*FD model instance
+
+    real(dp) factor
+
+    factor = model%lithot%con_r/(model%lithot%deltaz(2)-model%lithot%deltaz(1))
+    model%temper%bheatflx(:,:) = factor*(model%lithot%temp(:,:,2)-model%lithot%temp(:,:,1))
+  end subroutine calc_geoth
 
   function linearise(model,i,j,k)
     use glide_types

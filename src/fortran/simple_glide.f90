@@ -72,6 +72,8 @@ program simple_glide
   ! fill dimension variables
   call glide_nc_fillall(model)
   time = model%numerics%tstart
+  call simple_surftemp(climate,model,time)
+  call spinup_lithot(model)
   do while(time.le.model%numerics%tend)
      call simple_massbalance(climate,model,time)
      call simple_surftemp(climate,model,time)     
