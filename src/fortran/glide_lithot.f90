@@ -55,7 +55,7 @@ contains
     type(glide_global_type),intent(inout) :: model       !*FD model instance
 
     ! local variables
-    integer i,j,k,r
+    integer i,j,k,r,icount,jcount
     real(kind=dp) :: factor
 
     ! set up vertical grid
@@ -68,8 +68,8 @@ contains
     model%lithot%diffu = model%lithot%con_r/(model%lithot%rho_r*model%lithot%shc_r)
 
     ! set up factors for finite differences
-    model%lithot%xfactor = 0.5*model%lithot%diffu*tim0*model%numerics%dt / (model%numerics%dew*len0)
-    model%lithot%yfactor = 0.5*model%lithot%diffu*tim0*model%numerics%dt / (model%numerics%dns*len0)
+    model%lithot%xfactor = 0.5*model%lithot%diffu*tim0*model%numerics%dt / (model%numerics%dew*len0)**2
+    model%lithot%yfactor = 0.5*model%lithot%diffu*tim0*model%numerics%dt / (model%numerics%dns*len0)**2
     do k=2,model%lithot%nlayer-1
        model%lithot%zfactors(1,k) =  model%lithot%diffu*tim0*model%numerics%dt / &
             ((model%lithot%deltaz(k)-model%lithot%deltaz(k-1)) * (model%lithot%deltaz(k+1)-model%lithot%deltaz(k-1)))
@@ -91,319 +91,44 @@ contains
     end if
 
     ! calculate finite difference coefficient matrix
-    ! interior
-    do k=2, model%lithot%nlayer-1
-       do j=2,model%general%nsn-1
-          do i=2,model%general%ewn-1
+    do k=2, model%lithot%nlayer
+       do j=1,model%general%nsn
+          do i=1,model%general%ewn
+             icount = 0
+             jcount = 0
              r = linearise(model,i,j,k)
-             ! i+1,j,k
-             call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i+1,j,k), -model%lithot%xfactor)
              ! i-1,j,k
-             call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i-1,j,k), -model%lithot%xfactor)
-             ! i,j+1,k
-             call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j+1,k), -model%lithot%yfactor)
+             if (i.ne.1) then
+                call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i-1,j,k), -model%lithot%xfactor)
+                icount = icount + 1
+             end if
+             ! i+1, j, k
+             if (i.ne.model%general%ewn) then
+                call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i+1,j,k), -model%lithot%xfactor)
+                icount = icount + 1
+             end if
              ! i,j-1,k
-             call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j-1,k), -model%lithot%yfactor)
-             ! i,j,k+1
-             call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j,k+1), -model%lithot%zfactors(3,k))
+             if (j.ne.1) then
+                call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j-1,k), -model%lithot%yfactor)
+                jcount = jcount + 1
+             end if
+             ! i,j+1,k
+             if (j.ne.model%general%nsn) then
+                call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j+1,k), -model%lithot%yfactor)
+                jcount = jcount + 1
+             end if
              ! i,j,k-1
              call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j,k-1), -model%lithot%zfactors(1,k))
+             ! i,j,k+1
+             if (k.ne.model%lithot%nlayer) then
+                call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j,k+1), -model%lithot%zfactors(3,k))
+             end if
              ! i,j,k
              call sparse_insert_val(model%lithot%fd_coeff,r,r, &
-                  2.*model%lithot%xfactor + 2.*model%lithot%yfactor + model%lithot%zfactors(2,k) + 1.)
+                  icount*model%lithot%xfactor + jcount*model%lithot%yfactor + model%lithot%zfactors(2,k) + 1.)
           end do
        end do
     end do
-    ! boundaries
-    ! left and right face
-    do k=2, model%lithot%nlayer-1
-       do j=2,model%general%nsn-1
-          ! left face
-          i = 1
-          r = linearise(model,i,j,k)
-          ! i+1
-          call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i+1,j,k), -model%lithot%xfactor)
-          ! i-1
-          ! 0
-          ! i,j+1,k
-          call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j+1,k), -model%lithot%yfactor)
-          ! i,j-1,k
-          call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j-1,k), -model%lithot%yfactor)
-          ! i,j,k+1
-          call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j,k+1), -model%lithot%zfactors(3,k))
-          ! i,j,k-1
-          call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j,k-1), -model%lithot%zfactors(1,k))
-          ! i,j,k
-          call sparse_insert_val(model%lithot%fd_coeff,r,r, &
-               model%lithot%xfactor + 2.*model%lithot%yfactor + model%lithot%zfactors(2,k) + 1.)
-          
-          ! right face
-          i = model%general%ewn
-          r = linearise(model,i,j,k)
-          ! i+1
-          ! 0
-          ! i-1,j,k
-          call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i-1,j,k), -model%lithot%xfactor)
-          ! i,j+1,k
-          call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j+1,k), -model%lithot%yfactor)
-          ! i,j-1,k
-          call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j-1,k), -model%lithot%yfactor)
-          ! i,j,k+1
-          call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j,k+1), -model%lithot%zfactors(3,k))
-          ! i,j,k-1
-          call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j,k-1), -model%lithot%zfactors(1,k))
-          ! i,j,k
-          call sparse_insert_val(model%lithot%fd_coeff,r,r, &
-               model%lithot%xfactor + 2.*model%lithot%yfactor + model%lithot%zfactors(2,k) + 1.)
-       end do
-    end do
-    ! front and back face
-    do k=2, model%lithot%nlayer-1
-       do i=2,model%general%ewn-1
-          ! front face
-          j = 1
-          r = linearise(model,i,j,k)
-          ! i+1,j,k
-          call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i+1,j,k), -model%lithot%xfactor)
-          ! i-1,j,k
-          call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i-1,j,k), -model%lithot%xfactor)
-          ! i,j+1,k
-          call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j+1,k), -model%lithot%yfactor)
-          ! i,j-1,k
-          ! 0          
-          ! i,j,k+1
-          call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j,k+1), -model%lithot%zfactors(3,k))
-          ! i,j,k-1
-          call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j,k-1), -model%lithot%zfactors(1,k))
-          ! i,j,k
-          call sparse_insert_val(model%lithot%fd_coeff,r,r, &
-               2.*model%lithot%xfactor + model%lithot%yfactor + model%lithot%zfactors(2,k) + 1.)
-
-          ! back face
-          j=model%general%nsn
-          r = linearise(model,i,j,k)
-          ! i+1,j,k
-          call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i+1,j,k), -model%lithot%xfactor)
-          ! i-1,j,k
-          call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i-1,j,k), -model%lithot%xfactor)
-          ! i,j+1,k
-          ! 0
-          ! i,j-1,k
-          call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j-1,k), -model%lithot%yfactor)
-          ! i,j,k+1
-          call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j,k+1), -model%lithot%zfactors(3,k))
-          ! i,j,k-1
-          call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j,k-1), -model%lithot%zfactors(1,k))
-          ! i,j,k
-          call sparse_insert_val(model%lithot%fd_coeff,r,r, &
-               2.*model%lithot%xfactor + model%lithot%yfactor + model%lithot%zfactors(2,k) + 1.)
-       end do
-    end do
-    ! vertical edges
-    do k=2, model%lithot%nlayer-1
-       i = 1
-       j = 1
-       r = linearise(model,i,j,k)
-       ! i+1,j,k
-       call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i+1,j,k), -model%lithot%xfactor)
-       ! i,j+1,k
-       call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j+1,k), -model%lithot%yfactor)
-       ! i,j,k+1
-       call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j,k+1), -model%lithot%zfactors(3,k))
-       ! i,j,k-1
-       call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j,k-1), -model%lithot%zfactors(1,k))
-       ! i,j,k
-       call sparse_insert_val(model%lithot%fd_coeff,r,r, &
-            model%lithot%xfactor + model%lithot%yfactor + model%lithot%zfactors(2,k) + 1.)
-
-       i = 1
-       j = model%general%nsn
-       r = linearise(model,i,j,k)
-       ! i+1,j,k
-       call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i+1,j,k), -model%lithot%xfactor)
-       ! i,j-1,k
-       call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j-1,k), -model%lithot%yfactor)
-       ! i,j,k+1
-       call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j,k+1), -model%lithot%zfactors(3,k))
-       ! i,j,k-1
-       call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j,k-1), -model%lithot%zfactors(1,k))
-       ! i,j,k
-       call sparse_insert_val(model%lithot%fd_coeff,r,r, &
-            model%lithot%xfactor + model%lithot%yfactor + model%lithot%zfactors(2,k) + 1.)
-
-       i = model%general%ewn
-       j = model%general%nsn
-       r = linearise(model,i,j,k)
-       ! i-1,j,k
-       call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i-1,j,k), -model%lithot%xfactor)
-       ! i,j-1,k
-       call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j-1,k), -model%lithot%yfactor)
-       ! i,j,k+1
-       call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j,k+1), -model%lithot%zfactors(3,k))
-       ! i,j,k-1
-       call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j,k-1), -model%lithot%zfactors(1,k))
-       ! i,j,k
-       call sparse_insert_val(model%lithot%fd_coeff,r,r, &
-            model%lithot%xfactor + model%lithot%yfactor + model%lithot%zfactors(2,k) + 1.)
-
-       i = model%general%ewn
-       j = 1
-       r = linearise(model,i,j,k)
-       ! i-1,j,k
-       call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i-1,j,k), -model%lithot%xfactor)
-       ! i,j+1,k
-       call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j+1,k), -model%lithot%yfactor)
-       ! i,j,k+1
-       call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j,k+1), -model%lithot%zfactors(3,k))
-       ! i,j,k-1
-       call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j,k-1), -model%lithot%zfactors(1,k))
-       ! i,j,k
-       call sparse_insert_val(model%lithot%fd_coeff,r,r, &
-            model%lithot%xfactor + model%lithot%yfactor + model%lithot%zfactors(2,k) + 1.)
-    end do
-    ! bottom face
-    k = model%lithot%nlayer
-    do j=2,model%general%nsn-1
-       do i=2,model%general%ewn-1
-          r = linearise(model,i,j,k)
-          ! i+1,j,k
-          call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i+1,j,k), -model%lithot%xfactor)
-          ! i-1,j,k
-          call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i-1,j,k), -model%lithot%xfactor)
-          ! i,j+1,k
-          call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j+1,k), -model%lithot%yfactor)
-          ! i,j-1,k
-          call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j-1,k), -model%lithot%yfactor)
-          ! i,j,k-1
-          call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j-1,k-1), -model%lithot%zfactors(1,k))
-          ! i,j,k
-          call sparse_insert_val(model%lithot%fd_coeff,r,r, &
-                  2.*model%lithot%xfactor + 2.*model%lithot%yfactor + model%lithot%zfactors(2,k) + 1.)
-       end do
-    end do
-    ! bottom edges
-    do j=2,model%general%nsn-1
-       ! left edge
-       i = 1
-       r = linearise(model,i,j,k)
-       ! i+1
-       call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i+1,j,k), -model%lithot%xfactor)
-       ! i-1
-       ! 0
-       ! i,j+1,k
-       call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j+1,k), -model%lithot%yfactor)
-       ! i,j-1,k
-       call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j-1,k), -model%lithot%yfactor)
-       ! i,j,k-1
-       call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j-1,k-1), -model%lithot%zfactors(1,k))
-       ! i,j,k
-       call sparse_insert_val(model%lithot%fd_coeff,r,r, &
-            model%lithot%xfactor + 2.*model%lithot%yfactor + model%lithot%zfactors(2,k) + 1.)
-
-       ! right edge
-       i = model%general%ewn
-       r = linearise(model,i,j,k)
-       ! i+1
-       ! 0
-       ! i-1,j,k
-       call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i-1,j,k), -model%lithot%xfactor)
-       ! i,j+1,k
-       call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j+1,k), -model%lithot%yfactor)
-       ! i,j-1,k
-       call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j-1,k), -model%lithot%yfactor)
-       ! i,j,k-1
-       call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j,k-1), -model%lithot%zfactors(1,k))
-       ! i,j,k
-       call sparse_insert_val(model%lithot%fd_coeff,r,r, &
-            model%lithot%xfactor + 2.*model%lithot%yfactor + model%lithot%zfactors(2,k) + 1.)
-    end do
-    do i=2,model%general%ewn-1
-       ! front edge
-       j = 1
-       r = linearise(model,i,j,k)
-       ! i+1,j,k
-       call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i+1,j,k), -model%lithot%xfactor)
-       ! i-1,j,k
-       call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i-1,j,k), -model%lithot%xfactor)
-       ! i,j+1,k
-       call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j+1,k), -model%lithot%yfactor)
-       ! i,j-1,k
-       ! 0          
-       ! i,j,k-1
-       call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j,k-1), -model%lithot%zfactors(1,k))
-       ! i,j,k
-       call sparse_insert_val(model%lithot%fd_coeff,r,r, &
-            2.*model%lithot%xfactor + model%lithot%yfactor + model%lithot%zfactors(2,k) + 1.)
-
-       ! back edge
-       j=model%general%nsn
-       r = linearise(model,i,j,k)
-       ! i+1,j,k
-       call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i+1,j,k), -model%lithot%xfactor)
-       ! i-1,j,k
-       call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i-1,j,k), -model%lithot%xfactor)
-       ! i,j+1,k
-       ! 0
-       ! i,j-1,k
-       call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j-1,k), -model%lithot%yfactor)
-       ! i,j,k-1
-       call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j,k-1), -model%lithot%zfactors(1,k))
-       ! i,j,k
-       call sparse_insert_val(model%lithot%fd_coeff,r,r, &
-            2.*model%lithot%xfactor + model%lithot%yfactor + model%lithot%zfactors(2,k) + 1.)
-    end do
-    ! bottom corners
-    i = 1
-    j = 1
-    r = linearise(model,i,j,k)
-    ! i+1,j,k
-    call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i+1,j,k), -model%lithot%xfactor)
-    ! i,j+1,k
-    call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j+1,k), -model%lithot%yfactor)
-    ! i,j,k-1
-    call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j,k-1), -model%lithot%zfactors(1,k))
-    ! i,j,k
-    call sparse_insert_val(model%lithot%fd_coeff,r,r, &
-         model%lithot%xfactor + model%lithot%yfactor + model%lithot%zfactors(2,k) + 1.)
-
-    i = 1
-    j = model%general%nsn
-    r = linearise(model,i,j,k)
-    ! i+1,j,k
-    call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i+1,j,k), -model%lithot%xfactor)
-    ! i,j-1,k
-    call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j-1,k), -model%lithot%yfactor)
-    ! i,j,k-1
-    call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j,k-1), -model%lithot%zfactors(1,k))
-    ! i,j,k
-    call sparse_insert_val(model%lithot%fd_coeff,r,r, &
-         model%lithot%xfactor + model%lithot%yfactor + model%lithot%zfactors(2,k) + 1.)
-
-    i = model%general%ewn
-    j = model%general%nsn
-    r = linearise(model,i,j,k)
-    ! i-1,j,k
-    call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i-1,j,k), -model%lithot%xfactor)
-    ! i,j-1,k
-    call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j-1,k), -model%lithot%yfactor)
-    ! i,j,k-1
-    call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j,k-1), -model%lithot%zfactors(1,k))
-    ! i,j,k
-    call sparse_insert_val(model%lithot%fd_coeff,r,r, &
-         model%lithot%xfactor + model%lithot%yfactor + model%lithot%zfactors(2,k) + 1.)
-
-    i = model%general%ewn
-    j = 1
-    r = linearise(model,i,j,k)
-    ! i-1,j,k
-    call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i-1,j,k), -model%lithot%xfactor)
-    ! i,j+1,k
-    call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j+1,k), -model%lithot%yfactor)
-    ! i,j,k-1
-    call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j,k-1), -model%lithot%zfactors(1,k))
-    ! i,j,k
-    call sparse_insert_val(model%lithot%fd_coeff,r,r, &
-         model%lithot%xfactor + model%lithot%yfactor + model%lithot%zfactors(2,k) + 1.)
     
     ! top face
     ! simply match air temperature where no ice and basal temperature where ice
@@ -428,7 +153,7 @@ contains
           end do
        end do
     end do
-  end subroutine init_lithot
+  end subroutine init_lithot    
 
   subroutine spinup_lithot(model)
     use glide_types
@@ -462,6 +187,7 @@ contains
     use glide_types
     use glide_mask
     use glide_stop
+    use paramets, only: tim0
     implicit none
     type(glide_global_type),intent(inout) :: model       !*FD model instance
 
@@ -477,7 +203,8 @@ contains
     call sparse_matrix_vec_prod(model%lithot%fd_coeff,model%lithot%answer,model%lithot%rhs)
     model%lithot%rhs = -model%lithot%rhs + 2. * model%lithot%answer
     k = model%lithot%nlayer
-    factor = model%paramets%geot/model%lithot%con_r/(model%lithot%deltaz(k)-model%lithot%deltaz(k-1))
+    factor = model%lithot%diffu*tim0*model%numerics%dt*model%paramets%geot/model%lithot%con_r /&
+         (model%lithot%deltaz(k)-model%lithot%deltaz(k-1))
     do j=1,model%general%nsn
        do i=1,model%general%ewn
           k = 1
@@ -492,7 +219,7 @@ contains
 
           k = model%lithot%nlayer
           r = linearise(model,i,j,k)
-          model%lithot%rhs(r) = model%lithot%rhs(r) + 2.*(model%lithot%xfactor + model%lithot%yfactor)*factor
+          model%lithot%rhs(r) = model%lithot%rhs(r) + factor
        end do
     end do
 

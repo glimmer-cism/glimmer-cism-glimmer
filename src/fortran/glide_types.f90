@@ -321,8 +321,8 @@ module glide_types
      real(dp), dimension(:,:), pointer :: zfactors => null()!*FD array holding factors for finite differences of vertical diffu
      real(dp) :: xfactor,yfactor !*FD factors for finite differences of horizontal diffu
 
-     integer :: nlayer = 10     !*FD number of layers in lithosphere
-     real :: rock_base = -2500. !*FD depth below sea-level at which geothermal heat gradient is applied
+     integer :: nlayer = 20     !*FD number of layers in lithosphere
+     real :: rock_base = -5000. !*FD depth below sea-level at which geothermal heat gradient is applied
      
      real(dp) :: rho_r = 3300.0d0 !*FD The density of lithosphere (kg m$^{-3}$)
      real(dp) :: shc_r = 1000.0d0 !*FD specific heat capcity of lithosphere (J kg$^{-1}$ K$^{-1}$)
@@ -589,8 +589,8 @@ contains
     allocate(model%lithot%temp(1:ewn,1:nsn,model%lithot%nlayer)); model%lithot%temp = 0.0
     allocate(model%lithot%deltaz(model%lithot%nlayer)); model%lithot%deltaz = 0.0
     allocate(model%lithot%zfactors(3,model%lithot%nlayer)); model%lithot%zfactors = 0.0
-    call new_sparse_matrix((model%lithot%nlayer-1)*ewn*nsn*7+ewn*nsn,model%lithot%fd_coeff)
-    call new_sparse_matrix((model%lithot%nlayer-1)*ewn*nsn*7+ewn*nsn,model%lithot%fd_coeff_slap)
+    call new_sparse_matrix((model%lithot%nlayer-1)*ewn*nsn*7+ewn*nsn+1,model%lithot%fd_coeff)
+    call new_sparse_matrix((model%lithot%nlayer-1)*ewn*nsn*7+ewn*nsn+1,model%lithot%fd_coeff_slap)
     allocate(model%lithot%rhs(model%lithot%nlayer*ewn*nsn))
     allocate(model%lithot%answer(model%lithot%nlayer*ewn*nsn))
     model%lithot%mxnelt = 20 * model%lithot%nlayer*ewn*nsn

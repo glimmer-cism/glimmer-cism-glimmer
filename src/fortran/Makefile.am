@@ -2,7 +2,7 @@ SUBDIRS = SLAP_library
 
 lib_LIBRARIES = libglimmer.a libglide.a libglint.a libclimate.a
 bin_PROGRAMS  =  simple_glide eis_glide glint_example glex_ebm
-check_PROGRAMS = test_config test_setup test_ts
+check_PROGRAMS = test_config test_setup test_ts test_lithot
 
 variable_DATA = glide_vars.def eis_vars.def glint_vars.def time_vars.def glint_mbal_vars.def ncdf_template.f90.in
 variabledir = $(pkgdatadir)
@@ -37,6 +37,8 @@ test_config_SOURCES = test_config.f90 glimmer_config.f90 glimmer_log.f90
 test_setup_SOURCES = test_setup.f90
 test_setup_LDADD = libglide.a libglimmer.a
 test_ts_SOURCES = glimmer_ts.f90 glimmer_log.f90 test_ts.f90
+test_lithot_SOURCES = test_lithot.f90
+test_lithot_LDADD = libclimate.a libglide.a libglimmer.a SLAP_library/libslap.a
 
 #some special rules for automatically generating ncdf src code
 glide_io.f90:	glide_vars.def ncdf_template.f90.in

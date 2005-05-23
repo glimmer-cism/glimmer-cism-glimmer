@@ -1,3 +1,14 @@
+2005-05-23 Magnus Hagdorn
+ * glide_types.f90: change litho temp calculations to use 20 layers and
+   a base at -5000m, allocate one extra element for sparse matrices
+ * glide_mask.f90: set mask at margin
+ * glide_lithot.f90: simplify sparse matrix setup with if statements since
+   it's only calculated once, fix bugs in RHS
+   potential BUG: I think there might be a factor of 2 missing somewhere,
+   simple diffusion takes twice as long as I would expect...
+ * test_lithot.f90: simple prog testing diffusion calcs
+ * Makefile.am: hooked up test_lithot.f90
+
 2005-05-20 Magnus Hagdorn
  * glide_lithot.f90: fixed bug calling CG solver, added routine for
    calculating geothermal heat flux
