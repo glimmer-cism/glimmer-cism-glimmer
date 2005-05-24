@@ -72,16 +72,19 @@ program simple_glide
   ! fill dimension variables
   call glide_nc_fillall(model)
   time = model%numerics%tstart
+
+  call simple_massbalance(climate,model,time)
   call simple_surftemp(climate,model,time)
   call spinup_lithot(model)
+
   do while(time.le.model%numerics%tend)
-     call simple_massbalance(climate,model,time)
-     call simple_surftemp(climate,model,time)     
      call glide_tstep_p1(model,time)
      call glide_tstep_p2(model)
      call glide_tstep_p3(model)
      ! override masking stuff for now
      time = time + model%numerics%tinc
+     call simple_massbalance(climate,model,time)
+     call simple_surftemp(climate,model,time)     
   end do
 
   ! finalise GLIDE

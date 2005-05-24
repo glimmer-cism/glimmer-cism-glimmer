@@ -121,7 +121,9 @@ contains
     call init_velo(model)
     call init_temp(model)
     call init_thck(model)
-    call init_lithot(model)
+    if (model%options%gthf.gt.0) then
+       call init_lithot(model)
+    end if
 
     if (model%options%hotstart.ne.1) then
        ! initialise Glen's flow parameter A using an isothermal temperature distribution
@@ -237,7 +239,12 @@ contains
     call glide_prof_stop(model,3,'ice mask 1')
 #endif
 
-    call calc_lithot(model)
+    ! ------------------------------------------------------------------------ 
+    ! calculate geothermal heat flux
+    ! ------------------------------------------------------------------------ 
+    if (model%options%gthf.gt.0) then
+       call calc_lithot(model)
+    end if
 
     ! ------------------------------------------------------------------------ 
     ! Calculate temperature evolution and Glenn's A, if necessary

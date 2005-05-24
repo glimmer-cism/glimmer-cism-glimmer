@@ -86,7 +86,7 @@ contains
        ! set initial temp distribution to thermal gradient
        factor = model%paramets%geot/model%lithot%con_r
        do k=1,model%lithot%nlayer
-          model%lithot%temp(:,:,k) = model%climate%artm(:,:)+model%lithot%deltaz(k)*factor
+          model%lithot%temp(:,:,k) = model%lithot%deltaz(k)*factor
        end do
     end if
 
@@ -157,30 +157,36 @@ contains
 
   subroutine spinup_lithot(model)
     use glide_types
+    use glimmer_log
     implicit none
     type(glide_global_type),intent(inout) :: model       !*FD model instance
 
-    integer i,k,j
+    integer i,k,j,t
     real(dp) :: factor
 
-    if (model%options%hotstart.ne.1) then
+    if (model%options%hotstart.ne.1 .and. model%lithot%numt .gt. 0) then
+       call write_log('Spinning up GTHF calculations',type=GM_INFO)
+
        ! set initial temp distribution to thermal gradient
        factor = model%paramets%geot/model%lithot%con_r
        do k=1,model%lithot%nlayer
           model%lithot%temp(:,:,k) = model%climate%artm(:,:)+model%lithot%deltaz(k)*factor
        end do
-    end if
 
-    ! initialise result vector
-    do k=1,model%lithot%nlayer
-       do j=1,model%general%nsn
-          do i=1,model%general%ewn
-             model%lithot%answer(linearise(model,i,j,k)) = model%lithot%temp(i,j,k)
+       ! initialise result vector
+       do k=1,model%lithot%nlayer
+          do j=1,model%general%nsn
+             do i=1,model%general%ewn
+                model%lithot%answer(linearise(model,i,j,k)) = model%lithot%temp(i,j,k)
+             end do
           end do
        end do
-    end do
 
-    call calc_geoth(model)
+       do t=1,model%lithot%numt
+          call calc_lithot(model)
+       end do
+       call calc_geoth(model)
+    end if
   end subroutine spinup_lithot
 
   subroutine calc_lithot(model)

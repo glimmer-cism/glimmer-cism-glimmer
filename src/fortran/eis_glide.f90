@@ -75,14 +75,17 @@ program eis_glide
   call glide_nc_fillall(model)
 
   time = model%numerics%tstart
-  do while(time.le.model%numerics%tend)
-     call eis_climate(climate,model,time)
+  call eis_climate(climate,model,time)
+  call spinup_lithot(model)
+
+  do while(time.le.model%numerics%tend)    
      call glide_tstep_p1(model,time)
      call eis_io_writeall(climate,model)
      call glide_tstep_p2(model)
      call glide_tstep_p3(model)
      ! override masking stuff for now
      time = time + model%numerics%tinc
+     call eis_climate(climate,model,time)
   end do
 
   ! finalise GLIDE

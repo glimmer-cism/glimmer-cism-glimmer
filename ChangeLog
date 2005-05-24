@@ -1,3 +1,14 @@
+2005-05-24 Magnus Hagdorn
+ * glide_types.f90: add switch for GTHF calculations, add number of
+   timesteps for spinning up GTHF calculations
+ * glide_lithot.f90: sort out spin-up routine, initially set temp of top 
+   layer to zero
+ * glide_setup.f90: add configuration stuff for GTHF
+ * glide.f90: only call GTHF routines if enabled in config file
+ * eis_glide.f90: hook up GTHF calc and move climate calc
+ * simple_glide.f90: ditto
+ 
+
 2005-05-23 Magnus Hagdorn
  * glide_types.f90: change litho temp calculations to use 20 layers and
    a base at -5000m, allocate one extra element for sparse matrices

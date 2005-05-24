@@ -193,6 +193,12 @@ module glide_types
     !*FD \item[1] periodic EW boundary conditions
     !*FD \end{description}
 
+    integer :: gthf = 0
+    !*FD \begin{description}
+    !*FD \item[0] no geothermal heat flux calculations
+    !*FD \item[1] calculate gthf using 3d diffusion
+    !*FD \end{description}
+
   end type glide_options
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -324,6 +330,8 @@ module glide_types
      integer :: nlayer = 20     !*FD number of layers in lithosphere
      real :: rock_base = -5000. !*FD depth below sea-level at which geothermal heat gradient is applied
      
+     integer :: numt = 0        !*FD number time steps for spinning up GTHF calculations
+
      real(dp) :: rho_r = 3300.0d0 !*FD The density of lithosphere (kg m$^{-3}$)
      real(dp) :: shc_r = 1000.0d0 !*FD specific heat capcity of lithosphere (J kg$^{-1}$ K$^{-1}$)
      real(dp) :: con_r = 3.3d0    !*FD thermal conductivity of lithosphere (W m$^{-1}$ K$^{-1}$)
