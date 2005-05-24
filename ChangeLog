@@ -1,4 +1,13 @@
 2005-05-24 Magnus Hagdorn
+ * glide_lithot.f90: improve initial conditions
+ * test_lithot.f90: make it somewhat more interesting
+ * gthf.tex: added documentation
+ * grid.tex, temp.tex: added some lables
+ * num.tex: hooked up gthf docu
+ * Makefile.am: ditto
+ * num.tex: fixed version string
+
+2005-05-24 Magnus Hagdorn
  * glide_types.f90: add switch for GTHF calculations, add number of
    timesteps for spinning up GTHF calculations
  * glide_lithot.f90: sort out spin-up routine, initially set temp of top 

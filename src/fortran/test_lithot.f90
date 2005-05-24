@@ -54,6 +54,8 @@ program test_lithot
   type(ConfigSection), pointer :: config  ! configuration stuff
   character(len=50) :: fname   ! name of paramter file
   real(kind=rk) time
+
+  integer si,sj
   
   write(*,*) 'Enter name of GLIDE configuration file to be read'
   read(*,*) fname
@@ -76,9 +78,14 @@ program test_lithot
   
   ! set all to 0
   model%lithot%temp(:,:,:) = 0.
-  !model%climate%artm(:,:)  = 0.
+  model%climate%artm(:,:)  = 0.
   model%geometry%thkmask = -1
-  !call spinup_lithot(model)
+  call spinup_lithot(model)
+
+  si = model%general%ewn/4
+  sj = model%general%nsn/4
+
+  model%climate%artm(si:3*si,sj:3*sj) = 10.
 
   do while(time.le.model%numerics%tend)
      model%numerics%time=time  

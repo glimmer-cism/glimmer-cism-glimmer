@@ -158,19 +158,24 @@ contains
   subroutine spinup_lithot(model)
     use glide_types
     use glimmer_log
+    use glide_mask
     implicit none
     type(glide_global_type),intent(inout) :: model       !*FD model instance
 
     integer i,k,j,t
     real(dp) :: factor
 
+
     if (model%options%hotstart.ne.1 .and. model%lithot%numt .gt. 0) then
        call write_log('Spinning up GTHF calculations',type=GM_INFO)
-
        ! set initial temp distribution to thermal gradient
        factor = model%paramets%geot/model%lithot%con_r
        do k=1,model%lithot%nlayer
-          model%lithot%temp(:,:,k) = model%climate%artm(:,:)+model%lithot%deltaz(k)*factor
+          if (is_ocean(model%geometry%thkmask(i,j))) then
+             model%lithot%temp(:,:,k) = 2.+model%lithot%deltaz(k)*factor
+          else
+             model%lithot%temp(:,:,k) = model%climate%artm(:,:)+model%lithot%deltaz(k)*factor
+          end if
        end do
 
        ! initialise result vector
