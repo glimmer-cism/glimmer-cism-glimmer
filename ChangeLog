@@ -1,3 +1,9 @@
+2005-05-26 Magnus Hagdorn
+ * glide_types.f90: add new logical array to lithot, keeping track of
+   if a cell has been covered by ice through-out model run
+ * glide_lithot.f90: simplify BC
+ * gthf.tex: update doc to reflect changes of BC
+
 2005-05-24 Magnus Hagdorn
  * glide_lithot.f90: improve initial conditions
  * test_lithot.f90: make it somewhat more interesting

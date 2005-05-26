@@ -5,11 +5,17 @@ The heat flux accross the basal boundary depends on past temperature variations 
   \frac{\pd T}{\pd t} = \frac{k_{\text{rock}}}{\rho_{\text{rock}}c_{\text{rock}}}\nabla^2T=\frac{k_{\text{rock}}}{\rho_{\text{rock}}c_{\text{rock}}} 
   \left(\frac{\pd^2 T}{\pd x^2}+\frac{\pd^2 T}{\pd y^2}+\frac{\pd^2 T}{\pd z^2}\right),
 \end{equation}
-where $k_{\text{rock}}$ is the thermal conductivity, $\rho_{\text{rock}}$ the density and $c_{\text{rock}}$ the specific heat capacity of the bed rock layer. The bed rock layer is heated from below by the geothermal heat flux. The lower boundary condition is then
+where $k_{\text{rock}}$ is the thermal conductivity, $\rho_{\text{rock}}$ the density and $c_{\text{rock}}$ the specific heat capacity of the bed rock layer. 
+
+Initial conditions for the temperature field $T$ are found by applying the geothermal heat flux, $G$ to an arbitrary surface temperature $T_0$:
 \begin{equation}
-  \left.\frac{\pd T}{\pd z}\right|_{z=H_{\text{rock}}}=\frac{G}{k_{\text{rock}}},
+  T(x,y,z)=T_0+\frac{G}{k_{\text{rock}}}z.
 \end{equation}
-where $G$ is the geothermal heat flux and $H_{\text{rock}}$ is the thickness of the bedrock layer. Lateral boundary conditions are given by
+This ensures that initially the geothermal heat flux experienced by the ice sheet is equal to the regional heat flux. The basal boundary condition of the bedrock layer is kept constant, i.e.
+\begin{equation}
+  T(x,y,H_{\text{rock}})=T_0+\frac{G}{k_{\text{rock}}}H_{\text{rock}}.
+\end{equation}
+Lateral boundary conditions are given by
 \begin{equation}
   \left.\frac{\pd T}{\pd x}\right|_{x=0} = \left.\frac{\pd T}{\pd x}\right|_{x=L_x} = \left.\frac{\pd T}{\pd y}\right|_{y=0} = \left.\frac{\pd T}{\pd y}\right|_{y=L_y} = 0.
 \end{equation}
@@ -18,12 +24,9 @@ At the upper boundary, the heat flux of the rock layer has to be matched with th
   \label{num.eq.gthf_bc}
   k_{\text{rock}}\left.\frac{\pd T}{\pd z}\right|_{z=-0}=k_{\text{ice}}\left.\frac{\pd T}{\pd z}\right|_{z=+0}.
 \end{equation}
-Otherwise the temperature of the top bedrock layer is set to the surface temperature (if there is no ice) or the basal ice temperature (if there is ice)\footnote{I have also set the temperature to 2$^\circ$C if the surface is below sea--level. This is just a random value. I haven't looked into using something more sensible.}. Equation \eqref{num.eq.gthf_bc} is automatically fulfilled if we set the top bedrock temperature to the basal ice temperature \emph{everywhere} and then calculate the geothermal heat flux to be used as boundary condition for Equation \eqref{temp.eq.temp_z}.
+Otherwise the temperature of the top bedrock layer is set to the surface temperature (if the cell has been occupied by ice, but there is no ice present) or the basal ice temperature (if there is ice). Equation \eqref{num.eq.gthf_bc} is automatically fulfilled if we set the top bedrock temperature to the basal ice temperature \emph{everywhere} and then calculate the geothermal heat flux to be used as boundary condition for Equation \eqref{temp.eq.temp_z}.
 
-Initial conditions for the temperature field $T$ are found by applying the geothermal heat gradient to the surface temperatures:
-\begin{equation}
-  T(x,y,z)=T(x,y,0)+\frac{G}{k_{\text{rock}}}z.
-\end{equation}
+
 
 \subsection{Numerical Solution}
 The horizontal grid is described in Section \ref{num.sec.grid}. The vertical grid is irregular like the vertical grid of the ice sheet model. However, it is not scaled. Also for now, I have ignored topography or isostatic adjustment, i.e. the bedrock layer is assumed to be flat and constant.

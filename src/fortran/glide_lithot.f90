@@ -46,6 +46,8 @@ module glide_lithot
 
 private :: linearise
 
+real, private :: t0 = 2.
+
 contains  
   subroutine init_lithot(model)
     use glide_types
@@ -86,12 +88,21 @@ contains
        ! set initial temp distribution to thermal gradient
        factor = model%paramets%geot/model%lithot%con_r
        do k=1,model%lithot%nlayer
-          model%lithot%temp(:,:,k) = model%lithot%deltaz(k)*factor
+          model%lithot%temp(:,:,k) = t0+model%lithot%deltaz(k)*factor
        end do
     end if
 
     ! calculate finite difference coefficient matrix
-    do k=2, model%lithot%nlayer
+    ! top face
+    ! simply match air temperature where no ice and basal temperature where ice
+    k = 1
+    do j=1,model%general%nsn
+       do i=1,model%general%ewn
+          r = linearise(model,i,j,k)
+          call sparse_insert_val(model%lithot%fd_coeff,r,r, 1.d0)
+       end do
+    end do
+    do k=2, model%lithot%nlayer-1
        do j=1,model%general%nsn
           do i=1,model%general%ewn
              icount = 0
@@ -120,9 +131,7 @@ contains
              ! i,j,k-1
              call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j,k-1), -model%lithot%zfactors(1,k))
              ! i,j,k+1
-             if (k.ne.model%lithot%nlayer) then
-                call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j,k+1), -model%lithot%zfactors(3,k))
-             end if
+             call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j,k+1), -model%lithot%zfactors(3,k))
              ! i,j,k
              call sparse_insert_val(model%lithot%fd_coeff,r,r, &
                   icount*model%lithot%xfactor + jcount*model%lithot%yfactor + model%lithot%zfactors(2,k) + 1.)
@@ -130,9 +139,9 @@ contains
        end do
     end do
     
-    ! top face
-    ! simply match air temperature where no ice and basal temperature where ice
-    k = 1
+    ! bottom face
+    ! keep constant
+    k = model%lithot%nlayer
     do j=1,model%general%nsn
        do i=1,model%general%ewn
           r = linearise(model,i,j,k)
@@ -162,35 +171,15 @@ contains
     implicit none
     type(glide_global_type),intent(inout) :: model       !*FD model instance
 
-    integer i,k,j,t
-    real(dp) :: factor
-
+    integer t
 
     if (model%options%hotstart.ne.1 .and. model%lithot%numt .gt. 0) then
        call write_log('Spinning up GTHF calculations',type=GM_INFO)
-       ! set initial temp distribution to thermal gradient
-       factor = model%paramets%geot/model%lithot%con_r
-       do k=1,model%lithot%nlayer
-          if (is_ocean(model%geometry%thkmask(i,j))) then
-             model%lithot%temp(:,:,k) = 2.+model%lithot%deltaz(k)*factor
-          else
-             model%lithot%temp(:,:,k) = model%climate%artm(:,:)+model%lithot%deltaz(k)*factor
-          end if
-       end do
-
-       ! initialise result vector
-       do k=1,model%lithot%nlayer
-          do j=1,model%general%nsn
-             do i=1,model%general%ewn
-                model%lithot%answer(linearise(model,i,j,k)) = model%lithot%temp(i,j,k)
-             end do
-          end do
-       end do
 
        do t=1,model%lithot%numt
           call calc_lithot(model)
        end do
-       call calc_geoth(model)
+
     end if
   end subroutine spinup_lithot
 
@@ -203,7 +192,6 @@ contains
     type(glide_global_type),intent(inout) :: model       !*FD model instance
 
     integer i,j,k,r
-    real(kind=dp) :: factor
     integer iter
     real(dp) err
     real(dp), parameter :: tol = 1.0d-12
@@ -213,24 +201,23 @@ contains
     ! calculate RHS
     call sparse_matrix_vec_prod(model%lithot%fd_coeff,model%lithot%answer,model%lithot%rhs)
     model%lithot%rhs = -model%lithot%rhs + 2. * model%lithot%answer
-    k = model%lithot%nlayer
-    factor = model%lithot%diffu*tim0*model%numerics%dt*model%paramets%geot/model%lithot%con_r /&
-         (model%lithot%deltaz(k)-model%lithot%deltaz(k-1))
+    ! calc RHS on upper boundary
+    k = 1
     do j=1,model%general%nsn
        do i=1,model%general%ewn
-          k = 1
           r = linearise(model,i,j,k)
-          if (is_ocean(model%geometry%thkmask(i,j))) then
-             model%lithot%rhs(r) = 2.    ! 2degC for bottom of ocean
-          else if (is_land(model%geometry%thkmask(i,j))) then
-             model%lithot%rhs(r) = model%climate%artm(i,j) ! air temperature outside ice sheet
-          else
+          if (is_ground(model%geometry%thkmask(i,j)) .and. .not. is_thin(model%geometry%thkmask(i,j)) ) then
              model%lithot%rhs(r) = model%temper%temp(model%general%upn,i,j) ! ice basal temperature
+             model%lithot%mask(i,j) = .true.
+          else
+             if (model%lithot%mask(i,j)) then
+                if (is_ocean(model%geometry%thkmask(i,j))) then
+                   model%lithot%rhs(r) = t0
+                else if (is_land(model%geometry%thkmask(i,j))) then
+                   model%lithot%rhs(r) = model%climate%artm(i,j) ! air temperature outside ice sheet
+                end if
+             end if
           end if
-
-          k = model%lithot%nlayer
-          r = linearise(model,i,j,k)
-          model%lithot%rhs(r) = model%lithot%rhs(r) + factor
        end do
     end do
 

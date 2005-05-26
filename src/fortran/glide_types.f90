@@ -311,7 +311,8 @@ module glide_types
      !*FD holds variables for temperature calculations in the lithosphere
 
      real(dp),dimension(:,:,:),pointer :: temp => null()    !*FD Three-dimensional temperature field.
-     
+     logical, dimension(:,:), pointer :: mask => null()     !*FD whether the point has been ice covered at some time
+
      ! The sparse matrix and linearised arrays
      type(sparse_matrix_type) :: fd_coeff, fd_coeff_slap
      integer :: all_bar_top
@@ -595,6 +596,7 @@ contains
     allocate(model%temper%bmlt(ewn,nsn));             model%temper%bmlt = 0.0
 
     allocate(model%lithot%temp(1:ewn,1:nsn,model%lithot%nlayer)); model%lithot%temp = 0.0
+    allocate(model%lithot%mask(1:ewn,1:nsn));  model%lithot%mask = .false.
     allocate(model%lithot%deltaz(model%lithot%nlayer)); model%lithot%deltaz = 0.0
     allocate(model%lithot%zfactors(3,model%lithot%nlayer)); model%lithot%zfactors = 0.0
     call new_sparse_matrix((model%lithot%nlayer-1)*ewn*nsn*7+ewn*nsn+1,model%lithot%fd_coeff)
@@ -671,6 +673,7 @@ contains
     deallocate(model%temper%bmlt)
 
     deallocate(model%lithot%temp)
+    deallocate(model%lithot%mask)
     deallocate(model%lithot%deltaz)
     deallocate(model%lithot%zfactors)
     call del_sparse_matrix(model%lithot%fd_coeff)
