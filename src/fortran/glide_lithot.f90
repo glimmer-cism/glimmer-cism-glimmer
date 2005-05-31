@@ -46,8 +46,6 @@ module glide_lithot
 
 private :: linearise
 
-real, private :: t0 = 2.
-
 contains  
   subroutine init_lithot(model)
     use glide_types
@@ -88,7 +86,7 @@ contains
        ! set initial temp distribution to thermal gradient
        factor = model%paramets%geot/model%lithot%con_r
        do k=1,model%lithot%nlayer
-          model%lithot%temp(:,:,k) = t0+model%lithot%deltaz(k)*factor
+          model%lithot%temp(:,:,k) = model%lithot%surft+model%lithot%deltaz(k)*factor
        end do
     end if
 
@@ -212,7 +210,7 @@ contains
           else
              if (model%lithot%mask(i,j)) then
                 if (is_ocean(model%geometry%thkmask(i,j))) then
-                   model%lithot%rhs(r) = t0
+                   model%lithot%rhs(r) = model%lithot%mart
                 else if (is_land(model%geometry%thkmask(i,j))) then
                    model%lithot%rhs(r) = model%climate%artm(i,j) ! air temperature outside ice sheet
                 end if

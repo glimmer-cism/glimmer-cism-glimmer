@@ -727,6 +727,7 @@ contains
     type(glide_global_type)  :: model
 
     call GetValue(section,'nlayer',model%lithot%nlayer)
+    call GetValue(section,'surft',model%lithot%surft)
     call GetValue(section,'rock_base',model%lithot%rock_base)
     call GetValue(section,'numt',model%lithot%numt)
     call GetValue(section,'rho',model%lithot%rho_r)
@@ -748,6 +749,8 @@ contains
           call write_log('solve 3D diffusion equation')
        end if
        write(message,*) 'number of layers                     : ',model%lithot%nlayer
+       call write_log(message)
+       write(message,*) 'initial surface temperature          : ',model%lithot%surft
        call write_log(message)
        write(message,*) 'rock base                            : ',model%lithot%rock_base
        call write_log(message)

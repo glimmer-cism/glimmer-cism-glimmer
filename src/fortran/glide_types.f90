@@ -328,6 +328,9 @@ module glide_types
      real(dp), dimension(:,:), pointer :: zfactors => null()!*FD array holding factors for finite differences of vertical diffu
      real(dp) :: xfactor,yfactor !*FD factors for finite differences of horizontal diffu
 
+
+     real :: surft = 2.         !*FD surface temperature, used for calculating initial temperature distribution
+     real :: mart  = 2.         !*FD sea floor temperature 
      integer :: nlayer = 20     !*FD number of layers in lithosphere
      real :: rock_base = -5000. !*FD depth below sea-level at which geothermal heat gradient is applied
      
