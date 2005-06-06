@@ -85,6 +85,14 @@ contains
     call isos_printconfig(model%isos)
     ! scale parameters
     call glide_scale_params(model)
+    ! set up coordinate systems
+    model%general%ice_grid = coordsystem_new(0.d0, 0.d0, &
+         model%numerics%dew, model%numerics%dns, &
+         model%general%ewn, model%general%nsn)
+    model%general%velo_grid = coordsystem_new(model%numerics%dew/2.,model%numerics%dns/2., &
+         model%numerics%dew,model%numerics%dns, &
+         model%general%ewn-1,model%general%nsn-1)
+
     ! allocate arrays
     call glide_allocarr(model)
     

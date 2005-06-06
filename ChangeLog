@@ -1,3 +1,13 @@
+2005-06-06 Magnus Hagdorn
+ * glimmer_coordinates.f90: new module for handling 2d, regular 
+   coordinate systems
+ * Makefile.am: added glimmer_coordinates.f90 to list of glimmer srcs
+ * glide_types.f90: add coord systems for ice and velo grids
+ * glide.f90: setup coords for ice and velo grids
+ * glimmer_log.f90: add accessor to glimmer log unit
+ * ncdf_template.f90.in: add optional arguments for data module
+ * generate_ncvars.py: add line break to avoid f95 line limit
+
 2005-05-31 Magnus Hagdorn
  * glide_types.f90: initial surface temp for gthf calc is a run-time
    parameter now

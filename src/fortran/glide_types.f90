@@ -60,6 +60,7 @@ module glide_types
   use glimmer_ncdf
   use isostasy_types
   use profile
+  use glimmer_coordinates
   use glimmer_cfproj, only : CFproj_projection
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -77,6 +78,9 @@ module glide_types
     integer :: ewn = 0  !*FD The number of grid-points in the E-W direction.
     integer :: nsn = 0  !*FD The number of grid-points in the N-S direction.
     integer :: upn = 1  !*FD The number of vertical levels in the model.
+
+    type(coordsystem_type) :: ice_grid  !*FD coordinate system of the ice grid
+    type(coordsystem_type) :: velo_grid !*FD coordinate system of the velocity grid
 
   end type glide_general
 

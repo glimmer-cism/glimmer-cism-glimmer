@@ -209,4 +209,12 @@ contains
 
   end subroutine glimmer_set_msg_level
 
+  function glimmer_get_logunit()
+    !*FD return glimmer log unit
+    implicit none
+    integer glimmer_get_logunit
+
+    glimmer_get_logunit = glimmer_unit
+  end function glimmer_get_logunit
+  
 end module glimmer_log
