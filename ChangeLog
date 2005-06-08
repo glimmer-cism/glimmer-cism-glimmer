@@ -1,3 +1,6 @@
+2005-06-08 Magnus Hagdorn
+ * glide_thk.f90: fixed bug #132
+
 2005-06-06 Magnus Hagdorn
  * glimmer_coordinates.f90: new module for handling 2d, regular 
    coordinate systems
