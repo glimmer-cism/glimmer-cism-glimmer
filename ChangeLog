@@ -1,3 +1,13 @@
+2005-06-13 Magnus Hagdorn
+ * profile.f90: new function to register new time stamps
+ * glide_types.f90: make profile period a run-time parameter, add
+   profile type
+ * glide_setup.f90: move profile routines to glide_profile.f90, 
+   load profile period from config file
+ * glide_profile.f90: new module for profiling
+ * Makefile.am: add glide_profile.f90 to built system
+ * glide.f90: use new profiling mechanism
+
 2005-06-08 Magnus Hagdorn
  * glide_thk.f90: fixed bug #132
 

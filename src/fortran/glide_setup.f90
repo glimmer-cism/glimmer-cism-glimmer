@@ -48,40 +48,10 @@ module glide_setup
   private
   public :: glide_readconfig, glide_printconfig, glide_scale_params, &
        glide_calclsrf, glide_marinlim, glide_load_sigma, glide_maskthck, &
-       glide_prof_start, glide_prof_stop, glide_calc_sigma
+       glide_calc_sigma
 
 contains
   
-  subroutine glide_prof_start(model,profn)
-    !*FD start logging profile
-    use glide_types
-    use profile
-    implicit none
-    type(glide_global_type) :: model        !*FD model instance
-    integer, intent(in)     :: profn        !*FD profile number
-
-    call profile_start(model%prof,profn)
-  end subroutine glide_prof_start
-
-  subroutine glide_prof_stop(model,profn,msg)
-    !*FD write message to profile
-    use glide_types
-    use profile
-    implicit none
-    type(glide_global_type) :: model        !*FD model instance
-    integer, intent(in)     :: profn        !*FD profile number
-    character(len=*), intent(in) :: msg     !*FD message to be written to profile
-    
-    !local variables
-    character (len=20) :: timestring
-
-    call profile_stop(model%prof,profn)
-    if (mod(model%numerics%timecounter,glide_profile_period).eq.0) then
-       write(timestring,*) model%numerics%time
-       call profile_log(model%prof,profn,trim(timestring)//' '//msg)
-    end if
-  end subroutine glide_prof_stop
-
   subroutine glide_readconfig(model,config)
     !*FD read GLIDE configuration file
     use glide_types
@@ -486,6 +456,7 @@ contains
     call GetValue(section,'dt',model%numerics%tinc)
     call GetValue(section,'ntem',model%numerics%ntem)
     call GetValue(section,'nvel',model%numerics%nvel)
+    call GetValue(section,'profile',model%numerics%profile_period)
   end subroutine handle_time
   
   subroutine print_time(model)
@@ -506,6 +477,8 @@ contains
     write(message,*) 'thermal dt factor : ',model%numerics%ntem
     call write_log(message)
     write(message,*) 'velo dt factor    : ',model%numerics%nvel
+    call write_log(message)
+    write(message,*) 'profile frequency : ',model%numerics%profile_period
     call write_log(message)
     call write_log('')
   end subroutine print_time

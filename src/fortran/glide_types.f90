@@ -65,12 +65,6 @@ module glide_types
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-#ifdef PROFILE_PERIOD
-  integer, parameter :: glide_profile_period = PROFILE_PERIOD
-#else
-  integer, parameter :: glide_profile_period = 100
-#endif
-
   type glide_general
 
     !*FD Holds fundamental parameters of the ice model geometry.
@@ -385,7 +379,7 @@ module glide_types
     real(dp),dimension(:),pointer :: sigma => null() !*FD Sigma values for 
                                                      !*FD vertical spacing of 
                                                      !*FD model levels
-
+    integer :: profile_period = 100            !*FD profile frequency
   end type glide_numerics
 
 
@@ -493,6 +487,17 @@ module glide_types
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+  type glide_prof_type
+     integer :: geomderv
+     integer :: hvelos
+     integer :: ice_mask1
+     integer :: temperature
+     integer :: ice_evo
+     integer :: ice_mask2
+     integer :: isos_water
+     integer :: isos
+  end type glide_prof_type
+
   type glide_global_type
     type(glide_general)  :: general
     type(glide_options)  :: options
@@ -510,7 +515,8 @@ module glide_types
     type(glide_tempwk)   :: tempwk
     type(glide_paramets) :: paramets
     type(CFproj_projection) :: projection
-    type(profile_type)   :: prof
+    type(profile_type)   :: profile
+    type(glide_prof_type) :: glide_prof
     type(isos_type)      :: isos
   end type glide_global_type
 

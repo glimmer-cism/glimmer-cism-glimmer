@@ -49,10 +49,12 @@ module profile
   integer, private,parameter :: max_prof = 100
 
   type profile_type
-     integer :: profile_unit    !*FD file unit to be written to
+     integer :: profile_unit=0  !*FD file unit to be written to
      real :: start_time         !*FD CPU time at start of log
+     integer :: nump=0          !*FD number of profiles
 
-     real, dimension(max_prof) :: pstart,ptotal  !*FD for each log store start and totals
+     real, dimension(max_prof) :: pstart,ptotal      !*FD for each log store start and totals
+     character(len=50), dimension(max_prof) :: pname !*FD name for each profile
   end type profile_type
 
 contains
@@ -75,6 +77,22 @@ contains
          date(1:4),date(5:6),date(7:8),time(1:2),time(3:4),time(5:10)
   end subroutine profile_init
   
+  function profile_register(prof,msg)
+    !*FD register a new series of meassurements
+    use glimmer_log
+    implicit none
+    type(profile_type) :: prof !*FD structure storing profile definitions
+    character(len=*), intent(in) :: msg
+    integer profile_register
+
+    prof%nump = prof%nump+1
+    if (prof%nump .gt. max_prof) then
+       call write_log('Maximum number of profiles reached',type=GM_FATAL,file=__FILE__,line=__LINE__)
+    end if
+    profile_register = prof%nump
+    prof%pname(prof%nump) = trim(msg)
+  end function profile_register
+
   subroutine profile_start(prof,profn)
     !*FD start profiling
     implicit none
@@ -100,12 +118,16 @@ contains
     implicit none
     type(profile_type)           :: prof !*FD structure storing profile definitions
     integer, intent(in) :: profn
-    character(len=*), intent(in) :: msg    !*FD name of file
+    character(len=*), intent(in), optional :: msg     !*FD message to be written to profile
 
     real t
 
     call cpu_time(t)
-    write(prof%profile_unit,*) t-prof%start_time,prof%ptotal(profn),profn,msg
+    if (present(msg)) then
+       write(prof%profile_unit,*) t-prof%start_time,prof%ptotal(profn),profn,trim(msg)//' '//trim(prof%pname(profn))
+    else
+       write(prof%profile_unit,*) t-prof%start_time,prof%ptotal(profn),profn,trim(prof%pname(profn))
+    end if
     prof%ptotal(profn) = 0.
     prof%pstart(profn) = 0.
   end subroutine profile_log
