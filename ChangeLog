@@ -1,3 +1,6 @@
+2005-06-15 Ian Rutt
+ * Corrected documentation error in annual pdd scheme
+
 2005-06-08 Magnus Hagdorn
  * glide_thck.f90: fixed bug #132, extreme velos.
 
