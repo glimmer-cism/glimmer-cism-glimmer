@@ -30,8 +30,8 @@ AC_LANG_PUSH(Fortran)
 AC_FC_SRCEXT(f90)
 # which Fortran compiler are we running?
 AC_MSG_CHECKING([which fortran compiler])
-f95string=`$FC -V 2>&1`
 f95v="no idea"
+f95string=`$FC -V 2>&1`
 f95_moduleinclude="-I"
 f95_preprocessor="-fpp"
 # testing for SUN f95 compiler
@@ -45,15 +45,22 @@ fs=`echo $f95string |$EGREP "NAGWare"`
 if test "$fs" != "" ; then
   f95v="NAGWare f95"
 fi
+# testing for INTEL ifort compiler
+fs=`echo $f95string |$EGREP "Intel"`
+if test "$fs" != "" ; then
+  f95v="Intel ifort"
+fi
+# testing for gfortran
+f95string=`$FC -v 2>&1`
+fs=`echo $f95string |$EGREP "gcc"`
+if test "$fs" != "" ; then
+  f95v="gfortran"
+  f95_preprocessor="-x f95-cpp-input"
+fi
+
 AC_MSG_RESULT([$f95v])
 
 FCFLAGS="$FCFLAGS $f95_preprocessor"
-
-#if test "$FC" == gfortran; then
-#  FCFLAGS="$FCFLAGS -x f95-cpp-input"
-#else
-#  FCFLAGS="$FCFLAGS -fpp"
-#fi
 
 dnl Checking for python
 AM_PATH_PYTHON([2.3],,[AC_MSG_RESULT(need at least python 2.3)])
