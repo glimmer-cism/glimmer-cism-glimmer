@@ -3,8 +3,8 @@ Glimmer COMPILE file
 ===================
 
 This version of the code has been sucessfully tested under the following 
-compilers: Compaq Visual Fortran on Windows, and the Intel, NAGWare and 
-Portland Group compilers on Linux.
+compilers: Compaq Visual Fortran on Windows, the Intel, NAGWare and 
+Portland Group compilers on Linux and the SUN f95 v 8.1 compiler on Solaris.
 
 Prerequisites:
 =============

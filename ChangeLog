@@ -1,3 +1,8 @@
+2005-06-24 Magnus Hagdorn
+ * configure.in: detect which f95 compiler is used and set some flags
+   accordingly
+ * INSTALL: also mention SUN f95 compiler
+
 2005-06-15 Ian Rutt
  * Corrected documentation error in annual pdd scheme
 
