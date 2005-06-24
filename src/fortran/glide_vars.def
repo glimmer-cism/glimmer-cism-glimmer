@@ -148,17 +148,17 @@ load:          1
 
 [taux]
 dimensions:    time, y0, x0
-units:         pascal
+units:         kilopascal
 long_name:     basal shear stress in x direction
 data:          data%velocity%tau_x
-factor:        thk0*thk0/len0
+factor:        1e-3*thk0*thk0/len0
 
 [tauy]
 dimensions:    time, y0, x0
-units:         pascal
+units:         kilopascal
 long_name:     basal shear stress in y direction
 data:          data%velocity%tau_y
-factor:        thk0*thk0/len0
+factor:        1e-3*thk0*thk0/len0
 
 [thk]
 dimensions:    time, y1, x1

@@ -1,3 +1,9 @@
+2005-06-24 Magnus Hagdorn
+ * glide.f90: enable basal shear stress calculations
+ * glide_vars.def: change unit of basal shear stress to kilopascal
+ * glimmer_coordinates.f90: add function to calculate lower-left 
+   node
+
 2005-06-13 Magnus Hagdorn
  * profile.f90: new function to register new time stamps
  * glide_types.f90: make profile period a run-time parameter, add

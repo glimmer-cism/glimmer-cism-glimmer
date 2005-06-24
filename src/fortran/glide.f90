@@ -355,8 +355,8 @@ contains
     call glide_prof_stop(model,model%glide_prof%isos_water)
 #endif
     
-    ! basal shear stress calculations are for now disabled.
-    !call calc_basal_shear(model)
+    ! basal shear stress calculations
+    call calc_basal_shear(model)
   end subroutine glide_tstep_p2
 
   subroutine glide_tstep_p3(model)

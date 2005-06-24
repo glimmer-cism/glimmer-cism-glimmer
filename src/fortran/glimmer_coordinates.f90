@@ -163,6 +163,18 @@ contains
 #endif
   end function coordsystem_get_node
 
+  function coordsystem_get_llnode(coord,point)
+    !*FD get index of lower-left node of cell into which point falls
+    use glimmer_log
+    implicit none
+    type(coordsystem_type), intent(in) :: coord !*FD coordinate system
+    type(coord_point), intent(in) :: point      !*FD point
+    
+    type(coord_ipoint) :: coordsystem_get_llnode
+
+    coordsystem_get_llnode%pt(:) = 1+floor((point%pt(:)-coord%origin%pt(:))*coord%delta_r%pt(:))
+  end function coordsystem_get_llnode
+
   function coordsystem_node_inside(coord,node)
     !*FD return true iff node is inside coord system
     implicit none
