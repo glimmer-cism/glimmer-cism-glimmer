@@ -1,3 +1,12 @@
+2005-06-28 Magnus Hagdorn
+ * glimmer.bib: added bibtex database
+ * glimmer.tex: use bibtex
+ * num.tex: ditto
+ * definitions.tex: ditto
+ * packages.tex: ditto
+ * grid.tex, kinematics.tex: add some references
+ * configure.in, Makefile.am: hook up bibtex
+
 2005-06-24 Magnus Hagdorn
  * configure.in: added detection of Intel and gcc f95 compiler
 

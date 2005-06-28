@@ -44,5 +44,7 @@ code_doc.tex:	../src/fortran/*.f90
 		f90docp.py -t "GLIMMER Code Documentation" -a "Glimmer Developer Team" $^ > $@
 
 .tex.dvi::
-	latex $<
-	latex $<
+	$(LATEX) $<
+	$(BIBTEX) $*
+	$(LATEX) $<
+	$(LATEX) $<
