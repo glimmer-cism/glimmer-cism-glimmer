@@ -27,3 +27,73 @@ units:         meter
 long_name:     superimposed ice depth
 data:          data%siced
 coordinates:   lon lat
+
+[instant_acab]
+dimensions:    time, y1, x1
+units:         meter
+long_name:     instantaneous mass-balance
+data:          data%acab
+coordinates:   lon lat
+
+[instant_ablt]
+dimensions:    time, y1, x1
+units:         meter
+long_name:     instantaneous ablation
+data:          data%ablt
+coordinates:   lon lat
+
+[instant_prcp]
+dimensions:    time, y1, x1
+units:         meter
+long_name:     instantaneous precip
+data:          data%prcp
+coordinates:   lon lat
+
+[instant_artm]
+dimensions:    time, y1, x1
+units:         degC
+long_name:     instantaneous air temperature
+data:          data%artm
+coordinates:   lon lat
+
+[instant_xwind]
+dimensions:    time, y1, x1
+units:         m/s
+long_name:     instantaneous x-wind 
+data:          data%xwind
+coordinates:   lon lat
+
+[instant_ywind]
+dimensions:    time, y1, x1
+units:         m/s
+long_name:     instantaneous y-wind
+data:          data%ywind
+coordinates:   lon lat
+
+[instant_humidity]
+dimensions:    time, y1, x1
+units:         1
+long_name:     instantaneous humidity
+data:          data%humidity
+coordinates:   lon lat
+
+[instant_swdown]
+dimensions:    time, y1, x1
+units:         W/m^2
+long_name:     instantaneous sw down 
+data:          data%swdown
+coordinates:   lon lat
+
+[instant_lwdown]
+dimensions:    time, y1, x1
+units:         W/m^2
+long_name:     instantaneous lw down
+data:          data%lwdown
+coordinates:   lon lat
+
+[instant_psurf]
+dimensions:    time, y1, x1
+units:         Pa
+long_name:     instantaneous surface pressure 
+data:          data%psurf
+coordinates:   lon lat

@@ -145,6 +145,8 @@ contains
     real(rk), dimension(:,:), intent(in)    :: LWdown  !*FD Downwelling longwave (W/m^2)
     real(rk), dimension(:,:), intent(in)    :: Psurf   !*FD Surface pressure (Pa)
 
+    real(rk),dimension(size(acab,1),size(acab,2)) :: acab_temp
+
     select case(params%which)
     case(1)
        call glimmer_pdd_mbal(params%annual_pdd,artm,arng,prcp,ablt,acab,landsea) 
@@ -154,7 +156,8 @@ contains
        ! The energy-balance model will go here...
        ! NB SLM will be thickness array...
 #ifdef USE_ENMABAL
-       call SMBStepWrapper(params%smb,real(acab,rk),thck,real(artm,rk),real(prcp*1000.0,rk),U10m,V10m,humidity,SWdown,LWdown,Psurf)
+       call SMBStepWrapper(params%smb,acab_temp,thck,real(artm,rk),real(prcp*1000.0,rk),U10m,V10m,humidity,SWdown,LWdown,Psurf)
+       acab=acab_temp
        acab=acab/1000.0  ! Convert to metres
        ablt=prcp-acab    ! Construct ablation field (in m)
        ! Fix according to land-sea mask

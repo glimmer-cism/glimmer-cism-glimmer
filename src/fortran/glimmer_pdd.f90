@@ -143,11 +143,11 @@ contains
     type(glimmer_pdd_params),   intent(inout) :: params  !*FD The positive-degree-day parameters
     real(sp), dimension(:,:), intent(in)    :: artm    !*FD Annual mean air-temperature 
                                                        !*FD ($^{\circ}$C)
-    real(sp), dimension(:,:), intent(in)    :: arng    !*FD Annual temerature half-range ($^{\circ}$C)
+    real(sp), dimension(:,:), intent(in)    :: arng    !*FD Annual temperature half-range ($^{\circ}$C)
     real(sp), dimension(:,:), intent(in)    :: prcp    !*FD Annual accumulated precipitation 
-                                                       !*FD (mm water equivalent)
-    real(sp), dimension(:,:), intent(out)   :: ablt    !*FD Annual ablation (mm water equivalent)
-    real(sp), dimension(:,:), intent(out)   :: acab    !*FD Annual mass-balance (mm water equivalent)
+                                                       !*FD (m water equivalent)
+    real(sp), dimension(:,:), intent(out)   :: ablt    !*FD Annual ablation (m water equivalent)
+    real(sp), dimension(:,:), intent(out)   :: acab    !*FD Annual mass-balance (m water equivalent)
     logical,  dimension(:,:), intent(in)    :: landsea !*FD Land-sea mask (land is TRUE)
 
     ! Internal variables

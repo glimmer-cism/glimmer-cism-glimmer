@@ -4,9 +4,9 @@ The evolution of the ice thickness, $H$, stems from the continuity equation and 
   \label{kin.eq.ice_thickness}
   \frac{\pd H}{\pd t} = -\vec\nabla\cdot(\overline{\vec{u}} H) + B,
 \end{equation}
-where $\overline{\vec{u}}$ is the vertically averaged ice velocity, $B$ is the surface mass balance and $\vec\nabla$ is the horizontal gradient operator. 
+where $\overline{\vec{u}}$ is the vertically averaged ice velocity, $B$ is the surface mass balance and $\vec\nabla$ is the horizontal gradient operator \citep{Payne1997}. 
 
-For large--scale ice sheet models, the \emph{shallow ice approximation} is generally used. This approximation states that bedrock and ice surface slopes are assumed sufficiently small so that the normal stress components can be neglected. The horizontal shear stresses ($\tau_{xz}$ and $\tau_{yz}$) can thus be approximated by
+For large--scale ice sheet models, the \emph{shallow ice approximation} is generally used. This approximation states that bedrock and ice surface slopes are assumed sufficiently small so that the normal stress components can be neglected \citep{Hutter1983}. The horizontal shear stresses ($\tau_{xz}$ and $\tau_{yz}$) can thus be approximated by
 \begin{equation}
   \label{kin.eq.horiz_shear}
   \begin{split}
@@ -21,12 +21,11 @@ Strain rates $\dot{\epsilon}_{ij}$ of polycrystalline ice are related to the str
   \label{kin.eq.flowlaw}
   \dot{\epsilon}_{iz}=\frac12\left(\frac{\pd u_i}{\pd z}+\frac{\pd u_z}{\pd i}\right)=A(T^\ast)\tau_\ast^{(n-1)}\tau_{iz}\qquad i=x,y,
 \end{equation}
-where $\tau_\ast$ is the effective shear stress defined by the second invariant of the stress tensor, $n$ the flow law exponent and $A$ the temperature--dependent flow law coefficient. $T^\ast$ is the absolute temperature corrected for the dependence of the melting point on pressure. The parameters $A$ and $n$ have to
- be found by experiment. $n$ is usually taken to be 3. $A$ depends on factors such as temperature, crystal size and orientation, and ice impurities. Experiments suggest that $A$ follows the Arrhenius relationship:
+where $\tau_\ast$ is the effective shear stress defined by the second invariant of the stress tensor, $n$ the flow law exponent and $A$ the temperature--dependent flow law coefficient. $T^\ast$ is the absolute temperature corrected for the dependence of the melting point on pressure \cite[$T^\ast=T+8.7\cdot10^{-4}(H+h-z)$, $T$ in Kelvin,][]{Huybrechts1986}. The parameters $A$ and $n$ have to be found by experiment. $n$ is usually taken to be 3. $A$ depends on factors such as temperature, crystal size and orientation, and ice impurities. Experiments suggest that $A$ follows the Arrhenius relationship:
 \begin{equation}
   \label{kin.eq.arrhenius}
   A(T^\ast)=fae^{-Q/RT^\ast},
-\end{equation}where $a$ is a temperature--independent material constant, $Q$ is the activation energy for creep and $R$ is the universal gas constant. $f$ is a tuning parameter used to `speed--up' ice flow and accounts for ice impurities and the development of anisotropic ice fabrics.
+\end{equation}where $a$ is a temperature--independent material constant, $Q$ is the activation energy for creep and $R$ is the universal gas constant \citep{Paterson1994}. $f$ is a tuning parameter used to `speed--up' ice flow and accounts for ice impurities and the development of anisotropic ice fabrics \citep{Payne1999,Tarasov1999,Tarasov2000,Peltier2000}.
 
 Integrating \eqref{kin.eq.arrhenius} with respect to $z$ gives the horizontal velocity profile:
 \begin{equation}
