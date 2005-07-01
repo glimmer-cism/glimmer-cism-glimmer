@@ -1,5 +1,14 @@
 \section{Geothermal Heat Flux}
-The heat flux accross the basal boundary depends on past temperature variations since temperature perturbations penetrate the bed rock if the ice is frozen to the ground. The heat equation for the bed rock layer is given by the diffusion equation
+The heat flux accross the basal boundary depends on past temperature variations since temperature perturbations penetrate the bed rock if the ice is frozen to the ground. 
+
+\begin{figure}[htbp]
+  \centering
+  \epsfig{file=\dir/figs/basal_bc.eps,width=0.9\textwidth}
+  \caption{Basal boundary condition.}
+  \label{num.fig.basal_bc}
+\end{figure}
+
+The heat equation for the bed rock layer is given by the diffusion equation
 \begin{equation}
   \label{num.eq.diffu_rock}
   \frac{\pd T}{\pd t} = \frac{k_{\text{rock}}}{\rho_{\text{rock}}c_{\text{rock}}}\nabla^2T=\frac{k_{\text{rock}}}{\rho_{\text{rock}}c_{\text{rock}}} 
