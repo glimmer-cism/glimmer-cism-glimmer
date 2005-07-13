@@ -1,3 +1,7 @@
+2005-07-13 Magnus Hagdorn
+ * glimmer_ts.f90: fixed bug where the BC of linear interpolator
+   were not correctly implemented
+
 2005-07-04 Magnus Hagdorn
  * expanded basal boundary section in numerics doc
 

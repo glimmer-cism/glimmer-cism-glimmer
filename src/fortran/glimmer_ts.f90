@@ -116,11 +116,20 @@ contains
     real, intent(in)      :: time   !*FD time value to get
     real, dimension(:)    :: value  !*FD interpolated value
        
+    integer i
+
     if (size(value).ne.ts%numv) then
        call write_log('Error, wrong number of values',GM_FATAL,__FILE__,__LINE__)
     end if
 
-    value = ts%values(:,get_i(ts,time))
+    i = get_i(ts,time)
+    if (i.eq.-1) then
+       i = 1
+    else if (i.eq.ts%numt+1) then
+       i = ts%numt
+    end if
+
+    value = ts%values(:,i)
   end subroutine glimmer_ts_step_array
 
   subroutine glimmer_ts_step_scalar(ts,time,value)
@@ -131,7 +140,16 @@ contains
     real, intent(in)      :: time   !*FD time value to get
     real                  :: value  !*FD interpolated value
        
-    value = ts%values(1,get_i(ts,time))
+    integer i
+
+    i = get_i(ts,time)
+    if (i.eq.-1) then
+       i = 1
+    else if (i.eq.ts%numt+1) then
+       i = ts%numt
+    end if
+
+    value = ts%values(1,i)
   end subroutine glimmer_ts_step_scalar
   
   subroutine glimmer_ts_linear_array(ts,time,value)
@@ -150,8 +168,14 @@ contains
     end if
     
     i = get_i(ts,time)
-    slope(:) = (ts%values(:,i+1)-ts%values(:,i))/(ts%times(i+1)-ts%times(i))
-    value(:) = ts%values(:,i) + slope(:)*(time-ts%times(i))
+    if (i.eq.-1) then
+       value(:) = ts%values(:,1)
+    else if (i.eq.ts%numt+1) then
+       value(:) = ts%values(:,ts%numt)
+    else
+       slope(:) = (ts%values(:,i+1)-ts%values(:,i))/(ts%times(i+1)-ts%times(i))
+       value(:) = ts%values(:,i) + slope(:)*(time-ts%times(i))
+    end if
   end subroutine glimmer_ts_linear_array
 
   subroutine glimmer_ts_linear_scalar(ts,time,value)
@@ -166,8 +190,14 @@ contains
     real :: slope
 
     i = get_i(ts,time)
-    slope = (ts%values(1,i+1)-ts%values(1,i))/(ts%times(i+1)-ts%times(i))
-    value = ts%values(1,i) + slope*(time-ts%times(i))
+    if (i.eq.-1) then
+       value = ts%values(1,1)
+    else if (i.eq.ts%numt+1) then
+       value = ts%values(1,ts%numt)
+    else
+       slope = (ts%values(1,i+1)-ts%values(1,i))/(ts%times(i+1)-ts%times(i))
+       value = ts%values(1,i) + slope*(time-ts%times(i))
+    end if
   end subroutine glimmer_ts_linear_scalar
   
 
@@ -181,11 +211,11 @@ contains
 
     ! BC
     if (time.le.ts%times(1)) then
-       get_i = 1
+       get_i = -1
        return
     end if
     if (time.ge.ts%times(ts%numt)) then
-       get_i = ts%numt
+       get_i = ts%numt + 1
        return
     end if
     ! first try if the interpolated value is around the last value
