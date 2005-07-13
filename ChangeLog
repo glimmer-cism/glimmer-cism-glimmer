@@ -1,3 +1,7 @@
+2005-07-13 Magnus Hagdorn
+ * glimmer_ts.f90: fixed bug where the BC of linear interpolator
+   were not correctly implemented
+
 2005-06-28 Magnus Hagdorn
  * glimmer.bib: added bibtex database
  * glimmer.tex: use bibtex
