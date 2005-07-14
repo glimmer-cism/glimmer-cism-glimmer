@@ -1,3 +1,10 @@
+2005-07-14 Magnus Hagdorn
+ * glimmer_pdd.f90: moved romberg integration to separate module
+ * glimmer_integrate.f90: new module for numerical integration
+ * test_integrate.f90: test program for numerical integration
+ * Makefile.am: hooked up new files
+ * glimmer_ts.f90: require time series to be monotonic
+
 2005-07-13 Magnus Hagdorn
  * glimmer_ts.f90: fixed bug where the BC of linear interpolator
    were not correctly implemented

@@ -2,7 +2,7 @@ SUBDIRS = SLAP_library
 
 lib_LIBRARIES = libglimmer.a libglide.a libglint.a libclimate.a
 bin_PROGRAMS  =  simple_glide eis_glide glint_example glex_ebm
-check_PROGRAMS = test_config test_setup test_ts test_lithot
+check_PROGRAMS = test_config test_setup test_ts test_lithot test_integrate
 
 variable_DATA = glide_vars.def eis_vars.def glint_vars.def time_vars.def glint_mbal_vars.def ncdf_template.f90.in
 variabledir = $(pkgdatadir)
@@ -15,7 +15,8 @@ CLEANFILES = $(BUILT_SOURCES) f90_dep.mak
 
 libglimmer_a_SOURCES = glimmer_version.f90 glimmer_CFproj.f90 glimmer_config.f90 glimmer_global.f90 glimmer_utils.f90 glimmer_log.f90 glimmer_ts.f90 \
                 glimmer_ncdf.f90 glimmer_ncio.f90 glimmer_ncparms.f90 glimmer_paramets.f90 glimmer_physcon.f90 kelvin.f90 profile.f90 \
-                glimmer_pdd.f90 glimmer_routing.f90 glimmer_daily_pdd.f90 glint_global_interp.f90 glimmer_sparse.f90 glimmer_coordinates.f90
+                glimmer_pdd.f90 glimmer_routing.f90 glimmer_daily_pdd.f90 glint_global_interp.f90 glimmer_sparse.f90 glimmer_coordinates.f90 \
+                glimmer_integrate.f90
 nodist_libglimmer_a_SOURCES = glimmer_version.f90
 libglide_a_SOURCES = glide.f90 glide_setup.f90 glide_types.f90 glide_temp.f90 glide_thck.f90 glide_velo.f90 glide_mask.f90 glide_stop.f90 glide_io.f90 \
                 glide_nc_custom.f90 isostasy.f90 isostasy_el.f90 isostasy_setup.f90 isostasy_types.f90 glide_lithot.f90 glide_profile.f90
@@ -39,6 +40,7 @@ test_setup_LDADD = libglide.a libglimmer.a
 test_ts_SOURCES = glimmer_ts.f90 glimmer_log.f90 test_ts.f90
 test_lithot_SOURCES = test_lithot.f90
 test_lithot_LDADD = libclimate.a libglide.a libglimmer.a SLAP_library/libslap.a
+test_integrate_SOURCES = test_integrate.f90 glimmer_global.f90 glimmer_physcon.f90 glimmer_integrate.f90
 
 #some special rules for automatically generating ncdf src code
 glide_io.f90:	glide_vars.def ncdf_template.f90.in
