@@ -83,8 +83,8 @@ contains
     call daily_pdd_readconfig(params,config)
     call daily_pdd_printconfig(params)
 
-    params%pddfs = (rhow / rhoi) * 0.003_sp 
-    params%pddfi = (rhow / rhoi) * 0.008_sp 
+    params%pddfs = (rhow / rhoi) * params%pddfac_snow
+    params%pddfi = (rhow / rhoi) * params%pddfac_ice
 
   end subroutine glimmer_daily_pdd_init
 
