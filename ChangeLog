@@ -1,3 +1,6 @@
+2005-08-02 Ian Rutt
+ * Fixed really obvious bug in glimmer_daily_pdd.f90
+
 2005-07-13 Magnus Hagdorn
  * glimmer_ts.f90: fixed bug where the BC of linear interpolator
    were not correctly implemented
