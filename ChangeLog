@@ -1,3 +1,6 @@
+2005-08-11 Magnus Hagdorn
+ * eis_ela.f90: ablation over ice shelves wasn't scaled properly
+
 2005-07-14 Magnus Hagdorn
  * glimmer_pdd.f90: moved romberg integration to separate module
  * glimmer_integrate.f90: new module for numerical integration

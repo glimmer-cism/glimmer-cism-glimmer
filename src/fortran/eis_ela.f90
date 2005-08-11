@@ -59,6 +59,7 @@ module eis_ela
      real :: bmax_mar = 1.5                      !*FD varies around the ELA
      real :: zmax_cont = 500.                    !*FD parameters describing how the MB
      real :: bmax_cont = 0.3                     !*FD varies around the ELA
+     real :: shelf_ablation = -1.0               !*FD ablation over ice shelf
      character(len=fname_length) :: fname=''     !*FD name of file containing ELA ts
      type(glimmer_tseries) :: ela_ts             !*FD ELA time series 
      real,dimension(:,:),pointer :: ela => null()!*FD ELA field
@@ -133,6 +134,7 @@ contains
     ela%bmax_mar = ela%bmax_mar/ (acc0 * scyr)
     ela%zmax_cont = ela%zmax_cont/thk0
     ela%bmax_cont = ela%bmax_cont/ (acc0 * scyr)
+    ela%shelf_ablation = ela%shelf_ablation / (acc0 * scyr)
     ela%ela_a = ela%ela_a/thk0
     ela%ela_b = ela%ela_b/thk0
     ela%ela_c = ela%ela_c/thk0
@@ -164,13 +166,14 @@ contains
          cony%cony, &
          model%climate%eus, &
          ela%zmax_mar,ela%bmax_mar, &
-         ela%zmax_cont,ela%bmax_cont)
+         ela%zmax_cont,ela%bmax_cont, &
+         ela%shelf_ablation)
   end subroutine eis_massbalance
 
   !*****************************************************************************
   ! private procedures
   !*****************************************************************************
-  elemental function calc_mb(ela,topo,thick,cony,eus,mzmax,mbmax,czmax,cbmax)
+  elemental function calc_mb(ela,topo,thick,cony,eus,mzmax,mbmax,czmax,cbmax,shelf_ablation)
     !*FD calculate mass balance
     use glimmer_global, only : dp
     implicit none
@@ -181,6 +184,7 @@ contains
     real, intent(in) :: eus       !*FD eustatic sea level
     real, intent(in) :: mzmax,mbmax !*FD parameters describing MB variation around ELA
     real, intent(in) :: czmax,cbmax !*FD parameters describing MB variation around ELA
+    real, intent(in) :: shelf_ablation !*FD ablation over ice shelf
     real calc_mb
 
     ! local variables
@@ -190,7 +194,7 @@ contains
     if (topo.ge.eus .or. thick.gt.0) then
        z = topo+thick-eus
        if (z.lt.0.) then
-          calc_mb = -1.    ! ablation on ice shelf
+          calc_mb = shelf_ablation   ! ablation on ice shelf
           return
        end if
        z = z - ela
