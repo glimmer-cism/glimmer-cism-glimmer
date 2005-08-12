@@ -1,3 +1,6 @@
+2005-08-12 Magnus Hagdorn
+ * glimmer_ncio.f90: made comparison between two floats more robust
+
 2005-08-02 Ian Rutt
  * Fixed really obvious bug in glimmer_daily_pdd.f90
 
