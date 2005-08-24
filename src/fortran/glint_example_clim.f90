@@ -223,7 +223,6 @@ contains
     integer  :: ncid      ! NetCDF file id
     integer  :: varid     ! NetCDF variable id
     integer  :: ndims     ! Number of dimensions
-    integer  :: i,args
     real(rk) :: offset=0.0,scale=1.0
     integer,      dimension(2) :: dimids,dimlens
     character(20),dimension(2) :: dimnames
@@ -298,11 +297,9 @@ contains
     integer  :: ncid      ! NetCDF file id
     integer  :: varid     ! NetCDF variable id
     integer  :: ndims     ! Number of dimensions
-    integer  :: i,args
     real(rk) :: offset=0.0,scale=1.0
     integer,      dimension(3) :: dimids,dimlens
     character(20),dimension(3) :: dimnames
-    real(dp),     dimension(:,:),allocatable :: lnb,ltb
     logical :: lonb_present,latb_present
 
     if (associated(array)) deallocate(array)
@@ -557,7 +554,6 @@ contains
     real(rk) :: tsp,tst
     real(rk) :: pos
     integer :: lower,upper
-    character(150) :: msg
 
     ntemp   = size(params%surftemp_clim,3)
     nprecip = size(params%precip_clim,3)

@@ -48,7 +48,7 @@ module glimmer_ncio
   !*FD written by Magnus Hagdorn, 2004
 
   use glimmer_ncdf
-  integer,parameter,private :: msglen=150
+  integer,parameter,private :: msglen=200
   
 contains
   !*****************************************************************************

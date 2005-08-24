@@ -81,7 +81,7 @@ module glimmer_global
   !*FD Note that if the code is being compiled with forced typing (e.g. with 
   !*FD the -r8 flag), then this parameter must be set in agreement with that. 
 
-  integer,parameter :: fname_length=70
+  integer,parameter :: fname_length=100
 
   !*FD Specifies the length of character string variables used to
   !*FD hold filenames.

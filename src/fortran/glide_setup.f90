@@ -48,7 +48,7 @@ module glide_setup
   private
   public :: glide_readconfig, glide_printconfig, glide_scale_params, &
        glide_calclsrf, glide_marinlim, glide_load_sigma, glide_maskthck, &
-       glide_prof_start, glide_prof_stop
+       glide_prof_start, glide_prof_stop, glide_read_sigma
 
 contains
   
@@ -151,6 +151,26 @@ contains
 
     model%numerics%mlimit = model%numerics%mlimit / thk0
   end subroutine glide_scale_params
+
+  subroutine glide_read_sigma(model,config)
+    !*FD read sigma levels from configuration file
+    use glide_types
+    use glimmer_config
+    implicit none
+    type(glide_global_type) :: model        !*FD model instance
+    type(ConfigSection), pointer :: config  !*FD structure holding sections of configuration file
+        
+    ! local variables
+    type(ConfigSection), pointer :: section
+
+    ! read grid size  parameters
+    call GetSection(config,section,'sigma')
+    if (associated(section)) then
+       call handle_sigma(section, model)
+       call print_sigma(model)
+    end if
+
+  end subroutine glide_read_sigma
 
 !-------------------------------------------------------------------------
 
@@ -711,5 +731,36 @@ contains
     call write_log('')
   end subroutine print_parameters
 
+  ! Sigma levels
+  subroutine handle_sigma(section, model)
+    use glimmer_config
+    use glide_types
+    implicit none
+    type(ConfigSection), pointer :: section
+    type(glide_global_type)  :: model
+
+    call GetValue(section,'sigma_levels',model%numerics%sigma,model%general%upn)
+
+  end subroutine handle_sigma
+
+  subroutine print_sigma(model)
+    use glide_types
+    use glimmer_log
+    implicit none
+    type(glide_global_type)  :: model
+    character(len=100) :: message,temp
+    integer :: i
+
+    call write_log('Sigma levels:')
+    call write_log('------------------')
+    message=''
+    do i=1,model%general%upn
+       write(temp,'(F5.2)') model%numerics%sigma(i)
+       message=trim(message)//trim(temp)
+    enddo
+    call write_log(trim(message))
+    call write_log('')
+    
+  end subroutine print_sigma
 
 end module glide_setup

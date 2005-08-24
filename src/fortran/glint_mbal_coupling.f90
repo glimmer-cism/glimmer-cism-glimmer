@@ -33,13 +33,14 @@ module glint_mbal_coupling
 
 contains
 
-  subroutine glint_mbc_init(params,proj,config,whichacab,nx,ny,dx)
+  subroutine glint_mbc_init(params,proj,config,whichacab,snowd,siced,nx,ny,dx)
 
     type(glint_mbc)  :: params
     type(projection) :: proj
     type(ConfigSection), pointer :: config !*FD structure holding sections of configuration file
     integer          :: whichacab
-    integer          :: whichprcp
+    real(sp),dimension(:,:),intent(in) :: snowd !*FD Initial snow-depth field
+    real(sp),dimension(:,:),intent(in) :: siced !*FD Initial superimposed ice field
     integer          :: nx,ny  !*FD grid dimensions (for SMB)
     real(rk)         :: dx     !* Grid length (for SMB)
 
@@ -89,11 +90,18 @@ contains
 
     call glint_mbal_init(params%mbal,config,whichacab,nx,ny,dx)
 
+    ! Copy snow and ice depths if relevant
+
+    if (mbal_has_snow_model(params%mbal)) then
+       params%snowd=snowd
+       params%siced=siced
+    end if
+
   end subroutine glint_mbc_init
 
   ! +++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine glint_accumulate(params,artm,arng,prcp,snowd,siced,xwind,ywind,global_orog,local_orog, &
+  subroutine glint_accumulate(params,artm,arng,prcp,snowd,siced,xwind,ywind,local_orog, &
        thck,humidity,SWdown,LWdown,Psurf)
 
     type(glint_mbc)  :: params
@@ -104,7 +112,6 @@ contains
     real(sp),dimension(:,:),intent(in) :: siced        !*FD Superimposed ice depth (m)
     real(rk),dimension(:,:),intent(in) :: xwind        !*FD $x$-component of surface winds (m/s)
     real(rk),dimension(:,:),intent(in) :: ywind        !*FD $y$-component of surface winds (m/s)
-    real(dp),dimension(:,:),intent(in) :: global_orog  !*FD Global orography (m)
     real(sp),dimension(:,:),intent(in) :: local_orog   !*FD Local orography (m)
     real(rk),dimension(:,:),intent(in) :: thck         !*FD Ice thickness (m)
     real(rk),dimension(:,:),intent(in) :: humidity     !*FD Relative humidity (%)
@@ -125,8 +132,6 @@ contains
 
        params%snowd=snowd
        params%siced=siced
-       params%snowd_save=snowd
-       params%siced_save=siced
 
        params%prcp_save=0.0
        params%ablt_save=0.0
@@ -177,8 +182,6 @@ contains
     real(sp),dimension(:,:),intent(inout) :: siced  !*FD Superimposed ice depth (m)
 
     if (.not.params%new_accum) then
-       params%snowd=params%snowd-params%snowd_save
-       params%siced=params%siced-params%siced_save
        params%artm_save=params%artm_save/real(params%av_count)
     end if
 
@@ -188,8 +191,8 @@ contains
     prcp=params%prcp_save
     ablt=params%ablt_save
     acab=params%acab_save
-    snowd=snowd+params%snowd
-    siced=siced+params%siced
+    snowd=params%snowd
+    siced=params%siced
 
     where (snowd<0.0) snowd=0.0
     where (siced<0.0) siced=0.0

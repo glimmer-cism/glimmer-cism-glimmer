@@ -47,11 +47,11 @@ module glint_initialise
   use glint_type
 
   private
-  public glint_i_initialise, glint_i_end, calc_coverage, get_i_upscaled_fields
+  public glint_i_initialise, glint_i_end, calc_coverage
 
 contains
 
-  subroutine glint_i_initialise(config,instance,grid,grid_orog,mbts,need_winds,enmabal)
+  subroutine glint_i_initialise(config,instance,grid,grid_orog,mbts,idts,need_winds,enmabal)
 
     !*FD Initialise a GLINT ice model instance
 
@@ -69,6 +69,7 @@ contains
     type(global_grid),     intent(in)    :: grid        !*FD Global grid to use
     type(global_grid),     intent(in)    :: grid_orog   !*FD Global grid to use for orography
     integer,               intent(out)   :: mbts        !*FD mass-balance time-step (hours)
+    integer,               intent(out)   :: idts        !*FD ice dynamics time-step (hours)
     logical,               intent(inout) :: need_winds  !*FD Set if this instance needs wind input
     logical,               intent(inout) :: enmabal     !*FD Set if this instance uses the energy balance mass-bal model
 
@@ -76,6 +77,7 @@ contains
 
     call glide_initialise(instance%model,config)
     instance%ice_tstep=get_tinc(instance%model)*years2hours
+    idts=instance%ice_tstep
 
     ! create glint variables
     call glint_io_createall(instance%model)
@@ -122,6 +124,7 @@ contains
     ! initialise the mass-balance accumulation
 
     call glint_mbc_init(instance%mbal_accum,instance%proj,config,instance%whichacab, &
+         instance%snowd,instance%siced, &
          instance%proj%nx,instance%proj%ny,instance%proj%dx)
     instance%mbal_tstep=instance%mbal_accum%mbal%tstep
     mbts=instance%mbal_tstep
@@ -347,74 +350,5 @@ contains
     lon_diff=aa-bb
 
   end function lon_diff
-
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-  subroutine get_i_upscaled_fields(instance,orog,albedo,ice_frac)
-
-    !*FD Upscales and returns certain fields, according to the 
-    !*FD arguments supplied
-
-    use paramets
-
-    type(glint_instance),            intent(in)  :: instance
-    real(rk),dimension(:,:),optional,intent(out) :: orog
-    real(rk),dimension(:,:),optional,intent(out) :: albedo
-    real(rk),dimension(:,:),optional,intent(out) :: ice_frac
-
-    real(rk),dimension(:,:),allocatable :: if_temp,upscale_temp
-
-	  ! Calculate orography
-
-    if (present(orog)) then
-      call mean_to_global(instance%ups_orog, &
-                          instance%model%geometry%usrf, &
-                          orog,    &
-                          instance%out_mask)
-      orog=thk0*orog
-    endif
-
-    if (present(albedo).or.present(ice_frac)) then
-
-      if (present(albedo)) then
-        allocate(if_temp(size(albedo,1),size(albedo,2)))
-      else
-        allocate(if_temp(size(ice_frac,1),size(ice_frac,2)))
-      endif
-      allocate(upscale_temp(instance%model%general%ewn,instance%model%general%nsn))
-
-      ! First, ice coverage on local grid 
-  
-      where (instance%model%geometry%thck>0.0)
-        upscale_temp=1.0
-      elsewhere
-        upscale_temp=0.0
-      endwhere
-
-      ! Upscale it...
-
-      call mean_to_global(instance%ups, &
-                          upscale_temp, &
-                          if_temp,    &
-                          instance%out_mask)
-
-      if (present(ice_frac)) ice_frac=if_temp
-
-    endif
-
-    ! Calculate albedo -------------------------------------------------------
-
-    if (present(albedo)) then 
-      where (if_temp>0.0)
-        albedo=instance%ice_albedo
-      elsewhere
-        albedo=0.0
-      endwhere
-    endif
-
-    if (allocated(if_temp)) deallocate(if_temp)
-    if (allocated(upscale_temp)) deallocate(upscale_temp)
-
-  end subroutine get_i_upscaled_fields
 
 end module glint_initialise

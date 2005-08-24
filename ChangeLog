@@ -1,3 +1,13 @@
+2005-08-24 Ian Rutt
+ * Updated with improvements from GENIE development:
+	- Sigma levels from config file if desired
+	- Longer message variables in some places
+	- Land tiling of ice, snow and veg fracs in glint output
+	- Simplified output calculation in glint
+	- Removed some unused variables
+	- minor adjustments to daily pdd scheme and coupling
+	- better ordering for glint timestep
+
 2005-08-12 Magnus Hagdorn
  * glimmer_ncio.f90: made comparison between two floats more robust
 

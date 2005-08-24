@@ -104,7 +104,6 @@ program glint_example
   logical :: out    ! Outputs set flag
   integer :: i,j    ! Array index counters
   integer :: time   ! Current time (hours)
-  integer :: ierr
 
   ! -------------------------------------------------------------------------------------
   ! Executable code starts here - Basic initialisation

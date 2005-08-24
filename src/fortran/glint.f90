@@ -133,7 +133,8 @@ module glint_main
 contains
 
   subroutine initialise_glint(params,lats,longs,paramfile,latb,lonb,orog,albedo, &
-       ice_frac,orog_lats,orog_longs,orog_latb,orog_lonb,output_flag,daysinyear)
+       ice_frac,veg_frac,snowice_frac,snowveg_frac,snow_depth,orog_lats,orog_longs,orog_latb,orog_lonb,output_flag, &
+       daysinyear,snow_model,ice_dt)
 
     !*FD Initialises the model
 
@@ -158,6 +159,10 @@ contains
     real(rk),dimension(:,:),optional,intent(out)   :: orog        !*FD Initial global orography
     real(rk),dimension(:,:),optional,intent(out)   :: albedo      !*FD Initial albedo
     real(rk),dimension(:,:),optional,intent(out)   :: ice_frac    !*FD Initial ice fraction 
+    real(rk),dimension(:,:),optional,intent(out)   :: veg_frac    !*FD Initial veg fraction
+    real(rk),dimension(:,:),optional,intent(out)   :: snowice_frac !*FD Initial snow-covered ice fraction
+    real(rk),dimension(:,:),optional,intent(out)   :: snowveg_frac !*FD Initial snow-covered veg fraction
+    real(rk),dimension(:,:),optional,intent(out)   :: snow_depth  !*FD Initial snow depth 
     real(rk),dimension(:),  optional,intent(in)    :: orog_lats   !*FD Latitudinal location of gridpoints 
                                                                   !*FD for global orography output.
     real(rk),dimension(:),  optional,intent(in)    :: orog_longs  !*FD Longitudinal location of gridpoints 
@@ -169,6 +174,8 @@ contains
     logical,                optional,intent(out)   :: output_flag !*FD Flag to show output set (provided for
                                                                   !*FD consistency)
     integer,                optional,intent(in)    :: daysinyear  !*FD Number of days in the year
+    logical,                optional,intent(out)   :: snow_model  !*FD Set if the mass-balance scheme has a snow-depth model
+    integer,                optional,intent(out)   :: ice_dt      !*FD Ice dynamics time-step in hours
 
     ! Internal variables -----------------------------------------------------------------------
 
@@ -176,8 +183,8 @@ contains
     character(len=100) :: message                 ! For log-writing
     character(fname_length):: instance_fname      ! name of instance specific configuration file
     integer :: i,args,o_args
-    real(rk),dimension(:,:),allocatable :: orog_temp,if_temp,alb_temp ! Temporary output arrays
-    integer,dimension(:),allocatable :: mbts ! Array of mass-balance timesteps
+    real(rk),dimension(:,:),allocatable :: orog_temp,if_temp,vf_temp,sif_temp,svf_temp,sd_temp,alb_temp ! Temporary output arrays
+    integer,dimension(:),allocatable :: mbts,idts ! Array of mass-balance and ice dynamics timesteps
 
     ! Initialise year-length -------------------------------------------------------------------
 
@@ -262,7 +269,7 @@ contains
     ! and the array of mass-balance timesteps
 
     allocate(params%instances(params%ninstances))
-    allocate(mbts(params%ninstances))
+    allocate(mbts(params%ninstances),idts(params%ninstances))
 
     ! ---------------------------------------------------------------
     ! Zero coverage maps and normalisation fields for main grid and
@@ -301,7 +308,7 @@ contains
 
        call write_log(trim(paramfile))
        call glint_i_initialise(global_config,params%instances(1),params%g_grid,params%g_grid_orog, &
-            mbts(1),params%need_winds,params%enmabal)
+            mbts(1),idts(1),params%need_winds,params%enmabal)
        call write_log('')
 
        ! Update the coverage and normalisation fields
@@ -329,7 +336,7 @@ contains
           call write_log(trim(instance_fname))
           call ConfigRead(instance_fname,instance_config)
           call glint_i_initialise(instance_config,params%instances(i),params%g_grid,params%g_grid_orog, &
-               mbts(i),params%need_winds,params%enmabal)
+               mbts(i),idts(i),params%need_winds,params%enmabal)
 
           params%total_coverage = params%total_coverage + params%instances(i)%frac_coverage
           params%total_cov_orog = params%total_cov_orog + params%instances(i)%frac_cov_orog
@@ -359,6 +366,9 @@ contains
     ! assign that value to the top-level variable
 
     params%tstep_mbal=check_mbts(mbts)
+    if (present(ice_dt)) then
+       ice_dt=check_mbts(idts)
+    end if
 
     ! Check we don't have coverage greater than one at any point.
 
@@ -371,45 +381,70 @@ contains
     if (present(orog))     orog=0.0
     if (present(albedo))   albedo=0.0
     if (present(ice_frac)) ice_frac=0.0
+    if (present(veg_frac)) veg_frac=0.0
+    if (present(snowice_frac)) snowice_frac=0.0
+    if (present(snowveg_frac)) snowveg_frac=0.0
+    if (present(snow_depth)) snow_depth=0.0
+
+    ! Allocate arrays
+
+    allocate(orog_temp(params%g_grid_orog%nx,params%g_grid_orog%ny))
+    allocate(alb_temp(params%g_grid%nx,params%g_grid%ny))
+    allocate(if_temp(params%g_grid%nx,params%g_grid%ny))
+    allocate(vf_temp(params%g_grid%nx,params%g_grid%ny))
+    allocate(sif_temp(params%g_grid%nx,params%g_grid%ny))
+    allocate(svf_temp(params%g_grid%nx,params%g_grid%ny))
+    allocate(sd_temp(params%g_grid%nx,params%g_grid%ny))
 
     ! Get initial fields from instances, splice together and return
-    ! First, orography
 
-    if (present(orog)) then
-       allocate(orog_temp(size(orog,1),size(orog,2)))
+    do i=1,params%ninstances
+       call get_i_upscaled_fields(params%instances(i),orog_temp, &
+            alb_temp,if_temp,vf_temp,sif_temp,svf_temp,sd_temp)
+
+       if (present(orog)) &
+            orog=splice_field(orog,orog_temp,params%instances(i)%frac_cov_orog, &
+            params%cov_norm_orog)
+
+       if (present(albedo)) &
+            albedo=splice_field(albedo,alb_temp,params%instances(i)%frac_coverage, &
+            params%cov_normalise)
+
+       if (present(ice_frac)) &
+            ice_frac=splice_field(ice_frac,if_temp,params%instances(i)%frac_coverage, &
+            params%cov_normalise)
+
+       if (present(veg_frac)) &
+            veg_frac=splice_field(veg_frac,vf_temp,params%instances(i)%frac_coverage, &
+            params%cov_normalise)
+
+       if (present(snowice_frac)) &
+            snowice_frac=splice_field(snowice_frac,sif_temp,params%instances(i)%frac_coverage, &
+            params%cov_normalise)
+
+       if (present(snowveg_frac)) &
+            snowveg_frac=splice_field(snowveg_frac,svf_temp,params%instances(i)%frac_coverage, &
+            params%cov_normalise)
+
+       if (present(snow_depth)) &
+            snow_depth=splice_field(snow_depth,sd_temp,params%instances(i)%frac_coverage, &
+            params%cov_normalise)
+    end do
+
+    ! Deallocate
+
+    deallocate(orog_temp,alb_temp,if_temp,vf_temp,sif_temp,svf_temp,sd_temp)
+
+    ! Sort out snow_model flag
+
+    if (present(snow_model)) then
+       snow_model=.false.
        do i=1,params%ninstances
-          call get_i_upscaled_fields(params%instances(i),orog=orog_temp)
-          orog=splice_field(orog,orog_temp,params%instances(i)%frac_cov_orog, &
-               params%cov_norm_orog)
-       enddo
-       deallocate(orog_temp)
-    endif
+          snow_model=(snow_model.or.glint_has_snow_model(params%instances(i)))
+       end do
+    end if
 
-    ! Then albedo and ice fraction
-
-    if (present(albedo).or.present(ice_frac)) then
-       ! Allocate temporary upscaled arrays for passing to instances
-       if (present(albedo)) then
-          allocate(if_temp(size(albedo,1),size(albedo,2)))
-          allocate(alb_temp(size(albedo,1),size(albedo,2)))
-       else
-          allocate(if_temp(size(ice_frac,1),size(ice_frac,2)))
-          allocate(alb_temp(size(ice_frac,1),size(ice_frac,2)))
-       endif
-       ! Loop through instances in turn and get fields
-       do i=1,params%ninstances
-          call get_i_upscaled_fields(params%instances(i),ice_frac=if_temp,albedo=alb_temp)
-          if (present(albedo)) then
-             albedo=splice_field(albedo,alb_temp,params%instances(i)%frac_coverage, &
-                  params%cov_normalise)
-          endif
-          if (present(ice_frac)) then
-             ice_frac=splice_field(ice_frac,if_temp,params%instances(i)%frac_coverage, &
-                  params%cov_normalise)
-          endif
-       enddo
-       deallocate(if_temp,alb_temp)
-    endif
+    ! Set output flag
 
     if (present(output_flag)) output_flag=.true.
 
@@ -419,9 +454,9 @@ contains
 
   subroutine glint(params,time,temp,precip,zonwind,merwind,orog, &
        humid,lwdown,swdown,airpress, &
-       output_flag,orog_out,albedo,ice_frac,water_in, &
+       output_flag,orog_out,albedo,ice_frac,veg_frac,snowice_frac,snowveg_frac,snow_depth,water_in, &
        water_out,total_water_in,total_water_out, &
-       ice_volume,skip_mbal)
+       ice_volume,skip_mbal,ice_tstep)
 
     !*FD Main Glimmer subroutine.
     !*FD
@@ -461,20 +496,26 @@ contains
     real(rk),dimension(:,:),optional,intent(inout) :: orog_out        !*FD The fed-back, output orography (m)
     real(rk),dimension(:,:),optional,intent(inout) :: albedo          !*FD surface albedo
     real(rk),dimension(:,:),optional,intent(inout) :: ice_frac        !*FD grid-box ice-fraction
+    real(rk),dimension(:,:),optional,intent(inout) :: veg_frac        !*FD grid-box veg-fraction
+    real(rk),dimension(:,:),optional,intent(inout) :: snowice_frac    !*FD grid-box snow-covered ice fraction
+    real(rk),dimension(:,:),optional,intent(inout) :: snowveg_frac    !*FD grid-box snow-covered veg fraction
+    real(rk),dimension(:,:),optional,intent(inout) :: snow_depth      !*FD grid-box mean snow depth (m water equivalent)
     real(rk),dimension(:,:),optional,intent(inout) :: water_in        !*FD Input water flux          (mm)
     real(rk),dimension(:,:),optional,intent(inout) :: water_out       !*FD Output water flux         (mm)
     real(rk),               optional,intent(inout) :: total_water_in  !*FD Area-integrated water flux in (kg)
     real(rk),               optional,intent(inout) :: total_water_out !*FD Area-integrated water flux out (kg)
     real(rk),               optional,intent(inout) :: ice_volume      !*FD Total ice volume (m$^3$)
     logical,                optional,intent(in)    :: skip_mbal       !*FD Set to skip mass-balance accumulation
+    logical,                optional,intent(out)   :: ice_tstep       !*FD Set when an ice-timestep has been done, and
+                                                                      !*FD water balance information is available
 
     ! Internal variables ----------------------------------------------------------------------------
 
     integer :: i
-    real(rk),dimension(:,:),allocatable :: albedo_temp,if_temp,wout_temp,orog_out_temp,win_temp
+    real(rk),dimension(:,:),allocatable :: albedo_temp,if_temp,vf_temp,sif_temp,svf_temp,sd_temp,wout_temp,orog_out_temp,win_temp
     real(rk) :: twin_temp,twout_temp,icevol_temp
     type(output_flags) :: out_f
-    logical :: skmb
+    logical :: skmb,icets
 
     if (present(skip_mbal)) then
        skmb=skip_mbal
@@ -503,6 +544,7 @@ contains
     ! Reset output flag
 
     if (present(output_flag)) output_flag=.false.
+    if (present(ice_tstep))   ice_tstep=.false.
 
     ! ---------------------------------------------------------
     ! Do averaging and so on...
@@ -570,6 +612,38 @@ contains
           out_f%ice_frac=.true.
        else
           out_f%ice_frac=.false.
+       endif
+
+       if (present(veg_frac)) then
+          veg_frac  = 0.0
+          allocate(vf_temp(size(orog,1),size(orog,2)))
+          out_f%veg_frac=.true.
+       else
+          out_f%veg_frac=.false.
+       endif
+
+       if (present(snowice_frac)) then
+          snowice_frac  = 0.0
+          allocate(sif_temp(size(orog,1),size(orog,2)))
+          out_f%snowice_frac=.true.
+       else
+          out_f%snowice_frac=.false.
+       endif
+
+       if (present(snowveg_frac)) then
+          snowveg_frac  = 0.0
+          allocate(svf_temp(size(orog,1),size(orog,2)))
+          out_f%snowveg_frac=.true.
+       else
+          out_f%snowveg_frac=.false.
+       endif
+
+       if (present(snow_depth)) then
+          snow_depth  = 0.0
+          allocate(sd_temp(size(orog,1),size(orog,2)))
+          out_f%snow_depth=.true.
+       else
+          out_f%snow_depth=.false.
        endif
 
        if (present(water_out)) then
@@ -652,6 +726,10 @@ contains
                orog_out_temp,                &
                albedo_temp,                  &
                if_temp,                      &
+               vf_temp,                      &
+               sif_temp,                     &
+               svf_temp,                     &
+               sd_temp,                      &
                win_temp,                     &
                wout_temp,                    &
                twin_temp,                    &
@@ -659,7 +737,8 @@ contains
                icevol_temp,                  &
                out_f,                        &
                .true.,                       &
-               skmb)
+               skmb,                         &
+               icets)
 
           ! Add this contribution to the output orography
 
@@ -681,6 +760,30 @@ contains
                params%instances(i)%frac_coverage, &
                params%cov_normalise)
 
+          if (present(veg_frac)) &
+               veg_frac=splice_field(veg_frac, &
+               vf_temp, &
+               params%instances(i)%frac_coverage, &
+               params%cov_normalise)
+
+          if (present(snowice_frac)) &
+               snowice_frac=splice_field(snowice_frac, &
+               sif_temp, &
+               params%instances(i)%frac_coverage, &
+               params%cov_normalise)
+
+          if (present(snowveg_frac)) &
+               snowveg_frac=splice_field(snowveg_frac, &
+               svf_temp, &
+               params%instances(i)%frac_coverage, &
+               params%cov_normalise)
+
+          if (present(snow_depth)) &
+               snow_depth=splice_field(snow_depth, &
+               sd_temp, &
+               params%instances(i)%frac_coverage, &
+               params%cov_normalise)
+
           if (present(water_in)) &
                water_in=splice_field(water_in, &
                win_temp, &
@@ -698,6 +801,11 @@ contains
           if (present(total_water_in))  total_water_in =total_water_in +twin_temp
           if (present(total_water_out)) total_water_out=total_water_out+twout_temp
           if (present(ice_volume))      ice_volume=ice_volume+icevol_temp
+
+          ! Set flag
+          if (present(ice_tstep)) then
+             ice_tstep=(ice_tstep.or.icets)
+          end if
 
        enddo
 
@@ -734,6 +842,10 @@ contains
 
     if (allocated(albedo_temp))   deallocate(albedo_temp)
     if (allocated(if_temp))       deallocate(if_temp)
+    if (allocated(vf_temp))       deallocate(vf_temp)
+    if (allocated(sif_temp))      deallocate(sif_temp)
+    if (allocated(svf_temp))      deallocate(svf_temp)
+    if (allocated(sd_temp))       deallocate(sd_temp)
     if (allocated(wout_temp))     deallocate(wout_temp)
     if (allocated(win_temp))      deallocate(win_temp)
     if (allocated(orog_out_temp)) deallocate(orog_out_temp)
@@ -972,7 +1084,7 @@ contains
 
     do i=2,n
        if (timesteps(i)/=check_mbts) then
-          call write_log('All mass-balance schemes must have the same timestep', &
+          call write_log('All instances must have the same mass-balance and ice timesteps', &
                GM_FATAL,__FILE__,__LINE__)
        endif
     enddo

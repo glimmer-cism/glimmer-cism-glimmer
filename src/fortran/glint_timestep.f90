@@ -52,8 +52,9 @@ contains
 
   subroutine glint_i_tstep(time,instance,g_temp,g_temp_range, &
                           g_precip,g_zonwind,g_merwind,g_humid,g_lwdown,g_swdown,g_airpress, &
-                          g_orog,g_orog_out,g_albedo,g_ice_frac,g_water_in,g_water_out,t_win,&
-                          t_wout,ice_vol,out_f,orogflag,mbal_skip)
+                          g_orog,g_orog_out,g_albedo,g_ice_frac,g_veg_frac,g_snowice_frac,g_snowveg_frac,&
+                          g_snow_depth,g_water_in,g_water_out,t_win,&
+                          t_wout,ice_vol,out_f,orogflag,mbal_skip,ice_tstep)
 
     !*FD Performs time-step of an ice model instance. Note that this 
     !*FD code will need to be altered to take account of the 
@@ -91,6 +92,10 @@ contains
     real(rk),dimension(:,:),intent(out)  :: g_orog_out   !*FD Output orography (m)
     real(rk),dimension(:,:),intent(out)  :: g_albedo     !*FD Output surface albedo 
     real(rk),dimension(:,:),intent(out)  :: g_ice_frac   !*FD Output ice fraction
+    real(rk),dimension(:,:),intent(out)  :: g_veg_frac   !*FD Output veg fraction
+    real(rk),dimension(:,:),intent(out)  :: g_snowice_frac !*FD Output snow-ice fraction
+    real(rk),dimension(:,:),intent(out)  :: g_snowveg_frac !*FD Output snow-veg fraction
+    real(rk),dimension(:,:),intent(out)  :: g_snow_depth !*FD Output snow depth (m)
     real(rk),dimension(:,:),intent(out)  :: g_water_in   !*FD Input water flux (mm)
     real(rk),dimension(:,:),intent(out)  :: g_water_out  !*FD Output water flux (mm)
     real(rk),               intent(out)  :: t_win        !*FD Total water input (kg)
@@ -99,6 +104,7 @@ contains
     type(output_flags),     intent(in)   :: out_f        !*FD Flags to tell us whether to do output   
     logical,                intent(in)   :: orogflag     !*FD Set if we have new global orog
     logical,                intent(in)   :: mbal_skip    !*FD set if we are to skip mass-balance accumulation
+    logical,                intent(out)  :: ice_tstep    !*FD Set if we have done an ice time step
 
     ! ------------------------------------------------------------------------  
     ! Internal variables
@@ -111,6 +117,11 @@ contains
     integer, dimension(:,:),allocatable :: fudge_mask    ! temporary array for fudging
     real(sp),dimension(:,:),allocatable :: thck_temp     ! temporary array for volume calcs
     real(rk) :: start_volume,end_volume,flux_fudge
+    
+    ! Assume we always need this, as it's too complicated to work out when we do and don't
+      
+    allocate(thck_temp(instance%proj%nx,instance%proj%ny))
+    ice_tstep=.false.
 
     if (.not.mbal_skip) then
 
@@ -137,126 +148,172 @@ contains
        call glint_lapserate(instance%artm,real(instance%local_orog,rk), real(instance%lapse_rate,rk))
  
        ! Process the precipitation field if necessary ---------------------------
-       ! and convert from mm to m
 
        call glint_calc_precip(instance)
 
        ! Get ice thickness, if necessary ----------------------------------------
 
        if (instance%whichacab==3) then
-          allocate(thck_temp(instance%proj%nx,instance%proj%ny))
           call glide_get_thk(instance%model,thck_temp)
        endif
 
        ! Do accumulation --------------------------------------------------------
 
        call glint_accumulate(instance%mbal_accum,instance%artm,instance%arng,instance%prcp, &
-            instance%snowd,instance%siced,instance%xwind,instance%ywind,instance%global_orog, &
+            instance%snowd,instance%siced,instance%xwind,instance%ywind, &
             instance%local_orog,real(thck_temp,rk),instance%humid,instance%swdown,instance%lwdown, &
             instance%airpress)
-
-       ! Tidy up ----------------------------------------------------------------
-
-      if (allocated(thck_temp)) deallocate(thck_temp)
 
     end if
 
     ! Write output if necessary ----------------------------------------------
 
     call set_time(instance%model,real(time)*real(hours2years))
-    call glint_mbal_io_writeall(instance%mbal_accum,instance%model)
 
-    ! If it's not time for a dynamics/temp/velocity timestep, return ---------
+    ! Initialise water budget quantities to zero. These will be over-ridden if
+    ! there's an ice-model time-step
 
-    if (time-instance%last_timestep.lt.instance%ice_tstep) return
+    t_win=0.0       ; t_wout=0.0
+    g_water_out=0.0 ; g_water_in=0.0
 
     ! ------------------------------------------------------------------------  
     ! ICE TIMESTEP begins HERE ***********************************************
     ! ------------------------------------------------------------------------  
 
-    instance%last_timestep=time
+    if (time-instance%last_timestep.ge.instance%ice_tstep) then
 
-    ! Allocate temporary upscaling array -------------------------------------
+       ice_tstep=.true.
+       instance%last_timestep=time
 
-    allocate(upscale_temp(instance%proj%nx,instance%proj%ny))
-    allocate(routing_temp(instance%proj%nx,instance%proj%ny))
-    allocate(accum_temp(instance%proj%nx,instance%proj%ny))
-    allocate(ablat_temp(instance%proj%nx,instance%proj%ny))
-    allocate(fudge_mask(instance%proj%nx,instance%proj%ny))
-    allocate(thck_temp(instance%proj%nx,instance%proj%ny))
+       ! Get the mass-balance ------------------------------------------------
 
-    accum_temp=0.0 ; ablat_temp=0.0
+       call glint_get_mbal(instance%mbal_accum,instance%artm,instance%prcp,instance%ablt, &
+            instance%acab,instance%snowd,instance%siced)
 
-    ! Calculate the initial ice volume (scaled) ------------------------------
+       ! Calculate the initial ice volume (scaled) ------------------------------
 
-    call glide_get_thk(instance%model,thck_temp)
-    start_volume=sum(thck_temp)
+       call glide_get_thk(instance%model,thck_temp)
+       start_volume=sum(thck_temp)
 
-    ! Get the mass-balance ---------------------------------------------------
+       ! Constrain accumulation according to topography and domain edges -----
 
-    call glint_get_mbal(instance%mbal_accum,instance%artm,instance%prcp,instance%ablt, &
-         instance%acab,instance%snowd,instance%siced)
+       call fix_acab(instance%ablt,instance%acab,instance%prcp,thck_temp,instance%local_orog)
 
-    ! Constrain accumulation according to topography and domain edges --------
+       ! Put climate inputs in the appropriate places ------------------------
 
-    call fix_acab(instance%ablt,instance%acab,instance%prcp,thck_temp,instance%local_orog)
+       call glide_set_acab(instance%model,instance%acab)
+       call glide_set_artm(instance%model,instance%artm)
+    
+       ! Do water budget accounting ---------------------------------------------
 
-    ! Do water budget accounting ---------------------------------------------
+       if (out_f%water_out.or.out_f%total_wout.or.out_f%water_in .or.out_f%total_win) then
+          allocate(accum_temp(instance%proj%nx,instance%proj%ny))
+          allocate(ablat_temp(instance%proj%nx,instance%proj%ny))
+          accum_temp=instance%prcp
+          ablat_temp=instance%ablt
+       endif
 
-    if (out_f%water_out.or.out_f%total_wout.or.out_f%water_in .or.out_f%total_win) then
-      accum_temp=instance%prcp
-      ablat_temp=instance%ablt
-    endif
+       ! ---------------------------------------------------------------------
+       ! do the different parts of the glint timestep
+       ! ---------------------------------------------------------------------
 
-    ! Put climate inputs in the appropriate places
-
-    call glide_set_acab(instance%model,instance%acab)
-    call glide_set_artm(instance%model,instance%artm)
-
-    ! ------------------------------------------------------------------------
-    ! do the different parts of the glint timestep
-    ! ------------------------------------------------------------------------
-
-    call glide_tstep_p1(instance%model,real(time,rk)*hours2years)
-    call glide_tstep_p2(instance%model)
-    call glide_tstep_p3(instance%model)
+       call glide_tstep_p1(instance%model,real(time,rk)*hours2years)
+       call glide_tstep_p2(instance%model)
+       call glide_tstep_p3(instance%model)
  
-    ! Calculate flux fudge factor --------------------------------------------
+       ! Calculate flux fudge factor --------------------------------------------
 
-    if (out_f%water_out.or.out_f%total_wout.or.out_f%water_in .or.out_f%total_win) then
+       if (out_f%water_out.or.out_f%total_wout.or.out_f%water_in .or.out_f%total_win) then
 
-      call glide_get_thk(instance%model,thck_temp)
-      end_volume=sum(thck_temp)
+          allocate(fudge_mask(instance%proj%nx,instance%proj%ny))
 
-      where (thck_temp>0.0)
-        fudge_mask=1
-      elsewhere
-        fudge_mask=0
-      endwhere
+          call glide_get_thk(instance%model,thck_temp)
+          end_volume=sum(thck_temp)
 
-      flux_fudge=(start_volume+sum(accum_temp)-sum(ablat_temp)-end_volume)/sum(fudge_mask)
+          where (thck_temp>0.0)
+             fudge_mask=1
+          elsewhere
+             fudge_mask=0
+          endwhere
 
-      ! Apply fudge_factor
+          flux_fudge=(start_volume+sum(accum_temp)-sum(ablat_temp)-end_volume)/sum(fudge_mask)
 
-      where(thck_temp>0.0)
-        ablat_temp=ablat_temp+flux_fudge
-      endwhere
+          ! Apply fudge_factor
+          
+          where(thck_temp>0.0)
+             ablat_temp=ablat_temp+flux_fudge
+          endwhere
 
-    endif
+       endif
+
+       ! Upscale water flux fields ----------------------------------------------
+       ! First water input (i.e. mass balance + ablation)
+
+       if (out_f%water_in) then
+         allocate(upscale_temp(instance%proj%nx,instance%proj%ny))
+
+          where (thck_temp>0.0)
+             upscale_temp=accum_temp
+          elsewhere
+             upscale_temp=0.0
+          endwhere
+
+          call mean_to_global(instance%ups,   &
+               upscale_temp,   &
+               g_water_in,     &
+               instance%out_mask)
+          deallocate(upscale_temp)
+       endif
+
+       ! Now water output (i.e. ablation) - and do routing
+
+       if (out_f%water_out) then
+          allocate(upscale_temp(instance%proj%nx,instance%proj%ny))
+          allocate(routing_temp(instance%proj%nx,instance%proj%ny))
+
+          where (thck_temp>0.0)
+             upscale_temp=ablat_temp
+          elsewhere
+             upscale_temp=0.0
+          endwhere
+
+          call glide_get_usurf(instance%model,instance%local_orog)
+          call flow_router(instance%local_orog, &
+               upscale_temp, &
+               routing_temp, &
+               instance%out_mask, &
+               instance%proj%dx, &
+               instance%proj%dy)
+
+         call mean_to_global(instance%ups,   &
+               routing_temp,   &
+               g_water_out,    &
+               instance%out_mask)
+          deallocate(upscale_temp,routing_temp)
+
+       endif
+
+       ! Sum water fluxes and convert if necessary ------------------------------
+
+       if (out_f%total_win) then
+          t_win  = sum(accum_temp)*instance%proj%dx*instance%proj%dy
+       endif
+
+       if (out_f%total_wout) then
+          t_wout = sum(ablat_temp)*instance%proj%dx*instance%proj%dy
+       endif
+    else
+       call glide_io_writeall(instance%model,instance%model)
+    end if
 
     ! ------------------------------------------------------------------------ 
     ! Upscaling of output
     ! ------------------------------------------------------------------------ 
 
-    ! Upscale the output orography field, and re-dimensionalise --------------
+    ! We now upscale all fields at once...
 
-    if (out_f%orog) call get_i_upscaled_fields(instance,orog=g_orog_out)
-
-    ! Use thickness to calculate albedo and ice fraction ---------------------
-
-    if (out_f%albedo.or.out_f%ice_frac.or.out_f%water_out) then
-      call get_i_upscaled_fields(instance,albedo=g_albedo,ice_frac=g_ice_frac)
-    endif
+    call get_i_upscaled_fields(instance,g_orog_out,g_albedo,g_ice_frac,g_veg_frac, &
+         g_snowice_frac,g_snowveg_frac,g_snow_depth)
 
     ! Calculate ice volume ---------------------------------------------------
 
@@ -265,137 +322,18 @@ contains
        ice_vol=sum(thck_temp)*instance%proj%dx*instance%proj%dy
     endif
 
-    ! Upscale water flux fields ----------------------------------------------
-    ! First water input (i.e. mass balance + ablation)
-
-    if (out_f%water_in) then
-
-      where (thck_temp>0.0)
-        upscale_temp=accum_temp
-      elsewhere
-        upscale_temp=0.0
-      endwhere
-
-      call mean_to_global(instance%ups,   &
-                          upscale_temp,   &
-                          g_water_in,     &
-                          instance%out_mask)
-
-    endif
-
-    ! Now water output (i.e. ablation) - and do routing
-
-    if (out_f%water_out) then
-
-      where (thck_temp>0.0)
-        upscale_temp=ablat_temp
-      elsewhere
-        upscale_temp=0.0
-      endwhere
-
-      call glide_get_usurf(instance%model,instance%local_orog)
-      call flow_router(instance%local_orog, &
-                       upscale_temp, &
-                       routing_temp, &
-                       instance%out_mask, &
-                       instance%proj%dx, &
-                       instance%proj%dy)
-
-      call mean_to_global(instance%ups,   &
-                          routing_temp,   &
-                          g_water_out,    &
-                          instance%out_mask)
-
-    endif
-
-    ! Sum water fluxes and convert if necessary ------------------------------
-
-    if (out_f%total_win) then
-      t_win  = sum(accum_temp)*instance%proj%dx*instance%proj%dy
-    endif
-
-    if (out_f%total_wout) then
-      t_wout = sum(ablat_temp)*instance%proj%dx*instance%proj%dy
-    endif
-
     ! Write glint data to file -----------------------------------------------
 
     call glint_io_writeall(instance,instance%model)
+    call glint_mbal_io_writeall(instance%mbal_accum,instance%model)
 
     ! Tidy up ----------------------------------------------------------------
 
-    deallocate(upscale_temp,accum_temp,ablat_temp,fudge_mask,routing_temp,thck_temp)
- 
+    if (allocated(accum_temp)) deallocate(accum_temp)
+    if (allocated(ablat_temp)) deallocate(ablat_temp)
+    deallocate(thck_temp)
+
   end subroutine glint_i_tstep
-
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-  subroutine get_i_upscaled_fields(instance,orog,albedo,ice_frac)
-
-    !*FD Upscales and returns certain fields, according to the 
-    !*FD arguments supplied
-
-    use paramets
-
-    type(glint_instance),            intent(in)  :: instance
-    real(rk),dimension(:,:),optional,intent(out) :: orog
-    real(rk),dimension(:,:),optional,intent(out) :: albedo
-    real(rk),dimension(:,:),optional,intent(out) :: ice_frac
-
-    real(rk),dimension(:,:),allocatable :: if_temp,upscale_temp
-
-	  ! Calculate orography
-
-    if (present(orog)) then
-      call mean_to_global(instance%ups_orog, &
-                          instance%model%geometry%usrf, &
-                          orog,    &
-                          instance%out_mask)
-      orog=thk0*orog
-    endif
-
-    if (present(albedo).or.present(ice_frac)) then
-
-      if (present(albedo)) then
-        allocate(if_temp(size(albedo,1),size(albedo,2)))
-      else
-        allocate(if_temp(size(ice_frac,1),size(ice_frac,2)))
-      endif
-      allocate(upscale_temp(instance%proj%nx,instance%proj%ny))
-
-      ! First, ice coverage on local grid 
-  
-      where (instance%model%geometry%thck>0.0)
-        upscale_temp=1.0
-      elsewhere
-        upscale_temp=0.0
-      endwhere
-
-      ! Upscale it...
-
-      call mean_to_global(instance%ups, &
-                          upscale_temp, &
-                          if_temp,    &
-                          instance%out_mask)
-
-      if (present(ice_frac)) ice_frac=if_temp
-
-    endif
-
-    ! Calculate albedo -------------------------------------------------------
-
-    if (present(albedo)) then 
-      where (if_temp>0.0)
-        albedo=instance%ice_albedo
-      elsewhere
-        albedo=0.0
-      endwhere
-    endif
-
-    if (allocated(if_temp)) deallocate(if_temp)
-    if (allocated(upscale_temp)) deallocate(upscale_temp)
-
-  end subroutine get_i_upscaled_fields
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

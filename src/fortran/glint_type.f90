@@ -148,6 +148,10 @@ module glint_type
     logical :: orog         !*FD Set if we need to upscale the orography
     logical :: albedo       !*FD Set if we need to upscale the albedo
     logical :: ice_frac     !*FD Set if we need to upscale the ice fraction
+    logical :: veg_frac     !*FD Set if we need to upscale the veg fraction
+    logical :: snowice_frac !*FD Set if we need to upscale the snow-covered ice fraction
+    logical :: snowveg_frac !*FD Set if we need to upscale the snow-covered veg fraction
+    logical :: snow_depth   !*FD Set if we need to upscale the snow depth
     logical :: water_in     !*FD Set if we need to upscale the input water flux
     logical :: water_out    !*FD Set if we need to upscale the output water flux
     logical :: total_win    !*FD Set if we need to sum the total water taken up by ice sheet
@@ -302,5 +306,116 @@ contains
     call write_log('')
 
   end subroutine glint_i_printconfig
+
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  subroutine get_i_upscaled_fields(instance,orog,albedo,ice_frac,veg_frac,snowice_frac,snowveg_frac,snow_depth)
+
+    !*FD Upscales and returns certain fields
+    !*FD 
+    !*FD \begin{itemize}
+    !*FD \item \texttt{orog} --- the orographic elevation (m)
+    !*FD \item \texttt{albedo} --- the albedo of ice/snow (this is only a notional value --- need to do
+    !*FD some work here)
+    !*FD \item \texttt{ice\_frac} --- The fraction covered by ice
+    !*FD \item \texttt{veg\_frac} --- The fraction of exposed vegetation
+    !*FD \item \texttt{snowice\_frac} --- The fraction of snow-covered ice
+    !*FD \item \texttt{snowveg\_frac} --- The fraction of snow-covered vegetation
+    !*FD \item \texttt{snow_depth} --- The mean snow-depth over those parts covered in snow (m w.e.)
+    !*FD \end{itemize}
+
+    use paramets
+
+    ! Arguments ----------------------------------------------------------------------------------------
+
+    type(glint_instance),   intent(in)  :: instance      !*FD the model instance
+    real(rk),dimension(:,:),intent(out) :: orog          !*FD the orographic elevation (m)
+    real(rk),dimension(:,:),intent(out) :: albedo        !*FD the albedo of ice/snow
+    real(rk),dimension(:,:),intent(out) :: ice_frac      !*FD The fraction covered by ice
+    real(rk),dimension(:,:),intent(out) :: veg_frac      !*FD The fraction of exposed vegetation
+    real(rk),dimension(:,:),intent(out) :: snowice_frac  !*FD The fraction of snow-covered ice
+    real(rk),dimension(:,:),intent(out) :: snowveg_frac  !*FD The fraction of snow-covered vegetation
+    real(rk),dimension(:,:),intent(out) :: snow_depth    !*FD The mean snow-depth over those 
+                                                         !*FD parts covered in snow (m w.e.)
+
+    ! Internal variables -------------------------------------------------------------------------------
+
+    real(rk),dimension(:,:),allocatable :: temp
+
+    ! --------------------------------------------------------------------------------------------------
+    ! Orography
+
+    call mean_to_global(instance%ups_orog, &
+         instance%model%geometry%usrf, &
+         orog,    &
+         instance%out_mask)
+    orog=thk0*orog
+
+    allocate(temp(instance%proj%nx,instance%proj%ny))
+
+    ! Ice-no-snow fraction
+    where (instance%mbal_accum%snowd==0.0.and.instance%model%geometry%thck>0.0)
+       temp=1.0
+    elsewhere
+       temp=0.0
+    endwhere
+    call mean_to_global(instance%ups, &
+         temp, &
+         ice_frac,    &
+         instance%out_mask)
+
+    ! Ice-with-snow fraction
+    where (instance%mbal_accum%snowd>0.0.and.instance%model%geometry%thck>0.0)
+       temp=1.0
+    elsewhere
+       temp=0.0
+    endwhere
+    call mean_to_global(instance%ups, &
+         temp, &
+         snowice_frac,    &
+         instance%out_mask)
+
+    ! Veg-with-snow fraction (if ice <10m thick)
+    where (instance%mbal_accum%snowd>0.0.and.instance%model%geometry%thck<=(10.0/thk0))
+       temp=1.0
+    elsewhere
+       temp=0.0
+    endwhere
+    call mean_to_global(instance%ups, &
+         temp, &
+         snowveg_frac,    &
+         instance%out_mask)
+
+    ! Remainder is veg only
+    veg_frac=1.0-ice_frac-snowice_frac-snowveg_frac
+
+    ! Snow depth
+
+    call mean_to_global(instance%ups, &
+         instance%mbal_accum%snowd, &
+         snow_depth,    &
+         instance%out_mask)
+
+    ! Albedo
+
+    where ((ice_frac+snowice_frac)>0.0)
+       albedo=instance%ice_albedo
+    elsewhere
+       albedo=0.0
+    endwhere
+
+    deallocate(temp)
+
+  end subroutine get_i_upscaled_fields
+
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  logical function glint_has_snow_model(instance)
+
+    type(glint_instance),            intent(in)  :: instance
+
+    glint_has_snow_model=mbal_has_snow_model(instance%mbal_accum%mbal)
+
+  end function glint_has_snow_model
 
 end module glint_type

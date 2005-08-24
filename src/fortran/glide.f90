@@ -90,6 +90,10 @@ contains
     ! load sigma file
     call glide_load_sigma(model,dummyunit)
 
+    ! Read alternate sigma levels from
+    ! config file, if necessary
+    call glide_read_sigma(model,config)
+
     ! netCDF I/O
     if (trim(model%funits%ncfile).eq.'') then
        ncconfig => config
@@ -196,7 +200,7 @@ contains
 
           call slipvelo(model, &
                model%options%whichslip,model%options%whichbtrc, &
-                model%velocity% btrc,     &
+               model%velocity% btrc,     &
                model%velocity% ubas,     &
                model%velocity% vbas)
 
