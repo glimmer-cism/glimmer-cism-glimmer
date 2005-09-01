@@ -878,7 +878,7 @@ contains
 
     use glimmer_global, only : dp 
     use paramets, only : thk0
-
+    use glide_thck
     implicit none
 
     type(glide_global_type) :: model
@@ -1064,6 +1064,12 @@ contains
 
     ! How to call the flow router.
     ! call advectflow(bwat,phi,bmlt,model%geometry%mask)
+
+    ! now also calculate basal water in velocity coord system
+    call stagvarb(model%temper%bwat, &
+         model%temper%stagbwat ,&
+         model%general%  ewn, &
+         model%general%  nsn)
 
   contains
     subroutine smooth_bwat(ewm,ew,ewp,nsm,ns,nsp)

@@ -1,3 +1,13 @@
+2005-09-01 Magnus Hagdorn
+ * glide_types.f90: new variable for basal water depth in velo grid
+ * glide_velo.f90: rename calcbtrc to calc_btrc and make it public, use
+   stagbwat; change API of slipvelo, btrc is now calculated after temps
+   have been calculated
+ * glide.f90: slipvelo API changed, calculate basal traction param after
+   temp calculations
+ * glide_temp.f90: also transform basal water depth to velo grid
+ * glide_thck.f90: slipvelo API changed
+
 2005-08-11 Magnus Hagdorn
  * eis_ela.f90: ablation over ice shelves wasn't scaled properly
 

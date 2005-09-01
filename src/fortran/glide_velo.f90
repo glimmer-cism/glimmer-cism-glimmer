@@ -51,7 +51,7 @@ module glide_velo
   use physcon, only : rhoi, grav, gn
   use paramets, only : thk0, len0, vis0, vel0, acc0
 
-  private vertintg, patebudd, calcbtrc
+  private vertintg, patebudd
 
   ! some private parameters
   integer, private, parameter :: p1 = gn+1
@@ -267,7 +267,7 @@ contains
   !*****************************************************************************
   ! old velo functions come here
   !*****************************************************************************
-  subroutine slipvelo(model,flag1,flag2,btrc,ubas,vbas)
+  subroutine slipvelo(model,flag1,btrc,ubas,vbas)
 
     !*FD Calculate the basal slip velocity and the value of $B$, the free parameter
     !*FD in the basal velocity equation (though I'm not sure that $B$ is used anywhere 
@@ -280,12 +280,10 @@ contains
     !------------------------------------------------------------------------------------
 
     type(glide_global_type) :: model                  !*FD model instance
-    integer, intent(in)                 :: flag1,flag2!*FD \texttt{flag1} sets the calculation
+    integer, intent(in)                 :: flag1      !*FD \texttt{flag1} sets the calculation
                                                       !*FD method to use for the basal velocity
                                                       !*FD (corresponds to \texttt{whichslip} elsewhere
-                                                      !*FD in the model. \texttt{flag2} controls the
-                                                      !*FD calculation of the basal slip coefficient $B$,
-                                                      !*FD which corresponds to \texttt{whichbtrc} elsewhere.
+                                                      !*FD in the model. 
     real(dp),dimension(:,:),intent(out)   :: btrc     !*FD The basal slip coefficient.
     real(dp),dimension(:,:),intent(out)   :: ubas     !*FD The $x$ basal velocity (scaled)
     real(dp),dimension(:,:),intent(out)   :: vbas     !*FD The $y$ basal velocity (scaled)
@@ -310,8 +308,6 @@ contains
     
       ! Linear function of gravitational driving stress ---------------------------------
 
-      call calcbtrc(model,flag2,btrc)
-
       where (model%numerics%thklim < model%geomderv%stagthck)
         ubas = btrc * rhograv * model%geomderv%stagthck * model%geomderv%dusrfdew
         vbas = btrc * rhograv * model%geomderv%stagthck * model%geomderv%dusrfdns
@@ -324,8 +320,6 @@ contains
 
       ! *tp* option to be used in picard iteration for thck
       ! *tp* start by find constants which dont vary in iteration
-
-      call calcbtrc(model,flag2,btrc)
 
       model%velowk%fslip = rhograv * btrc
 
@@ -997,7 +991,7 @@ contains
 
 !------------------------------------------------------------------------------------------
 
-  subroutine calcbtrc(model,flag,btrc)
+  subroutine calc_btrc(model,flag,btrc)
     !*FD Calculate the value of $B$ used for basal sliding calculations.
     use glimmer_global, only : dp 
     implicit none
@@ -1028,8 +1022,7 @@ contains
        ! constant where basal melt water is present
        do ns = 1,nsn-1
           do ew = 1,ewn-1
-             stagbwat = sum(model%temper%bwat(ew:ew+1,ns:ns+1))
-             if (0.0d0 < stagbwat) then
+             if (0.0d0 < model%temper%stagbwat(ew,ns)) then
                 btrc(ew,ns) = model%velowk%btrac_const
              else
                 btrc(ew,ns) = 0.0d0
@@ -1040,9 +1033,7 @@ contains
        ! function of basal water depth
        do ns = 1,nsn-1
           do ew = 1,ewn-1
-             stagbwat = sum(model%temper%bwat(ew:ew+1,ns:ns+1))
-
-             if (0.0d0 < stagbwat) then
+             if (0.0d0 < model%temper%stagbwat(ew,ns)) then
                 btrc(ew,ns) = model%velowk%c(2) * tanh(model%velowk%c(3) * &
                      (stagbwat - model%velowk%c(4))) + model%velowk%c(1)
                 if (0.0d0 > sum(model%isos%relx(ew:ew+1,ns:ns+1))) then
@@ -1072,7 +1063,7 @@ contains
        btrc = 0.0d0
     end select
 
-  end subroutine calcbtrc
+  end subroutine calc_btrc
 
   subroutine calc_basal_shear(model)
     !*FD calculate basal shear stress: tau_{x,y} = -ro_i*g*H*d(H+h)/d{x,y}

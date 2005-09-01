@@ -206,7 +206,7 @@ contains
             model%numerics%time == model%numerics%tinc)) then
 
           call slipvelo(model, &
-               model%options%whichslip,model%options%whichbtrc, &
+               model%options%whichslip, &
                 model%velocity% btrc,     &
                model%velocity% ubas,     &
                model%velocity% vbas)
@@ -266,6 +266,12 @@ contains
 #ifdef PROFILING
     call glide_prof_stop(model,model%glide_prof%temperature)
 #endif
+
+    ! ------------------------------------------------------------------------ 
+    ! Calculate basal traction factor
+    ! ------------------------------------------------------------------------ 
+    call calc_btrc(model,model%options%whichbtrc,model%velocity%btrc)
+
   end subroutine glide_tstep_p1
 
 

@@ -296,6 +296,7 @@ module glide_types
     real(dp),dimension(:,:),  pointer :: bheatflx => null() !*FD basal heat flux
     real(dp),dimension(:,:,:),pointer :: flwa => null() !*FD Glenn's $A$.
     real(dp),dimension(:,:),  pointer :: bwat => null() !*FD Basal water depth(?)
+    real(dp),dimension(:,:),  pointer :: stagbwat => null() !*FD Basal water depth(?) in velo grid
     real(dp),dimension(:,:),  pointer :: bmlt => null() !*FD Basal melt-rate(?)
     integer  :: niter   = 0      !*FD
     real(sp) :: perturb = 0.0    !*FD
@@ -606,6 +607,7 @@ contains
     allocate(model%temper%flwa(upn,ewn,nsn))   
     allocate(model%temper%bheatflx(ewn,nsn));         model%temper%bheatflx = 0.0
     allocate(model%temper%bwat(ewn,nsn));             model%temper%bwat = 0.0
+    allocate(model%temper%stagbwat(ewn-1,nsn-1));     model%temper%stagbwat = 0.0
     allocate(model%temper%bmlt(ewn,nsn));             model%temper%bmlt = 0.0
 
     allocate(model%lithot%temp(1:ewn,1:nsn,model%lithot%nlayer)); model%lithot%temp = 0.0
@@ -683,6 +685,7 @@ contains
     deallocate(model%temper%flwa)
     deallocate(model%temper%bheatflx)
     deallocate(model%temper%bwat)
+    deallocate(model%temper%stagbwat)
     deallocate(model%temper%bmlt)
 
     deallocate(model%lithot%temp)

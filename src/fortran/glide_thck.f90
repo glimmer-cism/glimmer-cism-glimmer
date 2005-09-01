@@ -95,7 +95,7 @@ contains
        ! calculate basal velos
        if (newtemps) then
           call slipvelo(model,                &
-               1,model%options%whichbtrc,     &
+               1,                             &
                model%velocity% btrc,          &
                model%velocity% ubas,          &
                model%velocity% vbas)
@@ -103,7 +103,7 @@ contains
           call velo_integrate_flwa(model%velowk,model%geomderv%stagthck,model%temper%flwa)
        end if
        call slipvelo(model,                &
-            2,model%options%whichbtrc,     &
+            2,                             &
             model%velocity% btrc,          &
             model%velocity% ubas,          &
             model%velocity% vbas)
@@ -117,7 +117,7 @@ contains
 
        ! calculate horizontal velocity field
        call slipvelo(model,                &
-            3,model%options%whichbtrc,     &
+            3,                             &
             model%velocity%btrc,           &
             model%velocity%ubas,           &
             model%velocity%vbas)
@@ -161,7 +161,7 @@ contains
        ! calculate basal velos
        if (newtemps) then
           call slipvelo(model,                &
-               1,model%options%whichbtrc,     &
+               1,                             &
                model%velocity% btrc,          &
                model%velocity% ubas,          &
                model%velocity% vbas)
@@ -193,7 +193,7 @@ contains
                model%geomderv% dthckdns)
 
           call slipvelo(model,                &
-               2,model%options%whichbtrc,     &
+               2,                             &
                model%velocity% btrc,          &
                model%velocity% ubas,          &
                model%velocity% vbas)
@@ -222,7 +222,7 @@ contains
 
        ! calculate horizontal velocity field
        call slipvelo(model,                &
-            3,model%options%whichbtrc,     &
+            3,                             &
             model%velocity%btrc,           &
             model%velocity%ubas,           &
             model%velocity%vbas)
