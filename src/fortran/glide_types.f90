@@ -604,16 +604,16 @@ contains
     ! Allocate appropriately
 
     allocate(model%temper%temp(upn,0:ewn+1,0:nsn+1)); model%temper%temp = 0.0
-    allocate(model%temper%flwa(upn,ewn,nsn))   
-    allocate(model%temper%bheatflx(ewn,nsn));         model%temper%bheatflx = 0.0
-    allocate(model%temper%bwat(ewn,nsn));             model%temper%bwat = 0.0
-    allocate(model%temper%stagbwat(ewn-1,nsn-1));     model%temper%stagbwat = 0.0
-    allocate(model%temper%bmlt(ewn,nsn));             model%temper%bmlt = 0.0
+    call coordsystem_allocate(model%general%ice_grid, upn, model%temper%flwa)
+    call coordsystem_allocate(model%general%ice_grid, model%temper%bheatflx)
+    call coordsystem_allocate(model%general%ice_grid, model%temper%bwat)
+    call coordsystem_allocate(model%general%velo_grid, model%temper%stagbwat)
+    call coordsystem_allocate(model%general%ice_grid, model%temper%bmlt)
 
     allocate(model%lithot%temp(1:ewn,1:nsn,model%lithot%nlayer)); model%lithot%temp = 0.0
-    allocate(model%lithot%mask(1:ewn,1:nsn));  model%lithot%mask = .false.
     allocate(model%lithot%deltaz(model%lithot%nlayer)); model%lithot%deltaz = 0.0
     allocate(model%lithot%zfactors(3,model%lithot%nlayer)); model%lithot%zfactors = 0.0
+    call coordsystem_allocate(model%general%ice_grid, model%lithot%mask)
     call new_sparse_matrix((model%lithot%nlayer-1)*ewn*nsn*7+ewn*nsn+1,model%lithot%fd_coeff)
     call new_sparse_matrix((model%lithot%nlayer-1)*ewn*nsn*7+ewn*nsn+1,model%lithot%fd_coeff_slap)
     allocate(model%lithot%rhs(model%lithot%nlayer*ewn*nsn))
@@ -622,46 +622,46 @@ contains
     allocate(model%lithot%rwork(model%lithot%mxnelt))
     allocate(model%lithot%iwork(model%lithot%mxnelt))
 
-    allocate(model%velocity%uvel(upn,ewn-1,nsn-1));   model%velocity%uvel = 0.0d0
-    allocate(model%velocity%vvel(upn,ewn-1,nsn-1));   model%velocity%vvel = 0.0d0
-    allocate(model%velocity%wvel(upn,ewn,nsn));       model%velocity%wvel = 0.0d0
-    allocate(model%velocity%wgrd(upn,ewn,nsn));       model%velocity%wgrd = 0.0d0
-    allocate(model%velocity%uflx(ewn-1,nsn-1));       model%velocity%uflx = 0.0d0
-    allocate(model%velocity%vflx(ewn-1,nsn-1));       model%velocity%vflx = 0.0d0
-    allocate(model%velocity%diffu(ewn-1,nsn-1));      model%velocity%diffu = 0.0d0
-    allocate(model%velocity%btrc(ewn-1,nsn-1));       model%velocity%btrc = 0.0d0
-    allocate(model%velocity%ubas(ewn-1,nsn-1));       model%velocity%ubas = 0.0d0
-    allocate(model%velocity%vbas(ewn-1,nsn-1));       model%velocity%vbas = 0.0d0
-    allocate(model%velocity%tau_x(ewn-1,nsn-1));      model%velocity%tau_x = 0.0d0
-    allocate(model%velocity%tau_y(ewn-1,nsn-1));      model%velocity%tau_y = 0.0d0
+    call coordsystem_allocate(model%general%velo_grid, upn, model%velocity%uvel)
+    call coordsystem_allocate(model%general%velo_grid, upn, model%velocity%vvel)
+    call coordsystem_allocate(model%general%ice_grid, upn, model%velocity%wvel)
+    call coordsystem_allocate(model%general%ice_grid, upn, model%velocity%wgrd)
+    call coordsystem_allocate(model%general%velo_grid, model%velocity%uflx)
+    call coordsystem_allocate(model%general%velo_grid, model%velocity%vflx)
+    call coordsystem_allocate(model%general%velo_grid, model%velocity%diffu)
+    call coordsystem_allocate(model%general%velo_grid, model%velocity%btrc)
+    call coordsystem_allocate(model%general%velo_grid, model%velocity%ubas)
+    call coordsystem_allocate(model%general%velo_grid, model%velocity%vbas)
+    call coordsystem_allocate(model%general%velo_grid, model%velocity%tau_x)
+    call coordsystem_allocate(model%general%velo_grid, model%velocity%tau_y)
 
-    allocate(model%climate%acab(ewn,nsn));            model%climate%acab = 0.0
-    allocate(model%climate%artm(ewn,nsn));            model%climate%artm = 0.0
-    allocate(model%climate%lati(ewn,nsn));            model%climate%lati = 0.0
-    allocate(model%climate%loni(ewn,nsn));            model%climate%loni = 0.0
+    call coordsystem_allocate(model%general%ice_grid, model%climate%acab)
+    call coordsystem_allocate(model%general%ice_grid, model%climate%artm)
+    call coordsystem_allocate(model%general%ice_grid, model%climate%lati)
+    call coordsystem_allocate(model%general%ice_grid, model%climate%loni)
 
-    allocate(model%geomderv%dthckdew(ewn-1,nsn-1));   model%geomderv%dthckdew = 0.0d0 
-    allocate(model%geomderv%dusrfdew(ewn-1,nsn-1));   model%geomderv%dusrfdew = 0.0d0
-    allocate(model%geomderv%dthckdns(ewn-1,nsn-1));   model%geomderv%dthckdns = 0.0d0
-    allocate(model%geomderv%dusrfdns(ewn-1,nsn-1));   model%geomderv%dusrfdns = 0.0d0
-    allocate(model%geomderv%dthckdtm(ewn,nsn));       model%geomderv%dthckdtm = 0.0d0
-    allocate(model%geomderv%dusrfdtm(ewn,nsn));       model%geomderv%dusrfdtm = 0.0d0
-    allocate(model%geomderv%stagthck(ewn-1,nsn-1));   model%geomderv%stagthck = 0.0d0
+    call coordsystem_allocate(model%general%velo_grid, model%geomderv%dthckdew)
+    call coordsystem_allocate(model%general%velo_grid, model%geomderv%dusrfdew)
+    call coordsystem_allocate(model%general%velo_grid, model%geomderv%dthckdns)
+    call coordsystem_allocate(model%general%velo_grid, model%geomderv%dusrfdns)
+    call coordsystem_allocate(model%general%ice_grid, model%geomderv%dthckdtm)
+    call coordsystem_allocate(model%general%ice_grid, model%geomderv%dusrfdtm)
+    call coordsystem_allocate(model%general%velo_grid, model%geomderv%stagthck)
   
-    allocate(model%geometry%temporary0(ewn-1,nsn-1));
-    allocate(model%geometry%temporary1(ewn,nsn));
-    allocate(model%geometry%thck(ewn,nsn));           model%geometry%thck = 0.0d0
-    allocate(model%geometry%usrf(ewn,nsn));           model%geometry%usrf = 0.0d0
-    allocate(model%geometry%lsrf(ewn,nsn));           model%geometry%lsrf = 0.0d0
-    allocate(model%geometry%topg(ewn,nsn));           model%geometry%topg = 0.0d0
-    allocate(model%geometry%mask(ewn,nsn));           model%geometry%mask = 0
-    allocate(model%geometry%thkmask(ewn,nsn));        model%geometry%thkmask = 0
+    call coordsystem_allocate(model%general%velo_grid, model%geometry%temporary0)
+    call coordsystem_allocate(model%general%ice_grid, model%geometry%temporary1)
+    call coordsystem_allocate(model%general%ice_grid, model%geometry%thck)
+    call coordsystem_allocate(model%general%ice_grid, model%geometry%usrf)
+    call coordsystem_allocate(model%general%ice_grid, model%geometry%lsrf)
+    call coordsystem_allocate(model%general%ice_grid, model%geometry%topg)
+    call coordsystem_allocate(model%general%ice_grid, model%geometry%mask)
+    call coordsystem_allocate(model%general%ice_grid, model%geometry%thkmask)
 
     allocate(model%thckwk%olds(ewn,nsn,model%thckwk%nwhich))
-                                                      model%thckwk%olds = 0.0d0
-    allocate(model%thckwk%oldthck(ewn,nsn));          model%thckwk%oldthck = 0.0d0
-    allocate(model%thckwk%oldthck2(ewn,nsn));         model%thckwk%oldthck2 = 0.0d0
-    allocate(model%thckwk%basestate(ewn,nsn));        model%thckwk%basestate = 0.0d0
+    model%thckwk%olds = 0.0d0
+    call coordsystem_allocate(model%general%ice_grid, model%thckwk%oldthck)
+    call coordsystem_allocate(model%general%ice_grid, model%thckwk%oldthck2)
+    call coordsystem_allocate(model%general%ice_grid, model%thckwk%basestate)
     allocate(model%numerics%sigma(upn))
     
     ! allocate memory for sparse matrix

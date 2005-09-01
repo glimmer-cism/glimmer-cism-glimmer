@@ -1,4 +1,9 @@
 2005-09-01 Magnus Hagdorn
+ * glimmer_coordinates.f90: add allocation procedures for many data types and
+   provide generic interface
+ * glide_types.f90: use glimmer_coordinate field allocation procedures
+
+2005-09-01 Magnus Hagdorn
  * glide_types.f90: new variable for basal water depth in velo grid
  * glide_velo.f90: rename calcbtrc to calc_btrc and make it public, use
    stagbwat; change API of slipvelo, btrc is now calculated after temps

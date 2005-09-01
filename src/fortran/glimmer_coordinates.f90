@@ -44,7 +44,7 @@
 module glimmer_coordinates
 
   !*FD module for handling regular coordinate systems
-  use glimmer_global, only: dp
+  use glimmer_global, only: dp, sp
 
   type coord_point
      !*FD  point type
@@ -67,6 +67,11 @@ module glimmer_coordinates
   ! interface of creating new coord system
   interface coordsystem_new
      module procedure coordsystem_new_real, coordsystem_new_pt
+  end interface
+
+  interface coordsystem_allocate
+     module procedure coordsystem_allocate_d, coordsystem_allocate_s, coordsystem_allocate_i, coordsystem_allocate_l, &
+          coordsystem_allocate_d2, coordsystem_allocate_s2
   end interface
 
   character(len=100), private :: message
@@ -245,13 +250,66 @@ contains
     coordsystem_delinearise2d%pt(2) = (ind-1)/coord%size%pt(1) + 1
   end function coordsystem_delinearise2d
 
-  subroutine coordsystem_allocate(coord, field)
+  subroutine coordsystem_allocate_d(coord, field)
     !*FD allocate memory to pointer field
     implicit none
     type(coordsystem_type), intent(in) :: coord !*FD coordinate system
     real(kind=dp), dimension(:,:), pointer :: field !*FD unallocated field
 
     allocate(field(coord%size%pt(1),coord%size%pt(2)))
-  end subroutine coordsystem_allocate
+    field = 0.d0
+  end subroutine coordsystem_allocate_d
+  
+  subroutine coordsystem_allocate_s(coord, field)
+    !*FD allocate memory to pointer field
+    implicit none
+    type(coordsystem_type), intent(in) :: coord !*FD coordinate system
+    real(kind=sp), dimension(:,:), pointer :: field !*FD unallocated field
+
+    allocate(field(coord%size%pt(1),coord%size%pt(2)))
+    field = 0.e0
+  end subroutine coordsystem_allocate_s
+
+  subroutine coordsystem_allocate_i(coord, field)
+    !*FD allocate memory to pointer field
+    implicit none
+    type(coordsystem_type), intent(in) :: coord !*FD coordinate system
+    integer, dimension(:,:), pointer :: field !*FD unallocated field
+
+    allocate(field(coord%size%pt(1),coord%size%pt(2)))
+    field = 0
+  end subroutine coordsystem_allocate_i
+
+  subroutine coordsystem_allocate_l(coord, field)
+    !*FD allocate memory to pointer field
+    implicit none
+    type(coordsystem_type), intent(in) :: coord !*FD coordinate system
+    logical, dimension(:,:), pointer :: field !*FD unallocated field
+
+    allocate(field(coord%size%pt(1),coord%size%pt(2)))
+    field = .FALSE.
+  end subroutine coordsystem_allocate_l
+
+  subroutine coordsystem_allocate_d2(coord, nup, field)
+    !*FD allocate memory to pointer field
+    implicit none
+    type(coordsystem_type), intent(in) :: coord !*FD coordinate system
+    integer, intent(in) :: nup
+    real(kind=dp), dimension(:,:,:), pointer :: field !*FD unallocated field
+
+    allocate(field(nup,coord%size%pt(1),coord%size%pt(2)))
+    field = 0.d0
+  end subroutine coordsystem_allocate_d2
+
+  subroutine coordsystem_allocate_s2(coord, nup, field)
+    !*FD allocate memory to pointer field
+    implicit none
+    type(coordsystem_type), intent(in) :: coord !*FD coordinate system
+    integer, intent(in) :: nup
+    real(kind=sp), dimension(:,:,:), pointer :: field !*FD unallocated field
+
+    allocate(field(nup,coord%size%pt(1),coord%size%pt(2)))
+    field = 0.d0
+  end subroutine coordsystem_allocate_s2
 
 end module glimmer_coordinates
