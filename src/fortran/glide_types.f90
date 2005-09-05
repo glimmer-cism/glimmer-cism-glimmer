@@ -312,12 +312,15 @@ module glide_types
      real(dp),dimension(:,:,:),pointer :: temp => null()    !*FD Three-dimensional temperature field.
      logical, dimension(:,:), pointer :: mask => null()     !*FD whether the point has been ice covered at some time
 
+     integer :: num_dim = 1                                 !*FD either 1 or 3 for 1D/3D calculations
+
      ! The sparse matrix and linearised arrays
      type(sparse_matrix_type) :: fd_coeff, fd_coeff_slap
      integer :: all_bar_top
      real(dp), dimension(:), pointer :: rhs
      real(dp), dimension(:), pointer :: answer
-     
+     real(dp), dimension(:), pointer :: supd,diag,subd
+
      ! work arrays for solver
      real(dp), dimension(:), pointer :: rwork
      integer, dimension(:), pointer :: iwork
@@ -611,16 +614,7 @@ contains
     call coordsystem_allocate(model%general%ice_grid, model%temper%bmlt)
 
     allocate(model%lithot%temp(1:ewn,1:nsn,model%lithot%nlayer)); model%lithot%temp = 0.0
-    allocate(model%lithot%deltaz(model%lithot%nlayer)); model%lithot%deltaz = 0.0
-    allocate(model%lithot%zfactors(3,model%lithot%nlayer)); model%lithot%zfactors = 0.0
     call coordsystem_allocate(model%general%ice_grid, model%lithot%mask)
-    call new_sparse_matrix((model%lithot%nlayer-1)*ewn*nsn*7+ewn*nsn+1,model%lithot%fd_coeff)
-    call new_sparse_matrix((model%lithot%nlayer-1)*ewn*nsn*7+ewn*nsn+1,model%lithot%fd_coeff_slap)
-    allocate(model%lithot%rhs(model%lithot%nlayer*ewn*nsn))
-    allocate(model%lithot%answer(model%lithot%nlayer*ewn*nsn))
-    model%lithot%mxnelt = 20 * model%lithot%nlayer*ewn*nsn
-    allocate(model%lithot%rwork(model%lithot%mxnelt))
-    allocate(model%lithot%iwork(model%lithot%mxnelt))
 
     call coordsystem_allocate(model%general%velo_grid, upn, model%velocity%uvel)
     call coordsystem_allocate(model%general%velo_grid, upn, model%velocity%vvel)
@@ -690,12 +684,6 @@ contains
 
     deallocate(model%lithot%temp)
     deallocate(model%lithot%mask)
-    deallocate(model%lithot%deltaz)
-    deallocate(model%lithot%zfactors)
-    call del_sparse_matrix(model%lithot%fd_coeff)
-    call del_sparse_matrix(model%lithot%fd_coeff_slap)
-    deallocate(model%lithot%rhs)
-    deallocate(model%lithot%answer)
 
     deallocate(model%velocity%uvel)
     deallocate(model%velocity%vvel)

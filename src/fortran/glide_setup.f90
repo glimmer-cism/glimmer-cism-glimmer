@@ -699,6 +699,7 @@ contains
     type(ConfigSection), pointer :: section
     type(glide_global_type)  :: model
 
+    call GetValue(section,'num_dim',model%lithot%num_dim)
     call GetValue(section,'nlayer',model%lithot%nlayer)
     call GetValue(section,'surft',model%lithot%surft)
     call GetValue(section,'rock_base',model%lithot%rock_base)
@@ -718,8 +719,12 @@ contains
     if (model%options%gthf.gt.0) then
        call write_log('GTHF configuration')
        call write_log('------------------')
-       if (model%options%gthf.gt.1) then
+       if (model%lithot%num_dim.eq.1) then
+          call write_log('solve 1D diffusion equation')
+       else if (model%lithot%num_dim.eq.3) then          
           call write_log('solve 3D diffusion equation')
+       else
+          call write_log('Wrong number of dimensions.',GM_FATAL,__FILE__,__LINE__)
        end if
        write(message,*) 'number of layers                     : ',model%lithot%nlayer
        call write_log(message)

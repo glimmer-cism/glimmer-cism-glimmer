@@ -1,3 +1,16 @@
+2005-09-05 Magnus Hagdorn
+ * glide_lithot.f90: move 3D code to glide_lithot3d.f90 and provide wrapper
+   functions to 1D and 3D solvers
+ * glide_lithot1d.f90: solve thermal diffusion eqn in 1D
+ * glide_lithot3d.f90: solve thermal diffusion eqn in 3D
+ * Makefile.am: add new files
+ * glide_types.f90: add variables for 1D solver and move some memory allocation
+   to the initialisation of the 1D/3D solver
+ * glide_setup.f90: select 1D/3D solver at run-time
+ * glide_temp.f90: move tri-diagonal matrix solver to glimmer_utils.f90
+ * glimmer_utils.f90: added tri-diagonal matrix solver
+ * glide.tex: updated docs
+
 2005-09-01 Magnus Hagdorn
  * glimmer_coordinates.f90: add allocation procedures for many data types and
    provide generic interface

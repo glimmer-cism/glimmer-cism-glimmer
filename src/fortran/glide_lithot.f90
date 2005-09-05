@@ -44,19 +44,25 @@
 
 module glide_lithot
 
-private :: linearise
 
 contains  
   subroutine init_lithot(model)
     use glide_types
     use glide_setup
-    use paramets, only: len0,tim0
+    use paramets, only: tim0
+    use glimmer_log
+    use glide_lithot1d
+    use glide_lithot3d
     implicit none
     type(glide_global_type),intent(inout) :: model       !*FD model instance
 
     ! local variables
-    integer i,j,k,r,icount,jcount
+    integer k
     real(kind=dp) :: factor
+
+    ! allocate memory for common arrays
+    allocate(model%lithot%deltaz(model%lithot%nlayer)); model%lithot%deltaz = 0.0
+    allocate(model%lithot%zfactors(3,model%lithot%nlayer)); model%lithot%zfactors = 0.0    
 
     ! set up vertical grid
     do k=1,model%lithot%nlayer
@@ -67,9 +73,7 @@ contains
     ! calculate diffusion coefficient
     model%lithot%diffu = model%lithot%con_r/(model%lithot%rho_r*model%lithot%shc_r)
 
-    ! set up factors for finite differences
-    model%lithot%xfactor = 0.5*model%lithot%diffu*tim0*model%numerics%dt / (model%numerics%dew*len0)**2
-    model%lithot%yfactor = 0.5*model%lithot%diffu*tim0*model%numerics%dt / (model%numerics%dns*len0)**2
+    ! set up factors for vertical finite differences
     do k=2,model%lithot%nlayer-1
        model%lithot%zfactors(1,k) =  model%lithot%diffu*tim0*model%numerics%dt / &
             ((model%lithot%deltaz(k)-model%lithot%deltaz(k-1)) * (model%lithot%deltaz(k+1)-model%lithot%deltaz(k-1)))
@@ -90,76 +94,14 @@ contains
        end do
     end if
 
-    ! calculate finite difference coefficient matrix
-    ! top face
-    ! simply match air temperature where no ice and basal temperature where ice
-    k = 1
-    do j=1,model%general%nsn
-       do i=1,model%general%ewn
-          r = linearise(model,i,j,k)
-          call sparse_insert_val(model%lithot%fd_coeff,r,r, 1.d0)
-       end do
-    end do
-    do k=2, model%lithot%nlayer-1
-       do j=1,model%general%nsn
-          do i=1,model%general%ewn
-             icount = 0
-             jcount = 0
-             r = linearise(model,i,j,k)
-             ! i-1,j,k
-             if (i.ne.1) then
-                call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i-1,j,k), -model%lithot%xfactor)
-                icount = icount + 1
-             end if
-             ! i+1, j, k
-             if (i.ne.model%general%ewn) then
-                call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i+1,j,k), -model%lithot%xfactor)
-                icount = icount + 1
-             end if
-             ! i,j-1,k
-             if (j.ne.1) then
-                call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j-1,k), -model%lithot%yfactor)
-                jcount = jcount + 1
-             end if
-             ! i,j+1,k
-             if (j.ne.model%general%nsn) then
-                call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j+1,k), -model%lithot%yfactor)
-                jcount = jcount + 1
-             end if
-             ! i,j,k-1
-             call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j,k-1), -model%lithot%zfactors(1,k))
-             ! i,j,k+1
-             call sparse_insert_val(model%lithot%fd_coeff,r,linearise(model,i,j,k+1), -model%lithot%zfactors(3,k))
-             ! i,j,k
-             call sparse_insert_val(model%lithot%fd_coeff,r,r, &
-                  icount*model%lithot%xfactor + jcount*model%lithot%yfactor + model%lithot%zfactors(2,k) + 1.)
-          end do
-       end do
-    end do
-    
-    ! bottom face
-    ! keep constant
-    k = model%lithot%nlayer
-    do j=1,model%general%nsn
-       do i=1,model%general%ewn
-          r = linearise(model,i,j,k)
-          call sparse_insert_val(model%lithot%fd_coeff,r,r, 1.d0)
-       end do
-    end do
 
-    ! convert from SLAP Triad to SLAP Column format
-    call copy_sparse_matrix(model%lithot%fd_coeff,model%lithot%fd_coeff_slap)
-    call ds2y(model%general%nsn*model%general%ewn*model%lithot%nlayer,model%lithot%fd_coeff_slap%n, &
-         model%lithot%fd_coeff_slap%col,model%lithot%fd_coeff_slap%row,model%lithot%fd_coeff_slap%val, 0)
-
-    ! initialise result vector
-    do k=1,model%lithot%nlayer
-       do j=1,model%general%nsn
-          do i=1,model%general%ewn
-             model%lithot%answer(linearise(model,i,j,k)) = model%lithot%temp(i,j,k)
-          end do
-       end do
-    end do
+    if (model%lithot%num_dim.eq.1) then
+       call init_lithot1d(model)
+    else if (model%lithot%num_dim.eq.3) then
+       call init_lithot3d(model)
+    else
+       call write_log('Wrong number of dimensions.',GM_FATAL,__FILE__,__LINE__)
+    end if
   end subroutine init_lithot    
 
   subroutine spinup_lithot(model)
@@ -183,63 +125,19 @@ contains
 
   subroutine calc_lithot(model)
     use glide_types
-    use glide_mask
-    use glide_stop
-    use paramets, only: tim0
+    use glimmer_log
+    use glide_lithot1d
+    use glide_lithot3d
     implicit none
     type(glide_global_type),intent(inout) :: model       !*FD model instance
 
-    integer i,j,k,r
-    integer iter
-    real(dp) err
-    real(dp), parameter :: tol = 1.0d-12
-    integer, parameter :: isym = 0, itol = 2, itmax = 101
-    integer :: ierr
-
-    ! calculate RHS
-    call sparse_matrix_vec_prod(model%lithot%fd_coeff,model%lithot%answer,model%lithot%rhs)
-    model%lithot%rhs = -model%lithot%rhs + 2. * model%lithot%answer
-    ! calc RHS on upper boundary
-    k = 1
-    do j=1,model%general%nsn
-       do i=1,model%general%ewn
-          r = linearise(model,i,j,k)
-          if (is_ground(model%geometry%thkmask(i,j)) .and. .not. is_thin(model%geometry%thkmask(i,j)) ) then
-             model%lithot%rhs(r) = model%temper%temp(model%general%upn,i,j) ! ice basal temperature
-             model%lithot%mask(i,j) = .true.
-          else
-             if (model%lithot%mask(i,j)) then
-                if (is_ocean(model%geometry%thkmask(i,j))) then
-                   model%lithot%rhs(r) = model%lithot%mart
-                else if (is_land(model%geometry%thkmask(i,j))) then
-                   model%lithot%rhs(r) = model%climate%artm(i,j) ! air temperature outside ice sheet
-                end if
-             end if
-          end if
-       end do
-    end do
-
-    ! solve matrix equation
-    call dslucs(model%general%nsn*model%general%ewn*model%lithot%nlayer, model%lithot%rhs, model%lithot%answer, &
-         model%lithot%fd_coeff_slap%n, model%lithot%fd_coeff_slap%col,model%lithot%fd_coeff_slap%row, &
-         model%lithot%fd_coeff_slap%val, isym,itol,tol,itmax,iter,err,ierr,0, &
-         model%lithot%rwork, model%lithot%mxnelt, model%lithot%iwork, model%lithot%mxnelt)
-
-    if (ierr /= 0) then
-      print *, 'pcg error ', ierr, itmax, iter
-      write(*,*) model%numerics%time
-      call glide_finalise(model,.true.)
-      stop
+    if (model%lithot%num_dim.eq.1) then
+       call calc_lithot1d(model)
+    else if (model%lithot%num_dim.eq.3) then
+       call calc_lithot3d(model)
+    else
+       call write_log('Wrong number of dimensions.',GM_FATAL,__FILE__,__LINE__)
     end if
-
-    ! de-linearise results
-    do k=1, model%lithot%nlayer
-       do j=1,model%general%nsn
-          do i=1,model%general%ewn
-             model%lithot%temp(i,j,k) = model%lithot%answer(linearise(model,i,j,k))
-          end do
-       end do
-    end do
       
     call calc_geoth(model)
 
@@ -257,15 +155,24 @@ contains
     model%temper%bheatflx(:,:) = factor*(model%lithot%temp(:,:,2)-model%lithot%temp(:,:,1))
   end subroutine calc_geoth
 
-  function linearise(model,i,j,k)
+  subroutine finalise_lithot(model)
     use glide_types
+    use glide_lithot1d
+    use glimmer_log
+    use glide_lithot3d
     implicit none
-    type(glide_global_type),intent(in) :: model   
-    integer, intent(in) :: i,j,k
-    integer :: linearise
-    
-    linearise = i + (j-1)*model%general%ewn + (k-1)*model%general%ewn*model%general%nsn
-  end function linearise
+    type(glide_global_type),intent(inout) :: model       !*FD model instance
 
+    deallocate(model%lithot%deltaz)
+    deallocate(model%lithot%zfactors)
+
+    if (model%lithot%num_dim.eq.1) then
+       call finalise_lithot1d(model)
+    else if (model%lithot%num_dim.eq.3) then
+       call finalise_lithot3d(model)
+    else
+       call write_log('Wrong number of dimensions.',GM_FATAL,__FILE__,__LINE__)
+    end if
+  end subroutine finalise_lithot
 
 end module glide_lithot

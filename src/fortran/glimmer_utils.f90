@@ -302,4 +302,35 @@ contains
 
   end function lsum
 
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  subroutine tridag(a,b,c,r,u)
+    !*FD tri-diagonal matrix solver
+
+    use glimmer_global, only : dp
+
+    implicit none
+
+    real(dp), dimension(:), intent(in) :: a,b,c,r
+    real(dp), dimension(:), intent(out) :: u
+
+    real(dp), dimension(size(b)) :: gam
+    integer :: n, j
+    real(dp) :: bet
+
+    n=size(b)
+
+    bet = b(1); u(1) = r(1)/bet
+
+    do j = 2,n
+       gam(j) = c(j-1) / bet
+       bet = b(j) - a(j-1) * gam(j)
+       u(j) = (r(j)- a(j-1) * u(j-1)) / bet
+    end do
+
+    do j = n-1,1,-1
+       u(j) = u(j) - gam(j+1) * u(j+1)
+    end do
+
+  end subroutine tridag
+
 end module glimmer_utils
