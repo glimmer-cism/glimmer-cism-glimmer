@@ -408,7 +408,7 @@ contains
 
 !-------------------------------------------------------------
 
-  pure logical function grid_greater_than(a,b)
+  logical function grid_greater_than(a,b)
 
     type(global_grid),intent(in) :: a,b
 
@@ -422,7 +422,7 @@ contains
 
 !-------------------------------------------------------------
 
-  pure logical function grid_less_than(a,b)
+  logical function grid_less_than(a,b)
 
     type(global_grid),intent(in) :: a,b
 
@@ -436,7 +436,7 @@ contains
 
 !-------------------------------------------------------------
 
-  elemental function grid_min(a,b)
+  function grid_min(a,b)
 
     type(global_grid),intent(in) :: a,b
     type(global_grid) :: grid_min
@@ -451,7 +451,7 @@ contains
 
 !-------------------------------------------------------------
 
-  pure subroutine grid_assign(a,b)
+  subroutine grid_assign(a,b)
 
     type(global_grid),intent(out) :: a
     type(global_grid),intent(in)  :: b
@@ -489,7 +489,7 @@ contains
 
 !-------------------------------------------------------------
 
-  elemental logical function grid_equiv(a,b)
+  logical function grid_equiv(a,b)
 
     type(global_grid),intent(in)  :: a,b
 
@@ -519,7 +519,7 @@ contains
 
 !-------------------------------------------------------------
   
-  elemental logical function grid_nequiv(a,b)
+  logical function grid_nequiv(a,b)
 
     type(global_grid),intent(in)  :: a,b
 
@@ -529,7 +529,7 @@ contains
 
 !-------------------------------------------------------------
 
-  pure logical function check_associated(a)
+  logical function check_associated(a)
 
     type(global_grid),intent(in)  :: a
 

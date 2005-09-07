@@ -1,5 +1,8 @@
 2005-09-07 Ian Rutt
  * Various enhancements and corrections to mass-balance masking in glint
+ * Removed illegal elementals (glint_global_grid.f90) and unnecessary
+   pures
+ * Fixed segfault array allocation bug (glint.f90)
 
 2005-08-24 Ian Rutt
  * Updated with improvements from GENIE development:

@@ -588,11 +588,22 @@ contains
 
        if (present(output_flag)) output_flag=.true.
 
+       ! Allocate output fields
+
+       allocate(orog_out_temp(size(orog_out,1),size(orog_out,2)))
+       allocate(albedo_temp(size(orog,1),size(orog,2)))
+       allocate(if_temp(size(orog,1),size(orog,2)))
+       allocate(vf_temp(size(orog,1),size(orog,2)))
+       allocate(sif_temp(size(orog,1),size(orog,2)))
+       allocate(svf_temp(size(orog,1),size(orog,2)))
+       allocate(sd_temp(size(orog,1),size(orog,2)))
+       allocate(wout_temp(size(orog,1),size(orog,2)))
+       allocate(win_temp(size(orog,1),size(orog,2)))
+
        ! Reset output fields
 
        if (present(orog_out)) then
           orog_out  = 0.0
-          allocate(orog_out_temp(size(orog_out,1),size(orog_out,2)))
           out_f%orog=.true.
        else
           out_f%orog=.false.
@@ -600,7 +611,6 @@ contains
 
        if (present(albedo)) then
           albedo    = 0.0
-          allocate(albedo_temp(size(orog,1),size(orog,2)))
           out_f%albedo=.true.
        else
           out_f%albedo=.false.
@@ -608,7 +618,6 @@ contains
 
        if (present(ice_frac)) then
           ice_frac  = 0.0
-          allocate(if_temp(size(orog,1),size(orog,2)))
           out_f%ice_frac=.true.
        else
           out_f%ice_frac=.false.
@@ -616,7 +625,6 @@ contains
 
        if (present(veg_frac)) then
           veg_frac  = 0.0
-          allocate(vf_temp(size(orog,1),size(orog,2)))
           out_f%veg_frac=.true.
        else
           out_f%veg_frac=.false.
@@ -624,7 +632,6 @@ contains
 
        if (present(snowice_frac)) then
           snowice_frac  = 0.0
-          allocate(sif_temp(size(orog,1),size(orog,2)))
           out_f%snowice_frac=.true.
        else
           out_f%snowice_frac=.false.
@@ -632,7 +639,6 @@ contains
 
        if (present(snowveg_frac)) then
           snowveg_frac  = 0.0
-          allocate(svf_temp(size(orog,1),size(orog,2)))
           out_f%snowveg_frac=.true.
        else
           out_f%snowveg_frac=.false.
@@ -640,7 +646,6 @@ contains
 
        if (present(snow_depth)) then
           snow_depth  = 0.0
-          allocate(sd_temp(size(orog,1),size(orog,2)))
           out_f%snow_depth=.true.
        else
           out_f%snow_depth=.false.
@@ -648,7 +653,6 @@ contains
 
        if (present(water_out)) then
           water_out = 0.0
-          allocate(wout_temp(size(orog,1),size(orog,2)))
           out_f%water_out=.true.
        else
           out_f%water_out=.false.
@@ -656,7 +660,6 @@ contains
 
        if (present(water_in)) then
           water_in = 0.0
-          allocate(win_temp(size(orog,1),size(orog,2)))
           out_f%water_in=.true.
        else
           out_f%water_in=.false.
