@@ -1,6 +1,6 @@
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! +                                                           +
-! +  glimmer_proj.f90 - part of the GLIMMER ice model         + 
+! +  glint_proj.f90 - part of the GLIMMER ice model           + 
 ! +                                                           +
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! 
@@ -53,30 +53,30 @@ module glint_proj
 
   type projection
 
-    !*FD A derived type that holds information
-    !*FD relating to the projected grid.
-  
-    integer        :: p_type                     !*FD Number indicating projection used
-                                                 !*FD 
-                                                 !*FD The projections available are:
-                                                 !*FD \begin{enumerate}
-                                                 !*FD \item Lambert Equal Area
-                                                 !*FD \item Spherical polar
-                                                 !*FD \item Spherical stereographic (oblique)
-                                                 !*FD \item Spherical stereographic (equatorial)
-                                                 !*FD \end{enumerate}
-    type(gmt_pinf) :: gmt_params                 !*FD parameters needed for gmt routines
-    integer        :: nx                         !*FD number of grid points in the EW direction
-    integer        :: ny                         !*FD number of grid points in the NS direction
-    real(rk)       :: dx                         !*FD the nominal $x$ grid-spacing at the centre of the projection
-    real(rk)       :: dy                         !*FD the nominal $y$ grid-spacing at the centre of the projection
-    real(rk)       :: cpx,cpy                    !*FD The location of the map projection centre within the grid ($x$ and $y$)
-    real(rk)       :: latc,lonc                  !*FD The location of the projection centre in lat/lon space (lat and lon)
-    real(rk)       :: std_par=90.0               !*FD Standard parallel (polar stereographic only)
-    real(rk)       :: radea=6.37e6               !*FD Radius of the earth (m)
-    real(rk),dimension(:,:),pointer :: sintheta => NULL()  !*FD sines of grid angle relative to north.
-    real(rk),dimension(:,:),pointer :: costheta => NULL() !*FD coses of grid angle relative to north.
-    real(rk),dimension(:,:),pointer :: latitudes => NULL() !*FD The latitude of each grid-point
+     !*FD A derived type that holds information
+     !*FD relating to the projected grid.
+
+     integer        :: p_type                     !*FD Number indicating projection used
+                                                  !*FD 
+                                                  !*FD The projections available are:
+                                                  !*FD \begin{enumerate}
+                                                  !*FD \item Lambert Equal Area
+                                                  !*FD \item Spherical polar
+                                                  !*FD \item Spherical stereographic (oblique)
+                                                  !*FD \item Spherical stereographic (equatorial)
+                                                  !*FD \end{enumerate}
+     type(gmt_pinf) :: gmt_params                 !*FD parameters needed for gmt routines
+     integer        :: nx                         !*FD number of grid points in the EW direction
+     integer        :: ny                         !*FD number of grid points in the NS direction
+     real(rk)       :: dx                         !*FD the nominal $x$ grid-spacing at the centre of the projection
+     real(rk)       :: dy                         !*FD the nominal $y$ grid-spacing at the centre of the projection
+     real(rk)       :: cpx,cpy                    !*FD The location of the map projection centre within the grid ($x$ and $y$)
+     real(rk)       :: latc,lonc                  !*FD The location of the projection centre in lat/lon space (lat and lon)
+     real(rk)       :: std_par=90.0               !*FD Standard parallel (polar stereographic only)
+     real(rk)       :: radea=6.37e6               !*FD Radius of the earth (m)
+     real(rk),dimension(:,:),pointer :: sintheta => NULL()  !*FD sines of grid angle relative to north.
+     real(rk),dimension(:,:),pointer :: costheta => NULL()  !*FD coses of grid angle relative to north.
+     real(rk),dimension(:,:),pointer :: latitudes => NULL() !*FD The latitude of each grid-point
   end type projection
 
   real(rk),parameter :: pi=3.141592654  !*FD The value of pi
@@ -94,7 +94,7 @@ contains
 
     ! local variables
     type(ConfigSection), pointer :: section
-    
+
     call GetSection(config,section,'GLINT projection')
     if (associated(section)) then
        call GetValue(section,'projection',proj%p_type)
@@ -106,6 +106,8 @@ contains
        call GetValue(section,'earth_radius',proj%radea)
     end if
   end subroutine proj_readconfig
+
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine proj_printconfig(proj)
     !*FD print configuration to log
@@ -132,6 +134,8 @@ contains
     call write_log(message)
     call write_log('')
   end subroutine proj_printconfig
+
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine new_proj(proj,p_type,nx,ny,dx,dy,cpx,cpy,latc,lonc,std_par)
 
@@ -176,12 +180,12 @@ contains
 
   end subroutine new_proj
 
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine proj_allocate(proj)
 
     !*FD Allocates the array pointers in the \texttt{projection} type.
- 
+
     implicit none
 
     type(projection),intent(inout) :: proj     !*FD The projection being initialised
@@ -194,10 +198,10 @@ contains
 
     allocate(proj%costheta(proj%nx,proj%ny),proj%sintheta(proj%nx,proj%ny))
     allocate(proj%latitudes(proj%nx,proj%ny))
-   
+
   end subroutine proj_allocate
 
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine ll_to_xy(lon,lat,x,y,proj)
 
@@ -223,16 +227,16 @@ contains
 
     select case(proj%p_type)
     case(1)
-      call gmt_lambeq(tlon,tlat,x,y,proj%gmt_params)
+       call gmt_lambeq(tlon,tlat,x,y,proj%gmt_params)
     case(2)
-      call gmt_plrs_sph(tlon,tlat,x,y,proj%gmt_params)
+       call gmt_plrs_sph(tlon,tlat,x,y,proj%gmt_params)
     case(3)
-      call gmt_stereo1_sph (tlon,tlat,x,y,proj%gmt_params)
+       call gmt_stereo1_sph (tlon,tlat,x,y,proj%gmt_params)
     case(4)
-      call gmt_stereo2_sph (tlon,tlat,x,y,proj%gmt_params)
+       call gmt_stereo2_sph (tlon,tlat,x,y,proj%gmt_params)
     case default
-      write(errtxt,*)proj%p_type,' is not a valid projection type'
-      call write_log(trim(errtxt),GM_ERROR,__FILE__,__LINE__)
+       write(errtxt,*)proj%p_type,' is not a valid projection type'
+       call write_log(trim(errtxt),GM_ERROR,__FILE__,__LINE__)
     end select
 
     x=(x/proj%dx)+proj%cpx
@@ -240,7 +244,7 @@ contains
 
   end subroutine ll_to_xy
 
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine xy_to_ll(lon,lat,x,y,proj)
 
@@ -269,21 +273,21 @@ contains
 
     select case(proj%p_type)
     case(1)
-      call gmt_ilambeq(lon,lat,xx,yy,proj%gmt_params)
+       call gmt_ilambeq(lon,lat,xx,yy,proj%gmt_params)
     case(2)
-      call gmt_iplrs_sph(lon,lat,xx,yy,proj%gmt_params)
+       call gmt_iplrs_sph(lon,lat,xx,yy,proj%gmt_params)
     case(3:4)
-      call gmt_istereo_sph (lon,lat,xx,yy,proj%gmt_params)
+       call gmt_istereo_sph (lon,lat,xx,yy,proj%gmt_params)
     case default
-      write(errtxt,*)proj%p_type,' is not a valid projection type'
-      call write_log(trim(errtxt),GM_ERROR,__FILE__,__LINE__)
+       write(errtxt,*)proj%p_type,' is not a valid projection type'
+       call write_log(trim(errtxt),GM_ERROR,__FILE__,__LINE__)
     end select
 
     lon=loncorrect(lon)
 
   end subroutine xy_to_ll
 
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine calc_lats(proj,array)
 
@@ -303,20 +307,20 @@ contains
     nx=size(array,1) ; ny=size(array,2)
 
     if ((nx.ne.proj%nx).or.(ny.ne.proj%ny)) then
-      call write_log('Array size wrong in calc_lats',GM_FATAL,__FILE__,__LINE__)
+       call write_log('Array size wrong in calc_lats',GM_FATAL,__FILE__,__LINE__)
     endif
 
     do i=1,nx
-      do j=1,ny
-        x=i ; y=j
-        call xy_to_ll(lon,lat,x,y,proj)
-        array(i,j)=lat
-      enddo
+       do j=1,ny
+          x=i ; y=j
+          call xy_to_ll(lon,lat,x,y,proj)
+          array(i,j)=lat
+       enddo
     enddo
 
   end subroutine calc_lats
 
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine calc_grid_angle(proj)
 
@@ -325,56 +329,56 @@ contains
     !*FD and sin of that angle in the relevant arrays in \texttt{proj}.
 
     type(projection),intent(inout) :: proj !*FD The projection to be used
- 
+
     integer :: i,j
     real(rk) :: latn,lonn,lats,lons,lat,lon,dlat,dlon,temp
 
     do i=1,proj%nx
 
-    ! Main, central block
+       ! Main, central block
 
-      do j=2,proj%ny-1
-        call xy_to_ll(lonn,latn,real(i,rk),real(j+1,rk),proj)
-        call xy_to_ll(lon,lat,real(i,rk),real(j,rk),proj)
-        call xy_to_ll(lons,lats,real(i,rk),real(j-1,rk),proj)
-        dlat=latn-lats
-        dlon=lonn-lons
-        if (dlon<-90) dlon=dlon+360
-        temp=atan(dlon/dlat)
-        proj%sintheta(i,j)=sin(temp)
-        proj%costheta(i,j)=cos(temp)
-        proj%latitudes(i,j)=lat
-      enddo
+       do j=2,proj%ny-1
+          call xy_to_ll(lonn,latn,real(i,rk),real(j+1,rk),proj)
+          call xy_to_ll(lon,lat,real(i,rk),real(j,rk),proj)
+          call xy_to_ll(lons,lats,real(i,rk),real(j-1,rk),proj)
+          dlat=latn-lats
+          dlon=lonn-lons
+          if (dlon<-90) dlon=dlon+360
+          temp=atan(dlon/dlat)
+          proj%sintheta(i,j)=sin(temp)
+          proj%costheta(i,j)=cos(temp)
+          proj%latitudes(i,j)=lat
+       enddo
 
-    ! bottom row
+       ! bottom row
 
-      call xy_to_ll(lonn,latn,real(i,rk),real(2,rk),proj)
-      call xy_to_ll(lon,lat,real(i,rk),real(1,rk),proj)
-      dlat=latn-lat
-      dlon=lonn-lon
-      if (dlon<-90) dlon=dlon+360
-      temp=atan(dlon/dlat)
-      proj%sintheta(i,1)=sin(temp)
-      proj%costheta(i,1)=cos(temp)
-      proj%latitudes(i,1)=lat
+       call xy_to_ll(lonn,latn,real(i,rk),real(2,rk),proj)
+       call xy_to_ll(lon,lat,real(i,rk),real(1,rk),proj)
+       dlat=latn-lat
+       dlon=lonn-lon
+       if (dlon<-90) dlon=dlon+360
+       temp=atan(dlon/dlat)
+       proj%sintheta(i,1)=sin(temp)
+       proj%costheta(i,1)=cos(temp)
+       proj%latitudes(i,1)=lat
 
-    ! top row
+       ! top row
 
-      call xy_to_ll(lon,lat,real(i,rk),real(proj%ny,rk),proj)
-      call xy_to_ll(lons,lats,real(i,rk),real(proj%ny-1,rk),proj)
-      dlat=lat-lats
-      dlon=lon-lons
-      if (dlon<-90) dlon=dlon+360
-      temp=atan(dlon/dlat)
-      proj%sintheta(i,proj%ny)=sin(temp)
-      proj%costheta(i,proj%ny)=cos(temp)
-      proj%latitudes(i,proj%ny)=lat
+       call xy_to_ll(lon,lat,real(i,rk),real(proj%ny,rk),proj)
+       call xy_to_ll(lons,lats,real(i,rk),real(proj%ny-1,rk),proj)
+       dlat=lat-lats
+       dlon=lon-lons
+       if (dlon<-90) dlon=dlon+360
+       temp=atan(dlon/dlat)
+       proj%sintheta(i,proj%ny)=sin(temp)
+       proj%costheta(i,proj%ny)=cos(temp)
+       proj%latitudes(i,proj%ny)=lat
 
     enddo
 
   end subroutine calc_grid_angle
 
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine print_corners(proj)
 
@@ -400,7 +404,7 @@ contains
 
   end subroutine print_corners
 
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   real(rk) function loncorrect(lon)
 
@@ -412,16 +416,16 @@ contains
     loncorrect=lon
 
     do while (loncorrect>360.0)
-      loncorrect=loncorrect-360.0
+       loncorrect=loncorrect-360.0
     enddo
 
     do while (loncorrect<0.0)
-      loncorrect=loncorrect+360.0
+       loncorrect=loncorrect+360.0
     enddo
 
   end function loncorrect
 
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine proj_write_restart(proj,unit)
 
@@ -467,7 +471,7 @@ contains
 
   end subroutine proj_write_restart
 
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine proj_read_restart(proj,unit)
 

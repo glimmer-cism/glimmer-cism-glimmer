@@ -1,4 +1,3 @@
-
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !
 ! This code is taken from the Generic Mapping Tools and was 
@@ -50,49 +49,49 @@
 
 module gmt
 
-!*FD This code is taken from the Generic Mapping Tools and was 
-!*FD converted into Fortran 90 by Ian Rutt.
-!*FD 
-!*FD Original code (in C) Copyright (c) 1991-2003 by P. Wessel and W. H. F. Smith.
-!*FD 
-!*FD Partial translation into Fortran 90 (c) 2004 Ian C. Rutt.
-!*FD 
-!*FD To use this library:
-!*FD \begin{itemize}
-!*FD \item Include a use gmt statement at the start of the program;
-!*FD \item Declare an instance of gmt\_pinf for each instance of the projection you
-!*FD    want to use;
-!*FD \item initialise the projection by calling \texttt{gmt\_set(latc,lonc,radea,project\_info)}
-!*FD    with the centre of the projection (\texttt{latc},\texttt{lonc}) in degrees, the radius of the earth
-!*FD    (\texttt{radea}), in metres (though often it's convenient to set this to 1.0), and the
-!*FD    instance of \texttt{gmt\_pinf}.
-!*FD \end{itemize}
-!*FD 
-!*FD NB: Longitude and latitude coordinates are in degrees, relative to the global origin,
-!*FD     while x and y are relative to the centre of the projection, and given in metres (or whatever
-!*FD     units are used for the radius of the Earth).
+  !*FD This code is taken from the Generic Mapping Tools and was 
+  !*FD converted into Fortran 90 by Ian Rutt.
+  !*FD 
+  !*FD Original code (in C) Copyright (c) 1991-2003 by P. Wessel and W. H. F. Smith.
+  !*FD 
+  !*FD Partial translation into Fortran 90 (c) 2004 Ian C. Rutt.
+  !*FD 
+  !*FD To use this library:
+  !*FD \begin{itemize}
+  !*FD \item Include a use gmt statement at the start of the program;
+  !*FD \item Declare an instance of gmt\_pinf for each instance of the projection you
+  !*FD    want to use;
+  !*FD \item initialise the projection by calling \texttt{gmt\_set(latc,lonc,radea,project\_info)}
+  !*FD    with the centre of the projection (\texttt{latc},\texttt{lonc}) in degrees, the radius of the earth
+  !*FD    (\texttt{radea}), in metres (though often it's convenient to set this to 1.0), and the
+  !*FD    instance of \texttt{gmt\_pinf}.
+  !*FD \end{itemize}
+  !*FD 
+  !*FD NB: Longitude and latitude coordinates are in degrees, relative to the global origin,
+  !*FD     while x and y are relative to the centre of the projection, and given in metres (or whatever
+  !*FD     units are used for the radius of the Earth).
 
   use glimmer_global
 
   implicit none
 
   type gmt_pinf
-    real(rk) :: cosp             = 0.0     !*FD cos ($\phi_p$)
-    real(rk) :: sinp             = 0.0     !*FD sin ($\phi_p$)
-    real(rk) :: pole             = 0.0     !*FD +90 or -90, depending on hemisphere
-    real(rk) :: central_meridian = 0.0     !*FD Central meridian of projection
-    real(rk) :: EQ_RAD           = 0.0     !*FD The radius of earth
-    real(rk) :: i_EQ_RAD         = 0.0     !*FD 1/radius of earth.
-    real(rk) :: Dx               = 0.0     !*FD A fudge factor for scaling the projection.
-    real(rk) :: Dy               = 0.0     !*FD A fudge factor for scaling the projection.
-    real(rk) :: iDx              = 0.0     !*FD Inverse of Dx.
-    real(rk) :: iDy              = 0.0     !*FD Inverse of Dy.
-    real(rk) :: s_c              = 0.0     !*FD Not sure what this does\ldots.
-    real(rk) :: s_ic             = 0.0     !*FD Not sure what this does, but it's the inverse of {\tt s\_ic}\ldots.
-    logical  :: n_polar          = .false. !*FD not needed - indicates if projection pole is north pole.
-    logical  :: s_polar          = .false. !*FD not needed - indicates if projection pole is south pole.
-    logical  :: north_pole       = .false. !*FD true if projection in northern hemisphere, false otherwise.
-    logical  :: polar            = .false. !*FD Is this a polar projection?
+     real(rk) :: cosp             = 0.0     !*FD cos ($\phi_p$)
+     real(rk) :: sinp             = 0.0     !*FD sin ($\phi_p$)
+     real(rk) :: pole             = 0.0     !*FD +90 or -90, depending on hemisphere
+     real(rk) :: central_meridian = 0.0     !*FD Central meridian of projection
+     real(rk) :: EQ_RAD           = 0.0     !*FD The radius of earth
+     real(rk) :: i_EQ_RAD         = 0.0     !*FD 1/radius of earth.
+     real(rk) :: Dx               = 0.0     !*FD A fudge factor for scaling the projection.
+     real(rk) :: Dy               = 0.0     !*FD A fudge factor for scaling the projection.
+     real(rk) :: iDx              = 0.0     !*FD Inverse of Dx.
+     real(rk) :: iDy              = 0.0     !*FD Inverse of Dy.
+     real(rk) :: s_c              = 0.0     !*FD Not sure what this does\ldots.
+     real(rk) :: s_ic             = 0.0     !*FD Not sure what this does, but it's the inverse of {\tt s\_ic}\ldots.
+     logical  :: n_polar          = .false. !*FD not needed - indicates if projection pole is north pole.
+     logical  :: s_polar          = .false. !*FD not needed - indicates if projection pole is south pole.
+     logical  :: north_pole       = .false. !*FD true if projection in northern hemisphere, false otherwise.
+     logical  :: polar            = .false. !*FD Is this a polar projection?
   end type gmt_pinf
 
   real(rk),parameter :: pi=3.141592654          !*FD The value of $\pi$.
@@ -141,14 +140,14 @@ contains
 
     select case(p_type)
     case(1)   ! Lambert equal area 
-      call gmt_lambeq_set(latc,lonc,project_info)
+       call gmt_lambeq_set(latc,lonc,project_info)
     case(2)   ! Spherical/stereographic (polar) 
-      call gmt_map_init_stereo(latc,lonc,project_info,std_par)
+       call gmt_map_init_stereo(latc,lonc,project_info,std_par)
     case(3:4)  ! Spherical/stereographic (oblique, equatorial) 
-      call gmt_map_init_stereo(latc,lonc,project_info)
+       call gmt_map_init_stereo(latc,lonc,project_info)
     case default
-      write(errtxt,*)'* ERROR: ',p_type,' is not a valid projection type.'
-      call write_log(trim(errtxt),GM_FATAL,__FILE__,__LINE__)
+       write(errtxt,*)'* ERROR: ',p_type,' is not a valid projection type.'
+       call write_log(trim(errtxt),GM_FATAL,__FILE__,__LINE__)
     end select
 
   end subroutine gmt_set
@@ -180,11 +179,11 @@ contains
 
   end subroutine gmt_type_init
 
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-! PROJECTION CONVERSION CODES
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-! Lambert equal area
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  ! PROJECTION CONVERSION CODES
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  ! Lambert equal area
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine gmt_lambeq_set(latc,lonc,project_info)
 
@@ -215,7 +214,7 @@ contains
 
   end subroutine gmt_lambeq_set
 
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine gmt_lambeq(lon,lat,x,y,project_info)
 
@@ -241,11 +240,11 @@ contains
     dlon = lon-project_info%central_meridian
 
     do while (dlon.lt.-180.0)
-      dlon=dlon+360.0
+       dlon=dlon+360.0
     enddo
 
     do while (dlon.gt.180.0)
-      dlon=dlon-360.0
+       dlon=dlon-360.0
     enddo
 
     dlon = dlon*D2R
@@ -258,20 +257,20 @@ contains
     tmp = 1.0 + project_info%sinp * sin_lat + project_info%cosp * c
 
     if (tmp > 0.0) then
-      k = project_info%EQ_RAD * sqrt (2.0 / tmp)
-      x = k * cos_lat * sin_lon
-      y = k * (project_info%cosp * sin_lat - project_info%sinp * c)
-      if (GMT_convert_latitudes) then  ! Gotta fudge abit 
-        x = x*project_info%Dx
-        y = y*project_info%Dy
-      endif
+       k = project_info%EQ_RAD * sqrt (2.0 / tmp)
+       x = k * cos_lat * sin_lon
+       y = k * (project_info%cosp * sin_lat - project_info%sinp * c)
+       if (GMT_convert_latitudes) then  ! Gotta fudge abit 
+          x = x*project_info%Dx
+          y = y*project_info%Dy
+       endif
     else
-      x = -DBL_MAX ; y=-DBL_MAX
-    endif    
+       x = -DBL_MAX ; y=-DBL_MAX
+    endif
 
   end subroutine gmt_lambeq
 
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine gmt_ilambeq(lon,lat,x,y,project_info)
 
@@ -291,38 +290,38 @@ contains
     ! ---------------------------------------------------------------------------
 
     real(rk) :: rho,c,sin_c,cos_c,xx,yy
-  
+
     xx=x ; yy=y
 
     if (GMT_convert_latitudes) then  ! Undo effect of fudge factors
-      xx = xx*project_info%iDx
-      yy = yy*project_info%iDy
+       xx = xx*project_info%iDx
+       yy = yy*project_info%iDy
     endif
 
     rho=hypot (xx,yy)
-  
+
     if (abs(rho) < GMT_CONV_LIMIT) then
-      lat = project_info%pole
-      lon = project_info%central_meridian
+       lat = project_info%pole
+       lon = project_info%central_meridian
     else
        c = 2.0 * asin(0.5 * rho * project_info%i_EQ_RAD)
-      call sincos (c, sin_c, cos_c)
-      lat = asin (cos_c * project_info%sinp + (yy * sin_c * project_info%cosp / rho)) * R2D
-      if (project_info%n_polar) then
-        lon = project_info%central_meridian + R2D * atan2 (xx, -yy)
-      else if (project_info%s_polar) then
-        lon = project_info%central_meridian + R2D * atan2 (xx, yy)
-      else
-        lon = project_info%central_meridian + &
-          R2D * atan2 (xx * sin_c, (rho * project_info%cosp * cos_c - yy * project_info%sinp * sin_c))
-      endif
+       call sincos (c, sin_c, cos_c)
+       lat = asin (cos_c * project_info%sinp + (yy * sin_c * project_info%cosp / rho)) * R2D
+       if (project_info%n_polar) then
+          lon = project_info%central_meridian + R2D * atan2 (xx, -yy)
+       else if (project_info%s_polar) then
+          lon = project_info%central_meridian + R2D * atan2 (xx, yy)
+       else
+          lon = project_info%central_meridian + &
+               R2D * atan2 (xx * sin_c, (rho * project_info%cosp * cos_c - yy * project_info%sinp * sin_c))
+       endif
     endif
 
   end subroutine gmt_ilambeq
 
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-! Spherical polar / Polar Stereographic
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  ! Spherical polar / Polar Stereographic
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine gmt_map_init_stereo(latg,rlong,project_info,std_par)
 
@@ -346,17 +345,17 @@ contains
 
     if (abs (latg) < SMALL) latg = 0.001
 
-	  if (present(std_par)) then
-		  sp=std_par
-	  else
-		  sp=90.0 
+    if (present(std_par)) then
+       sp=std_par
+    else
+       sp=90.0 
     endif
 
     call gmt_vstereo(rlong,latg,sp,project_info)
 
   end subroutine gmt_map_init_stereo
 
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine gmt_set_polar (plat,project_info)
 
@@ -372,15 +371,15 @@ contains
     ! ---------------------------------------------------------------------------
 
     if (abs (abs (plat) - 90.0) < GMT_CONV_LIMIT) then
-      project_info%polar = .true.
-      project_info%north_pole  = (plat > 0.0)
+       project_info%polar = .true.
+       project_info%north_pole  = (plat > 0.0)
        project_info%n_polar = project_info%north_pole
-      project_info%s_polar = (.not.project_info%n_polar)
+       project_info%s_polar = (.not.project_info%n_polar)
     endif
 
   end subroutine gmt_set_polar
 
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine gmt_vstereo (rlong0,plat,std_par,project_info)
 
@@ -392,8 +391,8 @@ contains
 
     real(rk),      intent(in)    :: rlong0       !*FD Centre of the projection, longitude (degrees).
     real(rk),      intent(in)    :: plat         !*FD Centre of the projection, latitude (degrees).
-	  real(rk),      intent(in)    :: std_par      !*FD Standard parallel (for polar stereographic 
-	                                               !*FD only, in degrees)
+    real(rk),      intent(in)    :: std_par      !*FD Standard parallel (for polar stereographic 
+    !*FD only, in degrees)
     type(gmt_pinf),intent(inout) :: project_info !*FD GMT parameters to be set.
 
     ! Internal variables --------------------------------------------------------
@@ -414,12 +413,12 @@ contains
 
   end subroutine gmt_vstereo
 
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine gmt_plrs_sph(lon,lat,x,y,project_info)
 
-  !*FD Convert lon-lat coordinates to x-y coordinates using a 
-  !*FD spherical polar projection.
+    !*FD Convert lon-lat coordinates to x-y coordinates using a 
+    !*FD spherical polar projection.
 
     implicit none
 
@@ -434,38 +433,38 @@ contains
     ! Internal variables --------------------------------------------------------
 
     real(rk) :: rho, slon, clon,dlon,dlat
-      
+
     ! ---------------------------------------------------------------------------
 
     dlon = lon-project_info%central_meridian
     dlat = lat
 
     do 
-    if (.not.(dlon < -180.0)) exit
-    dlon = dlon+360.0
-    enddo 
+       if (.not.(dlon < -180.0)) exit
+       dlon = dlon+360.0
+    enddo
 
     do
-    if (.not.(dlon > 180.0)) exit
-    dlon = dlon-360.0
-    enddo  
+       if (.not.(dlon > 180.0)) exit
+       dlon = dlon-360.0
+    enddo
 
     dlon = dlon*D2R
     call sincos (dlon,slon,clon)
 
-     if (project_info%north_pole) then
-      rho = project_info%s_c * tan (M_PI_4 - 0.5 * D2R * dlat)
-      y = -rho * clon
-      x =  rho * slon
+    if (project_info%north_pole) then
+       rho = project_info%s_c * tan (M_PI_4 - 0.5 * D2R * dlat)
+       y = -rho * clon
+       x =  rho * slon
     else
-      rho = project_info%s_c * tan (M_PI_4 + 0.5 * D2R * dlat)
-      y = rho * clon
+       rho = project_info%s_c * tan (M_PI_4 + 0.5 * D2R * dlat)
+       y = rho * clon
        x = rho * slon
     endif
 
   end subroutine gmt_plrs_sph
 
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine gmt_iplrs_sph (lon,lat,x,y,project_info)
 
@@ -490,45 +489,45 @@ contains
     ! ---------------------------------------------------------------------------
 
     xx=x ; yy=y
-    
+
     if (x == 0.0.and.y == 0.0) then
-      lon = project_info%central_meridian
-      lat = project_info%pole
-      return
+       lon = project_info%central_meridian
+       lat = project_info%pole
+       return
     endif
 
     c = 2.0 * atan (hypot (xx, yy) * project_info%s_ic)
 
     if (project_info%north_pole) then
-      ! This line is the orginal GMT code, but it didn't seem to work
-      !lon = project_info%central_meridian + d_atan2 (xx, -yy) * R2D  
-      lon = project_info%central_meridian + d_atan2 (xx, yy) * R2D + 90.0 
-      lat = d_asin (cos (c)) * R2D
+       ! This line is the orginal GMT code, but it didn't seem to work
+       !lon = project_info%central_meridian + d_atan2 (xx, -yy) * R2D  
+       lon = project_info%central_meridian + d_atan2 (xx, yy) * R2D + 90.0 
+       lat = d_asin (cos (c)) * R2D
     else
-      !lon = project_info%central_meridian + d_atan2 (xx, yy) * R2D  
-      lon = project_info%central_meridian - d_atan2 (xx, yy) * R2D - 90.0  
-      lat = d_asin (-cos (c)) * R2D
+       !lon = project_info%central_meridian + d_atan2 (xx, yy) * R2D  
+       lon = project_info%central_meridian - d_atan2 (xx, yy) * R2D - 90.0  
+       lat = d_asin (-cos (c)) * R2D
     endif
 
     do
-    if (.not.(lon < -180.0)) exit
-    lon = lon+360.0
-    enddo 
+       if (.not.(lon < -180.0)) exit
+       lon = lon+360.0
+    enddo
 
     do
-    if (.not.(lon > 180.0)) exit
-    lon = lon-360.0
-    enddo  
+       if (.not.(lon > 180.0)) exit
+       lon = lon-360.0
+    enddo
 
   end subroutine gmt_iplrs_sph
 
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine gmt_stereo1_sph (lon,lat,x,y,project_info)
 
     !*FD Convert lon-lat coordinates to x-y coordinates using 
     !*FD a spherical stereographic projection, oblique view.
-  
+
     implicit none
 
     ! Subroutine arguments ------------------------------------------------------
@@ -548,14 +547,14 @@ contains
     dlon = (lon - project_info%central_meridian)
 
     do 
-    if (.not.(dlon < -180.0)) exit
-    dlon = dlon+360.0
-    enddo 
+       if (.not.(dlon < -180.0)) exit
+       dlon = dlon+360.0
+    enddo
 
     do
-    if (.not.(dlon > 180.0)) exit
-    dlon = dlon-360.0
-    enddo  
+       if (.not.(dlon > 180.0)) exit
+       dlon = dlon-360.0
+    enddo
 
     dlon = dlon*D2R
     dlat = lat*D2R
@@ -569,7 +568,7 @@ contains
 
   end subroutine gmt_stereo1_sph
 
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine gmt_istereo_sph (lon,lat,x,y,project_info)
 
@@ -579,7 +578,7 @@ contains
     implicit none
 
     ! Subroutine arguments ------------------------------------------------------
- 
+
     real(rk),      intent(out) :: lon !*FD Longitude (degrees).
     real(rk),      intent(out) :: lat !*FD Latitude (degrees).
     real(rk),      intent(in)  :: x   !*FD $x$-location (m).
@@ -593,20 +592,20 @@ contains
     ! ---------------------------------------------------------------------------
 
     if (x == 0.0 .and. y == 0.0) then
-      lon = project_info%central_meridian
-      lat = project_info%pole
+       lon = project_info%central_meridian
+       lat = project_info%pole
     else 
-      rho = hypot(x,y)
-      c = 2.0 * atan (rho * project_info%s_ic)
-      call sincos (c, sin_c, cos_c)
-      lat = d_asin (cos_c * project_info%sinp + (y * sin_c * project_info%cosp / rho)) * R2D
-      lon = R2D * atan (x * sin_c / (rho * project_info%cosp * cos_c - y * project_info%sinp * sin_c)) &
-             + project_info%central_meridian
+       rho = hypot(x,y)
+       c = 2.0 * atan (rho * project_info%s_ic)
+       call sincos (c, sin_c, cos_c)
+       lat = d_asin (cos_c * project_info%sinp + (y * sin_c * project_info%cosp / rho)) * R2D
+       lon = R2D * atan (x * sin_c / (rho * project_info%cosp * cos_c - y * project_info%sinp * sin_c)) &
+            + project_info%central_meridian
     endif
 
   end subroutine gmt_istereo_sph
 
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine gmt_stereo2_sph (lon,lat,x,y,project_info)
 
@@ -628,26 +627,26 @@ contains
     real(rk) :: dlon,dlat,s,c,clon,slon,A
 
     ! ---------------------------------------------------------------------------
-    
+
     dlon = lon - project_info%central_meridian
     if (abs (dlon - 180.0) < GMT_CONV_LIMIT) then
-      x = 0.0
-      y = 0.0
+       x = 0.0
+       y = 0.0
     else 
-      dlon = dlon*D2R
-      dlat = lat*D2R
-      call sincos (dlat,s,c)
-      call sincos (dlon,slon,clon)
-      A = project_info%s_c / (1.0 + c * clon)
-      x = A * c * slon
-      y = A * s
+       dlon = dlon*D2R
+       dlat = lat*D2R
+       call sincos (dlat,s,c)
+       call sincos (dlon,slon,clon)
+       A = project_info%s_c / (1.0 + c * clon)
+       x = A * c * slon
+       y = A * s
     endif
 
   end subroutine gmt_stereo2_sph
 
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-! Utility routines
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  ! Utility routines
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine sincos(a,s,c)
 
@@ -659,18 +658,18 @@ contains
     real(rk),intent(out) :: s !*FD sin(\texttt{a})
     real(rk),intent(out) :: c !*FD cos(\texttt{a})
 
-      s = sin (a)
-      c = cos (a)
+    s = sin (a)
+    c = cos (a)
 
   end subroutine sincos
 
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   real(rk) function hypot(x,y)
 
-  !*FD This is an implementation of a standard C library function, 
-  !*FD returning the value of $\sqrt{x^2+y^2}$.
-  !*RV Returns the value of $\sqrt{x^2+y^2}$.
+    !*FD This is an implementation of a standard C library function, 
+    !*FD returning the value of $\sqrt{x^2+y^2}$.
+    !*RV Returns the value of $\sqrt{x^2+y^2}$.
 
     implicit none
 
@@ -681,42 +680,42 @@ contains
 
   end function hypot
 
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   real(rk) function d_atan2(x,y)
 
-  !*FD A macro-implemented function from GMT
-  !*RV If \texttt{x} and \texttt{0} are both zero, zero is returned, else
-  !*FD \texttt{atan2 (y, x)} is returned.
+    !*FD A macro-implemented function from GMT
+    !*RV If \texttt{x} and \texttt{0} are both zero, zero is returned, else
+    !*FD \texttt{atan2 (y, x)} is returned.
 
     implicit none
 
     real(rk),intent(in) :: x,y !*FD Input value
 
     if (x==0.0 .and. y==0.0) then
-      d_atan2=0.0
+       d_atan2=0.0
     else
-      d_atan2=atan2 (y, x)
+       d_atan2=atan2 (y, x)
     endif
 
   end function d_atan2
 
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   real(rk) function d_asin(x)
 
-  !*FD Macro-implemented function from GMT
-  !*RV If $\mathtt{x}\geq 1$, \texttt{sign(M\_PI\_2,x)} is returned, else
-  !*RV \texttt{asin(x)} is returned.
+    !*FD Macro-implemented function from GMT
+    !*RV If $\mathtt{x}\geq 1$, \texttt{sign(M\_PI\_2,x)} is returned, else
+    !*RV \texttt{asin(x)} is returned.
 
     implicit none
 
     real(rk),intent(in) :: x !*FD Input value
 
     if (abs(x) >= 1.0) then
-      d_asin=sign(M_PI_2,x)
+       d_asin=sign(M_PI_2,x)
     else
-      d_asin=asin(x)
+       d_asin=asin(x)
     endif
 
   end function d_asin

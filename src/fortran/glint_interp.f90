@@ -1,6 +1,6 @@
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! +                                                           +
-! +  glimmer_interp.f90 - part of the GLIMMER ice model       + 
+! +  glint_interp.f90 - part of the GLIMMER ice model         + 
 ! +                                                           +
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! 
@@ -52,41 +52,41 @@ module glint_interp
 
   type downscale
 
-    !*FD Derived type containing indexing 
-    !*FD information for downscaling. This type was 
-    !*FD included for speed. Four of the arrays contained in it
-    !*FD are arrays of the indices of the corners 
-    !*FD of the global grid-boxes within which the given
-    !*FD local grid point lies.
+     !*FD Derived type containing indexing 
+     !*FD information for downscaling. This type was 
+     !*FD included for speed. Four of the arrays contained in it
+     !*FD are arrays of the indices of the corners 
+     !*FD of the global grid-boxes within which the given
+     !*FD local grid point lies.
 
-    real(rk),dimension(:,:),pointer :: llats => null() !*FD The latitude of each point in x-y space.
-    real(rk),dimension(:,:),pointer :: llons => null() !*FD The longitude of each point in x-y space.
+     real(rk),dimension(:,:),pointer :: llats => null() !*FD The latitude of each point in x-y space.
+     real(rk),dimension(:,:),pointer :: llons => null() !*FD The longitude of each point in x-y space.
 
-    integer, dimension(:,:,:),pointer :: xloc => null() !*FD The x-locations of the corner points of the
-                                                        !*FD interpolation domain.
-    integer, dimension(:,:,:),pointer :: yloc => null() !*FD The y-locations of the corner points of the
-                                                        !*FD interpolation domain.
-    real(rk),dimension(:,:),  pointer :: xfrac => null()
-    real(rk),dimension(:,:),  pointer :: yfrac => null()
+     integer, dimension(:,:,:),pointer :: xloc => null() !*FD The x-locations of the corner points of the
+                                                         !*FD interpolation domain.
+     integer, dimension(:,:,:),pointer :: yloc => null() !*FD The y-locations of the corner points of the
+                                                         !*FD interpolation domain.
+     real(rk),dimension(:,:),  pointer :: xfrac => null()
+     real(rk),dimension(:,:),  pointer :: yfrac => null()
 
   end type downscale
 
   type upscale
-  
-    !*FD Derived type containing indexing information
-    !*FD for upscaling by areal averaging.
 
-    integer, dimension(:,:),pointer :: gboxx => null() !*FD $x$-indicies of global grid-box 
-                                                       !*FD containing given local grid-box.
-    integer, dimension(:,:),pointer :: gboxy => null() !*FD $y$-indicies of global grid-box 
-                                                       !*FD containing given local grid-box.
-    integer, dimension(:,:),pointer :: gboxn => null() !*FD Number of local grid-boxes 
-                                                       !*FD contained in each global box.
-    logical                         :: set = .false.   !*FD Set if the type has been initialised.
+     !*FD Derived type containing indexing information
+     !*FD for upscaling by areal averaging.
+
+     integer, dimension(:,:),pointer :: gboxx => null() !*FD $x$-indicies of global grid-box 
+                                                        !*FD containing given local grid-box.
+     integer, dimension(:,:),pointer :: gboxy => null() !*FD $y$-indicies of global grid-box 
+                                                        !*FD containing given local grid-box.
+     integer, dimension(:,:),pointer :: gboxn => null() !*FD Number of local grid-boxes 
+                                                        !*FD contained in each global box.
+     logical                         :: set = .false.   !*FD Set if the type has been initialised.
   end type upscale
 
   interface mean_to_global
-    module procedure mean_to_global_sp,mean_to_global_dp
+     module procedure mean_to_global_sp,mean_to_global_dp
   end interface
 
 contains
@@ -125,16 +125,16 @@ contains
     ! Find lats and lons
 
     do i=1,proj%nx
-      do j=1,proj%ny
-        call xy_to_ll(llon,llat,real(i,rk),real(j,rk),proj)
-        downs%llons(i,j)=llon
-        downs%llats(i,j)=llat
-      end do
+       do j=1,proj%ny
+          call xy_to_ll(llon,llat,real(i,rk),real(j,rk),proj)
+          downs%llons(i,j)=llon
+          downs%llats(i,j)=llat
+       end do
     end do
 
   end subroutine new_downscale
 
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine interp_wind_to_local(proj,zonwind,merwind,downs,xwind,ywind)
 
@@ -172,7 +172,7 @@ contains
 
   end subroutine interp_wind_to_local
 
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine interp_to_local(proj,global,downs,localsp,localdp,localrk,global_fn)
 
@@ -185,7 +185,7 @@ contains
     !*FD
     !*FD Either localsp or localdp must be present (or both), depending
     !*FD which precision output is required.
-  
+
     use glimmer_utils
     use glimmer_log
 
@@ -213,40 +213,40 @@ contains
     ! check we have one output at least...
 
     if (.not.(present(localsp).or.present(localdp).or.present(localrk))) then
-      call write_log('Interp_to_local has no output',GM_WARNING,__FILE__,__LINE__)
+       call write_log('Interp_to_local has no output',GM_WARNING,__FILE__,__LINE__)
     endif
 
     ! Main interpolation loop
 
     do i=1,proj%nx
-      do j=1,proj%ny
+       do j=1,proj%ny
 
-        ! Compile the temporary array f from adjacent points 
+          ! Compile the temporary array f from adjacent points 
 
-        if (present(global_fn)) then
-          f(1)=global_fn(downs%xloc(i,j,1),downs%yloc(i,j,1))
-          f(2)=global_fn(downs%xloc(i,j,2),downs%yloc(i,j,2))
-          f(3)=global_fn(downs%xloc(i,j,3),downs%yloc(i,j,3))
-          f(4)=global_fn(downs%xloc(i,j,4),downs%yloc(i,j,4))
-        else
-          f(1)=global(downs%xloc(i,j,1),downs%yloc(i,j,1))
-          f(2)=global(downs%xloc(i,j,2),downs%yloc(i,j,2))
-          f(3)=global(downs%xloc(i,j,3),downs%yloc(i,j,3))
-          f(4)=global(downs%xloc(i,j,4),downs%yloc(i,j,4))
-        end if
+          if (present(global_fn)) then
+             f(1)=global_fn(downs%xloc(i,j,1),downs%yloc(i,j,1))
+             f(2)=global_fn(downs%xloc(i,j,2),downs%yloc(i,j,2))
+             f(3)=global_fn(downs%xloc(i,j,3),downs%yloc(i,j,3))
+             f(4)=global_fn(downs%xloc(i,j,4),downs%yloc(i,j,4))
+          else
+             f(1)=global(downs%xloc(i,j,1),downs%yloc(i,j,1))
+             f(2)=global(downs%xloc(i,j,2),downs%yloc(i,j,2))
+             f(3)=global(downs%xloc(i,j,3),downs%yloc(i,j,3))
+             f(4)=global(downs%xloc(i,j,4),downs%yloc(i,j,4))
+          end if
 
-         ! Apply the bilinear interpolation
+          ! Apply the bilinear interpolation
 
-        if (present(localsp)) localsp(i,j)=bilinear_interp(downs%xfrac(i,j),downs%yfrac(i,j),f)
-        if (present(localdp)) localdp(i,j)=bilinear_interp(downs%xfrac(i,j),downs%yfrac(i,j),f)
-        if (present(localrk)) localrk(i,j)=bilinear_interp(downs%xfrac(i,j),downs%yfrac(i,j),f)
+          if (present(localsp)) localsp(i,j)=bilinear_interp(downs%xfrac(i,j),downs%yfrac(i,j),f)
+          if (present(localdp)) localdp(i,j)=bilinear_interp(downs%xfrac(i,j),downs%yfrac(i,j),f)
+          if (present(localrk)) localrk(i,j)=bilinear_interp(downs%xfrac(i,j),downs%yfrac(i,j),f)
 
-      enddo
+       enddo
     enddo
 
   end subroutine interp_to_local
 
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine mean_to_local(proj,grid,global,localsp,localdp,global_fn)
 
@@ -254,7 +254,7 @@ contains
     !*FD This assumes that the global field is sufficiently high-resolution 
     !*FD compared with the local grid - it just averages the points contained 
     !*FD in each local grid-box.
- 
+
     use glint_proj
     use glimmer_utils
     use glimmer_log
@@ -288,7 +288,7 @@ contains
     ! check we have one output at least...
 
     if (.not.(present(localsp).or.present(localdp))) then
-      call write_log('mean_to_local has no output',GM_WARNING,__FILE__,__LINE__)
+       call write_log('mean_to_local has no output',GM_WARNING,__FILE__,__LINE__)
     endif
 
     ! Zero some things
@@ -310,11 +310,11 @@ contains
           call ll_to_xy(lon,lat,x,y,proj)
           xbox=nint(x)
           ybox=nint(y)
-          
+
           ! Add to appropriate location and update count
 
           if (xbox.ge.1.and.xbox.le.proj%nx.and. &
-              ybox.ge.1.and.ybox.le.proj%ny) then
+               ybox.ge.1.and.ybox.le.proj%ny) then
              if (present(global_fn)) then
                 temp_out(xbox,ybox)=temp_out(xbox,ybox)+global_fn(i,j)*grid%box_areas(xbox,ybox)
              else
@@ -330,10 +330,10 @@ contains
 
     if (present(localsp)) localsp=temp_out/real(mean_count,dp)
     if (present(localdp)) localdp=temp_out/real(mean_count,dp)
- 
+
   end subroutine mean_to_local
 
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine pointwise_to_global(proj,local,lons,lats,global)
 
@@ -362,21 +362,21 @@ contains
     nxl=size(local,1)  ; nyl=size(local,2)
 
     do i=1,nxg
-      do j=1,nyg
-        call ll_to_xy(lons(i),lats(j),x,y,proj)
-        xx=int(x) ; yy=int(y)
-        if (nint(x)<=1.or.nint(x)>nxl-1.or.nint(y)<=1.or.nint(y)>nyl-1) then
-          global(i,j)=0.0
-        else
-          f=local(xx:xx+1,yy:yy+1)*tempmask(xx:xx+1,yy:yy+1)
-          global(i,j)=bilinear_interp((x-real(xx))/real(1.0,rk),(y-real(yy))/real(1.0,rk),f)
-        endif
-      enddo
-    enddo  
+       do j=1,nyg
+          call ll_to_xy(lons(i),lats(j),x,y,proj)
+          xx=int(x) ; yy=int(y)
+          if (nint(x)<=1.or.nint(x)>nxl-1.or.nint(y)<=1.or.nint(y)>nyl-1) then
+             global(i,j)=0.0
+          else
+             f=local(xx:xx+1,yy:yy+1)*tempmask(xx:xx+1,yy:yy+1)
+             global(i,j)=bilinear_interp((x-real(xx))/real(1.0,rk),(y-real(yy))/real(1.0,rk),f)
+          endif
+       enddo
+    enddo
 
   end subroutine pointwise_to_global
 
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine mean_to_global_sp(ups,local,global,mask)
 
@@ -410,27 +410,27 @@ contains
     global=0.0
 
     if (present(mask)) then
-      tempmask=mask
+       tempmask=mask
     else
-      tempmask=1
+       tempmask=1
     endif
 
     do i=1,nxl
-      do j=1,nyl
-        global(ups%gboxx(i,j),ups%gboxy(i,j))= &
+       do j=1,nyl
+          global(ups%gboxx(i,j),ups%gboxy(i,j))= &
                global(ups%gboxx(i,j),ups%gboxy(i,j))+local(i,j)*tempmask(i,j)
        enddo
-    enddo  
+    enddo
 
     where (ups%gboxn.ne.0)
-      global=global/ups%gboxn
+       global=global/ups%gboxn
     elsewhere
-      global=0.0
-    endwhere  
+       global=0.0
+    endwhere
 
   end subroutine mean_to_global_sp
 
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine mean_to_global_dp(ups,local,global,mask)
 
@@ -464,27 +464,27 @@ contains
     global=0.0
 
     if (present(mask)) then
-      tempmask=mask
+       tempmask=mask
     else
-      tempmask=1
+       tempmask=1
     endif
 
     do i=1,nxl
-      do j=1,nyl
-        global(ups%gboxx(i,j),ups%gboxy(i,j))= &
+       do j=1,nyl
+          global(ups%gboxx(i,j),ups%gboxy(i,j))= &
                global(ups%gboxx(i,j),ups%gboxy(i,j))+local(i,j)*tempmask(i,j)
        enddo
-    enddo  
+    enddo
 
     where (ups%gboxn.ne.0)
-      global=global/ups%gboxn
+       global=global/ups%gboxn
     elsewhere
-      global=0.0
-    endwhere  
+       global=0.0
+    endwhere
 
   end subroutine mean_to_global_dp
 
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   real(rk) function bilinear_interp(xp,yp,f)
 
@@ -508,7 +508,7 @@ contains
 
   end function bilinear_interp
 
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine find_ll_index(il,jl,lon,lat,lons,lats)
 
@@ -525,7 +525,7 @@ contains
     real(rk),dimension(:),intent(in)  :: lons   !*FD Longitudes of global grid points 
     integer,              intent(out) :: il     !*FD $x$-gridpoint index (output)
     integer,              intent(out) :: jl     !*FD $y$-gridpoint index (output)
-  
+
     ! Internal variables
 
     integer :: nx,ny,i
@@ -535,31 +535,31 @@ contains
     il=nx
 
     do i=1,nx-1
-      if (lon_between(lons(i),lons(i+1),lon)) then
-        il=i
-        exit
-      endif
+       if (lon_between(lons(i),lons(i+1),lon)) then
+          il=i
+          exit
+       endif
     enddo
 
     if ((lat<lats(ny)).and.(lat>-90.0)) then
-      jl=ny
-      return
+       jl=ny
+       return
     endif
 
     if ((lat>lats(1)).and.(lat<90.0)) then
-      jl=1
-      return
+       jl=1
+       return
     endif
 
     jl=1
     do 
-      if (lat>lats(jl)) exit
-      jl=jl+1
+       if (lat>lats(jl)) exit
+       jl=jl+1
     enddo
 
   end subroutine find_ll_index
 
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine index_local_boxes(xloc,yloc,xfrac,yfrac,grid,proj)
 
@@ -582,142 +582,82 @@ contains
     real(rk) :: ilon,jlat,xa,ya,xb,yb,xc,yc,xd,yd
 
     do i=1,proj%nx
-      do j=1,proj%ny
+       do j=1,proj%ny
 
-        ! Find out where point i,j is in lat-lon space
+          ! Find out where point i,j is in lat-lon space
 
-        call xy_to_ll(ilon,jlat,real(i,rk),real(j,rk),proj)
+          call xy_to_ll(ilon,jlat,real(i,rk),real(j,rk),proj)
 
-        ! Index that location onto the global grid
+          ! Index that location onto the global grid
 
-        call find_ll_index(il,jl,ilon,jlat,grid%lons,grid%lats)
+          call find_ll_index(il,jl,ilon,jlat,grid%lons,grid%lats)
 
-        xloc(i,j,1)=il  ! This is the starting point - we now need to find
-        yloc(i,j,1)=jl  ! three other points that enclose the interpolation target
-        
-        if (jlat>grid%lats(grid%ny)) then
-          
-          ! For all points except on the bottom row
+          xloc(i,j,1)=il  ! This is the starting point - we now need to find
+          yloc(i,j,1)=jl  ! three other points that enclose the interpolation target
 
-          xloc(i,j,2)=il+1
-          yloc(i,j,2)=jl
+          if (jlat>grid%lats(grid%ny)) then
 
-          xloc(i,j,3)=il+1
-          yloc(i,j,3)=jl-1
+             ! For all points except on the bottom row
 
-          xloc(i,j,4)=il
-          yloc(i,j,4)=jl-1
+             xloc(i,j,2)=il+1
+             yloc(i,j,2)=jl
 
-          call fix_bcs2d(xloc(i,j,2) ,yloc(i,j,2),grid%nx,grid%ny)
-          call fix_bcs2d(xloc(i,j,3) ,yloc(i,j,3),grid%nx,grid%ny)
-          call fix_bcs2d(xloc(i,j,4) ,yloc(i,j,4),grid%nx,grid%ny)
+             xloc(i,j,3)=il+1
+             yloc(i,j,3)=jl-1
 
-          if (jl==1) then
-            temp=xloc(i,j,3)
-            xloc(i,j,3)=xloc(i,j,4)
-            xloc(i,j,4)=temp
+             xloc(i,j,4)=il
+             yloc(i,j,4)=jl-1
+
+             call fix_bcs2d(xloc(i,j,2) ,yloc(i,j,2),grid%nx,grid%ny)
+             call fix_bcs2d(xloc(i,j,3) ,yloc(i,j,3),grid%nx,grid%ny)
+             call fix_bcs2d(xloc(i,j,4) ,yloc(i,j,4),grid%nx,grid%ny)
+
+             if (jl==1) then
+                temp=xloc(i,j,3)
+                xloc(i,j,3)=xloc(i,j,4)
+                xloc(i,j,4)=temp
+             endif
+
+          else
+
+             ! The bottom row
+
+             xloc(i,j,2)=il-1
+             yloc(i,j,2)=jl
+
+             xloc(i,j,3)=il-1
+             yloc(i,j,3)=jl+1
+
+             xloc(i,j,4)=il
+             yloc(i,j,4)=jl+1
+
+             call fix_bcs2d(xloc(i,j,2) ,yloc(i,j,2),grid%nx,grid%ny)
+             call fix_bcs2d(xloc(i,j,3) ,yloc(i,j,3),grid%nx,grid%ny)
+             call fix_bcs2d(xloc(i,j,4) ,yloc(i,j,4),grid%nx,grid%ny)
+
+             temp=xloc(i,j,3)
+             xloc(i,j,3)=xloc(i,j,4)
+             xloc(i,j,4)=temp
+
           endif
 
-        else
+          ! Now, find out where each of those points is on the projected
+          ! grid, and calculate fractional displacements accordingly
 
-          ! The bottom row
+          call ll_to_xy(grid%lons(xloc(i,j,1)),grid%lats(yloc(i,j,1)),xa,ya,proj)
+          call ll_to_xy(grid%lons(xloc(i,j,2)),grid%lats(yloc(i,j,2)),xb,yb,proj)
+          call ll_to_xy(grid%lons(xloc(i,j,3)),grid%lats(yloc(i,j,3)),xc,yc,proj)
+          call ll_to_xy(grid%lons(xloc(i,j,4)),grid%lats(yloc(i,j,4)),xd,yd,proj)
 
-          xloc(i,j,2)=il-1
-          yloc(i,j,2)=jl
+          call calc_fractional(xfrac(i,j),yfrac(i,j),real(i,rk),real(j,rk), &
+               xa,ya,xb,yb,xc,yc,xd,yd)
 
-          xloc(i,j,3)=il-1
-          yloc(i,j,3)=jl+1
-
-          xloc(i,j,4)=il
-          yloc(i,j,4)=jl+1
-            
-          call fix_bcs2d(xloc(i,j,2) ,yloc(i,j,2),grid%nx,grid%ny)
-          call fix_bcs2d(xloc(i,j,3) ,yloc(i,j,3),grid%nx,grid%ny)
-          call fix_bcs2d(xloc(i,j,4) ,yloc(i,j,4),grid%nx,grid%ny)
-
-          temp=xloc(i,j,3)
-          xloc(i,j,3)=xloc(i,j,4)
-          xloc(i,j,4)=temp
-
-        endif
-
-        ! Now, find out where each of those points is on the projected
-        ! grid, and calculate fractional displacements accordingly
-
-        call ll_to_xy(grid%lons(xloc(i,j,1)),grid%lats(yloc(i,j,1)),xa,ya,proj)
-        call ll_to_xy(grid%lons(xloc(i,j,2)),grid%lats(yloc(i,j,2)),xb,yb,proj)
-        call ll_to_xy(grid%lons(xloc(i,j,3)),grid%lats(yloc(i,j,3)),xc,yc,proj)
-        call ll_to_xy(grid%lons(xloc(i,j,4)),grid%lats(yloc(i,j,4)),xd,yd,proj)
-
-        call calc_fractional(xfrac(i,j),yfrac(i,j),real(i,rk),real(j,rk), &
-                             xa,ya,xb,yb,xc,yc,xd,yd)
-
-      enddo
+       enddo
     enddo
 
   end subroutine index_local_boxes
 
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-!!$  subroutine downs_write_restart(downs,unit)
-!!$
-!!$    !*FD Write the part of a
-!!$    !*FD restart file relating to the downscaling.
-!!$    !*FD Note that the logical file unit must already be open
-!!$
-!!$    ! Arguments
-!!$
-!!$    type(downscale),intent(in) :: downs  !*FD The downscaling parameters to be written
-!!$    integer,        intent(in) :: unit   !*FD The logical file unit to use
-!!$
-!!$    ! temporary variable, this is need to fix an internal compiler error of the SUN WS f95 compiler.
-!!$    logical :: temp
-!!$
-!!$    ! Beginning of code
-!!$    
-!!$!   temp = associated(downs%il)
-!!$!   write(unit) temp
-!!$!   if (temp)  write(unit) downs%il
-!!$
-!!$!   temp = associated(downs%ilp)
-!!$!   write(unit) temp
-!!$!   if (temp)  write(unit) downs%il
-!!$
-!!$!   temp = associated(downs%jl)
-!!$!   write(unit) temp
-!!$!   if (temp)  write(unit) downs%il
-!!$
-!!$!   temp = associated(downs%jlp)
-!!$!   write(unit) temp
-!!$!   if (temp)  write(unit) downs%il
-!!$
-!!$  end subroutine downs_write_restart
-!!$
-!!$!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-!!$
-!!$  subroutine downs_read_restart(downs,unit)
-!!$
-!!$    !*FD Read the part of a
-!!$    !*FD restart file relating to the downscaling.
-!!$    !*FD Note that the logical file unit must already be open.
-!!$
-!!$    type(downscale),intent(inout) :: downs !*FD The downscaling parameters to be read.
-!!$    integer,        intent(in)    :: unit  !*FD The logical file unit to use.
-!!$
-!!$    logical :: tempflag
-!!$
-!!$!    read(unit) tempflag
-!!$!    if(tempflag) read(unit) downs%il
-!!$!    read(unit) tempflag
-!!$!    if(tempflag) read(unit) downs%ilp
-!!$!    read(unit) tempflag
-!!$!    if(tempflag) read(unit) downs%jl
-!!$!    read(unit) tempflag
-!!$!    if(tempflag) read(unit) downs%jlp
-!!$
-!!$  end subroutine downs_read_restart
-
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine new_upscale(ups,grid,proj,mask)
 
@@ -734,12 +674,12 @@ contains
     type(global_grid),     intent(in)  :: grid       !*FD Global grid to be used
     type(projection),      intent(in)  :: proj       !*FD Projection being used
     integer,dimension(:,:),intent(in)  :: mask       !*FD Upscaling mask to be used
-    
+
     ! Internal variables
 
     integer  :: i,j,ii,jj,nx,ny,gnx,gny
     real(rk) :: plon,plat
-    
+
     ! Beginning of code
 
     if (associated(ups%gboxx)) deallocate(ups%gboxx)
@@ -756,45 +696,45 @@ contains
     ups%gboxx=0 ; ups%gboxy=0
 
     do i=1,nx
-      do j=1,ny
-        call xy_to_ll(plon,plat,real(i,rk),real(j,rk),proj)
-        ii=1 ; jj=1
-        do
-          ups%gboxx(i,j)=ii
-          if (ii>gnx) then
-            call write_log('global index failure',GM_FATAL,__FILE__,__LINE__)
-          endif  
-          if (lon_between(grid%lon_bound(ii),grid%lon_bound(ii+1),plon)) exit
-          ii=ii+1
-        enddo
+       do j=1,ny
+          call xy_to_ll(plon,plat,real(i,rk),real(j,rk),proj)
+          ii=1 ; jj=1
+          do
+             ups%gboxx(i,j)=ii
+             if (ii>gnx) then
+                call write_log('global index failure',GM_FATAL,__FILE__,__LINE__)
+             endif
+             if (lon_between(grid%lon_bound(ii),grid%lon_bound(ii+1),plon)) exit
+             ii=ii+1
+          enddo
 
-        jj=1
+          jj=1
 
-        do
-          ups%gboxy(i,j)=jj
-          if (jj>gny) then
-            call write_log('global index failure',GM_FATAL,__FILE__,__LINE__)
-          endif  
-          if ((grid%lat_bound(jj)>=plat).and.(plat>grid%lat_bound(jj+1))) exit
-          jj=jj+1
-        enddo
+          do
+             ups%gboxy(i,j)=jj
+             if (jj>gny) then
+                call write_log('global index failure',GM_FATAL,__FILE__,__LINE__)
+             endif
+             if ((grid%lat_bound(jj)>=plat).and.(plat>grid%lat_bound(jj+1))) exit
+             jj=jj+1
+          enddo
 
-      enddo
+       enddo
     enddo
 
     ups%gboxn=0
 
     do i=1,nx
-      do j=1,ny
-        ups%gboxn(ups%gboxx(i,j),ups%gboxy(i,j))=ups%gboxn(ups%gboxx(i,j),ups%gboxy(i,j))+mask(i,j)
-      enddo
+       do j=1,ny
+          ups%gboxn(ups%gboxx(i,j),ups%gboxy(i,j))=ups%gboxn(ups%gboxx(i,j),ups%gboxy(i,j))+mask(i,j)
+       enddo
     enddo
 
     ups%set=.true.
 
   end subroutine new_upscale
 
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine copy_upscale(in,out)
 
@@ -804,7 +744,7 @@ contains
     type(upscale),intent(out) :: out
 
     if (.not.in%set) then
-      call write_log('Attempt to copy un-initialised upscale type',GM_FATAL,__FILE__,__LINE__)
+       call write_log('Attempt to copy un-initialised upscale type',GM_FATAL,__FILE__,__LINE__)
     endif
 
     if (associated(out%gboxx)) deallocate(out%gboxx)
@@ -823,7 +763,7 @@ contains
 
   end subroutine copy_upscale
 
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   logical function lon_between(a,b,x)
 
@@ -845,21 +785,21 @@ contains
     ! Beginning of code
 
     if (a<b) then
-      lon_between=((x>=a).and.(x<b))
+       lon_between=((x>=a).and.(x<b))
     else
-      if (x<a) then
-        ta=a-360.0
-        tb=b
-      else 
-        ta=a
-        tb=b+360.0
-      endif
-      lon_between=((x>=ta).and.(x<tb))
+       if (x<a) then
+          ta=a-360.0
+          tb=b
+       else 
+          ta=a
+          tb=b+360.0
+       endif
+       lon_between=((x>=ta).and.(x<tb))
     endif
 
   end function lon_between
 
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine calc_fractional(x,y,xp,yp,xa,ya,xb,yb,xc,yc,xd,yd)
 
@@ -879,16 +819,16 @@ contains
     a=(yb-ya)*(xc-xd)-(yc-yd)*(xb-xa)
 
     b=xp*(yc-yd)-yp*(xc-xd) &
-     +xd*(yb-ya)-yd*(xb-xa) &
-     -xp*(yb-ya)+yp*(xb-xa) &
-     -xa*(yc-yd)+ya*(xc-xd) 
-         
+         +xd*(yb-ya)-yd*(xb-xa) &
+         -xp*(yb-ya)+yp*(xb-xa) &
+         -xa*(yc-yd)+ya*(xc-xd) 
+
     c=xp*(yd-ya)+yp*(xa-xd)+ya*xd-xa*yd
 
     if (abs(a)>small) then
-      x=(-b-sqrt(b**2-4*a*c))/(2*a)
+       x=(-b-sqrt(b**2-4*a*c))/(2*a)
     else
-      x=-c/b
+       x=-c/b
     endif
 
     y=(yp-ya-x*(yb-ya))/(yd+x*(yc-yd-yb+ya)-ya)

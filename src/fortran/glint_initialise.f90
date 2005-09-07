@@ -143,7 +143,7 @@ contains
     endwhere
     call glide_set_thk(instance%model,thk)
     deallocate(thk)
-    
+
     call glint_mbal_io_writeall(instance%mbal_accum,instance%model)
     call glide_io_writeall(instance%model,instance%model)
     call glint_io_writeall(instance,instance%model)
@@ -156,7 +156,7 @@ contains
 
   end subroutine glint_i_initialise
 
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine glint_i_end(instance)
 
@@ -170,7 +170,7 @@ contains
 
   end subroutine glint_i_end
 
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine glint_i_readdata(instance)
     !*FD read data from netCDF file and initialise climate
@@ -183,17 +183,17 @@ contains
     implicit none
 
     type(glint_instance),intent(inout)   :: instance    !*FD Instance whose elements are to be allocated.
-     
+
     ! read data
     call glint_io_readall(instance,instance%model)
-      
+
     call glide_calclsrf(instance%model%geometry%thck,instance%model%geometry%topg, &
          instance%model%climate%eus,instance%model%geometry%lsrf)
     instance%model%geometry%usrf = instance%model%geometry%thck + instance%model%geometry%lsrf
- 
+
   end subroutine glint_i_readdata
 
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine calc_coverage(proj,ups,grid,mask,frac_coverage)
 
@@ -223,21 +223,21 @@ contains
     tempcount=0
 
     do i=1,proj%nx
-      do j=1,proj%ny
-        tempcount(ups%gboxx(i,j),ups%gboxy(i,j))=tempcount(ups%gboxx(i,j),ups%gboxy(i,j))+mask(i,j)
-      enddo
+       do j=1,proj%ny
+          tempcount(ups%gboxx(i,j),ups%gboxy(i,j))=tempcount(ups%gboxx(i,j),ups%gboxy(i,j))+mask(i,j)
+       enddo
     enddo
 
     do i=1,grid%nx
-      do j=1,grid%ny
-        if (tempcount(i,j)==0) then
-          frac_coverage(i,j)=0.0
-        else
-          frac_coverage(i,j)=(tempcount(i,j)*proj%dx*proj%dy)/ &
-                 (lon_diff(grid%lon_bound(i+1),grid%lon_bound(i))*D2R*proj%radea**2*    &
-                 (sin(grid%lat_bound(j)*D2R)-sin(grid%lat_bound(j+1)*D2R)))
-        endif
-      enddo
+       do j=1,grid%ny
+          if (tempcount(i,j)==0) then
+             frac_coverage(i,j)=0.0
+          else
+             frac_coverage(i,j)=(tempcount(i,j)*proj%dx*proj%dy)/ &
+                  (lon_diff(grid%lon_bound(i+1),grid%lon_bound(i))*D2R*proj%radea**2*    &
+                  (sin(grid%lat_bound(j)*D2R)-sin(grid%lat_bound(j+1)*D2R)))
+          endif
+       enddo
     enddo
 
     ! Fix points that should be 1.0 by checking their surroundings
@@ -245,69 +245,69 @@ contains
     ! Interior points first
 
     do i=2,grid%nx-1
-      do j=2,grid%ny-1
-        if ((frac_coverage(i,j).ne.0).and. &
-            (frac_coverage(i+1,j).ne.0).and. &
-            (frac_coverage(i,j+1).ne.0).and. &
-            (frac_coverage(i-1,j).ne.0).and. &
-            (frac_coverage(i,j-1).ne.0)) &
-                        frac_coverage(i,j)=1.0
-      enddo
+       do j=2,grid%ny-1
+          if ((frac_coverage(i,j).ne.0).and. &
+               (frac_coverage(i+1,j).ne.0).and. &
+               (frac_coverage(i,j+1).ne.0).and. &
+               (frac_coverage(i-1,j).ne.0).and. &
+               (frac_coverage(i,j-1).ne.0)) &
+               frac_coverage(i,j)=1.0
+       enddo
     enddo
 
     ! top and bottom edges
 
     do i=2,grid%nx/2
-      if ((frac_coverage(i,1).ne.0).and. &
-          (frac_coverage(i+1,1).ne.0).and. &
-          (frac_coverage(i,2).ne.0).and. &
-          (frac_coverage(i-1,1).ne.0).and. &
-          (frac_coverage(i+grid%nx/2,1).ne.0)) &
-                      frac_coverage(i,1)=1.0
+       if ((frac_coverage(i,1).ne.0).and. &
+           (frac_coverage(i+1,1).ne.0).and. &
+           (frac_coverage(i,2).ne.0).and. &
+           (frac_coverage(i-1,1).ne.0).and. &
+           (frac_coverage(i+grid%nx/2,1).ne.0)) &
+            frac_coverage(i,1)=1.0
     enddo
 
     do i=grid%nx/2+1,grid%nx-1
-      if ((frac_coverage(i,1).ne.0).and. &
-          (frac_coverage(i+1,1).ne.0).and. &
-          (frac_coverage(i,2).ne.0).and. &
-          (frac_coverage(i-1,1).ne.0).and. &
-          (frac_coverage(i-grid%nx/2,1).ne.0)) &
-                      frac_coverage(i,1)=1.0
+       if ((frac_coverage(i,1).ne.0).and. &
+           (frac_coverage(i+1,1).ne.0).and. &
+           (frac_coverage(i,2).ne.0).and. &
+           (frac_coverage(i-1,1).ne.0).and. &
+           (frac_coverage(i-grid%nx/2,1).ne.0)) &
+            frac_coverage(i,1)=1.0
     enddo
 
     do i=2,grid%nx/2
-      if ((frac_coverage(i,grid%ny).ne.0).and. &
-          (frac_coverage(i+1,grid%ny).ne.0).and. &
-          (frac_coverage(i+grid%nx/2,grid%ny).ne.0).and. &
-          (frac_coverage(i-1,grid%ny).ne.0).and. &
-          (frac_coverage(i,grid%ny-1).ne.0)) &
-                      frac_coverage(i,grid%ny)=1.0
+       if ((frac_coverage(i,grid%ny).ne.0).and. &
+           (frac_coverage(i+1,grid%ny).ne.0).and. &
+           (frac_coverage(i+grid%nx/2,grid%ny).ne.0).and. &
+           (frac_coverage(i-1,grid%ny).ne.0).and. &
+           (frac_coverage(i,grid%ny-1).ne.0)) &
+            frac_coverage(i,grid%ny)=1.0
     enddo
 
     do i=grid%nx/2+1,grid%nx-1
-      if ((frac_coverage(i,grid%ny).ne.0).and. &
-          (frac_coverage(i+1,grid%ny).ne.0).and. &
-          (frac_coverage(i-grid%nx/2,grid%ny).ne.0).and. &
-          (frac_coverage(i-1,grid%ny).ne.0).and. &
-          (frac_coverage(i,grid%ny-1).ne.0)) &
-                      frac_coverage(i,grid%ny)=1.0
+       if ((frac_coverage(i,grid%ny).ne.0).and. &
+           (frac_coverage(i+1,grid%ny).ne.0).and. &
+           (frac_coverage(i-grid%nx/2,grid%ny).ne.0).and. &
+           (frac_coverage(i-1,grid%ny).ne.0).and. &
+           (frac_coverage(i,grid%ny-1).ne.0)) &
+            frac_coverage(i,grid%ny)=1.0
     enddo
- 
+
     ! left and right edges
 
     do j=2,grid%ny-1
-      if ((frac_coverage(1,j).ne.0).and. &
-          (frac_coverage(2,j).ne.0).and. &
-          (frac_coverage(1,j+1).ne.0).and. &
-          (frac_coverage(grid%nx,j).ne.0).and. &
-          (frac_coverage(1,j-1).ne.0)) &
-                      frac_coverage(1,j)=1.0
-      if ((frac_coverage(grid%nx,j).ne.0).and. &
-          (frac_coverage(1,j).ne.0).and. &
-          (frac_coverage(grid%nx,j+1).ne.0).and. &
-          (frac_coverage(grid%nx-1,j).ne.0).and. &
-          (frac_coverage(grid%nx,j-1).ne.0)) &
-                      frac_coverage(grid%nx,j)=1.0
+       if ((frac_coverage(1,j).ne.0).and. &
+           (frac_coverage(2,j).ne.0).and. &
+           (frac_coverage(1,j+1).ne.0).and. &
+           (frac_coverage(grid%nx,j).ne.0).and. &
+           (frac_coverage(1,j-1).ne.0)) &
+            frac_coverage(1,j)=1.0
+       if ((frac_coverage(grid%nx,j).ne.0).and. &
+           (frac_coverage(1,j).ne.0).and. &
+           (frac_coverage(grid%nx,j+1).ne.0).and. &
+           (frac_coverage(grid%nx-1,j).ne.0).and. &
+           (frac_coverage(grid%nx,j-1).ne.0)) &
+            frac_coverage(grid%nx,j)=1.0
     enddo
 
     ! corners
@@ -317,28 +317,28 @@ contains
         (frac_coverage(1,2).ne.0).and. &
         (frac_coverage(grid%nx,1).ne.0).and. &
         (frac_coverage(grid%nx/2+1,1).ne.0)) &
-                    frac_coverage(1,1)=1.0
+         frac_coverage(1,1)=1.0
 
     if ((frac_coverage(1,grid%ny).ne.0).and. &
         (frac_coverage(2,grid%ny).ne.0).and. &
         (frac_coverage(grid%nx/2+1,grid%ny).ne.0).and. &
         (frac_coverage(grid%nx,grid%ny).ne.0).and. &
         (frac_coverage(1,grid%ny-1).ne.0)) &
-                    frac_coverage(1,grid%ny)=1.0
+         frac_coverage(1,grid%ny)=1.0
 
     if ((frac_coverage(grid%nx,1).ne.0).and. &
         (frac_coverage(1,1).ne.0).and. &
         (frac_coverage(grid%nx,2).ne.0).and. &
         (frac_coverage(grid%nx-1,1).ne.0).and. &
         (frac_coverage(grid%nx/2,1).ne.0)) &
-                   frac_coverage(grid%nx,1)=1.0
+         frac_coverage(grid%nx,1)=1.0
 
     if ((frac_coverage(grid%nx,grid%ny).ne.0).and. &
         (frac_coverage(1,grid%ny).ne.0).and. &
         (frac_coverage(grid%nx/2,grid%ny).ne.0).and. &
         (frac_coverage(grid%nx-1,grid%ny).ne.0).and. &
         (frac_coverage(grid%nx,grid%ny-1).ne.0)) &
-                   frac_coverage(grid%nx,grid%ny)=1.0
+         frac_coverage(grid%nx,grid%ny)=1.0
 
     ! Finally fix any rogue points > 1.0
 
@@ -346,7 +346,7 @@ contains
 
   end subroutine calc_coverage
 
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   real(rk) function lon_diff(a,b)
 
@@ -357,10 +357,10 @@ contains
 
     aa=a ; bb=b
 
-      do
-        if (aa>bb) exit
-        aa=aa+360.0
-      enddo
+    do
+       if (aa>bb) exit
+       aa=aa+360.0
+    enddo
 
     lon_diff=aa-bb
 

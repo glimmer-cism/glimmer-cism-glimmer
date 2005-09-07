@@ -49,7 +49,7 @@ module glint_climate
   !*FD Subroutines that do various things to prepare the glint climate
 
   interface glint_lapserate
-    module procedure glint_lapserate_dp, glint_lapserate_sp
+     module procedure glint_lapserate_dp, glint_lapserate_sp
   end interface
 
 contains
@@ -86,7 +86,7 @@ contains
 
   end subroutine glint_calc_precip
 
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine glint_downscaling(instance,g_temp,g_temp_range,g_precip,g_orog,g_zonwind, &
        g_merwind,g_humid,g_lwdown,g_swdown,g_airpress,orogflag)
@@ -120,13 +120,13 @@ contains
     end if
 
     if (orogflag) call interp_to_local(instance%proj,g_orog,instance%downs,localdp=instance%global_orog)
-    
+
     if (instance%whichprecip==2.or.instance%whichacab==3) &
          call interp_wind_to_local(instance%proj,g_zonwind,g_merwind,instance%downs,instance%xwind,instance%ywind)
 
   end subroutine glint_downscaling
 
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine fix_acab(ablt,acab,prcp,thck,usrf)
 
@@ -145,7 +145,7 @@ contains
     ! Adjust ablation to be no greater than ice available for melting
 
     where (acab<-thck) 
-      ablt=thck+prcp
+       ablt=thck+prcp
     endwhere
 
     ! If the upper ice/land surface is at or below sea-level, set accumulation,
@@ -153,8 +153,8 @@ contains
     ! sea-level.
 
     where (usrf<=0.0.and.acab>0.0)
-      ablt=prcp
-      acab=0.0
+       ablt=prcp
+       acab=0.0
     end where
 
     ! Remove accumulation from domain edges
@@ -170,7 +170,7 @@ contains
 
   end subroutine fix_acab
 
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine glint_lapserate_dp(temp,topo,lr)
 
@@ -193,7 +193,7 @@ contains
 
   end subroutine glint_lapserate_dp
 
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine glint_lapserate_sp(temp,topo,lr)
 
@@ -204,7 +204,7 @@ contains
 
     implicit none
 
-    real(sp),dimension(:,:),intent(inout) :: temp !*FD temperature at sea-level in $^{\circ}$C
+    real(sp),dimension(:,:),intent(inout) :: temp  !*FD temperature at sea-level in $^{\circ}$C
                                                    !*FD used for input and output
     real(rk),dimension(:,:), intent(in)    :: topo !*FD topography field (m above msl)
     real(rk),                intent(in)    :: lr   !*FD Lapse rate ($^{\circ}\mathrm{C\,km}^{-1}$).
@@ -215,7 +215,5 @@ contains
     temp=temp-(lr*topo/1000.0)                     ! The lapse rate calculation.
 
   end subroutine glint_lapserate_sp
-
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 end module glint_climate

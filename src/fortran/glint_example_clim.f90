@@ -1,4 +1,3 @@
-
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! +                                                           +
 ! +  glint_example_clim.f90 - part of the GLIMMER ice model   + 
@@ -90,7 +89,7 @@ module glint_example_clim
 contains
 
   subroutine glex_clim_init(params,filename)
-    
+
     use glimmer_config
     use glint_global_interp
 
@@ -132,7 +131,7 @@ contains
        call global_interp(params%orog_grid,params%orog_load,params%all_grid,params%orog_clim,error=ierr)
        if (ierr>0) call interp_error(ierr,__LINE__)
     end if
-         
+
     ! Precip
 
     if (params%precip_grid==params%all_grid) then
@@ -232,7 +231,7 @@ contains
     if (associated(grid))  deallocate(grid)
 
     call read_ncdf_common1(filename,ncid,varid,ndims,varname)
-    
+
     ! If not a 3d variable, flag and error and exit ----
 
     if (ndims/=2) then
@@ -247,7 +246,7 @@ contains
     allocate(array(dimlens(1),dimlens(2)))
     allocate(dim1(dimlens(1)))
     allocate(dim2(dimlens(2)))
-    
+
     ! Retrieve variable contents -----------------------
 
     ncerr=nf90_get_var(ncid, varid, array)
@@ -306,7 +305,7 @@ contains
     if (associated(grid))  deallocate(grid)
 
     call read_ncdf_common1(filename,ncid,varid,ndims,varname)
-    
+
     ! If not a 3d variable, flag and error and exit ----
 
     if (ndims/=3) then
@@ -322,7 +321,7 @@ contains
     allocate(dim1(dimlens(1)))
     allocate(dim2(dimlens(2)))
     allocate(dim3(dimlens(3)))
-    
+
     ! Retrieve variable contents -----------------------
 
     ncerr=nf90_get_var(ncid, varid, array)
@@ -365,7 +364,7 @@ contains
     integer :: ncid,varid,ndims
     character(*) :: varname
     integer :: ncerr
-    
+
     ! Open file
 
     ncerr=nf90_open(filename,0,ncid)
@@ -532,7 +531,7 @@ contains
 
     integer, intent (in) :: status
     integer, intent (in) :: line
-    
+
     if(status /= nf90_noerr) then
        print *, trim(nf90_strerror(status))
        print *, 'Line:',line
@@ -560,9 +559,9 @@ contains
 
     tst=params%hours_in_year/ntemp
     tsp=params%hours_in_year/nprecip
-    
+
     ! Temperature first
-    
+
     lower=int(time/tst)
     upper=lower+1
     pos=mod(time,tst)/tst

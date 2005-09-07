@@ -1,3 +1,44 @@
+! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+! +                                                           +
+! +  glint_mbal_coupling.f90 - part of the GLIMMER ice model  + 
+! +                                                           +
+! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+! 
+! Copyright (C) 2004 GLIMMER contributors - see COPYRIGHT file 
+! for list of contributors.
+!
+! This program is free software; you can redistribute it and/or 
+! modify it under the terms of the GNU General Public License as 
+! published by the Free Software Foundation; either version 2 of 
+! the License, or (at your option) any later version.
+!
+! This program is distributed in the hope that it will be useful, 
+! but WITHOUT ANY WARRANTY; without even the implied warranty of 
+! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+! GNU General Public License for more details.
+!
+! You should have received a copy of the GNU General Public License 
+! along with this program; if not, write to the Free Software 
+! Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 
+! 02111-1307 USA
+!
+! GLIMMER is maintained by:
+!
+! Ian Rutt
+! School of Geographical Sciences
+! University of Bristol
+! University Road
+! Bristol
+! BS8 1SS
+! UK
+!
+! email: <i.c.rutt@bristol.ac.uk> or <ian.rutt@physics.org>
+!
+! GLIMMER is hosted on NeSCForge:
+!
+! http://forge.nesc.ac.uk/projects/glimmer/
+!
+! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 module glint_mbal_coupling
 
@@ -8,27 +49,27 @@ module glint_mbal_coupling
   !*FD Module to handle the accumulation of inputs and calculation of mass-balance
 
   type glint_mbc
-    real(dp),dimension(:,:),pointer :: prcp_save => null() !*FD used to accumulate precip
-    real(dp),dimension(:,:),pointer :: ablt_save => null() !*FD used to accumulate ablation
-    real(dp),dimension(:,:),pointer :: acab_save => null() !*FD used to accumulate mass-balance
-    real(dp),dimension(:,:),pointer :: artm_save => null() !*FD used to average air-temperature
-    real(sp),dimension(:,:),pointer :: snowd     => null() !*FD Keeps track of snow depth
-    real(sp),dimension(:,:),pointer :: siced     => null() !*FD Keeps track of superimposed ice depth 
-    real(sp),dimension(:,:),pointer :: prcp      => null() !*FD Instantaneous precip
-    real(sp),dimension(:,:),pointer :: ablt      => null() !*FD Instantaneous ablation
-    real(sp),dimension(:,:),pointer :: acab      => null() !*FD Instantaneous mass-balance
-    real(sp),dimension(:,:),pointer :: artm      => null() !*FD Instantaneous air temperature
-    real(sp),dimension(:,:),pointer :: xwind      => null() !*FD Instantaneous x-wind
-    real(sp),dimension(:,:),pointer :: ywind      => null() !*FD Instantaneous y-wind
-    real(sp),dimension(:,:),pointer :: humidity   => null() !*FD Instantaneous humidity
-    real(sp),dimension(:,:),pointer :: SWdown     => null() !*FD Instantaneous sw down
-    real(sp),dimension(:,:),pointer :: LWdown     => null() !*FD Instantaneous lw down
-    real(sp),dimension(:,:),pointer :: Psurf      => null() !*FD Instantaneous psurf
-    real(sp),dimension(:,:),pointer :: snowd_save => null() !*FD Saves snow depth
-    real(sp),dimension(:,:),pointer :: siced_save => null() !*FD Saves superimposed ice depth 
-    integer :: av_count =0 !*FD Counter for averaging temperature input
-    logical :: new_accum=.true.
-    type(glint_mbal_params) :: mbal
+     real(dp),dimension(:,:),pointer :: prcp_save  => null() !*FD used to accumulate precip
+     real(dp),dimension(:,:),pointer :: ablt_save  => null() !*FD used to accumulate ablation
+     real(dp),dimension(:,:),pointer :: acab_save  => null() !*FD used to accumulate mass-balance
+     real(dp),dimension(:,:),pointer :: artm_save  => null() !*FD used to average air-temperature
+     real(sp),dimension(:,:),pointer :: snowd      => null() !*FD Keeps track of snow depth
+     real(sp),dimension(:,:),pointer :: siced      => null() !*FD Keeps track of superimposed ice depth 
+     real(sp),dimension(:,:),pointer :: prcp       => null() !*FD Instantaneous precip
+     real(sp),dimension(:,:),pointer :: ablt       => null() !*FD Instantaneous ablation
+     real(sp),dimension(:,:),pointer :: acab       => null() !*FD Instantaneous mass-balance
+     real(sp),dimension(:,:),pointer :: artm       => null() !*FD Instantaneous air temperature
+     real(sp),dimension(:,:),pointer :: xwind      => null() !*FD Instantaneous x-wind
+     real(sp),dimension(:,:),pointer :: ywind      => null() !*FD Instantaneous y-wind
+     real(sp),dimension(:,:),pointer :: humidity   => null() !*FD Instantaneous humidity
+     real(sp),dimension(:,:),pointer :: SWdown     => null() !*FD Instantaneous sw down
+     real(sp),dimension(:,:),pointer :: LWdown     => null() !*FD Instantaneous lw down
+     real(sp),dimension(:,:),pointer :: Psurf      => null() !*FD Instantaneous psurf
+     real(sp),dimension(:,:),pointer :: snowd_save => null() !*FD Saves snow depth
+     real(sp),dimension(:,:),pointer :: siced_save => null() !*FD Saves superimposed ice depth 
+     integer :: av_count =0 !*FD Counter for averaging temperature input
+     logical :: new_accum=.true.
+     type(glint_mbal_params) :: mbal
   end type glint_mbc
 
 contains
@@ -120,7 +161,7 @@ contains
     real(rk),dimension(:,:),intent(in) :: Psurf        !*FD Surface pressure (Pa)
 
     real(sp),dimension(size(artm,1),size(artm,2)) :: ablt,acab
-    
+
     ! Things to do the first time
 
     if (params%new_accum) then

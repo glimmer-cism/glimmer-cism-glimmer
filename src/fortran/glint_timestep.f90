@@ -51,10 +51,10 @@ module glint_timestep
 contains
 
   subroutine glint_i_tstep(time,instance,g_temp,g_temp_range, &
-                          g_precip,g_zonwind,g_merwind,g_humid,g_lwdown,g_swdown,g_airpress, &
-                          g_orog,g_orog_out,g_albedo,g_ice_frac,g_veg_frac,g_snowice_frac,g_snowveg_frac,&
-                          g_snow_depth,g_water_in,g_water_out,t_win,&
-                          t_wout,ice_vol,out_f,orogflag,mbal_skip,ice_tstep)
+       g_precip,g_zonwind,g_merwind,g_humid,g_lwdown,g_swdown,g_airpress, &
+       g_orog,g_orog_out,g_albedo,g_ice_frac,g_veg_frac,g_snowice_frac,g_snowveg_frac,&
+       g_snow_depth,g_water_in,g_water_out,t_win,&
+       t_wout,ice_vol,out_f,orogflag,mbal_skip,ice_tstep)
 
     !*FD Performs time-step of an ice model instance. Note that this 
     !*FD code will need to be altered to take account of the 
@@ -117,9 +117,9 @@ contains
     integer, dimension(:,:),allocatable :: fudge_mask    ! temporary array for fudging
     real(sp),dimension(:,:),allocatable :: thck_temp     ! temporary array for volume calcs
     real(rk) :: start_volume,end_volume,flux_fudge
-    
+
     ! Assume we always need this, as it's too complicated to work out when we do and don't
-      
+
     allocate(thck_temp(instance%proj%nx,instance%proj%ny))
     ice_tstep=.false.
 
@@ -146,7 +146,7 @@ contains
 
        call glint_lapserate(instance%artm,real(instance%global_orog,rk),real(-instance%lapse_rate,rk))
        call glint_lapserate(instance%artm,real(instance%local_orog,rk), real(instance%lapse_rate,rk))
- 
+
        ! Process the precipitation field if necessary ---------------------------
 
        call glint_calc_precip(instance)
@@ -210,7 +210,7 @@ contains
        where (instance%acab<-thck_temp)
           instance%acab=-thck_temp
        end where
-    
+
        ! Do water budget accounting ---------------------------------------------
 
        if (out_f%water_out.or.out_f%total_wout.or.out_f%water_in .or.out_f%total_win) then
@@ -227,7 +227,7 @@ contains
        call glide_tstep_p1(instance%model,real(time,rk)*hours2years)
        call glide_tstep_p2(instance%model)
        call glide_tstep_p3(instance%model)
- 
+
        ! Calculate flux fudge factor --------------------------------------------
 
        if (out_f%water_out.or.out_f%total_wout.or.out_f%water_in .or.out_f%total_win) then
@@ -246,7 +246,7 @@ contains
           flux_fudge=(start_volume+sum(accum_temp)-sum(ablat_temp)-end_volume)/sum(fudge_mask)
 
           ! Apply fudge_factor
-          
+
           where(thck_temp>0.0)
              ablat_temp=ablat_temp+flux_fudge
           endwhere
@@ -257,7 +257,7 @@ contains
        ! First water input (i.e. mass balance + ablation)
 
        if (out_f%water_in) then
-         allocate(upscale_temp(instance%proj%nx,instance%proj%ny))
+          allocate(upscale_temp(instance%proj%nx,instance%proj%ny))
 
           where (thck_temp>0.0)
              upscale_temp=accum_temp
@@ -292,7 +292,7 @@ contains
                instance%proj%dx, &
                instance%proj%dy)
 
-         call mean_to_global(instance%ups,   &
+          call mean_to_global(instance%ups,   &
                routing_temp,   &
                g_water_out,    &
                instance%out_mask)
@@ -342,7 +342,7 @@ contains
 
   end subroutine glint_i_tstep
 
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine glint_remove_bath(orog,x,y)
 
@@ -361,7 +361,7 @@ contains
 
   end subroutine glint_remove_bath
 
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   recursive subroutine glint_find_bath(orog,x,y,nx,ny)
 
@@ -376,17 +376,17 @@ contains
     integer :: ns=4,i
 
     do i=1,ns
-      if (x+xi(i).le.nx.and.x+xi(i).gt.0.and. &
-          y+yi(i).le.ny.and.y+yi(i).gt.0) then
-        if (orog(x+xi(i),y+yi(i)).lt.0.0) then
-          orog(x+xi(i),y+yi(i))=0.0
-          call glint_find_bath(orog,x+xi(i),y+yi(i),nx,ny)
-        endif
-      endif
+       if (x+xi(i).le.nx.and.x+xi(i).gt.0.and. &
+            y+yi(i).le.ny.and.y+yi(i).gt.0) then
+          if (orog(x+xi(i),y+yi(i)).lt.0.0) then
+             orog(x+xi(i),y+yi(i))=0.0
+             call glint_find_bath(orog,x+xi(i),y+yi(i),nx,ny)
+          endif
+       endif
     enddo
 
   end subroutine glint_find_bath
 
 end module glint_timestep
-  
-  
+
+

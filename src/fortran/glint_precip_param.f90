@@ -1,6 +1,6 @@
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! +                                                           +
-! +  glimmer_mbal.f90 - part of the GLIMMER ice model         + 
+! +  glint_precip_param.f90 - part of the GLIMMER ice model   + 
 ! +                                                           +
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! 
@@ -84,11 +84,11 @@ contains
     ! Arguments
 
     real(sp),dimension(:,:),intent(inout) :: precip  !*FD Precipitation field (mm/a) 
-                                                      !*FD used for input and output. on
-                                                      !*FD input it contains the large-scale 
-                                                      !*FD field calculated by interpolation. 
-                                                      !*FD On output, it contains the field calculated by 
-                                                      !*FD this subroutine and used for the mass-balance.
+                                                     !*FD used for input and output. on
+                                                     !*FD input it contains the large-scale 
+                                                     !*FD field calculated by interpolation. 
+                                                     !*FD On output, it contains the field calculated by 
+                                                     !*FD this subroutine and used for the mass-balance.
     real(rk), dimension(:,:),intent(in)    :: xwind   !*FD Annual mean wind field: $x$-component (m/s)
     real(rk), dimension(:,:),intent(in)    :: ywind   !*FD Annual mean wind field: $y$-component (m/s)
     real(sp), dimension(:,:),intent(in)    :: topo    !*FD Surface topography (m)
@@ -117,35 +117,35 @@ contains
     nx=size(precip,1) ; ny=size(precip,2)
 
     if (present(fixed_a)) then
-      fa=fixed_a
+       fa=fixed_a
     else
-      fa=.false.
+       fa=.false.
     endif
- 
+
     w0=calc_w0(xwind,ywind,topo,dx,dy)   ! calculate the mean vertical velocity
 
     do i=1,nx
-      do j=1,ny
-        if (fa) then
-          a=2.5e-11                             ! fixed a
-        else
-          a=precip(i,j)*pc/satvap(real(temp(i,j),rk))    ! calculate a from the precip and satvap
-        endif
-        x0=a/b+w0(i,j)                        ! for convenience, calc x0
-        precip(i,j)=b*satvap(real(temp(i,j),rk))* &    ! the function from Roe and Lindzen (corrected)
-          (0.5*abs(x0)+(x0**2/2*abs(x0))*error_func((1.0/alpha)*abs(x0)) &
-          +(alpha/(2*sqrt(pi)))*exp(-(1.0/alpha)**2*x0**2))
-        a=a
-      enddo
-    enddo  
+       do j=1,ny
+          if (fa) then
+             a=2.5e-11                             ! fixed a
+          else
+             a=precip(i,j)*pc/satvap(real(temp(i,j),rk))    ! calculate a from the precip and satvap
+          endif
+          x0=a/b+w0(i,j)                        ! for convenience, calc x0
+          precip(i,j)=b*satvap(real(temp(i,j),rk))* &    ! the function from Roe and Lindzen (corrected)
+               (0.5*abs(x0)+(x0**2/2*abs(x0))*error_func((1.0/alpha)*abs(x0)) &
+               +(alpha/(2*sqrt(pi)))*exp(-(1.0/alpha)**2*x0**2))
+          a=a
+       enddo
+    enddo
 
     precip=precip/pc   ! convert back to mm/a 
 
   end subroutine glint_precip
 
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-! Private subroutines and functions follow
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  ! Private subroutines and functions follow
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   real(rk) function satvap(temp,kelvin)
 
@@ -174,13 +174,13 @@ contains
     ! First check to see if kelvin is present and adjust accordingly
 
     if (present(kelvin)) then
-      if (kelvin) then 
-        ts=temp-273.15
-      else
-        ts=temp
-      endif
+       if (kelvin) then 
+          ts=temp-273.15
+       else
+          ts=temp
+       endif
     else
-      ts=temp
+       ts=temp
     endif
 
     ! finally, the function itself
@@ -189,7 +189,7 @@ contains
 
   end function satvap
 
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   function calc_w0(u,v,h0,dx,dy)
 
@@ -223,7 +223,7 @@ contains
     ! Returned array
 
     real(rk),dimension(size(u,1),size(u,2)) :: calc_w0
- 
+
     ! Internal variables
 
     integer :: i,j,nx,ny
@@ -235,23 +235,23 @@ contains
     ! main block loop
 
     do i=2,nx-1
-      do j=2,ny-1
-        calc_w0(i,j)=u(i,j)*(h0(i+1,j)-h0(i-1,j))/(2*dx) +v(i,j)*(h0(i,j+1)-h0(i,j-1))/(2*dy)
-      enddo
+       do j=2,ny-1
+          calc_w0(i,j)=u(i,j)*(h0(i+1,j)-h0(i-1,j))/(2*dx) +v(i,j)*(h0(i,j+1)-h0(i,j-1))/(2*dy)
+       enddo
     enddo
 
     ! top and bottom rows
 
     do i=2,nx-1
-      calc_w0(i,1) =u(i,1) *(h0(i+1,1) -h0(i-1,1)) /(2*dx) +v(i,1) *(h0(i,2) -h0(i,1))   /dy
-      calc_w0(i,ny)=u(i,ny)*(h0(i+1,ny)-h0(i-1,ny))/(2*dx) +v(i,ny)*(h0(i,ny)-h0(i,ny-1))/dy
+       calc_w0(i,1) =u(i,1) *(h0(i+1,1) -h0(i-1,1)) /(2*dx) +v(i,1) *(h0(i,2) -h0(i,1))   /dy
+       calc_w0(i,ny)=u(i,ny)*(h0(i+1,ny)-h0(i-1,ny))/(2*dx) +v(i,ny)*(h0(i,ny)-h0(i,ny-1))/dy
     enddo
 
     ! left and right columns
 
     do j=2,ny-1
-      calc_w0(1,j) =u(1,j) *(h0(2,j) -h0(1,j))   /dx +v(1,j) *(h0(1,j+1) -h0(1,j-1)) /(2*dy)
-      calc_w0(nx,j)=u(nx,j)*(h0(nx,j)-h0(nx-1,j))/dx +v(nx,j)*(h0(nx,j+1)-h0(nx,j-1))/(2*dy)
+       calc_w0(1,j) =u(1,j) *(h0(2,j) -h0(1,j))   /dx +v(1,j) *(h0(1,j+1) -h0(1,j-1)) /(2*dy)
+       calc_w0(nx,j)=u(nx,j)*(h0(nx,j)-h0(nx-1,j))/dx +v(nx,j)*(h0(nx,j+1)-h0(nx,j-1))/(2*dy)
     enddo
 
     ! corners
@@ -263,7 +263,7 @@ contains
 
   end function calc_w0
 
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   real(rk) function error_func(y)
 
@@ -286,7 +286,7 @@ contains
     implicit none
 
     real(rk),intent(in) :: y !*FD The independent variable
-    
+
     real(rk) :: t
     real(rk),parameter :: g0=0.47047
     real(rk),parameter :: g1=0.3480242

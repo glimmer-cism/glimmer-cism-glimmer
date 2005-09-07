@@ -1,4 +1,3 @@
-
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! +                                                           +
 ! +  glimmer_example.f90 - part of the GLIMMER ice model      + 
@@ -43,9 +42,9 @@
 
 program glint_example
 
-!*FD This program demonstrates the use of GLIMMER. It loads in
-!*FD some example global fields and associated grid data,
-!*FD Initialises the model, and then runs it for 1000 years.
+  !*FD This program demonstrates the use of GLIMMER. It loads in
+  !*FD some example global fields and associated grid data,
+  !*FD Initialises the model, and then runs it for 1000 years.
 
   use glint_main
   use glimmer_log
@@ -98,7 +97,7 @@ program glint_example
   real(rk) :: twin     ! Timestep-integrated input water flux (kg)
   real(rk) :: twout    ! Timestep-integrated output water flux (kg)
   real(rk) :: ice_vol  ! Total ice volume (m^3)
-  
+
   ! Other variables ---------------------------------------------------------------------
 
   logical :: out    ! Outputs set flag
@@ -167,13 +166,13 @@ program glint_example
   ! Calculate example orographic latitudes
 
   do j=1,nyo
-    lats_orog(j)=-(180.0/nyo)*j+90.0+(90.0/nyo)
+     lats_orog(j)=-(180.0/nyo)*j+90.0+(90.0/nyo)
   enddo
 
   ! Calculate example orographic longitudes
 
   do i=1,nxo
-    lons_orog(i)=(360.0/nxo)*i-(180.0/nxo)
+     lons_orog(i)=(360.0/nxo)*i-(180.0/nxo)
   enddo
 
   ! Set the message level (6 is the default - all messages on)
@@ -196,8 +195,8 @@ program glint_example
   ! Get coverage maps for the ice model instances
 
   if (glint_coverage_map(ice_sheet,coverage,cov_orog).ne.0) then
-    call write_log('Unable to get coverage maps',GM_FATAL,__FILE__,__LINE__)
-    stop
+     call write_log('Unable to get coverage maps',GM_FATAL,__FILE__,__LINE__)
+     stop
   endif
 
   ! Do initial timesteps ---------------------------------------------------------------------------

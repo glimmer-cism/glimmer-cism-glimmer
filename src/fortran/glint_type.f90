@@ -54,109 +54,109 @@ module glint_type
 
   type glint_instance
 
-    !*FD Derived type holding information about ice model instance. 
+     !*FD Derived type holding information about ice model instance. 
 
-    type(projection)                 :: proj               !*FD The projection definition of the instance.
-    type(downscale)                  :: downs              !*FD Downscaling parameters.
-    type(upscale)                    :: ups                !*FD Upscaling parameters
-    type(upscale)                    :: ups_orog           !*FD Upscaling parameters for orography (to cope
-                                                           !*FD with need to convert to spectral form).
-    type(glide_global_type)          :: model              !*FD The instance and all its arrays.
-    character(fname_length)          :: paramfile          !*FD The name of the configuration file.
-    integer                          :: ice_tstep          !*FD Ice timestep in hours
-    integer                          :: mbal_tstep         !*FD Mass-balance timestep in hours
+     type(projection)                 :: proj               !*FD The projection definition of the instance.
+     type(downscale)                  :: downs              !*FD Downscaling parameters.
+     type(upscale)                    :: ups                !*FD Upscaling parameters
+     type(upscale)                    :: ups_orog           !*FD Upscaling parameters for orography (to cope
+                                                            !*FD with need to convert to spectral form).
+     type(glide_global_type)          :: model              !*FD The instance and all its arrays.
+     character(fname_length)          :: paramfile          !*FD The name of the configuration file.
+     integer                          :: ice_tstep          !*FD Ice timestep in hours
+     integer                          :: mbal_tstep         !*FD Mass-balance timestep in hours
 
-    ! Climate inputs from global model --------------------------
+     ! Climate inputs from global model --------------------------
 
-    real(sp),dimension(:,:),pointer :: artm        => null() !*FD Annual mean air temperature
-    real(sp),dimension(:,:),pointer :: arng        => null() !*FD Annual air temperature half-range
-    real(sp),dimension(:,:),pointer :: prcp        => null() !*FD Precipitation (mm or m)
-    real(sp),dimension(:,:),pointer :: snowd       => null() !*FD Snow depth (m)
-    real(sp),dimension(:,:),pointer :: siced       => null() !*FD Superimposed ice depth (m)
-    real(rk),dimension(:,:),pointer :: xwind       => null() !*FD $x$-component of surface winds (m/s)
-    real(rk),dimension(:,:),pointer :: ywind       => null() !*FD $y$-component of surface winds (m/s)
-    real(rk),dimension(:,:),pointer :: humid       => null() !*FD Surface humidity (%)
-    real(rk),dimension(:,:),pointer :: lwdown      => null() !*FD Downwelling longwave (W/m^2)
-    real(rk),dimension(:,:),pointer :: swdown      => null() !*FD Downwelling shortwave (W/m^2)
-    real(rk),dimension(:,:),pointer :: airpress    => null() !*FD Surface air pressure (Pa)
-    real(dp),dimension(:,:),pointer :: global_orog => null() !*FD Global orography (m)
-    real(sp),dimension(:,:),pointer :: local_orog  => null() !*FD Local orography (m)
- 
-    ! Locally calculated climate/mass-balance fields ------------
+     real(sp),dimension(:,:),pointer :: artm        => null() !*FD Annual mean air temperature
+     real(sp),dimension(:,:),pointer :: arng        => null() !*FD Annual air temperature half-range
+     real(sp),dimension(:,:),pointer :: prcp        => null() !*FD Precipitation (mm or m)
+     real(sp),dimension(:,:),pointer :: snowd       => null() !*FD Snow depth (m)
+     real(sp),dimension(:,:),pointer :: siced       => null() !*FD Superimposed ice depth (m)
+     real(rk),dimension(:,:),pointer :: xwind       => null() !*FD $x$-component of surface winds (m/s)
+     real(rk),dimension(:,:),pointer :: ywind       => null() !*FD $y$-component of surface winds (m/s)
+     real(rk),dimension(:,:),pointer :: humid       => null() !*FD Surface humidity (%)
+     real(rk),dimension(:,:),pointer :: lwdown      => null() !*FD Downwelling longwave (W/m^2)
+     real(rk),dimension(:,:),pointer :: swdown      => null() !*FD Downwelling shortwave (W/m^2)
+     real(rk),dimension(:,:),pointer :: airpress    => null() !*FD Surface air pressure (Pa)
+     real(dp),dimension(:,:),pointer :: global_orog => null() !*FD Global orography (m)
+     real(sp),dimension(:,:),pointer :: local_orog  => null() !*FD Local orography (m)
 
-    real(sp),dimension(:,:),pointer :: ablt => null() !*FD Annual ablation.
-    real(sp),dimension(:,:),pointer :: acab => null() !*FD Annual mass-balance.
+     ! Locally calculated climate/mass-balance fields ------------
 
-    ! Arrays to accumulate mass-balance quantities --------------
+     real(sp),dimension(:,:),pointer :: ablt => null() !*FD Annual ablation.
+     real(sp),dimension(:,:),pointer :: acab => null() !*FD Annual mass-balance.
 
-    type(glint_mbc) :: mbal_accum
+     ! Arrays to accumulate mass-balance quantities --------------
 
-    ! Fractional coverage information ---------------------------
-    
-    real(rk) ,dimension(:,:),pointer :: frac_coverage => null() !*FD Fractional coverage of each 
-                                                                !*FD global gridbox by the projected grid.
-    real(rk) ,dimension(:,:),pointer :: frac_cov_orog => null() !*FD Fractional coverage of each 
-                                                                !*FD global gridbox by the projected grid 
-                                                                !*FD (orography).
-    ! Output masking --------------------------------------------
+     type(glint_mbc) :: mbal_accum
 
-    integer, dimension(:,:),pointer :: out_mask => null() 
-    
-    !*FD Array indicating whether a point should be considered or ignored 
-    !*FD when upscaling data for output. 1 means use, 0 means ignore.
+     ! Fractional coverage information ---------------------------
 
-    integer :: last_timestep=0
+     real(rk) ,dimension(:,:),pointer :: frac_coverage => null() 
+     !*FD Fractional coverage of each global gridbox by the projected grid.
+     real(rk) ,dimension(:,:),pointer :: frac_cov_orog => null() 
+     !*FD Fractional coverage of each global gridbox by the projected grid (orography).
 
-    ! Climate options -------------------------------------------
+     ! Output masking --------------------------------------------
 
-    integer :: whichacab = 1
+     integer, dimension(:,:),pointer :: out_mask => null() 
 
-    !*FD Which mass-balance scheme: 
-    !*FD \begin{description}
-    !*FD \item[1] PDD mass-balance model
-    !*FD \item[2] Accumulation only 
-    !*FD \item[3] RAPID energy balance model
-    !*FD \end{description}
+     !*FD Array indicating whether a point should be considered or ignored 
+     !*FD when upscaling data for output. 1 means use, 0 means ignore.
 
-    integer :: whichprecip = 1
+     integer :: last_timestep=0
 
-    !*FD Source of precipitation:
-    !*FD \begin{description}
-    !*FD \item[1] Use large-scale precip as is.
-    !*FD \item[2] Use parameterization of \emph{Roe and Lindzen} 
-    !*FD \end{description}
+     ! Climate options -------------------------------------------
 
-    ! Climate parameters ----------------------------------------------------------
+     integer :: whichacab = 1
 
-    real(sp) :: ice_albedo   =   0.4 !*FD Ice albedo. (fraction)
-    real(sp) :: lapse_rate   =   8.0 !*FD Uniform lapse rate in deg C/km 
-                                     !*FD (N.B. This should be \emph{positive} for 
-                                     !*FD temperature falling with height!)
+     !*FD Which mass-balance scheme: 
+     !*FD \begin{description}
+     !*FD \item[1] PDD mass-balance model
+     !*FD \item[2] Accumulation only 
+     !*FD \item[3] RAPID energy balance model
+     !*FD \end{description}
 
-    ! Counter for averaging temperature input --------------------------------------
+     integer :: whichprecip = 1
 
-    integer  :: av_count = 0 !*FD Counter for averaging temperature input
+     !*FD Source of precipitation:
+     !*FD \begin{description}
+     !*FD \item[1] Use large-scale precip as is.
+     !*FD \item[2] Use parameterization of \emph{Roe and Lindzen} 
+     !*FD \end{description}
+
+     ! Climate parameters ----------------------------------------------------------
+
+     real(sp) :: ice_albedo   =   0.4 !*FD Ice albedo. (fraction)
+     real(sp) :: lapse_rate   =   8.0 !*FD Uniform lapse rate in deg C/km 
+     !*FD (N.B. This should be \emph{positive} for 
+     !*FD temperature falling with height!)
+
+     ! Counter for averaging temperature input --------------------------------------
+
+     integer  :: av_count = 0 !*FD Counter for averaging temperature input
 
   end type glint_instance
 
   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   type output_flags
-    !*FD A derived type used internally to communicate the outputs which need
-    !*FD to be upscaled, thus avoiding unnecessary calculation
+     !*FD A derived type used internally to communicate the outputs which need
+     !*FD to be upscaled, thus avoiding unnecessary calculation
 
-    logical :: orog         !*FD Set if we need to upscale the orography
-    logical :: albedo       !*FD Set if we need to upscale the albedo
-    logical :: ice_frac     !*FD Set if we need to upscale the ice fraction
-    logical :: veg_frac     !*FD Set if we need to upscale the veg fraction
-    logical :: snowice_frac !*FD Set if we need to upscale the snow-covered ice fraction
-    logical :: snowveg_frac !*FD Set if we need to upscale the snow-covered veg fraction
-    logical :: snow_depth   !*FD Set if we need to upscale the snow depth
-    logical :: water_in     !*FD Set if we need to upscale the input water flux
-    logical :: water_out    !*FD Set if we need to upscale the output water flux
-    logical :: total_win    !*FD Set if we need to sum the total water taken up by ice sheet
-    logical :: total_wout   !*FD Set if we need to sum the total ablation by the ice sheet
-    logical :: ice_vol      !*FD Set if we need to calculate the total ice volume
+     logical :: orog         !*FD Set if we need to upscale the orography
+     logical :: albedo       !*FD Set if we need to upscale the albedo
+     logical :: ice_frac     !*FD Set if we need to upscale the ice fraction
+     logical :: veg_frac     !*FD Set if we need to upscale the veg fraction
+     logical :: snowice_frac !*FD Set if we need to upscale the snow-covered ice fraction
+     logical :: snowveg_frac !*FD Set if we need to upscale the snow-covered veg fraction
+     logical :: snow_depth   !*FD Set if we need to upscale the snow depth
+     logical :: water_in     !*FD Set if we need to upscale the input water flux
+     logical :: water_out    !*FD Set if we need to upscale the output water flux
+     logical :: total_win    !*FD Set if we need to sum the total water taken up by ice sheet
+     logical :: total_wout   !*FD Set if we need to sum the total ablation by the ice sheet
+     logical :: ice_vol      !*FD Set if we need to calculate the total ice volume
   end type output_flags
 
 contains
@@ -171,8 +171,8 @@ contains
     type(glint_instance),intent(inout) :: instance  !*FD Instance whose elements are to be allocated.
     integer,             intent(in)    :: nxg       !*FD Longitudinal size of global grid (grid-points).
     integer,             intent(in)    :: nyg       !*FD Latitudinal size of global grid (grid-points).
-    integer,             intent(in)    :: nxgo       !*FD Longitudinal size of global orog grid (grid-points).
-    integer,             intent(in)    :: nygo       !*FD Latitudinal size of global orog grid (grid-points).
+    integer,             intent(in)    :: nxgo      !*FD Longitudinal size of global orog grid (grid-points).
+    integer,             intent(in)    :: nygo      !*FD Latitudinal size of global orog grid (grid-points).
 
     integer ewn,nsn
 
@@ -243,7 +243,7 @@ contains
 
   end subroutine glint_i_allocate
 
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine glint_i_readconfig(instance,config)
 
@@ -264,7 +264,7 @@ contains
 
     ! GLINT projection parameters
     call proj_readconfig(instance%proj,config)         ! read glint projection configuration
-    
+
     call GetSection(config,section,'GLINT climate')
     if (associated(section)) then
        call GetValue(section,'precip_mode',instance%whichprecip)
@@ -275,7 +275,7 @@ contains
 
   end subroutine glint_i_readconfig
 
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine glint_i_printconfig(instance)
 
@@ -307,7 +307,7 @@ contains
 
   end subroutine glint_i_printconfig
 
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine get_i_upscaled_fields(instance,orog,albedo,ice_frac,veg_frac,snowice_frac,snowveg_frac,snow_depth)
 
@@ -336,7 +336,7 @@ contains
     real(rk),dimension(:,:),intent(out) :: snowice_frac  !*FD The fraction of snow-covered ice
     real(rk),dimension(:,:),intent(out) :: snowveg_frac  !*FD The fraction of snow-covered vegetation
     real(rk),dimension(:,:),intent(out) :: snow_depth    !*FD The mean snow-depth over those 
-                                                         !*FD parts covered in snow (m w.e.)
+    !*FD parts covered in snow (m w.e.)
 
     ! Internal variables -------------------------------------------------------------------------------
 
@@ -408,7 +408,7 @@ contains
 
   end subroutine get_i_upscaled_fields
 
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   logical function glint_has_snow_model(instance)
 

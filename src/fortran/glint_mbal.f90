@@ -52,11 +52,11 @@ module glint_mbal
   !*FD Unified wrapper for different mass-balance codes
 
   type glint_mbal_params
-    type(glimmer_pdd_params),      pointer :: annual_pdd => null() !*FD Pointer to annual PDD params
-    type(glimmer_daily_pdd_params),pointer :: daily_pdd => null()  !*FD Pointer to daily PDD params
-    type(smb_params),              pointer :: smb => null()        !*FD Pointer to SMB params
-    integer :: which !*FD Flag for chosen mass-balance type
-    integer :: tstep !*FD Timestep of mass-balance scheme in hours
+     type(glimmer_pdd_params),      pointer :: annual_pdd => null() !*FD Pointer to annual PDD params
+     type(glimmer_daily_pdd_params),pointer :: daily_pdd => null()  !*FD Pointer to daily PDD params
+     type(smb_params),              pointer :: smb => null()        !*FD Pointer to SMB params
+     integer :: which !*FD Flag for chosen mass-balance type
+     integer :: tstep !*FD Timestep of mass-balance scheme in hours
   end type glint_mbal_params
 
 contains
@@ -80,7 +80,7 @@ contains
     params%which=which
 
     ! Deallocate if necessary
-  
+
     if (associated(params%annual_pdd)) deallocate(params%annual_pdd)
     if (associated(params%daily_pdd))  deallocate(params%daily_pdd)
     if (associated(params%smb))        deallocate(params%smb)
@@ -90,21 +90,21 @@ contains
 
     select case(which)
     case(1)
-      allocate(params%annual_pdd)
-      call glimmer_pdd_init(params%annual_pdd,config)
-      params%tstep=years2hours
+       allocate(params%annual_pdd)
+       call glimmer_pdd_init(params%annual_pdd,config)
+       params%tstep=years2hours
     case(2)
-      params%tstep=years2hours
+       params%tstep=years2hours
     case(3)
-      allocate(params%smb)
-      params%tstep=3
-      call SMBInitWrapper(params%smb,nx,ny,nint(dxr),params%tstep*60,'/home/ggicr/work/ggdagw/src/smb/smb_config/online')
+       allocate(params%smb)
+       params%tstep=3
+       call SMBInitWrapper(params%smb,nx,ny,nint(dxr),params%tstep*60,'/home/ggicr/work/ggdagw/src/smb/smb_config/online')
     case(4)
-      allocate(params%daily_pdd)
-      call glimmer_daily_pdd_init(params%daily_pdd,config)
-      params%tstep=days2hours
+       allocate(params%daily_pdd)
+       call glimmer_daily_pdd_init(params%daily_pdd,config)
+       params%tstep=days2hours
     case default
-      call write_log('Invalid value of whichacab',GM_FATAL,__FILE__,__LINE__)
+       call write_log('Invalid value of whichacab',GM_FATAL,__FILE__,__LINE__)
     end select
 
   end subroutine glint_mbal_init
@@ -116,9 +116,8 @@ contains
 
     use glimmer_log
 
-    type(glint_mbal_params)      :: params !*FD parameters to be initialised
-    real(sp), dimension(:,:), intent(in)    :: artm    !*FD Mean air-temperature 
-                                                       !*FD ($^{\circ}$C)
+    type(glint_mbal_params)                 :: params  !*FD parameters to be initialised
+    real(sp), dimension(:,:), intent(in)    :: artm    !*FD Mean air-temperature ($^{\circ}$C)
     real(sp), dimension(:,:), intent(in)    :: arng    !*FD Temperature half-range ($^{\circ}$C)
     real(sp), dimension(:,:), intent(in)    :: prcp    !*FD Accumulated precipitation (m)
     logical,  dimension(:,:), intent(in)    :: landsea !*FD Land-sea mask (land is TRUE)

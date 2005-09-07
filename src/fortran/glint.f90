@@ -1,8 +1,6 @@
-
-
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! +                                                           +
-! +  glimmer.f90 - part of the GLIMMER ice model              + 
+! +  glint.f90 - part of the GLIMMER ice model                + 
 ! +                                                           +
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! 
@@ -85,16 +83,16 @@ module glint_main
                                      !*FD been called in current round of averaging.
      ! Averaging arrays -----------------------------------------
 
-     real(rk),pointer,dimension(:,:) :: g_av_precip  => null() !*FD globally averaged precip
-     real(rk),pointer,dimension(:,:) :: g_av_temp    => null() !*FD globally averaged temperature 
-     real(rk),pointer,dimension(:,:) :: g_max_temp   => null() !*FD global maximum temperature
-     real(rk),pointer,dimension(:,:) :: g_min_temp   => null() !*FD global minimum temperature
-     real(rk),pointer,dimension(:,:) :: g_temp_range => null() !*FD global temperature range
-     real(rk),pointer,dimension(:,:) :: g_av_zonwind => null() !*FD globally averaged zonal wind 
-     real(rk),pointer,dimension(:,:) :: g_av_merwind => null() !*FD globally averaged meridional wind 
-     real(rk),pointer,dimension(:,:) :: g_av_humid   => null() !*FD globally averaged humidity (%)
-     real(rk),pointer,dimension(:,:) :: g_av_lwdown  => null() !*FD globally averaged downwelling longwave (W/m^2)
-     real(rk),pointer,dimension(:,:) :: g_av_swdown  => null() !*FD globally averaged downwelling shortwave (W/m^2)
+     real(rk),pointer,dimension(:,:) :: g_av_precip  => null()  !*FD globally averaged precip
+     real(rk),pointer,dimension(:,:) :: g_av_temp    => null()  !*FD globally averaged temperature 
+     real(rk),pointer,dimension(:,:) :: g_max_temp   => null()  !*FD global maximum temperature
+     real(rk),pointer,dimension(:,:) :: g_min_temp   => null()  !*FD global minimum temperature
+     real(rk),pointer,dimension(:,:) :: g_temp_range => null()  !*FD global temperature range
+     real(rk),pointer,dimension(:,:) :: g_av_zonwind => null()  !*FD globally averaged zonal wind 
+     real(rk),pointer,dimension(:,:) :: g_av_merwind => null()  !*FD globally averaged meridional wind 
+     real(rk),pointer,dimension(:,:) :: g_av_humid   => null()  !*FD globally averaged humidity (%)
+     real(rk),pointer,dimension(:,:) :: g_av_lwdown  => null()  !*FD globally averaged downwelling longwave (W/m^2)
+     real(rk),pointer,dimension(:,:) :: g_av_swdown  => null()  !*FD globally averaged downwelling shortwave (W/m^2)
      real(rk),pointer,dimension(:,:) :: g_av_airpress => null() !*FD globally averaged surface air pressure (Pa)
 
      ! Fractional coverage information --------------------------
@@ -128,7 +126,7 @@ module glint_main
   ! Private names -----------------------------------------------
 
   private glint_allocate_arrays,pi
-  private glint_readconfig, calc_bounds
+  private glint_readconfig,calc_bounds,check_init_args
 
 contains
 
@@ -285,7 +283,7 @@ contains
 
        where (params%total_coverage>0.0) params%cov_normalise=1.0
        where (params%total_cov_orog>0.0) params%cov_norm_orog=1.0
- 
+
     else
 
        ! Otherwise, loop through instances
@@ -818,10 +816,10 @@ contains
 
     !*FD Splices an upscaled field into a global field
 
-    real(rk),dimension(:,:),intent(in) :: global  !*FD Field to receive the splice
-    real(rk),dimension(:,:),intent(in) :: local    !*FD The field to be spliced in
+    real(rk),dimension(:,:),intent(in) :: global    !*FD Field to receive the splice
+    real(rk),dimension(:,:),intent(in) :: local     !*FD The field to be spliced in
     real(rk),dimension(:,:),intent(in) :: coverage  !*FD The coverage fraction
-    real(rk),dimension(:,:),intent(in) :: normalise  !*FD The normalisation field
+    real(rk),dimension(:,:),intent(in) :: normalise !*FD The normalisation field
 
     real(rk),dimension(size(global,1),size(global,2)) :: splice_field
 
@@ -843,17 +841,17 @@ contains
     use glimmer_log
     implicit none
 
-    ! Arguments -------------------------------------------------------------
+    ! Arguments -------------------------------------------
 
     type(glint_params),intent(inout) :: params !*FD ice model parameters
     type(ConfigSection), pointer :: config     !*FD structure holding sections of configuration file
 
-    ! Internal variables ----------------------------------------------------
+    ! Internal variables ----------------------------------
 
     type(ConfigSection), pointer :: section
     character(len=100) :: message
 
-    ! -----------------------------------------------------------------------
+    ! -----------------------------------------------------
     ! If there's a section called 'GLINT' in the config file,
     ! then we use that information to overwrite the defaults.
     ! Otherwise, it's one instance with a timestep of one year.
@@ -885,7 +883,7 @@ contains
 
     implicit none
 
-    real(rk),dimension(:),intent(in) :: lon,lat !*FD locations of global grid-points (degrees)
+    real(rk),dimension(:),intent(in) :: lon,lat    !*FD locations of global grid-points (degrees)
     real(rk),dimension(:),intent(out) :: lonb,latb !*FD boundaries of grid-boxes (degrees)
 
     real(rk) :: dlon
@@ -967,12 +965,15 @@ contains
 
   subroutine check_init_args(orog_lats,orog_longs,orog_latb,orog_lonb)
 
+    !*FD Checks which combination arguments have been supplied to
+    !*FD define the global grid, and rejects unsuitable combinations
+
     use glimmer_log
 
-    real(rk),dimension(:),  optional,intent(in) :: orog_lats 
-    real(rk),dimension(:),  optional,intent(in) :: orog_longs 
-    real(rk),dimension(:),  optional,intent(in) :: orog_latb
-    real(rk),dimension(:),  optional,intent(in) :: orog_lonb 
+    real(rk),dimension(:),optional,intent(in) :: orog_lats 
+    real(rk),dimension(:),optional,intent(in) :: orog_longs 
+    real(rk),dimension(:),optional,intent(in) :: orog_latb
+    real(rk),dimension(:),optional,intent(in) :: orog_lonb 
 
     integer :: args
     integer,dimension(5) :: allowed=(/0,3,7,11,15/)
@@ -985,7 +986,7 @@ contains
     if (present(orog_lonb))  args=args+8
 
     if (.not.any(args==allowed)) then
-       call write_log('Unrecognised combination of arguments to initialise_glint', &
+       call write_log('Unexpected combination of arguments to initialise_glint', &
             GM_FATAL,__FILE__,__LINE__)
     end if
 

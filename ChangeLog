@@ -3,7 +3,9 @@
  * Removed illegal elementals (glint_global_grid.f90) and unnecessary
    pures
  * Fixed segfault array allocation bug (glint.f90)
- * Changes to glint.f90 to aid readability (some structural, some formatting)
+ * Changes to glint.f90 to aid readability (some structural, some
+   formatting)
+ * Substantial reformatting and tidying up of glint_*.f90 code
 	
 2005-08-24 Ian Rutt
  * Updated with improvements from GENIE development:

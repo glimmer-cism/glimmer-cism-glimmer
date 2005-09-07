@@ -1,4 +1,3 @@
-
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! +                                                           +
 ! +  glint_global_interp.f90 - part of the GLIMMER ice model  + 
@@ -51,7 +50,7 @@ module glint_global_interp
 contains
 
   subroutine global_interp (in_grid,a,out_grid,ao,in_mask,out_mask,missing,error)
-    
+
     ! This subroutine does an area weighted average from one grid,
     ! on a spherical earth, to another.  Logical masks may be assigned
     ! for each grid, and only those grid boxes which are masked true
@@ -448,7 +447,7 @@ contains
     end do
 
     ! Finish filling the output array from wrap-around.
-    
+
     if (iilo.lt.ilo) then
        do j=1,jlo 
           do i=iilo+1,ilo
@@ -470,6 +469,8 @@ contains
 
   end subroutine global_interp
 
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
   subroutine interp_error(err,line)
 
     use glimmer_log
@@ -477,10 +478,10 @@ contains
     integer :: err,line
     character(50) :: message
     integer :: e
-    
+
     write(message,'(A,I6)')'Interpolation errors at line ',line
     call write_log(message)
-    
+
     e=err
 
     call err_check(e,2048,'output longitude wraps but doesn''t repeat identically')
@@ -499,6 +500,8 @@ contains
 
   end subroutine interp_error
 
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
   subroutine err_check(e,en,out)
 
     use glimmer_log
@@ -510,7 +513,7 @@ contains
        call write_log(out)
        e=e-en
     end if
-    
+
   end subroutine err_check
 
 end module glint_global_interp
