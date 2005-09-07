@@ -182,7 +182,7 @@ contains
     type(ConfigSection), pointer :: global_config, instance_config, section  ! configuration stuff
     character(len=100) :: message                 ! For log-writing
     character(fname_length):: instance_fname      ! name of instance specific configuration file
-    integer :: i,args,o_args
+    integer :: i
     real(rk),dimension(:,:),allocatable :: orog_temp,if_temp,vf_temp,sif_temp,svf_temp,sd_temp,alb_temp ! Temporary output arrays
     integer,dimension(:),allocatable :: mbts,idts ! Array of mass-balance and ice dynamics timesteps
 
@@ -194,51 +194,17 @@ contains
 
     ! Initialise main global grid --------------------------------------------------------------
 
-    args=0
+    call new_global_grid(params%g_grid,longs,lats,lonb=lonb,latb=latb)
 
-    if (present(lonb)) args=args+1
-    if (present(latb)) args=args+2
+    ! Initialise orography grid ------------------------------------
 
-    select case(args)
-    case(0)
-       call new_global_grid(params%g_grid,longs,lats)
-    case(1)
-       call new_global_grid(params%g_grid,longs,lats,lonb=lonb)
-    case(2)
-       call new_global_grid(params%g_grid,longs,lats,latb=latb)
-    case(3)
-       call new_global_grid(params%g_grid,longs,lats,lonb=lonb,latb=latb)
-    end select
+    call check_init_args(orog_lats,orog_longs,orog_latb,orog_lonb)
 
-    ! Initialise orography grid ------------------------- -----------
-
-    o_args=0
-
-    if (present(orog_longs)) o_args=o_args+1
-    if (present(orog_lats)) o_args=o_args+2
-    if (present(orog_lonb)) o_args=o_args+4
-    if (present(orog_latb)) o_args=o_args+8
-
-    select case(o_args)
-    case(0)
-       ! Copy the main grid
-       call copy_global_grid(params%g_grid,params%g_grid_orog)
-    case(3)
-       ! Initialise with grid points only
-       call new_global_grid(params%g_grid_orog,orog_longs,orog_lats)
-    case(7)
-       ! Initialise with grid points and longitudinal boundaries
-       call new_global_grid(params%g_grid_orog,orog_longs,orog_lats,lonb=orog_lonb)
-    case(11)
-       ! Initialise with grid points and latitudinal boundaries
-       call new_global_grid(params%g_grid_orog,orog_longs,orog_lats,latb=orog_latb)
-    case(15)
-       ! Initialise with grid points and both sets of boundaries
+    if (present(orog_lats).and.present(orog_longs)) then
        call new_global_grid(params%g_grid_orog,orog_longs,orog_lats,lonb=orog_lonb,latb=orog_latb)
-    case default
-       ! Unexpected combination
-       call write_log('Unexpected combination of arguments to initialise_glint',GM_FATAL,__FILE__,__LINE__)
-    end select
+    else
+       call copy_global_grid(params%g_grid,params%g_grid_orog)
+    end if
 
     ! Allocate arrays -----------------------------------------------
 
@@ -452,11 +418,9 @@ contains
 
   !================================================================================
 
-  subroutine glint(params,time,temp,precip,zonwind,merwind,orog, &
-       humid,lwdown,swdown,airpress, &
+  subroutine glint(params,time,temp,precip,zonwind,merwind,orog,humid,lwdown,swdown,airpress, &
        output_flag,orog_out,albedo,ice_frac,veg_frac,snowice_frac,snowveg_frac,snow_depth,water_in, &
-       water_out,total_water_in,total_water_out, &
-       ice_volume,skip_mbal,ice_tstep)
+       water_out,total_water_in,total_water_out,ice_volume,skip_mbal,ice_tstep)
 
     !*FD Main Glimmer subroutine.
     !*FD
@@ -486,7 +450,7 @@ contains
     real(rk),dimension(:,:),         intent(in)    :: temp            !*FD Surface temperature field (celcius)
     real(rk),dimension(:,:),         intent(in)    :: precip          !*FD Precipitation rate        (mm/s)
     real(rk),dimension(:,:),         intent(in)    :: zonwind,merwind !*FD Zonal and meridional components 
-    !*FD of the wind field         (m/s)
+                                                                      !*FD of the wind field         (m/s)
     real(rk),dimension(:,:),         intent(inout) :: orog            !*FD The large-scale orography (m)
     real(rk),dimension(:,:),optional,intent(in)    :: humid           !*FD Surface humidity (%)
     real(rk),dimension(:,:),optional,intent(in)    :: lwdown          !*FD Downwelling longwave (W/m^2)
@@ -600,93 +564,35 @@ contains
        allocate(wout_temp(size(orog,1),size(orog,2)))
        allocate(win_temp(size(orog,1),size(orog,2)))
 
-       ! Reset output fields
+       ! Populate output flag derived type
 
-       if (present(orog_out)) then
-          orog_out  = 0.0
-          out_f%orog=.true.
-       else
-          out_f%orog=.false.
-       endif
+       out_f%orog         = present(orog_out)
+       out_f%albedo       = present(albedo)
+       out_f%ice_frac     = present(ice_frac)
+       out_f%veg_frac     = present(veg_frac)
+       out_f%snowice_frac = present(snowice_frac)
+       out_f%snowveg_frac = present(snowveg_frac)
+       out_f%snow_depth   = present(snow_depth)
+       out_f%water_out    = present(water_out)
+       out_f%water_in     = present(water_in)
+       out_f%total_win    = present(total_water_in)
+       out_f%total_wout   = present(total_water_out)
+       out_f%ice_vol      = present(ice_volume)
 
-       if (present(albedo)) then
-          albedo    = 0.0
-          out_f%albedo=.true.
-       else
-          out_f%albedo=.false.
-       endif
+       ! Zero outputs if present
 
-       if (present(ice_frac)) then
-          ice_frac  = 0.0
-          out_f%ice_frac=.true.
-       else
-          out_f%ice_frac=.false.
-       endif
-
-       if (present(veg_frac)) then
-          veg_frac  = 0.0
-          out_f%veg_frac=.true.
-       else
-          out_f%veg_frac=.false.
-       endif
-
-       if (present(snowice_frac)) then
-          snowice_frac  = 0.0
-          out_f%snowice_frac=.true.
-       else
-          out_f%snowice_frac=.false.
-       endif
-
-       if (present(snowveg_frac)) then
-          snowveg_frac  = 0.0
-          out_f%snowveg_frac=.true.
-       else
-          out_f%snowveg_frac=.false.
-       endif
-
-       if (present(snow_depth)) then
-          snow_depth  = 0.0
-          out_f%snow_depth=.true.
-       else
-          out_f%snow_depth=.false.
-       endif
-
-       if (present(water_out)) then
-          water_out = 0.0
-          out_f%water_out=.true.
-       else
-          out_f%water_out=.false.
-       endif
-
-       if (present(water_in)) then
-          water_in = 0.0
-          out_f%water_in=.true.
-       else
-          out_f%water_in=.false.
-       endif
-
-       ! Reset output total variables and set flags
-
-       if (present(total_water_in))  then
-          total_water_in  = 0.0
-          out_f%total_win = .true.
-       else
-          out_f%total_win = .false.
-       endif
-
-       if (present(total_water_out)) then
-          total_water_out = 0.0
-          out_f%total_wout = .true.
-       else
-          out_f%total_wout = .false.
-       endif
-
-       if (present(ice_volume)) then
-          ice_volume = 0.0
-          out_f%ice_vol = .true.
-       else
-          out_f%ice_vol = .false.
-       endif
+       if (present(orog_out))        orog_out        = 0.0
+       if (present(albedo))          albedo          = 0.0
+       if (present(ice_frac))        ice_frac        = 0.0
+       if (present(veg_frac))        veg_frac        = 0.0
+       if (present(snowice_frac))    snowice_frac    = 0.0
+       if (present(snowveg_frac))    snowveg_frac    = 0.0
+       if (present(snow_depth))      snow_depth      = 0.0
+       if (present(water_out))       water_out       = 0.0
+       if (present(water_in))        water_in        = 0.0
+       if (present(total_water_in))  total_water_in  = 0.0
+       if (present(total_water_out)) total_water_out = 0.0
+       if (present(ice_volume))      ice_volume      = 0.0
 
        ! Calculate averages by dividing by number of steps elapsed
        ! since last model timestep.
@@ -745,65 +651,38 @@ contains
 
           ! Add this contribution to the output orography
 
-          if (present(orog_out)) &
-               orog_out=splice_field(orog_out, &
-               orog_out_temp, &
-               params%instances(i)%frac_cov_orog, &
-               params%cov_norm_orog)
+          if (present(orog_out)) orog_out=splice_field(orog_out,orog_out_temp, &
+               params%instances(i)%frac_cov_orog,params%cov_norm_orog)
 
-          if (present(albedo)) &
-               albedo=splice_field(albedo,&
-               albedo_temp, &
-               params%instances(i)%frac_coverage, &
-               params%cov_normalise)
+          if (present(albedo)) albedo=splice_field(albedo,albedo_temp, &
+               params%instances(i)%frac_coverage,params%cov_normalise)
 
-          if (present(ice_frac)) &
-               ice_frac=splice_field(ice_frac, &
-               if_temp, &
-               params%instances(i)%frac_coverage, &
-               params%cov_normalise)
+          if (present(ice_frac)) ice_frac=splice_field(ice_frac,if_temp, &
+               params%instances(i)%frac_coverage,params%cov_normalise)
 
-          if (present(veg_frac)) &
-               veg_frac=splice_field(veg_frac, &
-               vf_temp, &
-               params%instances(i)%frac_coverage, &
-               params%cov_normalise)
+          if (present(veg_frac)) veg_frac=splice_field(veg_frac,vf_temp, &
+               params%instances(i)%frac_coverage,params%cov_normalise)
 
-          if (present(snowice_frac)) &
-               snowice_frac=splice_field(snowice_frac, &
-               sif_temp, &
-               params%instances(i)%frac_coverage, &
-               params%cov_normalise)
+          if (present(snowice_frac))snowice_frac=splice_field(snowice_frac,sif_temp, &
+               params%instances(i)%frac_coverage,params%cov_normalise)
 
-          if (present(snowveg_frac)) &
-               snowveg_frac=splice_field(snowveg_frac, &
-               svf_temp, &
-               params%instances(i)%frac_coverage, &
-               params%cov_normalise)
+          if (present(snowveg_frac)) snowveg_frac=splice_field(snowveg_frac, &
+               svf_temp,params%instances(i)%frac_coverage, params%cov_normalise)
 
-          if (present(snow_depth)) &
-               snow_depth=splice_field(snow_depth, &
-               sd_temp, &
-               params%instances(i)%frac_coverage, &
-               params%cov_normalise)
+          if (present(snow_depth)) snow_depth=splice_field(snow_depth, &
+               sd_temp,params%instances(i)%frac_coverage,params%cov_normalise)
 
-          if (present(water_in)) &
-               water_in=splice_field(water_in, &
-               win_temp, &
-               params%instances(i)%frac_coverage, &
-               params%cov_normalise)
+          if (present(water_in)) water_in=splice_field(water_in,win_temp, &
+               params%instances(i)%frac_coverage,params%cov_normalise)
 
-          if (present(water_out)) &
-               water_out=splice_field(water_out, &
-               wout_temp, &
-               params%instances(i)%frac_coverage, &
-               params%cov_normalise)
+          if (present(water_out)) water_out=splice_field(water_out, &
+               wout_temp, params%instances(i)%frac_coverage,params%cov_normalise)
 
           ! Add total water variables to running totals
 
-          if (present(total_water_in))  total_water_in =total_water_in +twin_temp
-          if (present(total_water_out)) total_water_out=total_water_out+twout_temp
-          if (present(ice_volume))      ice_volume=ice_volume+icevol_temp
+          if (present(total_water_in))  total_water_in  = total_water_in  + twin_temp
+          if (present(total_water_out)) total_water_out = total_water_out + twout_temp
+          if (present(ice_volume))      ice_volume      = ice_volume      + icevol_temp
 
           ! Set flag
           if (present(ice_tstep)) then
@@ -839,19 +718,9 @@ contains
        params%av_steps     = 0
        params%av_start_time = time
 
+       deallocate(albedo_temp,if_temp,vf_temp,sif_temp,svf_temp,sd_temp,wout_temp,win_temp,orog_out_temp)
+
     endif
-
-    ! Deallocate temporary arrays if necessary
-
-    if (allocated(albedo_temp))   deallocate(albedo_temp)
-    if (allocated(if_temp))       deallocate(if_temp)
-    if (allocated(vf_temp))       deallocate(vf_temp)
-    if (allocated(sif_temp))      deallocate(sif_temp)
-    if (allocated(svf_temp))      deallocate(svf_temp)
-    if (allocated(sd_temp))       deallocate(sd_temp)
-    if (allocated(wout_temp))     deallocate(wout_temp)
-    if (allocated(win_temp))      deallocate(win_temp)
-    if (allocated(orog_out_temp)) deallocate(orog_out_temp)
 
   end subroutine glint
 
@@ -1094,6 +963,33 @@ contains
 
   end function check_mbts
 
+  !========================================================
+
+  subroutine check_init_args(orog_lats,orog_longs,orog_latb,orog_lonb)
+
+    use glimmer_log
+
+    real(rk),dimension(:),  optional,intent(in) :: orog_lats 
+    real(rk),dimension(:),  optional,intent(in) :: orog_longs 
+    real(rk),dimension(:),  optional,intent(in) :: orog_latb
+    real(rk),dimension(:),  optional,intent(in) :: orog_lonb 
+
+    integer :: args
+    integer,dimension(5) :: allowed=(/0,3,7,11,15/)
+
+    args=0
+
+    if (present(orog_lats))  args=args+1
+    if (present(orog_longs)) args=args+2
+    if (present(orog_latb))  args=args+4
+    if (present(orog_lonb))  args=args+8
+
+    if (.not.any(args==allowed)) then
+       call write_log('Unrecognised combination of arguments to initialise_glint', &
+            GM_FATAL,__FILE__,__LINE__)
+    end if
+
+  end subroutine check_init_args
 
 end module glint_main
 
