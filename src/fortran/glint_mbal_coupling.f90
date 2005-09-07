@@ -8,10 +8,10 @@ module glint_mbal_coupling
   !*FD Module to handle the accumulation of inputs and calculation of mass-balance
 
   type glint_mbc
-    real(sp),dimension(:,:),pointer :: prcp_save => null() !*FD used to accumulate precip
-    real(sp),dimension(:,:),pointer :: ablt_save => null() !*FD used to accumulate ablation
-    real(sp),dimension(:,:),pointer :: acab_save => null() !*FD used to accumulate mass-balance
-    real(sp),dimension(:,:),pointer :: artm_save => null() !*FD used to average air-temperature
+    real(dp),dimension(:,:),pointer :: prcp_save => null() !*FD used to accumulate precip
+    real(dp),dimension(:,:),pointer :: ablt_save => null() !*FD used to accumulate ablation
+    real(dp),dimension(:,:),pointer :: acab_save => null() !*FD used to accumulate mass-balance
+    real(dp),dimension(:,:),pointer :: artm_save => null() !*FD used to average air-temperature
     real(sp),dimension(:,:),pointer :: snowd     => null() !*FD Keeps track of snow depth
     real(sp),dimension(:,:),pointer :: siced     => null() !*FD Keeps track of superimposed ice depth 
     real(sp),dimension(:,:),pointer :: prcp      => null() !*FD Instantaneous precip
@@ -144,7 +144,7 @@ contains
 
     ! Call mass-balance
 
-    call glint_mbal_calc(params%mbal,artm,arng,prcp,(local_orog>0.0),params%snowd, &
+    call glint_mbal_calc(params%mbal,artm,arng,prcp,(local_orog>0.0.or.thck>0.0),params%snowd, &
          params%siced,ablt,acab,thck,xwind,ywind,humidity,SWdown,LWdown,Psurf) 
 
     ! Accumulate

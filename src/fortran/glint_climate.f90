@@ -144,16 +144,15 @@ contains
 
     ! Adjust ablation to be no greater than ice available for melting
 
-    where (ablt>thck) 
+    where (acab<-thck) 
       ablt=thck+prcp
-      acab=prcp-ablt
     endwhere
 
     ! If the upper ice/land surface is at or below sea-level, set accumulation,
     ! ablation and mass-balance to zero. This is to prevent accumulation of ice below
     ! sea-level.
 
-    where (usrf<=0.0)
+    where (usrf<=0.0.and.acab>0.0)
       ablt=prcp
       acab=0.0
     end where

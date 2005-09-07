@@ -73,6 +73,9 @@ contains
     logical,               intent(inout) :: need_winds  !*FD Set if this instance needs wind input
     logical,               intent(inout) :: enmabal     !*FD Set if this instance uses the energy balance mass-bal model
 
+    ! Internal
+    real(sp),dimension(:,:),allocatable :: thk
+
     ! initialise model
 
     call glide_initialise(instance%model,config)
@@ -129,6 +132,18 @@ contains
     instance%mbal_tstep=instance%mbal_accum%mbal%tstep
     mbts=instance%mbal_tstep
 
+    ! Copy snow-depth to thickness if no thickness is present
+
+    allocate(thk(get_ewn(instance%model),get_nsn(instance%model)))
+    call glide_get_thk(instance%model,thk)
+    where (instance%snowd>0.0.and.thk==0.0)
+       thk=instance%snowd
+    elsewhere
+       thk=thk
+    endwhere
+    call glide_set_thk(instance%model,thk)
+    deallocate(thk)
+    
     call glint_mbal_io_writeall(instance%mbal_accum,instance%model)
     call glide_io_writeall(instance%model,instance%model)
     call glint_io_writeall(instance,instance%model)

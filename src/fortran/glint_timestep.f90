@@ -199,10 +199,17 @@ contains
 
        call fix_acab(instance%ablt,instance%acab,instance%prcp,thck_temp,instance%local_orog)
 
-       ! Put climate inputs in the appropriate places ------------------------
+       ! Put climate inputs in the appropriate places, with conversion ----------
 
-       call glide_set_acab(instance%model,instance%acab)
+       call glide_set_acab(instance%model,instance%acab/real(instance%ice_tstep*hours2years,sp))
        call glide_set_artm(instance%model,instance%artm)
+
+       ! Adjust acab for output. This is done here otherwise roundoff error leaves a 
+       ! residual thickness when it's taken away from the current ice
+
+       where (instance%acab<-thck_temp)
+          instance%acab=-thck_temp
+       end where
     
        ! Do water budget accounting ---------------------------------------------
 

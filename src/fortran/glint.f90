@@ -149,7 +149,7 @@ contains
     type(glint_params),              intent(inout) :: params      !*FD parameters to be set
     real(rk),dimension(:),           intent(in)    :: lats,longs  !*FD location of gridpoints 
                                                                   !*FD in global data.
-    character(fname_length),         intent(in)    :: paramfile   !*FD name of file containing 
+    character(*),                    intent(in)    :: paramfile   !*FD name of file containing 
                                                                   !*FD parameters for all required 
                                                                   !*FD instances. 
     real(rk),dimension(:),  optional,intent(in)    :: latb        !*FD Locations of the latitudinal 

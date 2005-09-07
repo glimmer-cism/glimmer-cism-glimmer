@@ -1,3 +1,6 @@
+2005-09-07 Ian Rutt
+ * Various enhancements and corrections to mass-balance masking in glint
+
 2005-08-24 Ian Rutt
  * Updated with improvements from GENIE development:
 	- Sigma levels from config file if desired

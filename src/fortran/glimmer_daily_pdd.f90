@@ -174,7 +174,7 @@ contains
           if (landsea(i,j)) then
              call degdaymodel(params,snowd(i,j),siced(i,j),giced(i,j),degd(i,j),rain(i,j),prcp(i,j)) 
              acab(i,j)=snowd(i,j)+siced(i,j)+giced(i,j)-old_snow(i,j)-old_sice(i,j)
-             ablt(i,j)=prcp(i,j)-acab(i,j)
+             ablt(i,j)=max(prcp(i,j)-acab(i,j),0.0)
           else
              ablt(i,j)=prcp(i,j)
              acab(i,j)=0.0
