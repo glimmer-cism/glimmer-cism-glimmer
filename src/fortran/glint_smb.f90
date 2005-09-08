@@ -40,7 +40,7 @@
 !
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-module smb_mecons
+module smb_dummy
 
   ! This module provides a dummy, hopefully warning-free interface
   ! in place of the Energy-balance mass-balance scheme. If either
@@ -99,4 +99,4 @@ contains
 
   end subroutine SMBStepWrapper
 
-end module smb_mecons
+end module smb_dummy

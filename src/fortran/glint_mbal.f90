@@ -45,7 +45,12 @@ module glint_mbal
   use glimmer_pdd
   use glimmer_daily_pdd
   use glimmer_global
+
+#ifdef USE_ENMABAL
   use smb_mecons
+#else
+  use smb_dummy
+#endif
 
   implicit none
 
