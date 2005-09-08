@@ -544,10 +544,10 @@ contains
        return
     end if
 
+    ! N.B. Only checks grid-box centres and not boundaries
+
     if (any(a%lats.ne.b%lats).or. &
          any(a%lons.ne.b%lons).or. &
-!         any(a%lat_bound.ne.b%lat_bound).or. &
-!         any(a%lon_bound.ne.b%lon_bound).or. &
          any(a%box_areas.ne.b%box_areas)) then
        grid_equiv=.false.
        return
