@@ -1,7 +1,8 @@
 2005-09-08 Ian Rutt
  * Minor cosmetic changes
  * Improved ability to plug in emb mass-balance scheme without altering code
-
+ * Fixed bug loadking config files for multiple instances
+	
 2005-09-07 Ian Rutt
  * Various enhancements and corrections to mass-balance masking in glint
  * Removed illegal elementals (glint_global_grid.f90) and unnecessary

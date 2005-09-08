@@ -286,10 +286,12 @@ contains
 
     else
 
-       ! Otherwise, loop through instances
+       ! Otherwise, loop through instances (we do it this way since we've already got
+       ! the first config section, but still need to get the remaining ones).
 
-       do i=1,params%ninstances
+       i=1
 
+       do 
           ! The section contains one element, 'name', which
           ! points to the config file for an individual instance.
           ! This is read in to instance_config, and passed to the initialisation
@@ -308,11 +310,13 @@ contains
           where (params%total_coverage>0.0) params%cov_normalise=params%cov_normalise+1.0
           where (params%total_cov_orog>0.0) params%cov_norm_orog=params%cov_norm_orog+1.0
 
-          ! Get the next GLINT instance section, and if not present, flag an error
+          ! If this is the last section, exit the loop. Otherwise, load the next one
+          ! and go round again.
+          
+          if (i>=params%ninstances) exit
+          i=i+1
 
-          !***** I (IR) think there's a bug here - won't the code always try and find one
-          !***** more section than there needs to be? Need to test and possibly
-          !***** think of a way of fixing this.
+          ! Get the next GLINT instance section, and if not present, flag an error
 
           call GetSection(section%next,section,'GLINT instance')
           if (.not.associated(section)) then
