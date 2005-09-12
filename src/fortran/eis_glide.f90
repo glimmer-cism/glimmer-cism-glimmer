@@ -62,7 +62,7 @@ program eis_glide
   read(*,*) fname
   
   ! start logging
-  call open_log(unit=50)
+  call open_log(unit=50, fname=trim(fname)//'.log')
 
   ! read configuration
   call ConfigRead(fname,config)

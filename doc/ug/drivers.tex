@@ -99,10 +99,16 @@ $$ where $z^\ast$ is the vertical distance above the ELA. }\\
     \hline
     \multicolumn{2}{|l|}{\texttt{[EIS Temperature]}}\\
     \hline
-    \multicolumn{2}{|p{0.98\textwidth}|}{Temperature is also assumed to depend on latitude and the atmospheric lapse rate. It is thus described by a polynomial:$$T(t)=\sum_{i=0}^N a_i(t)\lambda^i+bz.$$}\\
+    \multicolumn{2}{|p{0.98\textwidth}|}{Temperature is also assumed to depend on latitude and the atmospheric lapse rate.}\\
     \hline
     \texttt{temp\_file} & name of file containing temperature forcing time series.\\
-    \texttt{order} & order of polynomial, $N$.\\
+    \texttt{type} & 
+    \begin{description}
+    \item[0] polynomial: $T(t)=\sum_{i=0}^N a_i(t)\lambda^i+bz.$ where $\lambda$ is the latitude.
+    \item[1] exponential: $T(t)=a_0+a_1\exp\left(a_2(\lambda-\lambda_0)\right)$
+    \end{description}\\
+    \texttt{lat0} & $\lambda_0$ (only used when exponential type temperature)\\
+    \texttt{order} & order of polynomial, $N$ (only used when using polynomial type temperature).\\
     \texttt{lapse\_rate} & lapse rate, $b$.\\
     \hline
 %%%% 

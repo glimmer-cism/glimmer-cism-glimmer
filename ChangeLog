@@ -1,3 +1,9 @@
+2005-09-12 Magnus Hagdorn
+ * drivers.tex: update doc of EIS driver
+ * glide_vars.def: fix units of lithoz variable
+ * eis_glide.f90: use config file name for log file base name
+ * simple_glide.f90: ditto
+
 2005-09-05 Magnus Hagdorn
  * glide_lithot.f90: move 3D code to glide_lithot3d.f90 and provide wrapper
    functions to 1D and 3D solvers

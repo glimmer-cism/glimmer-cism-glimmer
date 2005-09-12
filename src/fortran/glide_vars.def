@@ -52,7 +52,7 @@ dimlen:        model%general%upn
 
 [lithoz]
 dimensions:    lithoz
-units:         1
+units:         meter
 long_name:     vertical coordinate of lithosphere layer
 dimlen:        model%lithot%nlayer
 
