@@ -249,6 +249,8 @@ contains
     integer status    
     character(len=msglen) message
     
+    real,parameter :: small = 1.e-6
+
     ! open netCDF file
     status = nf90_open(NCI%filename,NF90_NOWRITE,NCI%id)
     call nc_errorhandle(__FILE__,__LINE__,status)
@@ -290,7 +292,7 @@ contains
     call nc_errorhandle(__FILE__,__LINE__,status)
     status = nf90_get_var(NCI%id,varid,delta)
     call nc_errorhandle(__FILE__,__LINE__,status)
-    if (delta(2)-delta(1) .ne. model%numerics%dew*len0) then
+    if (abs(delta(2)-delta(1) - model%numerics%dew*len0).gt.small) then
        write(message,*) 'deltax1 of file '//trim(NCI%filename)//' does not match with config deltax: ',&
             delta(2)-delta(1),model%numerics%dew*len0
        call write_log(message,type=GM_FATAL)
@@ -310,7 +312,7 @@ contains
     call nc_errorhandle(__FILE__,__LINE__,status)
     status = nf90_get_var(NCI%id,varid,delta)
     call nc_errorhandle(__FILE__,__LINE__,status)
-    if (delta(2)-delta(1) .ne. model%numerics%dew*len0) then
+    if (abs(delta(2)-delta(1) - model%numerics%dew*len0).gt.small) then
        write(message,*) 'deltax0 of file '//trim(NCI%filename)//' does not match with config deltax: ', &
             delta(2)-delta(1),model%numerics%dew*len0
        call write_log(message,type=GM_FATAL)
@@ -330,7 +332,7 @@ contains
     call nc_errorhandle(__FILE__,__LINE__,status)
     status = nf90_get_var(NCI%id,varid,delta)
     call nc_errorhandle(__FILE__,__LINE__,status)
-    if (delta(2)-delta(1) .ne. model%numerics%dns*len0) then
+    if (abs(delta(2)-delta(1) - model%numerics%dns*len0).gt.small) then
        write(message,*) 'deltay1 of file '//trim(NCI%filename)//' does not match with config deltay: ',&
             delta(2)-delta(1),model%numerics%dns*len0
        call write_log(message,type=GM_FATAL)
@@ -350,7 +352,7 @@ contains
     call nc_errorhandle(__FILE__,__LINE__,status)
     status = nf90_get_var(NCI%id,varid,delta)
     call nc_errorhandle(__FILE__,__LINE__,status)
-    if (delta(2)-delta(1) .ne. model%numerics%dns*len0) then
+    if (abs(delta(2)-delta(1) - model%numerics%dns*len0).gt.small) then
        write(message,*) 'deltay0 of file '//trim(NCI%filename)//' does not match with config deltay: ',&
             delta(2)-delta(1),model%numerics%dns*len0
        call write_log(message,type=GM_FATAL)

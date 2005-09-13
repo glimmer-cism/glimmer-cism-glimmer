@@ -1,3 +1,9 @@
+2005-09-13 Magnus Hagdorn
+ * glimmer_integrate.f90: fixed minor problem with NAG f95 v 4.2
+ * glimmer_pdd.f90: ditto
+ * glimmer_ncio.f90: fixed problem with comparing two floats on i386
+   using NAG compiler (commited bug on GLIMMER head on 2005-08-12)
+
 2005-09-12 Magnus Hagdorn
  * drivers.tex: update doc of EIS driver
  * glide_vars.def: fix units of lithoz variable

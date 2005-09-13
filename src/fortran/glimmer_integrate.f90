@@ -45,6 +45,8 @@ module glimmer_integrate
 
   use glimmer_global, only : dp,sp
 
+  private :: dp, sp
+
   interface romberg_int
      module procedure sromberg_int, sromberg_int_prms, dromberg_int, dromberg_int_prms
   end interface

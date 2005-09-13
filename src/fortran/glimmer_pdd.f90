@@ -53,9 +53,11 @@ module glimmer_pdd
   !*FD
   !*FD Note also that this code now deals in {\it unscaled} variables.
 
-  use glimmer_global
+  use glimmer_global, only : dp,sp
 
   implicit none
+
+  private :: dp, sp
 
   type glimmer_pdd_params
 
