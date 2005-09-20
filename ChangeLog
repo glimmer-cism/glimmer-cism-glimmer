@@ -1,3 +1,6 @@
+2005-09-20 Magnus Hagdorn
+ * glide_nc_custom.f90: fixed bug when lithoz is not used
+
 2005-09-13 Magnus Hagdorn
  * glimmer_integrate.f90: fixed minor problem with NAG f95 v 4.2
  * glimmer_pdd.f90: ditto
