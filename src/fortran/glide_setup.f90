@@ -549,7 +549,7 @@ contains
          'none                             ' /)
     character(len=*), dimension(0:2), parameter :: evolution = (/ &
          'pseudo-diffusion', &
-         'unknown         ', &
+         'ADI scheme      ', &
          'diffusion       ' /)
     character(len=*), dimension(0:1), parameter :: vertical_integration = (/ &
          'standard     ', &

@@ -195,43 +195,6 @@ contains
     call glide_prof_stop(model,model%glide_prof%geomderv)
 #endif
 
-    ! ------------------------------------------------------------------------ 
-    ! Do velocity calculation if necessary
-    ! ------------------------------------------------------------------------ 
-#ifdef PROFILING
-    call glide_prof_start(model,model%glide_prof%hvelos)
-#endif
-    if (model%options%whichevol.eq.1) then
-       if ((model%numerics%tinc > mod(model%numerics%time,model%numerics%nvel) .or. &
-            model%numerics%time == model%numerics%tinc)) then
-
-          call slipvelo(model, &
-               model%options%whichslip, &
-                model%velocity% btrc,     &
-               model%velocity% ubas,     &
-               model%velocity% vbas)
-
-          call zerovelo(model%velowk,             &
-               model%numerics%sigma,     &
-               0,                                 &
-               model%geomderv% stagthck, &
-               model%geomderv% dusrfdew, &
-               model%geomderv% dusrfdns, &
-               model%temper%   flwa,     &
-               model%velocity% ubas,     &
-               model%velocity% vbas,     &
-               model%velocity% uvel,     &
-               model%velocity% vvel,     &
-               model%velocity% uflx,     &
-               model%velocity% vflx,     &
-               model%velocity% diffu)
-
-       end if
-    end if
-#ifdef PROFILING
-    call glide_prof_stop(model,model%glide_prof%hvelos)
-#endif
-
 #ifdef PROFILING
     call glide_prof_start(model,model%glide_prof%ice_mask1)
 #endif
@@ -306,10 +269,7 @@ contains
 
     case(1) ! Use explicit leap frog method with uflx,vflx -------------------
 
-       call stagleapthck(model, &
-            model%velocity% uflx, &
-            model%velocity% vflx, &
-            model%geometry% thck)
+       call stagleapthck(model,model%temper%newtemps, 6)
 
     case(2) ! Use non-linear calculation that incorporates velocity calc -----
 

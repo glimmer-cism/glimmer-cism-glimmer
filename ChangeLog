@@ -1,4 +1,13 @@
 2005-09-20 Magnus Hagdorn
+ * glide_thck.f90: implement new ADI scheme
+ * glide.f90: remove old velo calcs, hook-up new ADI scheme
+ * glide_setup.f90: fix message to log
+ * glide_types.f90: add some variables for ADI scheme
+ * glimmer_utils.f90: add optional argument to tridag solver for specifying
+   size of system
+ * updated doc to include ADI stuff
+
+2005-09-20 Magnus Hagdorn
  * glide_nc_custom.f90: fixed bug when lithoz is not used
 
 2005-09-13 Magnus Hagdorn

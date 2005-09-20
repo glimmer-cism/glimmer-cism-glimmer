@@ -270,6 +270,7 @@ module glide_types
     real(dp),dimension(:,:)  ,pointer :: uflx  => null() !*FD 
     real(dp),dimension(:,:)  ,pointer :: vflx  => null() !*FD 
     real(dp),dimension(:,:)  ,pointer :: diffu => null() !*FD 
+    real(dp),dimension(:,:)  ,pointer :: total_diffu => null() !*FD total diffusivity
     real(dp),dimension(:,:)  ,pointer :: ubas  => null() !*FD 
     real(dp),dimension(:,:)  ,pointer :: vbas  => null() !*FD 
     real(dp),dimension(:,:)  ,pointer :: btrc  => null() !*FD 
@@ -430,16 +431,18 @@ module glide_types
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   type glide_thckwk
-    real(dp),dimension(:,:),  pointer :: oldthck   => null()
-    real(dp),dimension(:,:),  pointer :: oldthck2  => null()
-    real(dp),dimension(:,:),  pointer :: basestate => null()
-    real(dp),dimension(:,:),pointer :: float => null()
-    real(dp),dimension(:,:,:),pointer :: olds      => null()
-    integer  :: nwhich  = 2
-    real(sp) :: oldtime = 0.0
-    real(dp) :: few     = 0.0
-    real(dp) :: fns     = 0.0
-    logical  :: first1  =.true.
+     real(dp),dimension(:,:),  pointer :: oldthck   => null()
+     real(dp),dimension(:,:),  pointer :: oldthck2  => null()
+     real(dp),dimension(:,:),pointer :: float => null()
+     real(dp),dimension(:,:,:),pointer :: olds      => null()
+     integer  :: nwhich  = 2
+     real(sp) :: oldtime = 0.0
+     
+     real(dp), dimension(:), pointer :: alpha => null()
+     real(dp), dimension(:), pointer :: beta  => null()
+     real(dp), dimension(:), pointer :: gamma => null()
+     real(dp), dimension(:), pointer :: delta => null()
+
   end type glide_thckwk
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -623,6 +626,7 @@ contains
     call coordsystem_allocate(model%general%velo_grid, model%velocity%uflx)
     call coordsystem_allocate(model%general%velo_grid, model%velocity%vflx)
     call coordsystem_allocate(model%general%velo_grid, model%velocity%diffu)
+    call coordsystem_allocate(model%general%velo_grid, model%velocity%total_diffu)
     call coordsystem_allocate(model%general%velo_grid, model%velocity%btrc)
     call coordsystem_allocate(model%general%velo_grid, model%velocity%ubas)
     call coordsystem_allocate(model%general%velo_grid, model%velocity%vbas)
@@ -655,7 +659,7 @@ contains
     model%thckwk%olds = 0.0d0
     call coordsystem_allocate(model%general%ice_grid, model%thckwk%oldthck)
     call coordsystem_allocate(model%general%ice_grid, model%thckwk%oldthck2)
-    call coordsystem_allocate(model%general%ice_grid, model%thckwk%basestate)
+    call coordsystem_allocate(model%general%ice_grid, model%thckwk%float)
     allocate(model%numerics%sigma(upn))
     
     ! allocate memory for sparse matrix
@@ -692,6 +696,7 @@ contains
     deallocate(model%velocity%uflx)
     deallocate(model%velocity%vflx)
     deallocate(model%velocity%diffu)
+    deallocate(model%velocity%total_diffu)
     deallocate(model%velocity%btrc)
     deallocate(model%velocity%ubas)
     deallocate(model%velocity%vbas)
@@ -723,7 +728,7 @@ contains
     deallocate(model%thckwk%olds)
     deallocate(model%thckwk%oldthck)
     deallocate(model%thckwk%oldthck2)
-    deallocate(model%thckwk%basestate)
+    deallocate(model%thckwk%float)
     deallocate(model%numerics%sigma)
     
     deallocate(model%pcgdwk%pcgrow,model%pcgdwk%pcgcol,model%pcgdwk%pcgval,model%pcgdwk%rhsd,model%pcgdwk%answ)
