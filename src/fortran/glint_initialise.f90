@@ -74,7 +74,8 @@ contains
 
     ! initialise model
 
-    call glide_initialise(instance%model,config)
+    call glide_config(instance%model,config)
+    call glide_initialise(instance%model)
     instance%ice_tstep=get_tinc(instance%model)*years2hours
 
     ! create glint variables

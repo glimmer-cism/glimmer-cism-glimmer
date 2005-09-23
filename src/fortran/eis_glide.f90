@@ -68,7 +68,8 @@ program eis_glide
   call ConfigRead(fname,config)
 
   ! initialise GLIDE
-  call glide_initialise(model,config)
+  call glide_config(model,config)
+  call glide_initialise(model)
   call eis_initialise(climate,config,model)
   call CheckSections(config)
   ! fill dimension variables

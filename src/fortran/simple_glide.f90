@@ -66,8 +66,9 @@ program simple_glide
   call ConfigRead(fname,config)
 
   ! initialise GLIDE
+  call glide_config(model,config)
   call simple_initialise(climate,config)
-  call glide_initialise(model,config)
+  call glide_initialise(model)
   call CheckSections(config)
   ! fill dimension variables
   call glide_nc_fillall(model)

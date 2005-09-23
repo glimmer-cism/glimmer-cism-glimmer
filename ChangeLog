@@ -1,3 +1,11 @@
+2005-09-23 Magnus Hagdorn
+ * glide.f90: move configuration file parsing from glide_initialise to
+   a new subroutine: glide_config
+ * eis_glide.f90: add call to glide_config
+ * glint_initialise.f90: ditto
+ * simple_glide.f90: ditto
+ * test_lithot.f90: ditto
+
 2005-09-20 Magnus Hagdorn
  * glide_thck.f90: implement new ADI scheme
  * glide.f90: remove old velo calcs, hook-up new ADI scheme

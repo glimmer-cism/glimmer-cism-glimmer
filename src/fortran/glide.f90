@@ -52,37 +52,55 @@ module glide
   integer, private, parameter :: dummyunit=99
 
 contains
-  subroutine glide_initialise(model,config)
-    !*FD initialise GLIDE model instance
+
+  subroutine glide_config(model,config)
+    !*FD read glide configuration from file and print it to the log
     use glide_setup
-    use glimmer_ncparams
-    use glimmer_ncio
-    use glide_velo
-    use glide_thck
-    use glide_temp
-    use glimmer_log
-    use glimmer_config
-    use glide_mask
-    use glimmer_scales
-    use glide_mask
     use isostasy
+    use glimmer_ncparams
+    use glimmer_config
     implicit none
     type(glide_global_type) :: model        !*FD model instance
     type(ConfigSection), pointer :: config  !*FD structure holding sections of configuration file
-   
+
     type(ConfigSection), pointer :: ncconfig
-
-
-    call write_log(glimmer_version)
-
-    ! initialise scales
-    call glimmer_init_scales
+   
     ! read configuration file
     call glide_readconfig(model,config)
     call glide_printconfig(model)
     ! read isostasy configuration file
     call isos_readconfig(model%isos,config)
     call isos_printconfig(model%isos)
+
+    ! netCDF I/O
+    if (trim(model%funits%ncfile).eq.'') then
+       ncconfig => config
+    else
+       call ConfigRead(model%funits%ncfile,ncconfig)
+    end if
+    call glimmer_nc_readparams(model,ncconfig)
+  end subroutine glide_config
+
+  subroutine glide_initialise(model)
+    !*FD initialise GLIDE model instance
+    use glide_setup
+    use glimmer_ncio
+    use glide_velo
+    use glide_thck
+    use glide_temp
+    use glimmer_log
+    use glide_mask
+    use glimmer_scales
+    use glide_mask
+    use isostasy
+    implicit none
+    type(glide_global_type) :: model        !*FD model instance
+
+    call write_log(glimmer_version)
+
+    ! initialise scales
+    call glimmer_init_scales
+
     ! scale parameters
     call glide_scale_params(model)
     ! set up coordinate systems
@@ -99,13 +117,6 @@ contains
     ! load sigma file
     call glide_load_sigma(model,dummyunit)
 
-    ! netCDF I/O
-    if (trim(model%funits%ncfile).eq.'') then
-       ncconfig => config
-    else
-       call ConfigRead(model%funits%ncfile,ncconfig)
-    end if
-    call glimmer_nc_readparams(model,ncconfig)
     ! open all input files
     call openall_in(model)
     ! and read first time slice
