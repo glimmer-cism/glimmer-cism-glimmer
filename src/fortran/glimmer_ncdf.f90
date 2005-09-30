@@ -54,6 +54,8 @@ module glimmer_ncdf
   !*FD maximum length for meta data
   character(len=*), parameter :: glimmer_nc_mapvarname = 'mapping'
   !*FD name of the grid mapping variable
+  real, parameter :: glimmer_nc_max_time=1.e10
+  !*FD maximum time that can be written
 
   type glimmer_nc_stat
      !*FD Data structure holding netCDF file description
@@ -106,6 +108,8 @@ module glimmer_ncdf
      !*FD frequency at which data is written to file
      real :: next_write=0
      !*FD next time step at which data is dumped
+     real :: end_write=glimmer_nc_max_time
+     !*FD stop writing after this year
      integer :: timecounter=1
      !*FD time counter
      

@@ -1,3 +1,9 @@
+2005-09-20 Magnus Hagdorn
+ * glimmer_ncdf.f90: add end time to output structure
+ * glimmer_ncio.f90: only write to output file if the current time is less
+   than the max time
+ * glimmer_ncparms.f90: read max time from config file
+
 2005-09-23 Magnus Hagdorn
  * glide.f90: move configuration file parsing from glide_initialise to
    a new subroutine: glide_config

@@ -111,6 +111,10 @@ contains
     write(message,*) 'Opening file ',trim(NCO%filename),' for output; '
     write(message,*) '  Starting output at ',outfile%next_write,' and write every ',outfile%freq,' years'
     call write_log(trim(message))
+    if (outfile%end_write .lt. glimmer_nc_max_time) then
+       write(message,*) '  Stop writing at ',outfile%end_write
+       call write_log(trim(message))
+    end if
 
     ! writing meta data
     status = nf90_put_att(NCO%id, NF90_GLOBAL, 'Conventions', "CF-1.0")
@@ -180,7 +184,7 @@ contains
        end if
     end if
     if (model%numerics%time.ge.outfile%next_write .or. (forcewrite.and.model%numerics%time.gt.outfile%next_write-outfile%freq)) then
-       if (.not.NCO%just_processed) then
+       if (model%numerics%time.le.outfile%end_write .and. .not.NCO%just_processed) then
           call write_log_div
           write(message,*) 'Writing to file ', trim(NCO%filename), ' at time ', model%numerics%time
           call write_log(trim(message))
