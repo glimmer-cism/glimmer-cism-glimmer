@@ -1,6 +1,6 @@
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! +                                                           +
-! +  eis_glide.f90 - part of the GLIMMER ice model            + 
+! +  test_lithot.f90 - part of the GLIMMER ice model          + 
 ! +                                                           +
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! 
@@ -40,55 +40,63 @@
 !
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-program eis_glide
-  !*FD This is the Edinburgh Ice Sheet GLIDE driver
+program test_lithot
+  !*FD testing the temperature diffusion in lithosphere layer
   use glimmer_global, only:rk
   use glide
-  use eis_forcing
-  use eis_io
   use glimmer_log
   use glimmer_config
+  use simple_forcing
   implicit none
 
   type(glide_global_type) :: model        ! model instance
-  type(eis_climate_type) :: climate       ! climate
+  type(simple_climate) :: climate         ! climate
   type(ConfigSection), pointer :: config  ! configuration stuff
   character(len=50) :: fname   ! name of paramter file
   real(kind=rk) time
+
+  integer si,sj
   
-
-
   write(*,*) 'Enter name of GLIDE configuration file to be read'
   read(*,*) fname
-  
-  ! start logging
-  call open_log(unit=50, fname=trim(fname)//'.log')
 
+  ! start logging
+  call open_log(unit=50)
+  
   ! read configuration
   call ConfigRead(fname,config)
 
   ! initialise GLIDE
   call glide_config(model,config)
+  call simple_initialise(climate,config)
   call glide_initialise(model)
-  call eis_initialise(climate,config,model)
   call CheckSections(config)
   ! fill dimension variables
   call glide_nc_fillall(model)
-
   time = model%numerics%tstart
-  call eis_climate(climate,model,time)
+
+  call simple_surftemp(climate,model,time)
+  
+  ! set all to 0
+  model%lithot%temp(:,:,:) = 0.
+  model%climate%artm(:,:)  = 0.
+  model%geometry%thkmask = -1
   call spinup_lithot(model)
 
-  do while(time.le.model%numerics%tend)    
-     call glide_tstep_p1(model,time)
-     call eis_io_writeall(climate,model)
-     call glide_tstep_p2(model)
-     call glide_tstep_p3(model)
+  si = model%general%ewn/4
+  sj = model%general%nsn/4
+
+  model%climate%artm(si:3*si,sj:3*sj) = 10.
+
+  do while(time.le.model%numerics%tend)
+     model%numerics%time=time  
+     call glide_io_writeall(model,model)
+     call calc_lithot(model)
+     call calc_geoth(model)     
      ! override masking stuff for now
      time = time + model%numerics%tinc
-     call eis_climate(climate,model,time)
   end do
 
   ! finalise GLIDE
   call glide_finalise(model)
-end program eis_glide
+end program test_lithot

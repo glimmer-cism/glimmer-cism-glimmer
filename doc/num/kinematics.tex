@@ -109,23 +109,59 @@ Quantities $\vec u$ and $D$ are found on the velocity grid. Integrating from the
 Expressions for $\vec{u}_{i,j,k}$ and $\vec{q}_{i,j}$ are straight forward.
 
 \subsection{Solving the Ice Thickness Evolution Equation}
-\subsubsection{Linearised Semi--Implicit Scheme}
 Equation \eqref{kin.eq.ice_thickness} can be rewritten as a diffusion equation, with non--linear diffusion coefficient $D$:
 \begin{equation}
   \label{kin.eq.ice_evo}
-  \frac{\pd H}{\pd t}=-\vec\nabla\cdot D\vec\nabla s+B=\vec\nabla\cdot\vec q+B
+  \frac{\pd H}{\pd t}=-\vec\nabla\cdot D\vec\nabla s+B=-\vec\nabla\cdot\vec q+B
 \end{equation}
-This non--linear partial differential equation can be linearised by using the diffusion coefficient from the previous time step. The diffusion coefficient is calculated on the $(r,s)$--grid, i.e. staggered in both $x$ and $y$ direction. Using finite differences, the fluxes in $x$ direction, $q^x$ become
+This non--linear partial differential equation can be linearised by using the diffusion coefficient from the previous time step. The diffusion coefficient is calculated on the $(r,s)$--grid, i.e. staggered in both $x$ and $y$ direction. Figure \ref{kin.fig.staggered_grid} illustrates the staggered grid. Using finite differences, the fluxes in $x$ direction, $q^x$ become
 \begin{subequations}
 \begin{align}
   q^x_{i+\frac12,j}&=-\frac12(\tilde{D}_{r,s}+\tilde{D}_{r,s-1})\frac{s_{i+1,j}-s_{i,j}}{\Delta x}\\
   q^x_{i-\frac12,j}&=-\frac12(\tilde{D}_{r-1,s}+\tilde{D}_{r-1,s-1})\frac{s_{i,j}-s_{i-1,j}}{\Delta x}\\
   \intertext{and the fluxes in $y$ direction}
   q^y_{i,j+\frac12}&=-\frac12(\tilde{D}_{r,s}+\tilde{D}_{r-1,s})\frac{s_{i,j+1}-s_{i,j}}{\Delta y}\\
-  q^y_{i,j-\frac12}&=-\frac12(\tilde{D}_{r,s-1}+\tilde{D}_{r-1,s-1})\frac{s_{i,j}-s_{i,j-1}}{\Delta y}
+  q^y_{i,j-\frac12}&=-\frac12(\tilde{D}_{r,s-1}+\tilde{D}_{r-1,s-1})\frac{s_{i,j}-s_{i,j-1}}{\Delta y}.
 \end{align}  
 \end{subequations}
 
+\begin{figure}[htbp]
+  \centering
+  \input{\dir/figs/staggered_grid.pstex_t}
+  \caption{Illustration of the staggered grid used to calculate ice thicknesses, diffusivities and mass fluxes.}
+  \label{kin.fig.staggered_grid}
+\end{figure}
+
+\subsubsection{ADI Scheme}
+The alternating--direction implicit method (ADI) uses the concept of operator splitting where Equation \eqref{kin.eq.ice_evo} is first solved in the $x$--direction and then in the $y$--direction, \citep{Press1992}. The time step $\Delta t$ is devided into two time steps $\Delta t/2$. The descretised version of Equation \eqref{kin.eq.ice_evo} becomes \citep{Huybrechts1986}:
+\begin{subequations}
+\begin{align}
+  \label{kin.eq.adi_1}
+  2\frac{H_{i,j}^{t+\frac12}-H_{i,j}^{t}}{\Delta t} &= -\frac{q_{i+\frac12,j}^{x,t+\frac12}-q_{i-\frac12,j}^{x,t+\frac12}}{\Delta x} - \frac{q_{i,j+\frac12}^{y,t}-q_{i,j-\frac12}^{y,t}}{\Delta y} + B_{i,j} \\
+  \label{kin.eq.adi_2}
+  2\frac{H_{i,j}^{t+1}-H_{i,j}^{t+\frac12}}{\Delta t} &= -\frac{q_{i+\frac12,j}^{x,t+\frac12}-q_{i-\frac12,j}^{x,t+\frac12}}{\Delta x} - \frac{q_{i,j+\frac12}^{y,t+1}-q_{i,j-\frac12}^{y,t+1}}{\Delta y} + B_{i,j}
+\end{align}
+\end{subequations}
+Gathering all $t+\frac12$ terms on the left side, Equation \eqref{kin.eq.adi_1} can be expressed as a tri--diagonal set of equations for each row $j$:
+\begin{equation}
+  -\alpha_{i,j}H_{i-1,j}^{t+\frac12} + (1-\beta_{i,j})H_{i,j}^{t+\frac12} - \gamma_{i,j}H_{i+1,j}^{t+\frac12} = \delta_{i,j}
+\end{equation}
+with
+\begin{subequations}
+  \begin{align}
+  \alpha_{i,j} &=\frac{\tilde{D}_{r-1,s}+\tilde{D}_{r-1,s-1}}{4\Delta x^2}\Delta t\\
+  \beta_{i,j}  &=-\frac{\tilde{D}_{r,s}+2\tilde{D}_{r-1,s}+\tilde{D}_{r-1,s-1}}{4\Delta x^2}\Delta t = -(\alpha_{i,j}+\gamma_{i,j})\\
+  \gamma_{i,j} &=\frac{\tilde{D}_{r,s}+\tilde{D}_{r,s-1}}{4\Delta x^2}\Delta t    
+  \end{align}
+and the RHS,
+\begin{equation}
+  \delta_{i,j} = H_{i,j}^t-\frac{\Delta t}{2\Delta y}\left(q_{i,j+\frac12}^{y,t}-q_{i,j-\frac12}^{y,t}\right) + \frac{\Delta t}2B_{i,j} + \alpha_{i,j}h_{i-1,j} -\beta_{i,j}h_{i,j} + \gamma_{i,j}h_{i+1,j}.
+\end{equation}
+\end{subequations}
+
+A similar tri--diagonal system is found for each column, $i$ of Equation \eqref{kin.eq.adi_2}.
+
+\subsubsection{Linearised Semi--Implicit Scheme}
 Using the Crank--Nicolson scheme, the semi--implicit temporal discretisation of \eqref{kin.eq.ice_evo} is then:
 \begin{multline}
 \label{kin.eq.ice_evo_disc1}

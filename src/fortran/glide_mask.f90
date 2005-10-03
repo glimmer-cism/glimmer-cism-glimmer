@@ -71,8 +71,8 @@ contains
     real(dp), parameter :: con = - rhoi / rhoo
 
     MASK = 0
-    do ns=2,model%general%nsn-1
-       do ew = 2,model%general%ewn-1
+    do ns=1,model%general%nsn
+       do ew = 1,model%general%ewn
           
           if (model%geometry%thck(ew,ns) .eq. 0.) then                               ! no ice
              if (model%geometry%topg(ew,ns) .lt. model%climate%eus) then             ! below SL

@@ -48,40 +48,10 @@ module glide_setup
   private
   public :: glide_readconfig, glide_printconfig, glide_scale_params, &
        glide_calclsrf, glide_marinlim, glide_load_sigma, glide_maskthck, &
-       glide_prof_start, glide_prof_stop, glide_read_sigma
+       glide_read_sigma, glide_calc_sigma
 
 contains
   
-  subroutine glide_prof_start(model,profn)
-    !*FD start logging profile
-    use glide_types
-    use profile
-    implicit none
-    type(glide_global_type) :: model        !*FD model instance
-    integer, intent(in)     :: profn        !*FD profile number
-
-    call profile_start(model%prof,profn)
-  end subroutine glide_prof_start
-
-  subroutine glide_prof_stop(model,profn,msg)
-    !*FD write message to profile
-    use glide_types
-    use profile
-    implicit none
-    type(glide_global_type) :: model        !*FD model instance
-    integer, intent(in)     :: profn        !*FD profile number
-    character(len=*), intent(in) :: msg     !*FD message to be written to profile
-    
-    !local variables
-    character (len=20) :: timestring
-
-    call profile_stop(model%prof,profn)
-    if (mod(model%numerics%timecounter,glide_profile_period).eq.0) then
-       write(timestring,*) model%numerics%time
-       call profile_log(model%prof,profn,trim(timestring)//' '//msg)
-    end if
-  end subroutine glide_prof_stop
-
   subroutine glide_readconfig(model,config)
     !*FD read GLIDE configuration file
     use glide_types
@@ -113,6 +83,12 @@ contains
     if (associated(section)) then
        call handle_parameters(section, model)
     end if
+    ! read GTHF 
+    call GetSection(config,section,'GTHF')
+    if (associated(section)) then
+       model%options%gthf = 1
+       call handle_gthf(section, model)
+    end if
   end subroutine glide_readconfig
 
   subroutine glide_printconfig(model)
@@ -127,6 +103,7 @@ contains
     call print_time(model)
     call print_options(model)
     call print_parameters(model)
+    call print_gthf(model)
   end subroutine glide_printconfig
     
   subroutine glide_scale_params(model)
@@ -425,21 +402,21 @@ contains
     else
        call write_log('Calculating sigma')
        do up=1,upn
-          model%numerics%sigma(up) = f(real(up-1)/real(upn-1),2.)
+          model%numerics%sigma(up) = glide_calc_sigma(real(up-1)/real(upn-1),2.)
        end do
        return
     end if
     
 10  call write_log('something wrong with sigma coord file',GM_FATAL)
     
-  contains
-    function f(x,n)
-      implicit none
-      real :: f,x,n
-      
-      f = (1-(x+1)**(-n))/(1-2**(-n))
-    end function f
   end subroutine glide_load_sigma
+
+  function glide_calc_sigma(x,n)
+      implicit none
+      real :: glide_calc_sigma,x,n
+      
+      glide_calc_sigma = (1-(x+1)**(-n))/(1-2**(-n))
+    end function glide_calc_sigma
 
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -499,6 +476,7 @@ contains
     call GetValue(section,'dt',model%numerics%tinc)
     call GetValue(section,'ntem',model%numerics%ntem)
     call GetValue(section,'nvel',model%numerics%nvel)
+    call GetValue(section,'profile',model%numerics%profile_period)
   end subroutine handle_time
   
   subroutine print_time(model)
@@ -519,6 +497,8 @@ contains
     write(message,*) 'thermal dt factor : ',model%numerics%ntem
     call write_log(message)
     write(message,*) 'velo dt factor    : ',model%numerics%nvel
+    call write_log(message)
+    write(message,*) 'profile frequency : ',model%numerics%profile_period
     call write_log(message)
     call write_log('')
   end subroutine print_time
@@ -589,7 +569,7 @@ contains
          'none                             ' /)
     character(len=*), dimension(0:2), parameter :: evolution = (/ &
          'pseudo-diffusion', &
-         'unknown         ', &
+         'ADI scheme      ', &
          'diffusion       ' /)
     character(len=*), dimension(0:1), parameter :: vertical_integration = (/ &
          'standard     ', &
@@ -739,6 +719,7 @@ contains
     type(ConfigSection), pointer :: section
     type(glide_global_type)  :: model
 
+    model%options%which_sigma = 2
     call GetValue(section,'sigma_levels',model%numerics%sigma,model%general%upn)
 
   end subroutine handle_sigma
@@ -762,5 +743,58 @@ contains
     call write_log('')
     
   end subroutine print_sigma
+
+  ! geothermal heat flux calculations
+  subroutine handle_gthf(section, model)
+    use glimmer_config
+    use glide_types
+    implicit none
+    type(ConfigSection), pointer :: section
+    type(glide_global_type)  :: model
+
+    call GetValue(section,'num_dim',model%lithot%num_dim)
+    call GetValue(section,'nlayer',model%lithot%nlayer)
+    call GetValue(section,'surft',model%lithot%surft)
+    call GetValue(section,'rock_base',model%lithot%rock_base)
+    call GetValue(section,'numt',model%lithot%numt)
+    call GetValue(section,'rho',model%lithot%rho_r)
+    call GetValue(section,'shc',model%lithot%shc_r)
+    call GetValue(section,'con',model%lithot%con_r)
+  end subroutine handle_gthf
+
+  subroutine print_gthf(model)
+    use glide_types
+    use glimmer_log
+    implicit none
+    type(glide_global_type)  :: model
+    character(len=100) :: message
+    
+    if (model%options%gthf.gt.0) then
+       call write_log('GTHF configuration')
+       call write_log('------------------')
+       if (model%lithot%num_dim.eq.1) then
+          call write_log('solve 1D diffusion equation')
+       else if (model%lithot%num_dim.eq.3) then          
+          call write_log('solve 3D diffusion equation')
+       else
+          call write_log('Wrong number of dimensions.',GM_FATAL,__FILE__,__LINE__)
+       end if
+       write(message,*) 'number of layers                     : ',model%lithot%nlayer
+       call write_log(message)
+       write(message,*) 'initial surface temperature          : ',model%lithot%surft
+       call write_log(message)
+       write(message,*) 'rock base                            : ',model%lithot%rock_base
+       call write_log(message)
+       write(message,*) 'density of rock layer                : ',model%lithot%rho_r
+       call write_log(message)
+       write(message,*) 'specific heat capacity of rock layer : ',model%lithot%shc_r
+       call write_log(message)
+       write(message,*) 'thermal conductivity of rock layer   : ',model%lithot%con_r
+       call write_log(message)
+       write(message,*) 'number of time steps for spin-up     : ',model%lithot%numt
+       call write_log(message)
+       call write_log('')
+    end if
+  end subroutine print_gthf
 
 end module glide_setup

@@ -50,6 +50,12 @@ standard_name: land_ice_sigma_coordinate
 formula_terms: sigma: level topo: topg thick: thk
 dimlen:        model%general%upn
 
+[lithoz]
+dimensions:    lithoz
+units:         meter
+long_name:     vertical coordinate of lithosphere layer
+dimlen:        model%lithot%nlayer
+
 [lat]
 dimensions:    time, y1, x1
 units:         degreeN
@@ -142,17 +148,17 @@ load:          1
 
 [taux]
 dimensions:    time, y0, x0
-units:         pascal
+units:         kilopascal
 long_name:     basal shear stress in x direction
 data:          data%velocity%tau_x
-factor:        thk0*thk0/len0
+factor:        1e-3*thk0*thk0/len0
 
 [tauy]
 dimensions:    time, y0, x0
-units:         pascal
+units:         kilopascal
 long_name:     basal shear stress in y direction
 data:          data%velocity%tau_y
-factor:        thk0*thk0/len0
+factor:        1e-3*thk0*thk0/len0
 
 [thk]
 dimensions:    time, y1, x1
@@ -311,5 +317,13 @@ units:         degree_Celsius
 long_name:     ice temperature
 data:          data%temper%temp(up,1:data%general%ewn,1:data%general%nsn)
 standard_name: land_ice_temperature
+hot:           1
+coordinates:   lon lat
+
+[litho_temp]
+dimensions:    time, lithoz, y1, x1
+units:         degree_Celsius
+long_name:     lithosphere temperature
+data:          data%lithot%temp
 hot:           1
 coordinates:   lon lat

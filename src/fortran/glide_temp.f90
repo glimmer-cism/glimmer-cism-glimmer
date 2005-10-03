@@ -192,7 +192,7 @@ contains
     !*FD Calculates the ice temperature, according to one
     !*FD of several alternative methods.
 
-    use glimmer_utils, only: hsum4
+    use glimmer_utils, only: hsum4,tridag
     use glimmer_global, only : dp
     use paramets,       only : thk0
     use glide_velo
@@ -878,7 +878,7 @@ contains
 
     use glimmer_global, only : dp 
     use paramets, only : thk0
-
+    use glide_thck
     implicit none
 
     type(glide_global_type) :: model
@@ -1065,6 +1065,12 @@ contains
     ! How to call the flow router.
     ! call advectflow(bwat,phi,bmlt,model%geometry%mask)
 
+    ! now also calculate basal water in velocity coord system
+    call stagvarb(model%temper%bwat, &
+         model%temper%stagbwat ,&
+         model%general%  ewn, &
+         model%general%  nsn)
+
   contains
     subroutine smooth_bwat(ewm,ew,ewp,nsm,ns,nsp)
       ! smoothing basal water distrib
@@ -1092,37 +1098,6 @@ contains
 
   end subroutine find_dt_wat
 
-
-  !-------------------------------------------------------------------
-
-  subroutine tridag(a,b,c,r,u)
-
-    use glimmer_global, only : dp
-
-    implicit none
-
-    real(dp), dimension(:), intent(in) :: a,b,c,r
-    real(dp), dimension(:), intent(out) :: u
-
-    real(dp), dimension(size(b)) :: gam
-    integer :: n, j
-    real(dp) :: bet
-
-    n=size(b)
-
-    bet = b(1); u(1) = r(1)/bet
-
-    do j = 2,n
-       gam(j) = c(j-1) / bet
-       bet = b(j) - a(j-1) * gam(j)
-       u(j) = (r(j)- a(j-1) * u(j-1)) / bet
-    end do
-
-    do j = n-1,1,-1
-       u(j) = u(j) - gam(j+1) * u(j+1)
-    end do
-
-  end subroutine tridag
 
   !-------------------------------------------------------------------
 

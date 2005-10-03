@@ -54,20 +54,26 @@ contains
   !*****************************************************************************
   ! netCDF output
   !*****************************************************************************
-  subroutine NAME_io_createall(model)
+  subroutine NAME_io_createall(model,data)
     !*FD open all netCDF files for output
+    use DATAMOD
     use glide_types
     use glimmer_ncdf
     use glimmer_ncio
     implicit none
     type(glide_global_type) :: model
+    type(DATATYPE), optional :: data
     
     ! local variables
     type(glimmer_nc_output), pointer :: oc
 
     oc=>model%funits%out_first
     do while(associated(oc))
-       call NAME_io_create(oc,model)
+       if (present(data)) then
+          call NAME_io_create(oc,model,data)
+       else
+          call NAME_io_create(oc,model)
+       end if
        oc=>oc%next
     end do
   end subroutine NAME_io_createall
@@ -102,14 +108,16 @@ contains
     end do
   end subroutine NAME_io_writeall
   
-  subroutine NAME_io_create(outfile,model)
+  subroutine NAME_io_create(outfile,model,data)
     use glide_types
+    use DATAMOD
     use glimmer_ncdf
     use glimmer_CFproj
     use glimmer_log
     implicit none
     type(glimmer_nc_output), pointer :: outfile
     type(glide_global_type) :: model
+    type(DATATYPE), optional :: data
 
     integer status,varid,pos
 
@@ -197,15 +205,17 @@ contains
     !GENVAR_READ!
   end subroutine NAME_io_read
 
-  subroutine NAME_io_checkdim(infile,model)
+  subroutine NAME_io_checkdim(infile,model,data)
     !*FD check if dimension sizes in file match dims of model
     use glimmer_log
     use glimmer_ncdf
     use glide_types
+    use DATAMOD
     implicit none
     type(glimmer_nc_input), pointer :: infile
     !*FD structure containg output netCDF descriptor
     type(glide_global_type) :: model
+    type(DATATYPE), optional :: data
 
     integer status,dimid,dimsize
     character(len=150) message

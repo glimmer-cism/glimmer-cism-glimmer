@@ -141,7 +141,7 @@ Sections and keys are case sensitive and may contain white space. However, the c
     \texttt{log\_level} & (integer) set to a value between 0, no messages, and 6, all messages are displayed to stdout. By default messages are only logged to file.\\
     \texttt{ice\_limit} & (real) below this limit ice is only accumulated, ice dynamics are switched on once the ice thickness is above this value.\\
     \texttt{marine\_limit} & (real) all ice is assumed lost once water depths reach this value. Note, water depth is negative. \\
-    \texttt{geothermal} & (real) geothermal heat flux \\
+    \texttt{geothermal} & (real) constant geothermal heat flux.\\
     \texttt{flow\_factor} & (real) the flow law is enhanced with this factor \\
     \texttt{hydro\_time} & (real) basal hydrology time constant \\
     \texttt{isos\_time} & (real) isostasy time constant \\
@@ -179,6 +179,20 @@ Sections and keys are case sensitive and may contain white space. However, the c
     \multicolumn{2}{|p{0.98\textwidth}|}{Set up parameters of the elastic lithosphere.}\\
     \hline
     \texttt{flexural\_rigidity} & flexural rigidity of the lithosphere (default: 0.24e25)\\
+    \hline
+    \hline
+    \multicolumn{2}{|l|}{\texttt{[GTHF]}}\\
+    \hline
+    \multicolumn{2}{|p{0.98\textwidth}|}{Switch on lithospheric temperature and geothermal heat calculation.}\\
+    \hline
+    \texttt{num\_dim} & can be either \texttt{1} for 1D calculations or 3 for 3D calculations.\\
+    \texttt{nlayer} & number of vertical layers (default: 20). \\
+    \texttt{surft} & initial surface temperature (default 2$^\circ$C).\\
+    \texttt{rock\_base} & depth below sea-level at which geothermal heat gradient is applied (default: -5000m).\\
+    \texttt{numt} & number time steps for spinning up GTHF calculations (default: 0).\\
+    \texttt{rho} & The density of lithosphere (default: 3300kg m$^{-3}$).\\
+    \texttt{shc} & specific heat capcity of lithosphere (default: 1000J kg$^{-1}$ K$^{-1}$).\\
+    \texttt{con} & thermal conductivity of lithosphere (3.3 W m$^{-1}$ K$^{-1}$).\\    
     \hline
   \end{supertabular}
 \end{center}
@@ -227,7 +241,8 @@ netCDF I/O can be configured in the main configuration file or in a separate fil
     \multicolumn{2}{|p{0.98\textwidth}|}{This section of the netCDF parameter file controls how often selected  variables are written to file.}\\
     \hline
     \texttt{name} & The name of the output netCDF file. Typically netCDF files end with \texttt{.nc}.\\
-    \texttt{start} & Start writing to file when this time is reached.\\
+    \texttt{start} & Start writing to file when this time is reached (default: first time slice).\\
+    \texttt{stop} & Stop writin to file when this time is reached (default: last time slice). \\
     \texttt{frequency} & The time interval in years, determining how often selected variables are written to file.\\
     \texttt{variables} & List of variables to be written to file. See Appendix \ref{ug.sec.varlist} for a list of known variables. Names should be separated by at least one space. The variable names are case sensitive. Variable \texttt{hot} selects all variables necessary for a hotstart.\\
     \hline

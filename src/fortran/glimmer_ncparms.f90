@@ -152,6 +152,7 @@ contains
     ! get filename
     call GetValue(section,'name',handle_output%nc%filename)
     call GetValue(section,'start',handle_output%next_write)
+    call GetValue(section,'stop',handle_output%end_write)
     call GetValue(section,'frequency',handle_output%freq)
     call GetValue(section,'variables',handle_output%nc%vars)
 

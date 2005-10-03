@@ -71,10 +71,11 @@ contains
     type(glimmer_tseries) :: ts           !*FD time series data
     character(len=*), intent(in) :: fname !*FD read from this file
     integer, intent(in),optional :: numv  !*FD number of values per time
-
+    
     ! local variables
-    real dummy
+    real :: d1,d2,fact=1.
     integer i,j,ios
+    character(len=100) :: message
 
     if (present(numv)) then
        ts%numv = numv
@@ -88,14 +89,35 @@ contains
        call write_log('Error opening file: '//trim(fname),type=GM_FATAL)
     end if
 
-    ! find number of times
+    ! find number of times and checking if ts is strictly monotonic
     ios=0
+    d1 = 1
     do
-       read(99,*,iostat=ios) dummy
+       d2 = d1
+       read(99,*,iostat=ios) d1
+       d1 = fact*d1
        if (ios.ne.0) then
           exit
        end if
        ts%numt = ts%numt + 1
+       if (ts%numt.eq.1) then
+          cycle
+       else if (ts%numt.eq.2) then
+          if (d1.gt.d2) then
+             fact = 1.
+          else if (d1.lt.d2) then
+             fact = -1.
+             d1 = -d1
+          else
+             write(message,*) 'Error, time series in file: '//trim(fname)//' is not monotonic line: ',ts%numt
+             call write_log(message,type=GM_FATAL)
+          end if
+       else
+          if (d1.le.d2) then
+             write(message,*) 'Error, time series in file: '//trim(fname)//' is not monotonic line: ',ts%numt
+             call write_log(message,type=GM_FATAL)
+          end if
+       end if
     end do
     rewind(99)
 

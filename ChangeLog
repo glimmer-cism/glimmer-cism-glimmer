@@ -1,3 +1,6 @@
+2005-10-03 Magnus Hagdorn
+ * merge THERMAL_LITHO branch
+
 2005-09-08 Ian Rutt
  * Minor cosmetic changes
  * Improved ability to plug in emb mass-balance scheme without altering code

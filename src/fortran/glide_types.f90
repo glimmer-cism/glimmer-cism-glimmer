@@ -55,19 +55,15 @@ module glide_types
   !*FD Note that this \emph{is} now where the defaults are defined for these
   !*FD variables.
  
+  use glimmer_sparse
   use glimmer_global
   use glimmer_ncdf
   use isostasy_types
   use profile
+  use glimmer_coordinates
   use glimmer_cfproj, only : CFproj_projection
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-#ifdef PROFILE_PERIOD
-  integer, parameter :: glide_profile_period = PROFILE_PERIOD
-#else
-  integer, parameter :: glide_profile_period = 100
-#endif
 
   type glide_general
 
@@ -76,6 +72,9 @@ module glide_types
     integer :: ewn = 0  !*FD The number of grid-points in the E-W direction.
     integer :: nsn = 0  !*FD The number of grid-points in the N-S direction.
     integer :: upn = 1  !*FD The number of vertical levels in the model.
+
+    type(coordsystem_type) :: ice_grid  !*FD coordinate system of the ice grid
+    type(coordsystem_type) :: velo_grid !*FD coordinate system of the velocity grid
 
   end type glide_general
 
@@ -192,6 +191,19 @@ module glide_types
     !*FD \item[1] periodic EW boundary conditions
     !*FD \end{description}
 
+    integer :: gthf = 0
+    !*FD \begin{description}
+    !*FD \item[0] no geothermal heat flux calculations
+    !*FD \item[1] calculate gthf using 3d diffusion
+    !*FD \end{description}
+
+    integer :: which_sigma = 0
+    !*FD \begin{description}
+    !*FD \item[0] calculate sigma coordinates
+    !*FD \item[1] sigma coordinates are given in external file
+    !*FD \item[2] sigma coordinates are given in configuration file
+    !*FD \end{description}
+
   end type glide_options
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -265,6 +277,7 @@ module glide_types
     real(dp),dimension(:,:)  ,pointer :: uflx  => null() !*FD 
     real(dp),dimension(:,:)  ,pointer :: vflx  => null() !*FD 
     real(dp),dimension(:,:)  ,pointer :: diffu => null() !*FD 
+    real(dp),dimension(:,:)  ,pointer :: total_diffu => null() !*FD total diffusivity
     real(dp),dimension(:,:)  ,pointer :: ubas  => null() !*FD 
     real(dp),dimension(:,:)  ,pointer :: vbas  => null() !*FD 
     real(dp),dimension(:,:)  ,pointer :: btrc  => null() !*FD 
@@ -291,6 +304,7 @@ module glide_types
     real(dp),dimension(:,:),  pointer :: bheatflx => null() !*FD basal heat flux
     real(dp),dimension(:,:,:),pointer :: flwa => null() !*FD Glenn's $A$.
     real(dp),dimension(:,:),  pointer :: bwat => null() !*FD Basal water depth(?)
+    real(dp),dimension(:,:),  pointer :: stagbwat => null() !*FD Basal water depth(?) in velo grid
     real(dp),dimension(:,:),  pointer :: bmlt => null() !*FD Basal melt-rate(?)
     integer  :: niter   = 0      !*FD
     real(sp) :: perturb = 0.0    !*FD
@@ -299,6 +313,46 @@ module glide_types
     logical  :: first1  = .true. !*FD
     logical  :: newtemps = .false. !*FD new temperatures
   end type glide_temper
+
+  type glide_lithot_type
+     !*FD holds variables for temperature calculations in the lithosphere
+
+     real(dp),dimension(:,:,:),pointer :: temp => null()    !*FD Three-dimensional temperature field.
+     logical, dimension(:,:), pointer :: mask => null()     !*FD whether the point has been ice covered at some time
+
+     integer :: num_dim = 1                                 !*FD either 1 or 3 for 1D/3D calculations
+
+     ! The sparse matrix and linearised arrays
+     type(sparse_matrix_type) :: fd_coeff, fd_coeff_slap
+     integer :: all_bar_top
+     real(dp), dimension(:), pointer :: rhs
+     real(dp), dimension(:), pointer :: answer
+     real(dp), dimension(:), pointer :: supd,diag,subd
+
+     ! work arrays for solver
+     real(dp), dimension(:), pointer :: rwork
+     integer, dimension(:), pointer :: iwork
+     integer mxnelt
+
+     real(dp), dimension(:), pointer :: deltaz => null()    !*FD array holding grid spacing in z
+     real(dp), dimension(:,:), pointer :: zfactors => null()!*FD array holding factors for finite differences of vertical diffu
+     real(dp) :: xfactor,yfactor !*FD factors for finite differences of horizontal diffu
+
+
+     real :: surft = 2.         !*FD surface temperature, used for calculating initial temperature distribution
+     real :: mart  = 2.         !*FD sea floor temperature 
+     integer :: nlayer = 20     !*FD number of layers in lithosphere
+     real :: rock_base = -5000. !*FD depth below sea-level at which geothermal heat gradient is applied
+     
+     integer :: numt = 0        !*FD number time steps for spinning up GTHF calculations
+
+     real(dp) :: rho_r = 3300.0d0 !*FD The density of lithosphere (kg m$^{-3}$)
+     real(dp) :: shc_r = 1000.0d0 !*FD specific heat capcity of lithosphere (J kg$^{-1}$ K$^{-1}$)
+     real(dp) :: con_r = 3.3d0    !*FD thermal conductivity of lithosphere (W m$^{-1}$ K$^{-1}$)
+
+     real(dp) :: diffu = 0. !*FD diffusion coefficient
+
+  end type glide_lithot_type
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -337,7 +391,7 @@ module glide_types
     real(dp),dimension(:),pointer :: sigma => null() !*FD Sigma values for 
                                                      !*FD vertical spacing of 
                                                      !*FD model levels
-
+    integer :: profile_period = 100            !*FD profile frequency
   end type glide_numerics
 
 
@@ -384,16 +438,18 @@ module glide_types
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   type glide_thckwk
-    real(dp),dimension(:,:),  pointer :: oldthck   => null()
-    real(dp),dimension(:,:),  pointer :: oldthck2  => null()
-    real(dp),dimension(:,:),  pointer :: basestate => null()
-    real(dp),dimension(:,:),pointer :: float => null()
-    real(dp),dimension(:,:,:),pointer :: olds      => null()
-    integer  :: nwhich  = 2
-    real(sp) :: oldtime = 0.0
-    real(dp) :: few     = 0.0
-    real(dp) :: fns     = 0.0
-    logical  :: first1  =.true.
+     real(dp),dimension(:,:),  pointer :: oldthck   => null()
+     real(dp),dimension(:,:),  pointer :: oldthck2  => null()
+     real(dp),dimension(:,:),pointer :: float => null()
+     real(dp),dimension(:,:,:),pointer :: olds      => null()
+     integer  :: nwhich  = 2
+     real(sp) :: oldtime = 0.0
+     
+     real(dp), dimension(:), pointer :: alpha => null()
+     real(dp), dimension(:), pointer :: beta  => null()
+     real(dp), dimension(:), pointer :: gamma => null()
+     real(dp), dimension(:), pointer :: delta => null()
+
   end type glide_thckwk
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -445,6 +501,17 @@ module glide_types
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+  type glide_prof_type
+     integer :: geomderv
+     integer :: hvelos
+     integer :: ice_mask1
+     integer :: temperature
+     integer :: ice_evo
+     integer :: ice_mask2
+     integer :: isos_water
+     integer :: isos
+  end type glide_prof_type
+
   type glide_global_type
     type(glide_general)  :: general
     type(glide_options)  :: options
@@ -453,6 +520,7 @@ module glide_types
     type(glide_velocity) :: velocity
     type(glide_climate)  :: climate
     type(glide_temper)   :: temper
+    type(glide_lithot_type) :: lithot
     type(glide_funits)   :: funits
     type(glide_numerics) :: numerics
     type(glide_velowk)   :: velowk
@@ -461,7 +529,8 @@ module glide_types
     type(glide_tempwk)   :: tempwk
     type(glide_paramets) :: paramets
     type(CFproj_projection) :: projection
-    type(profile_type)   :: prof
+    type(profile_type)   :: profile
+    type(glide_prof_type) :: glide_prof
     type(isos_type)      :: isos
   end type glide_global_type
 
@@ -548,51 +617,56 @@ contains
     ! Allocate appropriately
 
     allocate(model%temper%temp(upn,0:ewn+1,0:nsn+1)); model%temper%temp = 0.0
-    allocate(model%temper%flwa(upn,ewn,nsn))   
-    allocate(model%temper%bheatflx(ewn,nsn));         model%temper%bheatflx = 0.0
-    allocate(model%temper%bwat(ewn,nsn));             model%temper%bwat = 0.0
-    allocate(model%temper%bmlt(ewn,nsn));             model%temper%bmlt = 0.0
+    call coordsystem_allocate(model%general%ice_grid, upn, model%temper%flwa)
+    call coordsystem_allocate(model%general%ice_grid, model%temper%bheatflx)
+    call coordsystem_allocate(model%general%ice_grid, model%temper%bwat)
+    call coordsystem_allocate(model%general%velo_grid, model%temper%stagbwat)
+    call coordsystem_allocate(model%general%ice_grid, model%temper%bmlt)
 
-    allocate(model%velocity%uvel(upn,ewn-1,nsn-1));   model%velocity%uvel = 0.0d0
-    allocate(model%velocity%vvel(upn,ewn-1,nsn-1));   model%velocity%vvel = 0.0d0
-    allocate(model%velocity%wvel(upn,ewn,nsn));       model%velocity%wvel = 0.0d0
-    allocate(model%velocity%wgrd(upn,ewn,nsn));       model%velocity%wgrd = 0.0d0
-    allocate(model%velocity%uflx(ewn-1,nsn-1));       model%velocity%uflx = 0.0d0
-    allocate(model%velocity%vflx(ewn-1,nsn-1));       model%velocity%vflx = 0.0d0
-    allocate(model%velocity%diffu(ewn-1,nsn-1));      model%velocity%diffu = 0.0d0
-    allocate(model%velocity%btrc(ewn-1,nsn-1));       model%velocity%btrc = 0.0d0
-    allocate(model%velocity%ubas(ewn-1,nsn-1));       model%velocity%ubas = 0.0d0
-    allocate(model%velocity%vbas(ewn-1,nsn-1));       model%velocity%vbas = 0.0d0
-    allocate(model%velocity%tau_x(ewn-1,nsn-1));      model%velocity%tau_x = 0.0d0
-    allocate(model%velocity%tau_y(ewn-1,nsn-1));      model%velocity%tau_y = 0.0d0
+    allocate(model%lithot%temp(1:ewn,1:nsn,model%lithot%nlayer)); model%lithot%temp = 0.0
+    call coordsystem_allocate(model%general%ice_grid, model%lithot%mask)
 
-    allocate(model%climate%acab(ewn,nsn));            model%climate%acab = 0.0
-    allocate(model%climate%artm(ewn,nsn));            model%climate%artm = 0.0
-    allocate(model%climate%lati(ewn,nsn));            model%climate%lati = 0.0
-    allocate(model%climate%loni(ewn,nsn));            model%climate%loni = 0.0
+    call coordsystem_allocate(model%general%velo_grid, upn, model%velocity%uvel)
+    call coordsystem_allocate(model%general%velo_grid, upn, model%velocity%vvel)
+    call coordsystem_allocate(model%general%ice_grid, upn, model%velocity%wvel)
+    call coordsystem_allocate(model%general%ice_grid, upn, model%velocity%wgrd)
+    call coordsystem_allocate(model%general%velo_grid, model%velocity%uflx)
+    call coordsystem_allocate(model%general%velo_grid, model%velocity%vflx)
+    call coordsystem_allocate(model%general%velo_grid, model%velocity%diffu)
+    call coordsystem_allocate(model%general%velo_grid, model%velocity%total_diffu)
+    call coordsystem_allocate(model%general%velo_grid, model%velocity%btrc)
+    call coordsystem_allocate(model%general%velo_grid, model%velocity%ubas)
+    call coordsystem_allocate(model%general%velo_grid, model%velocity%vbas)
+    call coordsystem_allocate(model%general%velo_grid, model%velocity%tau_x)
+    call coordsystem_allocate(model%general%velo_grid, model%velocity%tau_y)
 
-    allocate(model%geomderv%dthckdew(ewn-1,nsn-1));   model%geomderv%dthckdew = 0.0d0 
-    allocate(model%geomderv%dusrfdew(ewn-1,nsn-1));   model%geomderv%dusrfdew = 0.0d0
-    allocate(model%geomderv%dthckdns(ewn-1,nsn-1));   model%geomderv%dthckdns = 0.0d0
-    allocate(model%geomderv%dusrfdns(ewn-1,nsn-1));   model%geomderv%dusrfdns = 0.0d0
-    allocate(model%geomderv%dthckdtm(ewn,nsn));       model%geomderv%dthckdtm = 0.0d0
-    allocate(model%geomderv%dusrfdtm(ewn,nsn));       model%geomderv%dusrfdtm = 0.0d0
-    allocate(model%geomderv%stagthck(ewn-1,nsn-1));   model%geomderv%stagthck = 0.0d0
+    call coordsystem_allocate(model%general%ice_grid, model%climate%acab)
+    call coordsystem_allocate(model%general%ice_grid, model%climate%artm)
+    call coordsystem_allocate(model%general%ice_grid, model%climate%lati)
+    call coordsystem_allocate(model%general%ice_grid, model%climate%loni)
+
+    call coordsystem_allocate(model%general%velo_grid, model%geomderv%dthckdew)
+    call coordsystem_allocate(model%general%velo_grid, model%geomderv%dusrfdew)
+    call coordsystem_allocate(model%general%velo_grid, model%geomderv%dthckdns)
+    call coordsystem_allocate(model%general%velo_grid, model%geomderv%dusrfdns)
+    call coordsystem_allocate(model%general%ice_grid, model%geomderv%dthckdtm)
+    call coordsystem_allocate(model%general%ice_grid, model%geomderv%dusrfdtm)
+    call coordsystem_allocate(model%general%velo_grid, model%geomderv%stagthck)
   
-    allocate(model%geometry%temporary0(ewn-1,nsn-1));
-    allocate(model%geometry%temporary1(ewn,nsn));
-    allocate(model%geometry%thck(ewn,nsn));           model%geometry%thck = 0.0d0
-    allocate(model%geometry%usrf(ewn,nsn));           model%geometry%usrf = 0.0d0
-    allocate(model%geometry%lsrf(ewn,nsn));           model%geometry%lsrf = 0.0d0
-    allocate(model%geometry%topg(ewn,nsn));           model%geometry%topg = 0.0d0
-    allocate(model%geometry%mask(ewn,nsn));           model%geometry%mask = 0
-    allocate(model%geometry%thkmask(ewn,nsn));        model%geometry%thkmask = 0
+    call coordsystem_allocate(model%general%velo_grid, model%geometry%temporary0)
+    call coordsystem_allocate(model%general%ice_grid, model%geometry%temporary1)
+    call coordsystem_allocate(model%general%ice_grid, model%geometry%thck)
+    call coordsystem_allocate(model%general%ice_grid, model%geometry%usrf)
+    call coordsystem_allocate(model%general%ice_grid, model%geometry%lsrf)
+    call coordsystem_allocate(model%general%ice_grid, model%geometry%topg)
+    call coordsystem_allocate(model%general%ice_grid, model%geometry%mask)
+    call coordsystem_allocate(model%general%ice_grid, model%geometry%thkmask)
 
     allocate(model%thckwk%olds(ewn,nsn,model%thckwk%nwhich))
-                                                      model%thckwk%olds = 0.0d0
-    allocate(model%thckwk%oldthck(ewn,nsn));          model%thckwk%oldthck = 0.0d0
-    allocate(model%thckwk%oldthck2(ewn,nsn));         model%thckwk%oldthck2 = 0.0d0
-    allocate(model%thckwk%basestate(ewn,nsn));        model%thckwk%basestate = 0.0d0
+    model%thckwk%olds = 0.0d0
+    call coordsystem_allocate(model%general%ice_grid, model%thckwk%oldthck)
+    call coordsystem_allocate(model%general%ice_grid, model%thckwk%oldthck2)
+    call coordsystem_allocate(model%general%ice_grid, model%thckwk%float)
     allocate(model%numerics%sigma(upn))
     
     ! allocate memory for sparse matrix
@@ -616,7 +690,11 @@ contains
     deallocate(model%temper%flwa)
     deallocate(model%temper%bheatflx)
     deallocate(model%temper%bwat)
+    deallocate(model%temper%stagbwat)
     deallocate(model%temper%bmlt)
+
+    deallocate(model%lithot%temp)
+    deallocate(model%lithot%mask)
 
     deallocate(model%velocity%uvel)
     deallocate(model%velocity%vvel)
@@ -625,6 +703,7 @@ contains
     deallocate(model%velocity%uflx)
     deallocate(model%velocity%vflx)
     deallocate(model%velocity%diffu)
+    deallocate(model%velocity%total_diffu)
     deallocate(model%velocity%btrc)
     deallocate(model%velocity%ubas)
     deallocate(model%velocity%vbas)
@@ -656,7 +735,7 @@ contains
     deallocate(model%thckwk%olds)
     deallocate(model%thckwk%oldthck)
     deallocate(model%thckwk%oldthck2)
-    deallocate(model%thckwk%basestate)
+    deallocate(model%thckwk%float)
     deallocate(model%numerics%sigma)
     
     deallocate(model%pcgdwk%pcgrow,model%pcgdwk%pcgcol,model%pcgdwk%pcgval,model%pcgdwk%rhsd,model%pcgdwk%answ)

@@ -90,19 +90,26 @@ $$ where $z^\ast$ is the vertical distance above the ELA. }\\
     \hline
     \multicolumn{2}{|l|}{\texttt{[EIS CONY]}}\\
     \hline
-    \multicolumn{2}{|p{0.98\textwidth}|}{The mass balance function can be modified with a continentality value. The continentality value is determined by finding the ratio between points below sea level and the total number of points in a circle of given search radius. This value between 0 and 1 is used to interpolate between continental and maritime mass balance curves.}\\
+    \multicolumn{2}{|p{0.98\textwidth}|}{The mass balance function can be modified with a continentality value. The continentality value is determined by finding the ratio between points below sea level and the total number of points in a circle of given search radius. This value between 0 (maritime) and 1 (continental) is used to interpolate between continental and maritime mass balance curves.}\\
     \hline
     \texttt{period} & how often continentality is updated (default 500a).\\
     \texttt{radius} & the search radius (default 600000m).\\
+    \texttt{file} & set to \textbf{1} to load continentality from file.\\ 
     \hline
 %%%% 
     \hline
     \multicolumn{2}{|l|}{\texttt{[EIS Temperature]}}\\
     \hline
-    \multicolumn{2}{|p{0.98\textwidth}|}{Temperature is also assumed to depend on latitude and the atmospheric lapse rate. It is thus described by a polynomial:$$T(t)=\sum_{i=0}^N a_i(t)\lambda^i+bz.$$}\\
+    \multicolumn{2}{|p{0.98\textwidth}|}{Temperature is also assumed to depend on latitude and the atmospheric lapse rate.}\\
     \hline
     \texttt{temp\_file} & name of file containing temperature forcing time series.\\
-    \texttt{order} & order of polynomial, $N$.\\
+    \texttt{type} & 
+    \begin{description}
+    \item[0] polynomial: $T(t)=\sum_{i=0}^N a_i(t)\lambda^i+bz.$ where $\lambda$ is the latitude.
+    \item[1] exponential: $T(t)=a_0+a_1\exp\left(a_2(\lambda-\lambda_0)\right)$
+    \end{description}\\
+    \texttt{lat0} & $\lambda_0$ (only used when exponential type temperature)\\
+    \texttt{order} & order of polynomial, $N$ (only used when using polynomial type temperature).\\
     \texttt{lapse\_rate} & lapse rate, $b$.\\
     \hline
 %%%% 

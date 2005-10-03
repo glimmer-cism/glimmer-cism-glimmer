@@ -1,7 +1,7 @@
-\subsection{Numerical Grid}
+\subsection{Numerical Grid}\label{num.sec.grid}
 The continuous equations descrining ice physics have to be discretised in order to be solved by a computer (which is inherently finite). This section describes the finite--difference grids employed by the model.
 \subsubsection{Horizontal Grid}
-The model uses two staggered horizontal grids in order to improve stability. Both grids use the same grid spacing, $\Delta x$ and $\Delta y$, but are off-set by half a grid (see Fig. \ref{kin.fig.grid}). 
+The modelled region ($x\in[0,L_x]$, $y\in[0,L_y]$) is discretised using a regular grid so that $x_i=(i-1)\Delta x$ for $i\in[1,N]$ (and similarly for $y_j$). The model uses two staggered horizontal grids in order to improve stability. Both grids use the same grid spacing, $\Delta x$ and $\Delta y$, but are off-set by half a grid (see Fig. \ref{kin.fig.grid}). 
 \begin{figure}[htbp]
   \begin{center}
     \input{\dir/figs/grid.pstex_t}

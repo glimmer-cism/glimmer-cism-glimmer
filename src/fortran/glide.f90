@@ -47,52 +47,32 @@ module glide
   use glide_stop
   use glide_nc_custom
   use glide_io
+  use glide_lithot
+  use glide_profile
   integer, private, parameter :: dummyunit=99
 
 contains
-  subroutine glide_initialise(model,config)
-    !*FD initialise GLIDE model instance
+
+  subroutine glide_config(model,config)
+    !*FD read glide configuration from file and print it to the log
     use glide_setup
-    use glimmer_ncparams
-    use glimmer_ncio
-    use glide_velo
-    use glide_thck
-    use glide_temp
-    use glimmer_log
-    use glimmer_config
-    use glide_mask
-    use glimmer_scales
-    use glide_mask
     use isostasy
-    use profile
+    use glimmer_ncparams
+    use glimmer_config
     implicit none
     type(glide_global_type) :: model        !*FD model instance
     type(ConfigSection), pointer :: config  !*FD structure holding sections of configuration file
-   
+
     type(ConfigSection), pointer :: ncconfig
-
-
-    call write_log(glimmer_version)
-
-    ! initialise scales
-    call glimmer_init_scales
+   
     ! read configuration file
     call glide_readconfig(model,config)
     call glide_printconfig(model)
+    ! Read alternate sigma levels from config file, if necessary
+    call glide_read_sigma(model,config)
     ! read isostasy configuration file
     call isos_readconfig(model%isos,config)
     call isos_printconfig(model%isos)
-    ! scale parameters
-    call glide_scale_params(model)
-    ! allocate arrays
-    call glide_allocarr(model)
-    
-    ! load sigma file
-    call glide_load_sigma(model,dummyunit)
-
-    ! Read alternate sigma levels from
-    ! config file, if necessary
-    call glide_read_sigma(model,config)
 
     ! netCDF I/O
     if (trim(model%funits%ncfile).eq.'') then
@@ -101,6 +81,44 @@ contains
        call ConfigRead(model%funits%ncfile,ncconfig)
     end if
     call glimmer_nc_readparams(model,ncconfig)
+  end subroutine glide_config
+
+  subroutine glide_initialise(model)
+    !*FD initialise GLIDE model instance
+    use glide_setup
+    use glimmer_ncio
+    use glide_velo
+    use glide_thck
+    use glide_temp
+    use glimmer_log
+    use glide_mask
+    use glimmer_scales
+    use glide_mask
+    use isostasy
+    implicit none
+    type(glide_global_type) :: model        !*FD model instance
+
+    call write_log(glimmer_version)
+
+    ! initialise scales
+    call glimmer_init_scales
+
+    ! scale parameters
+    call glide_scale_params(model)
+    ! set up coordinate systems
+    model%general%ice_grid = coordsystem_new(0.d0, 0.d0, &
+         model%numerics%dew, model%numerics%dns, &
+         model%general%ewn, model%general%nsn)
+    model%general%velo_grid = coordsystem_new(model%numerics%dew/2.,model%numerics%dns/2., &
+         model%numerics%dew,model%numerics%dns, &
+         model%general%ewn-1,model%general%nsn-1)
+
+    ! allocate arrays
+    call glide_allocarr(model)
+    
+    ! load sigma file
+    call glide_load_sigma(model,dummyunit)
+
     ! open all input files
     call openall_in(model)
     ! and read first time slice
@@ -124,6 +142,9 @@ contains
     call init_velo(model)
     call init_temp(model)
     call init_thck(model)
+    if (model%options%gthf.gt.0) then
+       call init_lithot(model)
+    end if
 
     if (model%options%hotstart.ne.1) then
        ! initialise Glen's flow parameter A using an isothermal temperature distribution
@@ -139,8 +160,7 @@ contains
 
     ! initialise profile
 #ifdef PROFILING
-    call profile_init(model%prof,'glide.profile')
-    write(model%prof%profile_unit,*) '# take a profile every ',glide_profile_period,' time steps'
+    call glide_prof_init(model)
 #endif
   end subroutine glide_initialise
   
@@ -166,7 +186,7 @@ contains
     ! Calculate various derivatives...
     ! ------------------------------------------------------------------------     
 #ifdef PROFILING
-    call glide_prof_start(model,1)
+    call glide_prof_start(model,model%glide_prof%geomderv)
 #endif
     call stagvarb(model%geometry% thck, &
          model%geomderv% stagthck,&
@@ -185,48 +205,11 @@ contains
          model%geomderv% dthckdew, &
          model%geomderv% dthckdns)
 #ifdef PROFILING
-    call glide_prof_stop(model,1,'horizontal derivatives')
-#endif
-
-    ! ------------------------------------------------------------------------ 
-    ! Do velocity calculation if necessary
-    ! ------------------------------------------------------------------------ 
-#ifdef PROFILING
-    call glide_prof_start(model,2)
-#endif
-    if (model%options%whichevol.eq.1) then
-       if ((model%numerics%tinc > mod(model%numerics%time,model%numerics%nvel) .or. &
-            model%numerics%time == model%numerics%tinc)) then
-
-          call slipvelo(model, &
-               model%options%whichslip,model%options%whichbtrc, &
-               model%velocity% btrc,     &
-               model%velocity% ubas,     &
-               model%velocity% vbas)
-
-          call zerovelo(model%velowk,             &
-               model%numerics%sigma,     &
-               0,                                 &
-               model%geomderv% stagthck, &
-               model%geomderv% dusrfdew, &
-               model%geomderv% dusrfdns, &
-               model%temper%   flwa,     &
-               model%velocity% ubas,     &
-               model%velocity% vbas,     &
-               model%velocity% uvel,     &
-               model%velocity% vvel,     &
-               model%velocity% uflx,     &
-               model%velocity% vflx,     &
-               model%velocity% diffu)
-
-       end if
-    end if
-#ifdef PROFILING
-    call glide_prof_stop(model,2,'horizontal velocities')
+    call glide_prof_stop(model,model%glide_prof%geomderv)
 #endif
 
 #ifdef PROFILING
-    call glide_prof_start(model,3)
+    call glide_prof_start(model,model%glide_prof%ice_mask1)
 #endif
     call glide_maskthck(0, &                                    !magi a hack, someone explain what whichthck=5 does
          model%geometry% thck,      &
@@ -236,22 +219,35 @@ contains
          model%geometry% totpts,    &
          model%geometry% empty)
 #ifdef PROFILING
-    call glide_prof_stop(model,3,'ice mask 1')
+    call glide_prof_stop(model,model%glide_prof%ice_mask1)
 #endif
+
+    ! ------------------------------------------------------------------------ 
+    ! calculate geothermal heat flux
+    ! ------------------------------------------------------------------------ 
+    if (model%options%gthf.gt.0) then
+       call calc_lithot(model)
+    end if
 
     ! ------------------------------------------------------------------------ 
     ! Calculate temperature evolution and Glenn's A, if necessary
     ! ------------------------------------------------------------------------ 
 #ifdef PROFILING
-    call glide_prof_start(model,4)
+    call glide_prof_start(model,model%glide_prof%temperature)
 #endif
     if ( model%numerics%tinc >  mod(model%numerics%time,model%numerics%ntem)) then
        call timeevoltemp(model, model%options%whichtemp)
        model%temper%newtemps = .true.
     end if
 #ifdef PROFILING
-    call glide_prof_stop(model,4,'temperature')
+    call glide_prof_stop(model,model%glide_prof%temperature)
 #endif
+
+    ! ------------------------------------------------------------------------ 
+    ! Calculate basal traction factor
+    ! ------------------------------------------------------------------------ 
+    call calc_btrc(model,model%options%whichbtrc,model%velocity%btrc)
+
   end subroutine glide_tstep_p1
 
 
@@ -277,7 +273,7 @@ contains
     ! Calculate flow evolution by various different methods
     ! ------------------------------------------------------------------------ 
 #ifdef PROFILING
-    call glide_prof_start(model,5)
+    call glide_prof_start(model,model%glide_prof%ice_evo)
 #endif
     select case(model%options%whichevol)
     case(0) ! Use precalculated uflx, vflx -----------------------------------
@@ -286,10 +282,7 @@ contains
 
     case(1) ! Use explicit leap frog method with uflx,vflx -------------------
 
-       call stagleapthck(model, &
-            model%velocity% uflx, &
-            model%velocity% vflx, &
-            model%geometry% thck)
+       call stagleapthck(model,model%temper%newtemps, 6)
 
     case(2) ! Use non-linear calculation that incorporates velocity calc -----
 
@@ -297,27 +290,24 @@ contains
 
     end select
 #ifdef PROFILING
-    call glide_prof_stop(model,5,'ice evolution')
+    call glide_prof_stop(model,model%glide_prof%ice_evo)
 #endif
 
     ! ------------------------------------------------------------------------
     ! get new mask
     ! ------------------------------------------------------------------------
 #ifdef PROFILING
-    call glide_prof_start(model,6)
+    call glide_prof_start(model,model%glide_prof%ice_mask2)
 #endif
     call glide_set_mask(model)
 #ifdef PROFILING
-    call glide_prof_stop(model,6,'ice mask 2')
+    call glide_prof_stop(model,model%glide_prof%ice_mask2)
 #endif
 
     ! ------------------------------------------------------------------------ 
     ! Remove ice which is either floating, or is present below prescribed
     ! depth, depending on value of whichmarn
     ! ------------------------------------------------------------------------ 
-#ifdef PROFILING
-    call glide_prof_start(model,7)
-#endif
     call glide_marinlim(model%options%  whichmarn, &
          0, &                                        !magi a hack, someone explain what whichthck=6 does
          model%geometry% thck,      &
@@ -326,15 +316,12 @@ contains
          model%geometry%thkmask,    &
          model%numerics%mlimit,     &
          model%climate%eus)
-#ifdef PROFILING
-    call glide_prof_stop(model,7,'marine margin')
-#endif
 
     ! ------------------------------------------------------------------------
     ! update ice/water load if necessary
     ! ------------------------------------------------------------------------
 #ifdef PROFILING
-    call glide_prof_start(model,8)
+    call glide_prof_start(model,model%glide_prof%isos_water)
 #endif
     if (model%isos%do_isos) then
        if (model%numerics%time.ge.model%isos%next_calc) then
@@ -344,11 +331,11 @@ contains
        end if
     end if
 #ifdef PROFILING
-    call glide_prof_stop(model,8,'isostasy water')
+    call glide_prof_stop(model,model%glide_prof%isos_water)
 #endif
     
-    ! basal shear stress calculations are for now disabled.
-    !call calc_basal_shear(model)
+    ! basal shear stress calculations
+    call calc_basal_shear(model)
   end subroutine glide_tstep_p2
 
   subroutine glide_tstep_p3(model)
@@ -363,13 +350,13 @@ contains
     ! Calculate isostasy
     ! ------------------------------------------------------------------------ 
 #ifdef PROFILING
-    call glide_prof_start(model,9)
+    call glide_prof_start(model,model%glide_prof%isos)
 #endif
     if (model%isos%do_isos) then
        call isos_isostasy(model)
     end if
 #ifdef PROFILING
-    call glide_prof_stop(model,9,'isostasy')
+    call glide_prof_stop(model,model%glide_prof%isos)
 #endif
 
     ! ------------------------------------------------------------------------

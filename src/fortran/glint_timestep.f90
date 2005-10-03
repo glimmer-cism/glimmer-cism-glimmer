@@ -148,6 +148,7 @@ contains
        call glint_lapserate(instance%artm,real(instance%local_orog,rk), real(instance%lapse_rate,rk))
 
        ! Process the precipitation field if necessary ---------------------------
+       ! and convert from mm to m
 
        call glint_calc_precip(instance)
 

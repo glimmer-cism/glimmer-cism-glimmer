@@ -43,6 +43,9 @@ module glide_thck
 
   use glide_types
 
+  private
+  public :: init_thck, thck_nonlin_evolve, thck_lin_evolve, stagvarb, geomders, timeders, stagleapthck
+
 #ifdef DEBUG_PICARD
   ! debugging Picard iteration
   integer, private, parameter :: picard_unit=101
@@ -58,7 +61,6 @@ contains
     implicit none
     type(glide_global_type) :: model
 
-    allocate(model%thckwk%float(model%general%ewn,model%general%nsn))
     
     model%pcgdwk%fc2 = (/ model%numerics%alpha * model%numerics%dt / (2.0d0 * model%numerics%dew * model%numerics%dew), &
          model%numerics%dt, (1.0d0-model%numerics%alpha) / model%numerics%alpha, &
@@ -70,6 +72,14 @@ contains
     open(picard_unit,name='picard_info.data',status='unknown')
     write(picard_unit,*) '#time    max_iter'
 #endif
+
+    ! allocate memory for ADI scheme
+    if (model%options%whichevol.eq.1) then
+       allocate(model%thckwk%alpha(max(model%general%ewn, model%general%nsn)))
+       allocate(model%thckwk%beta (max(model%general%ewn, model%general%nsn)))
+       allocate(model%thckwk%gamma(max(model%general%ewn, model%general%nsn)))
+       allocate(model%thckwk%delta(max(model%general%ewn, model%general%nsn)))
+    end if
   end subroutine init_thck
 
   subroutine thck_lin_evolve(model,newtemps,logunit)
@@ -95,7 +105,7 @@ contains
        ! calculate basal velos
        if (newtemps) then
           call slipvelo(model,                &
-               1,model%options%whichbtrc,     &
+               1,                             &
                model%velocity% btrc,          &
                model%velocity% ubas,          &
                model%velocity% vbas)
@@ -103,7 +113,7 @@ contains
           call velo_integrate_flwa(model%velowk,model%geomderv%stagthck,model%temper%flwa)
        end if
        call slipvelo(model,                &
-            2,model%options%whichbtrc,     &
+            2,                             &
             model%velocity% btrc,          &
             model%velocity% ubas,          &
             model%velocity% vbas)
@@ -117,7 +127,7 @@ contains
 
        ! calculate horizontal velocity field
        call slipvelo(model,                &
-            3,model%options%whichbtrc,     &
+            3,                             &
             model%velocity%btrc,           &
             model%velocity%ubas,           &
             model%velocity%vbas)
@@ -161,7 +171,7 @@ contains
        ! calculate basal velos
        if (newtemps) then
           call slipvelo(model,                &
-               1,model%options%whichbtrc,     &
+               1,                             &
                model%velocity% btrc,          &
                model%velocity% ubas,          &
                model%velocity% vbas)
@@ -193,7 +203,7 @@ contains
                model%geomderv% dthckdns)
 
           call slipvelo(model,                &
-               2,model%options%whichbtrc,     &
+               2,                             &
                model%velocity% btrc,          &
                model%velocity% ubas,          &
                model%velocity% vbas)
@@ -222,7 +232,7 @@ contains
 
        ! calculate horizontal velocity field
        call slipvelo(model,                &
-            3,model%options%whichbtrc,     &
+            3,                             &
             model%velocity%btrc,           &
             model%velocity%ubas,           &
             model%velocity%vbas)
@@ -816,79 +826,164 @@ contains
 
   end subroutine swapbndh
 
-!------------------------------------------------------------------------
+  !-----------------------------------------------------------------------------
+  ! ADI routines
+  !-----------------------------------------------------------------------------
 
-  subroutine stagleapthck(model,uflx,vflx,thck)
+  subroutine stagleapthck(model,newtemps,logunit)
+    
+    !*FD this subroutine solves the ice sheet thickness equation using the ADI scheme
+    !*FD diffusivities are updated for each half time step
 
-    use glimmer_global, only : dp
-
+    use glide_setup, only: glide_calclsrf
+    use glide_velo
+    use glimmer_utils
     implicit none
- 
+    ! subroutine arguments
     type(glide_global_type) :: model
-    real(dp), intent(in), dimension(:,:) :: uflx, vflx
-    real(dp), intent(inout), dimension(:,:) :: thck
+    logical, intent(in) :: newtemps                     !*FD true when we should recalculate Glen's A
+    integer,intent(in) :: logunit                       !*FD unit for logging
 
-    real(dp), dimension(:,:), allocatable :: newthck, bnduflx, bndvflx 
-    integer :: ns,ew
+    ! local variables
+    integer ew,ns, n
 
-    allocate(newthck(model%general%ewn,model%general%nsn))
-    newthck = 0.0d0
+    if (model%geometry%empty) then
 
-    allocate(bnduflx(0:model%general%ewn,0:model%general%nsn))
-    allocate(bndvflx(0:model%general%ewn,0:model%general%nsn))
+       model%geometry%thck = dmax1(0.0d0,model%geometry%thck + model%climate%acab * model%pcgdwk%fc2(2))
+#ifdef DEBUG       
+       print *, "* thck empty - net accumulation added", model%numerics%time
+#endif
+    else
 
-    bnduflx(1:model%general%ewn-1,1:model%general%nsn-1) = uflx
-    bndvflx(1:model%general%ewn-1,1:model%general%nsn-1) = vflx
+       ! calculate basal velos
+       if (newtemps) then
+          call slipvelo(model,                &
+               1,                             &
+               model%velocity% btrc,          &
+               model%velocity% ubas,          &
+               model%velocity% vbas)
+          ! calculate Glen's A if necessary
+          call velo_integrate_flwa(model%velowk,model%geomderv%stagthck,model%temper%flwa)
+       end if
+       call slipvelo(model,                &
+            2,                             &
+            model%velocity% btrc,          &
+            model%velocity% ubas,          &
+            model%velocity% vbas)
 
-    bnduflx(0:model%general%ewn:model%general%ewn,:) = 0.0d0
-    bnduflx(:,0:model%general%nsn:model%general%nsn) = 0.0d0
-    bndvflx(0:model%general%ewn:model%general%ewn,:) = 0.0d0
-    bndvflx(:,0:model%general%nsn:model%general%nsn) = 0.0d0
+       ! calculate diffusivity
+       call velo_calc_diffu(model%velowk,model%geomderv%stagthck,model%geomderv%dusrfdew, &
+            model%geomderv%dusrfdns,model%velocity%diffu)
 
-    ! bnduflx(0,:) = (/0.0d0,uflx(1,:),0.0d0/)
-    ! bndvflx(0,:) = (/0.0d0,vflx(1,:),0.0d0/) 
-    ! bnduflx(model%general%ewn,:) = (/0.0d0,uflx(model%general%ewn-1,:),0.0d0/)
-    ! bndvflx(model%general%ewn,:) = (/0.0d0,vflx(model%general%ewn-1,:),0.0d0/)
-  
-    bnduflx(:,0) = (/0.0d0,uflx(:,1),0.0d0/)
-    bndvflx(:,0) = (/0.0d0,vflx(:,1),0.0d0/);
-    ! bnduflx(:,model%general%nsn) = (/0.0d0,uflx(:,model%general%nsn-1),0.0d0/)
-    ! bnduflx(:,model%general%nsn) = (/0.0d0,vflx(:,model%general%nsn-1),0.0d0/)
+       model%velocity%total_diffu(:,:) = model%velocity%diffu(:,:) + model%velocity%ubas(:,:)
 
-    do ns = 1,model%general%nsn
-      do ew = 1,model%general%ewn
+       ! first ADI step, solve thickness equation along rows j
+       n = model%general%ewn
+       do ns=2,model%general%nsn-1
+          call adi_tri ( model%thckwk%alpha, model%thckwk%beta, model%thckwk%gamma, model%thckwk%delta, &
+               model%geometry%thck(:,ns), model%geometry%lsrf(:,ns), model%climate%acab(:,ns), &
+               model%velocity%vflx(:,ns), model%velocity%vflx(:,ns-1), &
+               model%velocity%total_diffu(:,ns),  model%velocity%total_diffu(:,ns-1), &
+               model%numerics%dt, model%numerics%dew, model%numerics%dns )
 
-        newthck(ew,ns) = - &
-        (sum(bnduflx(ew,ns-1:ns)) - sum(bnduflx(ew-1,ns-1:ns))) * model%thckwk%few - &
-        (sum(bndvflx(ew-1:ew,ns)) - sum(bndvflx(ew-1:ew,ns-1))) * model%thckwk%fns 
+          call tridag( model%thckwk%alpha(2:n), model%thckwk%beta(1:n), model%thckwk%gamma(1:n-1), model%thckwk%delta(1:n), &
+               model%thckwk%oldthck(:,ns), n )
+       end do
 
-      end do
-    end do
+       model%thckwk%oldthck(:,:) = max(model%thckwk%oldthck(:,:), 0.d0)
 
-    newthck = model%thckwk%oldthck  - model%thckwk%basestate  + newthck  
+       ! second ADI step, solve thickness equation along columns i
+       n = model%general%nsn
+       do ew=2,model%general%ewn-1
+          call adi_tri ( model%thckwk%alpha, model%thckwk%beta, model%thckwk%gamma, model%thckwk%delta, &
+               model%thckwk%oldthck(ew,:), model%geometry%lsrf(ew, :), model%climate%acab(ew, :), &
+               model%velocity%uflx(ew,:), model%velocity%uflx(ew-1,:), &
+               model%velocity%total_diffu(ew,:), model%velocity%total_diffu(ew-1,:), &
+               model%numerics%dt, model%numerics%dns, model%numerics%dew )
 
-    newthck(1,:) = model%thckwk%oldthck(1,:)
-    newthck(:,1) = model%thckwk%oldthck(:,1)
-    newthck(model%general%ewn,:) = model%thckwk%oldthck(model%general%ewn,:)
-    newthck(:,model%general%nsn) = model%thckwk%oldthck(:,model%general%nsn)
+          call tridag( model%thckwk%alpha(2:n), model%thckwk%beta(1:n), model%thckwk%gamma(1:n-1), model%thckwk%delta(1:n), &
+               model%geometry%thck(ew, :), n)
+       end do
 
-    model%thckwk%oldthck = thck
+       model%geometry%thck(:,:) = max(model%geometry%thck(:,:), 0.d0)
 
-    if (model%thckwk%first1) then
-      model%thckwk%basestate = newthck - model%thckwk%oldthck  
-      newthck = newthck - model%thckwk%basestate  
-      model%thckwk%first1 = .false.
+       ! calculate horizontal velocity field
+       call slipvelo(model,                &
+            3,                             &
+            model%velocity%btrc,           &
+            model%velocity%ubas,           &
+            model%velocity%vbas)
+       call velo_calc_velo(model%velowk,model%geomderv%stagthck,model%geomderv%dusrfdew, &
+            model%geomderv%dusrfdns,model%temper%flwa,model%velocity%diffu,model%velocity%ubas, &
+            model%velocity%vbas,model%velocity%uvel,model%velocity%vvel,model%velocity%uflx,model%velocity%vflx)
     end if
 
-    where (newthck .gt. 0.0d0) 
-      thck = newthck
-    elsewhere
-      thck = 0.0d0
-    end where
-
-    deallocate(newthck,bnduflx,bndvflx)
+    !------------------------------------------------------------
+    ! calculate upper and lower surface
+    !------------------------------------------------------------
+    call glide_calclsrf(model%geometry%thck, model%geometry%topg, model%climate%eus, model%geometry%lsrf)
+    model%geometry%usrf = max(0.d0,model%geometry%thck + model%geometry%lsrf)
 
   end subroutine stagleapthck
+
+
+  subroutine adi_tri(a,b,c,d,thk,tpg,mb,flx_p,flx_m,dif_p,dif_m,dt,ds1, ds2)
+    !*FD construct tri-diagonal matrix system for a column/row
+    use glimmer_global, only : dp, sp
+    implicit none
+    
+    real(dp), dimension(:), intent(out) :: a !*FD alpha (subdiagonal)
+    real(dp), dimension(:), intent(out) :: b !*FD alpha (diagonal)
+    real(dp), dimension(:), intent(out) :: c !*FD alpha (superdiagonal)
+    real(dp), dimension(:), intent(out) :: d !*FD right-hand side
+    
+    real(dp), dimension(:), intent(in) :: thk   !*FD ice thickness
+    real(dp), dimension(:), intent(in) :: tpg   !*FD lower surface of ice
+    real(sp), dimension(:), intent(in) :: mb    !*FD mass balance
+    real(dp), dimension(:), intent(in) :: flx_p !*FD flux +1/2
+    real(dp), dimension(:), intent(in) :: flx_m !*FD flux -1/2
+    real(dp), dimension(:), intent(in) :: dif_p !*FD diffusivity +1/2
+    real(dp), dimension(:), intent(in) :: dif_m !*FD diffusivity -1/2
+    
+    real(dp), intent(in) :: dt !*FD time step
+    real(dp), intent(in) :: ds1, ds2 !*FD spatial steps inline and transversal
+
+    ! local variables
+    real(dp) :: f1, f2, f3
+    integer :: i,n
+    
+    n = size(thk)
+
+    f1 = dt/(4*ds1*ds1)
+    f2 = dt/(4*ds2)
+    f3 = dt/2.
+
+    a(:) = 0.
+    b(:) = 0.
+    c(:) = 0.
+    d(:) = 0.
+
+    a(1) = 0.
+    do i=2,n
+       a(i) = f1*(dif_m(i-1)+dif_p(i-1))
+    end do
+    do i=1,n-1
+       c(i) = f1*(dif_m(i)+dif_p(i))
+    end do
+    c(n) = 0.
+    b(:) = -(a(:)+c(:))
+
+    ! calculate RHS
+    do i=2,n-1
+       d(i) = thk(i) - &
+            f2 * (flx_p(i-1) + flx_p(i) - flx_m(i-1) - flx_m(i)) + &
+            f3 * mb(i) - &
+            a(i)*tpg(i-1) - b(i)*tpg(i) - c(i)*tpg(i+1)
+    end do
+
+    b(:) = 1.+b(:)
+
+  end subroutine adi_tri
 
 end module glide_thck
 

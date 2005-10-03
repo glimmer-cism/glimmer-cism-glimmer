@@ -29,3 +29,4 @@ units:         1
 long_name:     continentality
 data:          data%cony%cony
 coordinates:   lon lat
+load:          1

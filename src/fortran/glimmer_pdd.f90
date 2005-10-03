@@ -1,7 +1,7 @@
 
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! +                                                           +
-! +  glide_pdd.f90 - part of the GLIMMER ice model            + 
+! +  glimmer_pdd.f90 - part of the GLIMMER ice model          + 
 ! +                                                           +
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! 
@@ -53,9 +53,11 @@ module glimmer_pdd
   !*FD
   !*FD Note also that this code now deals in {\it unscaled} variables.
 
-  use glimmer_global
+  use glimmer_global, only : dp,sp
 
   implicit none
+
+  private :: dp, sp
 
   type glimmer_pdd_params
 
@@ -333,6 +335,7 @@ contains
 
     use glimmer_global, only: sp
     use physcon, only: rhoi,rhow
+    use glimmer_integrate
     use glimmer_log
 
     implicit none
@@ -397,8 +400,11 @@ contains
     !*FD \int^{T_{a}'+2.5\sigma}_{0}T_{a}\times
     !*FD \exp\left(\frac{-(T_a-T_{a}')^2}{2\sigma^2}\right)\,dT
     !*FD \end{equation}
+    use glimmer_integrate
 
-    real(sp) :: day !*FD The `day', in radians, so that a year is $2\pi$ long.
+    implicit none
+
+    real(sp), intent(in) :: day !*FD The `day', in radians, so that a year is $2\pi$ long.
 
     real(sp) :: upper_limit
 
@@ -432,58 +438,6 @@ contains
      pdd_integrand = artm *  exp(- (artm - t_a_prime)**2 / (2.0 * dd_sigma**2))
 
   end function pdd_integrand
-
-!--------------------------------------------------------------------------------------
-
-  recursive real(sp) function romberg_int(fct,lgr,rgr)
-
-    !*FD Function to perform Romberg Integration on function \texttt{fct}, between
-    !*FD limits \texttt{lgr} and \texttt{rgr}. The precision of the routine is 
-    !*FD determined by the value of \texttt{ord}, an internal variable. 
-    !*FD
-    !*FD This routine is an implementation of ACM algorithm 60, by F. L. Bauer.
-    !*FD (Comm. ACM, vol. 4, issue 6, June 1961).
-
-    implicit none
-
-    real(sp)            :: fct    !*FD Function to be integrated
-    real(sp),intent(in) :: lgr    !*FD Lower bound
-    real(sp),intent(in) :: rgr    !*FD Upper bound
-    integer,parameter :: ord = 6
-
-    real(sp),dimension(ord+1) :: t
-    real(sp) :: l,u,m
-    integer :: f,h,j,n
-
-    external fct
-
-    l=rgr-lgr
-    t(1)=(fct(lgr)+fct(rgr))/2.0
-    n=1
-
-    do h=1,ord
-       u=0
-       m=l/(2*n)
-
-       do j=1,2*n-1,2
-          u=u+fct(lgr+j*m)
-       end do
-
-       t(h+1)=((u/n)+t(h))/2.0
-       f=1
-       
-       do j=h,1,-1
-          f=f*4
-          t(j)=t(j+1)+(t(j+1)-t(j))/(f-1)
-       end do
-
-       n=2*n
-
-    end do
-
-    romberg_int=t(1)*l
-
-  end function romberg_int
 
 !-------------------------------------------------------------------------------
 
