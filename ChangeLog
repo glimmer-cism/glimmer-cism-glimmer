@@ -1,4 +1,9 @@
 2005-10-03 Magnus Hagdorn
+ * glide.tex: minor addition to docs
+ * e2.adi.config: test config for ADI scheme
+ * Makefile.am: run ADI test
+
+2005-10-03 Magnus Hagdorn
  * merge THERMAL_LITHO branch
 
 2005-09-08 Ian Rutt
