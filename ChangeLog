@@ -1,3 +1,11 @@
+2005-10-03 Magnus Hagdorn
+ * eis_cony: add option to read continentality from file
+ * eis_forcing.f90: check input netCDF files if they contain variables that
+   should be read
+ * eis_vars.def: cony can be read
+ * glide.tex: document end time for netCDF output
+ * drivers.tex: document new cony option
+
 2005-09-20 Magnus Hagdorn
  * glimmer_ncdf.f90: add end time to output structure
  * glimmer_ncio.f90: only write to output file if the current time is less

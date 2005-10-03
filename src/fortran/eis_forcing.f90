@@ -69,6 +69,9 @@ contains
     call eis_init_ela(climate%ela,model)
     call eis_init_temp(climate%temp)
     call eis_init_slc(climate%slc)
+
+    ! and read first time slice
+    call eis_io_readall(climate,model)
   end subroutine eis_initialise
 
   subroutine eis_readconfig(climate,config)

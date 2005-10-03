@@ -241,7 +241,8 @@ netCDF I/O can be configured in the main configuration file or in a separate fil
     \multicolumn{2}{|p{0.98\textwidth}|}{This section of the netCDF parameter file controls how often selected  variables are written to file.}\\
     \hline
     \texttt{name} & The name of the output netCDF file. Typically netCDF files end with \texttt{.nc}.\\
-    \texttt{start} & Start writing to file when this time is reached.\\
+    \texttt{start} & Start writing to file when this time is reached (default: first time slice).\\
+    \texttt{stop} & Stop writin to file when this time is reached (default: last time slice). \\
     \texttt{frequency} & The time interval in years, determining how often selected variables are written to file.\\
     \texttt{variables} & List of variables to be written to file. See Appendix \ref{ug.sec.varlist} for a list of known variables. Names should be separated by at least one space. The variable names are case sensitive. Variable \texttt{hot} selects all variables necessary for a hotstart.\\
     \hline
