@@ -74,7 +74,9 @@ module glimmer_coordinates
           coordsystem_allocate_d2, coordsystem_allocate_s2
   end interface
 
+#ifdef DEBUG_COORDS
   character(len=100), private :: message
+#endif
 
 contains
   subroutine coordsystem_print(coord, unit)

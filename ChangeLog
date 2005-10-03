@@ -1,4 +1,8 @@
 2005-10-03 Magnus Hagdorn
+ * glide_velo.f90: fix compiler warning, btrc should have intent(in)
+ * glimmer_coordinates.f90: fix compiler warning
+
+2005-10-03 Magnus Hagdorn
  * glide.tex: minor addition to docs
  * e2.adi.config: test config for ADI scheme
  * Makefile.am: run ADI test
