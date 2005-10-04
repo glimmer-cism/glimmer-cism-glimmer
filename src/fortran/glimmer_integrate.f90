@@ -65,10 +65,11 @@ contains
     implicit none
 
     interface 
-       real(sp) function fct(x)
+       function fct(x)
          use glimmer_global, only : sp
          implicit none
          real(sp), intent(in) :: x
+         real(sp) :: fct
        end function fct
     end interface
     
@@ -122,11 +123,12 @@ contains
     implicit none
 
     interface 
-       real(sp) function fct(x,params)
+       function fct(x,params)
          use glimmer_global, only : sp
          implicit none
          real(sp), intent(in) :: x
          real(sp), intent(in), dimension(:) :: params
+         real(sp) :: fct
        end function fct
     end interface
     
@@ -179,10 +181,11 @@ contains
     implicit none
 
     interface 
-       real(dp) function fct(x)
+       function fct(x)
          use glimmer_global, only : dp
          implicit none
          real(dp), intent(in) :: x
+         real(dp) :: fct
        end function fct
     end interface
     
@@ -236,11 +239,12 @@ contains
     implicit none
 
     interface 
-       real(dp) function fct(x,params)
+       function fct(x,params)
          use glimmer_global, only : dp
          implicit none
          real(dp), intent(in) :: x
          real(dp), intent(in), dimension(:) :: params
+         real(dp) :: fct
        end function fct
     end interface
     

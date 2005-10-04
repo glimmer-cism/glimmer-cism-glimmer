@@ -57,6 +57,13 @@ if test "$fs" != "" ; then
   f95v="gfortran"
   f95_preprocessor="-x f95-cpp-input"
 fi
+# testing for Portland group
+f95string=`$FC -V 2>&1`
+fs=`echo $f95string |$EGREP "Portland"`
+if test "$fs" != "" ; then
+  f95v="Portland pgf90"
+  f95_preprocessor="-Mpreprocess"
+fi
 
 AC_MSG_RESULT([$f95v])
 

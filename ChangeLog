@@ -1,3 +1,7 @@
+2005-10-04 Ian Rutt
+ * Added testing for pgf90 compiler
+ * Changed interface blocks in glimmer_interpolate.f90 to work with pgf90
+
 2005-10-03 Magnus Hagdorn
  * glide_velo.f90: fix compiler warning, btrc should have intent(in)
  * glimmer_coordinates.f90: fix compiler warning
