@@ -1,4 +1,8 @@
 2005-10-06 Magnus Hagdorn
+ * definitions.tex: change date
+ * configure.in: bump version to 0.5.5
+
+2005-10-06 Magnus Hagdorn
  * definitions.tex: today's date
  * clean up documentation
  * configure.in: bump version
