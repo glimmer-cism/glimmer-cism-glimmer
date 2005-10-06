@@ -1,3 +1,9 @@
+2005-10-06 Magnus Hagdorn
+ * definitions.tex: today's date
+ * clean up documentation
+ * configure.in: bump version
+ * update NEWS
+
 2005-10-04 Ian Rutt
  * Added testing for pgf90 compiler
  * Changed interface blocks in glimmer_interpolate.f90 to work with pgf90

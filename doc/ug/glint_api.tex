@@ -28,7 +28,7 @@ other documentation for details).
   }
   \tablehead{%
     \hline
-    \multicolumn{4}{|p{0.98\textwidth}|}{\emph{\small continued from previous page}}\\
+    \multicolumn{4}{|p{\textwidth}|}{\emph{\small continued from previous page}}\\
     \hline
   }
   \tabletail{%
@@ -36,7 +36,7 @@ other documentation for details).
     \multicolumn{4}{|r|}{\emph{\small continued on next page}}\\
     \hline}
   \tablelasttail{\hline}
-  \begin{supertabular}{lllp{5.5cm}}
+  \begin{supertabular*}{\textwidth}{@{\extracolsep{\fill}}lllp{5.5cm}}
     \multicolumn{4}{|l|}{{\bf Mandatory}}\\
     \hline
     \texttt{params}    & \texttt{type(glint\_params)} & \texttt{intent(inout)} &
@@ -73,7 +73,7 @@ other documentation for details).
     \texttt{output\_flag} & \texttt{logical} & \texttt{intent(out)} & Set to
     show outputs have been updated (provided for consistency with main
     \texttt{glint} subroutine).\\
-  \end{supertabular}
+  \end{supertabular*}
 \end{center}
 %
 \paragraph{Additional notes}
@@ -124,7 +124,7 @@ available for feedback.
   }
   \tablehead{%
     \hline
-    \multicolumn{4}{|p{0.98\textwidth}|}{\emph{\small continued from previous page}}\\
+    \multicolumn{4}{|p{\textwidth}|}{\emph{\small continued from previous page}}\\
     \hline
   }
   \tabletail{%
@@ -132,7 +132,7 @@ available for feedback.
     \multicolumn{4}{|r|}{\emph{\small continued on next page}}\\
     \hline}
   \tablelasttail{\hline}
-  \begin{supertabular}{lllp{5.5cm}}
+  \begin{supertabular*}{\textwidth}{@{\extracolsep{\fill}}lllp{5.5cm}}
     \multicolumn{4}{|l|}{{\bf Mandatory}}\\
     \hline
     \texttt{params} & \texttt{type(glint\_params)} & \texttt{intent(inout)} &
@@ -173,7 +173,7 @@ available for feedback.
     \texttt{total\_water\_out} & \texttt{real(rk)} & \texttt{intent(inout)} &
     Area-integrated water flux out (kg)\\
     \texttt{ice\_volume} & \texttt{real(rk)} & \texttt{intent(inout)} & Total ice volume (m$^3$)\\
-  \end{supertabular}
+  \end{supertabular*}
 \end{center}
 \paragraph{Additional notes}
 %
@@ -247,7 +247,7 @@ extended at some point to include a model of ice albedo.
   } 
   \tablehead{%
     \hline
-    \multicolumn{4}{|p{0.98\textwidth}|}{\emph{\small continued from previous page}}\\
+    \multicolumn{4}{|p{\textwidth}|}{\emph{\small continued from previous page}}\\
     \hline
   } 
   \tabletail{%
@@ -255,9 +255,9 @@ extended at some point to include a model of ice albedo.
     \multicolumn{4}{|r|}{\emph{\small continued on next page}}\\
     \hline}
       \tablelasttail{\hline}
-        \begin{supertabular}{lllp{5.5cm}}
+        \begin{supertabular*}{\textwidth}{@{\extracolsep{\fill}}lllp{5.5cm}}
           \texttt{params} & \texttt{type(glint\_params)} & \texttt{intent(inout)} & Ice model paramters \\
-\end{supertabular}
+\end{supertabular*}
 \end{center}
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -284,7 +284,7 @@ indicating success, or giving error information.
   } 
   \tablehead{%
     \hline
-    \multicolumn{4}{|p{0.98\textwidth}|}{\emph{\small continued from previous page}}\\
+    \multicolumn{4}{|p{\textwidth}|}{\emph{\small continued from previous page}}\\
     \hline
   } 
   \tabletail{%
@@ -292,13 +292,13 @@ indicating success, or giving error information.
     \multicolumn{4}{|r|}{\emph{\small continued on next page}}\\
     \hline}
       \tablelasttail{\hline}
-        \begin{supertabular}{lllp{5.5cm}}
+        \begin{supertabular*}{\textwidth}{@{\extracolsep{\fill}}lllp{5.5cm}}
         \texttt{params} & \texttt{type(glint\_params)} & \texttt{intent(in)} & Ice model parameters \\
 \texttt{coverage(:,:)} & \texttt{real(rk)} & \texttt{intent(out)} & Coverage
 map (all fields except orography) \\
 \texttt{cov\_orog(:,:)} & \texttt{real(rk)} & \texttt{intent(out)} & Coverage
 map (orography) \\
-\end{supertabular}
+\end{supertabular*}
 \end{center}
 %
 \paragraph{Returned value}

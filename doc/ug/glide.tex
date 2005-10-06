@@ -21,7 +21,7 @@ Sections and keys are case sensitive and may contain white space. However, the c
   }
   \tablehead{%
     \hline
-    \multicolumn{2}{|p{0.98\textwidth}|}{\emph{\small continued from previous page}}\\
+    \multicolumn{2}{|l|}{\emph{\small continued from previous page}}\\
     \hline
   }
   \tabletail{%
@@ -29,12 +29,12 @@ Sections and keys are case sensitive and may contain white space. However, the c
     \multicolumn{2}{|r|}{\emph{\small continued on next page}}\\
     \hline}
   \tablelasttail{\hline}
-  \begin{supertabular}{|l|p{9cm}|}
+  \begin{supertabular*}{\textwidth}{@{\extracolsep{\fill}}|l|p{9cm}|}
 %%%% GRID
     \hline
     \multicolumn{2}{|l|}{\texttt{[grid]}}\\
     \hline
-    \multicolumn{2}{|p{0.98\textwidth}|}{Define model grid. Maybe we should make this optional and read grid specifications from input netCDF file (if present). Certainly, the input netCDF files should be checked (but presently are not) if grid specifications are compatible.}\\
+    \multicolumn{2}{|p{0.95\textwidth}|}{Define model grid. Maybe we should make this optional and read grid specifications from input netCDF file (if present). Certainly, the input netCDF files should be checked (but presently are not) if grid specifications are compatible.}\\
     \hline
     \texttt{ewn} & (integer) number of nodes in $x$--direction\\
     \texttt{nsn} & (integer) number of nodes in $y$--direction\\
@@ -48,7 +48,7 @@ Sections and keys are case sensitive and may contain white space. However, the c
     \hline
     \multicolumn{2}{|l|}{\texttt{[time]}}\\
     \hline
-    \multicolumn{2}{|p{0.98\textwidth}|}{Configure time steps, etc. Update intervals should probably become absolute values rather than related to the main time step when we introduce variable time steps.}\\
+    \multicolumn{2}{|p{0.95\textwidth}|}{Configure time steps, etc. Update intervals should probably become absolute values rather than related to the main time step when we introduce variable time steps.}\\
     \hline
     \texttt{tstart} & (real) Start time of the model in years\\
     \texttt{tend} & (real) End time of the model in years\\
@@ -61,7 +61,7 @@ Sections and keys are case sensitive and may contain white space. However, the c
     \hline
     \multicolumn{2}{|l|}{\texttt{[options]}}\\
     \hline
-    \multicolumn{2}{|p{0.98\textwidth}|}{Parameters set in this section determine how various components of the ice sheet model are treated. Defaults are indicated in bold.}\\
+    \multicolumn{2}{|p{0.95\textwidth}|}{Parameters set in this section determine how various components of the ice sheet model are treated. Defaults are indicated in bold.}\\
     \hline
     \texttt{ioparams} & (string) name of file containing netCDF I/O configuration. The main configuration file is searched for I/O related sections if no file name is given (default).\\
     \texttt{temperature} & 
@@ -136,7 +136,7 @@ Sections and keys are case sensitive and may contain white space. However, the c
     \hline
     \multicolumn{2}{|l|}{\texttt{[parameters]}}\\
     \hline
-    \multicolumn{2}{|p{0.98\textwidth}|}{Set various parameters.}\\
+    \multicolumn{2}{|p{0.95\textwidth}|}{Set various parameters.}\\
     \hline
     \texttt{log\_level} & (integer) set to a value between 0, no messages, and 6, all messages are displayed to stdout. By default messages are only logged to file.\\
     \texttt{ice\_limit} & (real) below this limit ice is only accumulated, ice dynamics are switched on once the ice thickness is above this value.\\
@@ -159,7 +159,7 @@ Sections and keys are case sensitive and may contain white space. However, the c
     \hline
     \multicolumn{2}{|l|}{\texttt{[isostasy]}}\\
     \hline
-    \multicolumn{2}{|p{0.98\textwidth}|}{Isostatic adjustment is only enabled if this section is present in the configuration file. The options described control isostasy model.}\\
+    \multicolumn{2}{|p{0.95\textwidth}|}{Isostatic adjustment is only enabled if this section is present in the configuration file. The options described control isostasy model.}\\
     \hline
     \texttt{lithosphere} & \begin{tabular}[t]{cp{\linewidth}} 
       {\bf 0} & local lithosphere, equilibrium bedrock depression is found using Archimedes' principle \\
@@ -176,14 +176,14 @@ Sections and keys are case sensitive and may contain white space. However, the c
     \hline
     \multicolumn{2}{|l|}{\texttt{[elastic lithosphere]}}\\
     \hline
-    \multicolumn{2}{|p{0.98\textwidth}|}{Set up parameters of the elastic lithosphere.}\\
+    \multicolumn{2}{|p{0.95\textwidth}|}{Set up parameters of the elastic lithosphere.}\\
     \hline
     \texttt{flexural\_rigidity} & flexural rigidity of the lithosphere (default: 0.24e25)\\
     \hline
     \hline
     \multicolumn{2}{|l|}{\texttt{[GTHF]}}\\
     \hline
-    \multicolumn{2}{|p{0.98\textwidth}|}{Switch on lithospheric temperature and geothermal heat calculation.}\\
+    \multicolumn{2}{|p{0.95\textwidth}|}{Switch on lithospheric temperature and geothermal heat calculation.}\\
     \hline
     \texttt{num\_dim} & can be either \texttt{1} for 1D calculations or 3 for 3D calculations.\\
     \texttt{nlayer} & number of vertical layers (default: 20). \\
@@ -194,7 +194,7 @@ Sections and keys are case sensitive and may contain white space. However, the c
     \texttt{shc} & specific heat capcity of lithosphere (default: 1000J kg$^{-1}$ K$^{-1}$).\\
     \texttt{con} & thermal conductivity of lithosphere (3.3 W m$^{-1}$ K$^{-1}$).\\    
     \hline
-  \end{supertabular}
+  \end{supertabular*}
 \end{center}
 
 netCDF I/O can be configured in the main configuration file or in a separate file (see \texttt{ioparams} in the \texttt{[options]} section). Any number of input and output files can be specified. Input files are processed in the same order hey occur in the configuration file, thus potentially overwriting priviously loaded fields.
@@ -205,7 +205,7 @@ netCDF I/O can be configured in the main configuration file or in a separate fil
   }
   \tablehead{%
     \hline
-    \multicolumn{2}{|p{0.98\textwidth}|}{\emph{\small continued from previous page}}\\
+    \multicolumn{2}{|l|}{\emph{\small continued from previous page}}\\
     \hline
   }
   \tabletail{%
@@ -213,12 +213,12 @@ netCDF I/O can be configured in the main configuration file or in a separate fil
     \multicolumn{2}{|r|}{\emph{\small continued on next page}}\\
     \hline}
   \tablelasttail{\hline}
-  \begin{supertabular}{|l|p{11cm}|}
+  \begin{supertabular*}{\textwidth}{@{\extracolsep{\fill}}|l|p{11cm}|}
 %%%% defaults
     \hline
     \multicolumn{2}{|l|}{\texttt{[CF default]}}\\
     \hline
-    \multicolumn{2}{|p{0.98\textwidth}|}{This section contains metadata describing the experiment. Any of these parameters can be modified in the \texttt{[output]} section. The model automatically attaches a time stamp and the model version to the netCDF output file.}\\
+    \multicolumn{2}{|p{0.95\textwidth}|}{This section contains metadata describing the experiment. Any of these parameters can be modified in the \texttt{[output]} section. The model automatically attaches a time stamp and the model version to the netCDF output file.}\\
     \hline
     \texttt{title}& Title of the experiment\\
     \texttt{institution} & Institution at which the experiment was run\\
@@ -229,7 +229,7 @@ netCDF I/O can be configured in the main configuration file or in a separate fil
     \hline
     \multicolumn{2}{|l|}{\texttt{[CF input]}}\\
     \hline
-    \multicolumn{2}{|p{0.98\textwidth}|}{Any number of input files can be specified. They are processed in the order they occur in the configuration file, potentially overriding previously loaded variables.}\\
+    \multicolumn{2}{|p{0.95\textwidth}|}{Any number of input files can be specified. They are processed in the order they occur in the configuration file, potentially overriding previously loaded variables.}\\
     \hline
     \texttt{name}& The name of the netCDF file to be read. Typically netCDF files end with \texttt{.nc}.\\
     \texttt{time}& The time slice to be read from the netCDF file. The first time slice is read by default.\\
@@ -238,7 +238,7 @@ netCDF I/O can be configured in the main configuration file or in a separate fil
     \hline
     \multicolumn{2}{|l|}{\texttt{[CF output]}}\\
     \hline
-    \multicolumn{2}{|p{0.98\textwidth}|}{This section of the netCDF parameter file controls how often selected  variables are written to file.}\\
+    \multicolumn{2}{|p{0.95\textwidth}|}{This section of the netCDF parameter file controls how often selected  variables are written to file.}\\
     \hline
     \texttt{name} & The name of the output netCDF file. Typically netCDF files end with \texttt{.nc}.\\
     \texttt{start} & Start writing to file when this time is reached (default: first time slice).\\
@@ -246,6 +246,6 @@ netCDF I/O can be configured in the main configuration file or in a separate fil
     \texttt{frequency} & The time interval in years, determining how often selected variables are written to file.\\
     \texttt{variables} & List of variables to be written to file. See Appendix \ref{ug.sec.varlist} for a list of known variables. Names should be separated by at least one space. The variable names are case sensitive. Variable \texttt{hot} selects all variables necessary for a hotstart.\\
     \hline
-  \end{supertabular}
+  \end{supertabular*}
 \end{center}
 

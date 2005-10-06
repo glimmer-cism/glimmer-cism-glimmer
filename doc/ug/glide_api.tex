@@ -1,10 +1,10 @@
 \section{GLIDE}\label{ug.sec.glide_api}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Subroutine \texttt{glide\_initialise}}
-\paragraph{Purpose} To initialise the basic ice sheet model
+\subsection{Subroutine \texttt{glide\_config}}
+\paragraph{Purpose} To parse configuration file and print configuration to log
 \paragraph{Name and mandatory arguments}
 \begin{verbatim}
-subroutine glide_initialise(model,config)
+subroutine glide_config(model,config)
 \end{verbatim}
 \paragraph{Arguments}
 \begin{center}
@@ -13,7 +13,7 @@ subroutine glide_initialise(model,config)
   }
   \tablehead{%
     \hline
-    \multicolumn{4}{|p{0.98\textwidth}|}{\emph{\small continued from previous page}}\\
+    \multicolumn{4}{|p{\textwidth}|}{\emph{\small continued from previous page}}\\
     \hline
   }
   \tabletail{%
@@ -21,13 +21,43 @@ subroutine glide_initialise(model,config)
     \multicolumn{4}{|r|}{\emph{\small continued on next page}}\\
     \hline}
   \tablelasttail{\hline}
-  \begin{supertabular}{lllp{5.5cm}}
+  \begin{supertabular*}{\textwidth}{@{\extracolsep{\fill}}lllp{5.5cm}}
     \multicolumn{4}{|l|}{{\bf Mandatory}}\\
     \hline
     %%
     \texttt{model} & \texttt{type(glide\_global\_type)} &\texttt{intent(inout)}& f95 type containing all variables associated with an instance of the model.\\
     \texttt{config} & \texttt{type(ConfigSection), pointer} & & pointer to first element of linked list containing configuration\\ 
-  \end{supertabular}
+  \end{supertabular*}
+\end{center}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Subroutine \texttt{glide\_initialise}}
+\paragraph{Purpose} To initialise the basic ice sheet model
+\paragraph{Name and mandatory arguments}
+\begin{verbatim}
+subroutine glide_initialise(model)
+\end{verbatim}
+\paragraph{Arguments}
+\begin{center}
+  \tablefirsthead{%
+    \hline
+  }
+  \tablehead{%
+    \hline
+    \multicolumn{4}{|p{\textwidth}|}{\emph{\small continued from previous page}}\\
+    \hline
+  }
+  \tabletail{%
+    \hline
+    \multicolumn{4}{|r|}{\emph{\small continued on next page}}\\
+    \hline}
+  \tablelasttail{\hline}
+  \begin{supertabular*}{\textwidth}{@{\extracolsep{\fill}}lllp{5.5cm}}
+    \multicolumn{4}{|l|}{{\bf Mandatory}}\\
+    \hline
+    %%
+    \texttt{model} & \texttt{type(glide\_global\_type)} &\texttt{intent(inout)}& f95 type containing all variables associated with an instance of the model.\\
+  \end{supertabular*}
 \end{center}
 \paragraph{Additional Notes}
 This subroutine initialises the model. Memory for all variables is allocated. Input files are opend and read. Output files are created. Variables are scaled.
@@ -46,7 +76,7 @@ subroutine glide_nc_fillall(model)
   }
   \tablehead{%
     \hline
-    \multicolumn{4}{|p{0.98\textwidth}|}{\emph{\small continued from previous page}}\\
+    \multicolumn{4}{|p{\textwidth}|}{\emph{\small continued from previous page}}\\
     \hline
   }
   \tabletail{%
@@ -54,12 +84,12 @@ subroutine glide_nc_fillall(model)
     \multicolumn{4}{|r|}{\emph{\small continued on next page}}\\
     \hline}
   \tablelasttail{\hline}
-  \begin{supertabular}{lllp{5.5cm}}
+  \begin{supertabular*}{\textwidth}{@{\extracolsep{\fill}}lllp{5.5cm}}
     \multicolumn{4}{|l|}{{\bf Mandatory}}\\
     \hline
     %%
     \texttt{model} & \texttt{type(glide\_global\_type)} &\texttt{intent(inout)}& f95 type containing all variables associated with an instance of the model.\\
-  \end{supertabular}
+  \end{supertabular*}
 \end{center}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -76,7 +106,7 @@ subroutine glide_tstep_p1(model,time)
   }
   \tablehead{%
     \hline
-    \multicolumn{4}{|p{0.98\textwidth}|}{\emph{\small continued from previous page}}\\
+    \multicolumn{4}{|p{\textwidth}|}{\emph{\small continued from previous page}}\\
     \hline
   }
   \tabletail{%
@@ -84,13 +114,13 @@ subroutine glide_tstep_p1(model,time)
     \multicolumn{4}{|r|}{\emph{\small continued on next page}}\\
     \hline}
   \tablelasttail{\hline}
-  \begin{supertabular}{lllp{5.5cm}}
+  \begin{supertabular*}{\textwidth}{@{\extracolsep{\fill}}lllp{5.5cm}}
     \multicolumn{4}{|l|}{{\bf Mandatory}}\\
     \hline
     %%
     \texttt{model} & \texttt{type(glide\_global\_type)} &\texttt{intent(inout)}& f95 type containing all variables associated with an instance of the model.\\
     \texttt{time}  & \texttt{real(rk)} & \texttt{intent(in)} & Current time in years\\
-  \end{supertabular}
+  \end{supertabular*}
 \end{center}
 
 
@@ -108,7 +138,7 @@ subroutine glide_tstep_p2(model)
   }
   \tablehead{%
     \hline
-    \multicolumn{4}{|p{0.98\textwidth}|}{\emph{\small continued from previous page}}\\
+    \multicolumn{4}{|p{\textwidth}|}{\emph{\small continued from previous page}}\\
     \hline
   }
   \tabletail{%
@@ -116,12 +146,12 @@ subroutine glide_tstep_p2(model)
     \multicolumn{4}{|r|}{\emph{\small continued on next page}}\\
     \hline}
   \tablelasttail{\hline}
-  \begin{supertabular}{lllp{5.5cm}}
+  \begin{supertabular*}{\textwidth}{@{\extracolsep{\fill}}lllp{5.5cm}}
     \multicolumn{4}{|l|}{{\bf Mandatory}}\\
     \hline
     %%
     \texttt{model} & \texttt{type(glide\_global\_type)} &\texttt{intent(inout)}& f95 type containing all variables associated with an instance of the model.\\
-  \end{supertabular}
+  \end{supertabular*}
 \end{center}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -138,7 +168,7 @@ subroutine glide_tstep_p3(model)
   }
   \tablehead{%
     \hline
-    \multicolumn{4}{|p{0.98\textwidth}|}{\emph{\small continued from previous page}}\\
+    \multicolumn{4}{|p{\textwidth}|}{\emph{\small continued from previous page}}\\
     \hline
   }
   \tabletail{%
@@ -146,12 +176,12 @@ subroutine glide_tstep_p3(model)
     \multicolumn{4}{|r|}{\emph{\small continued on next page}}\\
     \hline}
   \tablelasttail{\hline}
-  \begin{supertabular}{lllp{5.5cm}}
+  \begin{supertabular*}{\textwidth}{@{\extracolsep{\fill}}lllp{5.5cm}}
     \multicolumn{4}{|l|}{{\bf Mandatory}}\\
     \hline
     %%
     \texttt{model} & \texttt{type(glide\_global\_type)} &\texttt{intent(inout)}& f95 type containing all variables associated with an instance of the model.\\
-  \end{supertabular}
+  \end{supertabular*}
 \end{center}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -168,7 +198,7 @@ subroutine glide_finalise(model)
   }
   \tablehead{%
     \hline
-    \multicolumn{4}{|p{0.98\textwidth}|}{\emph{\small continued from previous page}}\\
+    \multicolumn{4}{|p{\textwidth}|}{\emph{\small continued from previous page}}\\
     \hline
   }
   \tabletail{%
@@ -176,7 +206,7 @@ subroutine glide_finalise(model)
     \multicolumn{4}{|r|}{\emph{\small continued on next page}}\\
     \hline}
   \tablelasttail{\hline}
-  \begin{supertabular}{lllp{5.5cm}}
+  \begin{supertabular*}{\textwidth}{@{\extracolsep{\fill}}lllp{5.5cm}}
     \multicolumn{4}{|l|}{{\bf Mandatory}}\\
     \hline
     %%
@@ -186,7 +216,7 @@ subroutine glide_finalise(model)
     \hline
     %%
     \texttt{crash} & \texttt{logical} & \texttt{intent(in)} & set to true if the model died unexpectedly \\
-  \end{supertabular}
+  \end{supertabular*}
 \end{center}
 
 
@@ -204,7 +234,7 @@ subroutine glide_finalise(model)
 %  }
 %  \tablehead{%
 %    \hline
-%    \multicolumn{4}{|p{0.98\textwidth}|}{\emph{\small continued from previous page}}\\
+%    \multicolumn{4}{|p{\textwidth}|}{\emph{\small continued from previous page}}\\
 %    \hline
 %  }
 %  \tabletail{%
@@ -212,7 +242,7 @@ subroutine glide_finalise(model)
 %    \multicolumn{4}{|r|}{\emph{\small continued on next page}}\\
 %    \hline}
 %  \tablelasttail{\hline}
-%  \begin{supertabular}{lllp{5.5cm}}
+%  \begin{supertabular*}{\textwidth}{@{\extracolsep{\fill}}lllp{5.5cm}}
 %    \multicolumn{4}{|l|}{{\bf Mandatory}}\\
 %    \hline
 %    %%
@@ -220,6 +250,6 @@ subroutine glide_finalise(model)
 %    \multicolumn{4}{|l|}{{\bf Optional}}\\
 %    \hline
 %    %%
-%  \end{supertabular}
+%  \end{supertabular*}
 %\end{center}
 

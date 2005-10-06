@@ -1,3 +1,23 @@
+Changes in Version 0.5.4
+========================
+* The way version numbers are handled has changed. Releases have
+  even numbers. Once a release was made the version number is 
+  increased by 1 for the development branch. Eventually, when we 
+  think we accumulated enough stuff we will make a new release.
+* The version string now also includes whether we compile from
+  CVS or not.
+* new mass balance model, RAPID
+* optionally calculate heat flux in lithosphere
+* glide configuration parser is now in it's own subroutine which
+  must be called after the configuration file has been read in and
+  before glide is initialised.
+* resurrect ADI scheme
+* utility function for integrating functions (Romberg integration)
+* new procedures for handling coordinate systems
+* new variable for basal shear stress
+* improve documentation
+* many bug fixes
+
 Changes in Version 0.5.2
 ========================
 This is the EGU 2005 special release!

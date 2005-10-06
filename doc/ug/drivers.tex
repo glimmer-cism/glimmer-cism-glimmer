@@ -15,7 +15,7 @@ These drivers are described in some detail here.
   }
   \tablehead{%
     \hline
-    \multicolumn{2}{|p{0.98\textwidth}|}{\emph{\small continued from previous page}}\\
+    \multicolumn{2}{|l|}{\emph{\small continued from previous page}}\\
     \hline
   }
   \tabletail{%
@@ -23,12 +23,12 @@ These drivers are described in some detail here.
     \multicolumn{2}{|r|}{\emph{\small continued on next page}}\\
     \hline}
   \tablelasttail{\hline}
-  \begin{supertabular}{|l|p{11cm}|}
+  \begin{supertabular*}{\textwidth}{@{\extracolsep{\fill}}|l|p{11cm}|}
 %%%% EISMINT-1 fixed margin
     \hline
     \multicolumn{2}{|l|}{\texttt{[EISMINT-1 fixed margin]}}\\
     \hline
-    \multicolumn{2}{|p{0.98\textwidth}|}{EISMINT 1 fixed margin scenario.}\\
+    \multicolumn{2}{|p{0.95\textwidth}|}{EISMINT 1 fixed margin scenario.}\\
     \hline
     \texttt{temperature} & (real(2)) Temperature forcing $$T_{\mbox{surface}}=t_1+t_2d$$ where $$d=\max\{|x-x_{\mbox{summit}}|,|y-y_{\mbox{summit}}|\}$$\\
     \texttt{massbalance} & (real) Mass balance forcing \\
@@ -38,13 +38,13 @@ These drivers are described in some detail here.
     \hline
     \multicolumn{2}{|l|}{\texttt{[EISMINT-1 moving margin]}}\\
     \hline
-    \multicolumn{2}{|p{0.98\textwidth}|}{EISMINT 1 moving margin scenario.}\\
+    \multicolumn{2}{|p{0.95\textwidth}|}{EISMINT 1 moving margin scenario.}\\
     \hline
     \texttt{temperature} & (real(2)) Temperature forcing $$T_{\mbox{surface}}=t_1-t_2H$$ where $H$ is the ice thickness\\
     \texttt{massbalance} & (real(3)) Mass balance forcing $$M=\min\{m_1,m_2(m_3-d)\}$$ where $$d=\sqrt{(x-x_{\mbox{summit}})^2+(y-y_{\mbox{summit}})^2}$$\\
     \texttt{period} & (real) period of time--dependent forcing (switched off when set to 0) $$\Delta T=10\sin\frac{2\pi t}{T}$$ and $$M=\min\left\{m_1,m_2\left(m_3+100sin\frac{2\pi t}{T}-d\right)\right\}$$\\
     \hline
-  \end{supertabular}
+  \end{supertabular*}
 \end{center}
 
 
@@ -56,7 +56,7 @@ These drivers are described in some detail here.
   }
   \tablehead{%
     \hline
-    \multicolumn{2}{|p{0.98\textwidth}|}{\emph{\small continued from previous page}}\\
+    \multicolumn{2}{|l|}{\emph{\small continued from previous page}}\\
     \hline
   }
   \tabletail{%
@@ -64,12 +64,12 @@ These drivers are described in some detail here.
     \multicolumn{2}{|r|}{\emph{\small continued on next page}}\\
     \hline}
   \tablelasttail{\hline}
-  \begin{supertabular}{|l|p{11cm}|}
+  \begin{supertabular*}{\textwidth}{@{\extracolsep{\fill}}|l|p{11cm}|}
 %%%% 
     \hline
     \multicolumn{2}{|l|}{\texttt{[EIS ELA]}}\\
     \hline
-    \multicolumn{2}{|p{0.98\textwidth}|}{Mass balance parameterisation of the EIS driver. The Equilibrium Line Altitude is parameterised with $$z_{\text{ELA}} = a + b\lambda + c\lambda^2 + \Delta z_{\text{ELA}},$$ where $\lambda$ is the latitude in degrees north. The mass balance is then defined by $$M(z^\ast)=\left\{
+    \multicolumn{2}{|p{0.95\textwidth}|}{Mass balance parameterisation of the EIS driver. The Equilibrium Line Altitude is parameterised with $$z_{\text{ELA}} = a + b\lambda + c\lambda^2 + \Delta z_{\text{ELA}},$$ where $\lambda$ is the latitude in degrees north. The mass balance is then defined by $$M(z^\ast)=\left\{
     \begin{array}{ll}
       2M_{\text{max}}\left(\frac{z^\ast}{z_{\text{max}}}\right)-M_{\text{max}}\left(\frac{z^\ast}{z_{\text{max}}}\right)^2&\mbox{for}\quad z^\ast\le z_{\text{max}}\\
       M_{\text{max}}&\mbox{for}\quad z^\ast>z_{\text{max}}
@@ -90,7 +90,7 @@ $$ where $z^\ast$ is the vertical distance above the ELA. }\\
     \hline
     \multicolumn{2}{|l|}{\texttt{[EIS CONY]}}\\
     \hline
-    \multicolumn{2}{|p{0.98\textwidth}|}{The mass balance function can be modified with a continentality value. The continentality value is determined by finding the ratio between points below sea level and the total number of points in a circle of given search radius. This value between 0 (maritime) and 1 (continental) is used to interpolate between continental and maritime mass balance curves.}\\
+    \multicolumn{2}{|p{0.95\textwidth}|}{The mass balance function can be modified with a continentality value. The continentality value is determined by finding the ratio between points below sea level and the total number of points in a circle of given search radius. This value between 0 (maritime) and 1 (continental) is used to interpolate between continental and maritime mass balance curves.}\\
     \hline
     \texttt{period} & how often continentality is updated (default 500a).\\
     \texttt{radius} & the search radius (default 600000m).\\
@@ -100,7 +100,7 @@ $$ where $z^\ast$ is the vertical distance above the ELA. }\\
     \hline
     \multicolumn{2}{|l|}{\texttt{[EIS Temperature]}}\\
     \hline
-    \multicolumn{2}{|p{0.98\textwidth}|}{Temperature is also assumed to depend on latitude and the atmospheric lapse rate.}\\
+    \multicolumn{2}{|p{0.95\textwidth}|}{Temperature is also assumed to depend on latitude and the atmospheric lapse rate.}\\
     \hline
     \texttt{temp\_file} & name of file containing temperature forcing time series.\\
     \texttt{type} & 
@@ -116,10 +116,10 @@ $$ where $z^\ast$ is the vertical distance above the ELA. }\\
     \hline
     \multicolumn{2}{|l|}{\texttt{[EIS SLC]}}\\
     \hline
-    \multicolumn{2}{|p{0.98\textwidth}|}{Global sea--level forcing}\\
+    \multicolumn{2}{|p{0.95\textwidth}|}{Global sea--level forcing}\\
     \hline
     \texttt{slc\_file} & name of file containing sea--level change time series.\\
     \hline
-  \end{supertabular}
+  \end{supertabular*}
 \end{center}
 
