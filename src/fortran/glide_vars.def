@@ -136,6 +136,7 @@ data:          data%velocity%ubas
 factor:        scale2d_f5
 standard_name: land_ice_basal_x_velocity
 load:          1
+average:       1
 
 [vbas]
 dimensions:    time, y0, x0
@@ -145,6 +146,7 @@ data:          data%velocity%vbas
 factor:        scale2d_f5
 standard_name: land_ice_basal_y_velocity
 load:          1
+average:       1
 
 [taux]
 dimensions:    time, y0, x0
@@ -234,6 +236,7 @@ factor:        scale2d_f1
 standard_name: land_ice_basal_melt_rate
 hot:           1
 coordinates:   lon lat
+average:       1
 
 [bwat]
 dimensions:    time, y1, x1

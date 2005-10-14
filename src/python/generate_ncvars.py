@@ -22,10 +22,12 @@
 
 import ConfigParser, sys, time, string,re, os.path
 
-NOATTRIB = ['name','dimensions','dimlen','data','factor','load','hot','type']
+NOATTRIB = ['name','dimensions','dimlen','data','factor','load','hot','type','average']
 hotvars = []
 dimensions = {}
 module = {}
+
+AVERAGE_SUFFIX = 'tavg'
 
 def dimid(name):
     return '%s_dimid'%name
@@ -55,6 +57,8 @@ class Variables(dict):
         vars = ConfigParser.ConfigParser()
         vars.readfp(open(filename))
 
+        self.__have_avg = False
+
         for v in vars.sections():
             if v == 'VARSET':
                 for (name, value) in vars.items(v):
@@ -70,6 +74,14 @@ class Variables(dict):
                     vardef['load'] = '1'
             if 'type' not in vardef:
                 vardef['type'] = 'float'
+            if 'average' in vardef:
+                if vardef['average'].lower() in ['1','true','t']:
+                    vardef['average'] = True
+                    self.__have_avg = True
+                else:
+                    vardef['average'] = False
+            else:
+                vardef['average'] = False
             # handle dims
             for d in vardef['dimensions'].split(','):
                 d=d.strip()
@@ -78,6 +90,29 @@ class Variables(dict):
                 if d not in dimensions:
                     dimensions[d] = '-1'
             self.__setitem__(v,vardef)
+
+            # handle average
+            if vardef['average']:
+                # copy data structure
+                vardef_avg = vardef.copy()
+                vardef_avg['average'] = False
+                vardef_avg['load'] = '0'
+                vardef_avg['hot'] = '0'
+                vardef_avg['data'] = '%s_%s'%(vardef_avg['data'],AVERAGE_SUFFIX)
+                vardef_avg['name'] = '%s_%s'%(vardef_avg['name'],AVERAGE_SUFFIX)
+                if 'long_name' in vardef_avg:
+                    vardef_avg['long_name'] = '%s (time average)'%vardef_avg['long_name']
+                if 'cell_methods' in vardef_avg:
+                    vardef_avg['cell_methods'] = '%s time: mean over years'%vardef_avg['cell_methods']
+                else:
+                    vardef_avg['cell_methods'] = 'time: mean over years'
+                if 'factor' in vardef_avg:
+                    vardef_avg['factor'] = '(%s)*tavgf'%vardef_avg['factor']
+                else:
+                    vardef_avg['factor'] = 'tavgf'
+                # and add to dictionary
+                self.__setitem__('%s_%s'%(v,AVERAGE_SUFFIX),vardef_avg)
+                
 
     def keys(self):
         """Reorder standard keys alphabetically."""
@@ -91,6 +126,10 @@ class Variables(dict):
         dk.sort()
         vk.sort()
         return dk+vk
+
+    def get_avg(self):
+        return self.__have_avg
+    have_avg = property(get_avg)
 
 class PrintVars:
     """Base class for printing variables."""
@@ -183,7 +222,9 @@ class PrintNC_template(PrintVars):
         self.handletoken['!GENVAR_VARDEF!'] = self.print_vardef
         self.handletoken['!GENVAR_WRITE!'] = self.print_var_write
         self.handletoken['!GENVAR_READ!'] = self.print_var_read
-        self.handletoken['GENVAR_ACCESSORS!'] = self.print_var_accessor
+        self.handletoken['!GENVAR_ACCESSORS!'] = self.print_var_accessor
+        self.handletoken['!GENVAR_CALCAVG!'] = self.print_var_avg_accu
+        self.handletoken['!GENVAR_RESETAVG!'] = self.print_var_avg_reset
 
     def write(self,vars):
         """Merge ncdf.F90.in with definitions."""
@@ -211,10 +252,20 @@ class PrintNC_template(PrintVars):
                 self.print_dimensions()
             elif '!GENVAR_CHECKDIM!' in l:
                 self.print_checkdims()
+            elif '!GENVAR_HAVE_AVG!' in l:
+                self.print_have_avg(vars.have_avg)
+            elif 'AVG_SUFF' in l:
+                self.stream.write("%s"%l.replace('AVG_SUFF','\"_%s\"'%AVERAGE_SUFFIX))
             else:
                 self.stream.write("%s"%l)
         self.infile.close()
         self.stream.close()
+
+    def print_have_avg(self,have_avg):
+        """define whether we have time averaged vars or not"""
+
+        if have_avg:
+            self.stream.write("#define HAVE_AVG 1\n")
 
     def print_varhot(self):
         """Create list of hotstart variables."""
@@ -383,7 +434,7 @@ class PrintNC_template(PrintVars):
                 if  'level' in dims:
                     self.stream.write("       end do\n")
                 
-            self.stream.write("    end if\n\n")
+                self.stream.write("    end if\n\n")
 
     def print_var_accessor(self,var):
         """Write accessor function to stream."""
@@ -394,7 +445,7 @@ class PrintNC_template(PrintVars):
             dimstring = ", dimension(:"+",:"*(dimlen-1)+")"
         else:
             dimstring = ""
-        if not is_dimvar(var) and dimlen<3:
+        if not is_dimvar(var) and dimlen<3 and AVERAGE_SUFFIX not in var['name']:
             # get
             self.stream.write("  subroutine %s_get_%s(data,outarray)\n"%(module['name'],var['name']))
             self.stream.write("    use glimmer_scales\n")
@@ -431,7 +482,30 @@ class PrintNC_template(PrintVars):
                 else:
                     self.stream.write("    %s = inarray\n"%(var['data']))
                 self.stream.write("  end subroutine %s_set_%s\n\n"%(module['name'],var['name']))
-            
+
+    def print_var_avg_accu(self,var):
+        """Take average of a single variable"""
+
+        if var['average']:
+            avgname = '%s_%s'%(var['name'],AVERAGE_SUFFIX)
+            avgdata = '%s_%s'%(var['data'],AVERAGE_SUFFIX)
+            self.stream.write("    ! accumulate %s\n"%var['name'])
+            self.stream.write("    status = nf90_inq_varid(NCO%%id,'%s',varid)\n"%avgname)
+            self.stream.write("    if (status .eq. nf90_noerr) then\n")
+            self.stream.write("       %s = %s + factor * %s\n"%(avgdata,avgdata,var['data']))
+            self.stream.write("    end if\n\n")
+
+    def print_var_avg_reset(self,var):
+        """Reset average variables"""
+
+        if var['average']:
+            avgname = '%s_%s'%(var['name'],AVERAGE_SUFFIX)
+            avgdata = '%s_%s'%(var['data'],AVERAGE_SUFFIX)
+            self.stream.write("    ! reset %s\n"%var['name'])
+            self.stream.write("    status = nf90_inq_varid(NCO%%id,'%s',varid)\n"%avgname)
+            self.stream.write("    if (status .eq. nf90_noerr) then\n")
+            self.stream.write("       %s = 0.\n"%avgdata)
+            self.stream.write("    end if\n\n")
 
 def usage():
     """Short help message."""

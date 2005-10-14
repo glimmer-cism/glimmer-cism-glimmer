@@ -279,7 +279,9 @@ module glide_types
     real(dp),dimension(:,:)  ,pointer :: diffu => null() !*FD 
     real(dp),dimension(:,:)  ,pointer :: total_diffu => null() !*FD total diffusivity
     real(dp),dimension(:,:)  ,pointer :: ubas  => null() !*FD 
+    real(dp),dimension(:,:)  ,pointer :: ubas_tavg  => null()
     real(dp),dimension(:,:)  ,pointer :: vbas  => null() !*FD 
+    real(dp),dimension(:,:)  ,pointer :: vbas_tavg  => null() 
     real(dp),dimension(:,:)  ,pointer :: btrc  => null() !*FD 
     real(dp),dimension(:,:)  ,pointer :: tau_x => null() !*FD basal shear stress, x-dir
     real(dp),dimension(:,:)  ,pointer :: tau_y => null() !*FD basal shear stress, y-dir
@@ -303,9 +305,11 @@ module glide_types
     real(dp),dimension(:,:,:),pointer :: temp => null() !*FD Three-dimensional temperature field.
     real(dp),dimension(:,:),  pointer :: bheatflx => null() !*FD basal heat flux
     real(dp),dimension(:,:,:),pointer :: flwa => null() !*FD Glenn's $A$.
-    real(dp),dimension(:,:),  pointer :: bwat => null() !*FD Basal water depth(?)
-    real(dp),dimension(:,:),  pointer :: stagbwat => null() !*FD Basal water depth(?) in velo grid
-    real(dp),dimension(:,:),  pointer :: bmlt => null() !*FD Basal melt-rate(?)
+    real(dp),dimension(:,:),  pointer :: bwat => null() !*FD Basal water depth
+    real(dp),dimension(:,:),  pointer :: stagbwat => null() !*FD Basal water depth in velo grid
+    real(dp),dimension(:,:),  pointer :: bmlt => null() !*FD Basal melt-rate
+    real(dp),dimension(:,:),  pointer :: bmlt_tavg => null() !*FD Basal melt-rate
+    
     integer  :: niter   = 0      !*FD
     real(sp) :: perturb = 0.0    !*FD
     real(sp) :: grid    = 0.0    !*FD
@@ -622,6 +626,7 @@ contains
     call coordsystem_allocate(model%general%ice_grid, model%temper%bwat)
     call coordsystem_allocate(model%general%velo_grid, model%temper%stagbwat)
     call coordsystem_allocate(model%general%ice_grid, model%temper%bmlt)
+    call coordsystem_allocate(model%general%ice_grid, model%temper%bmlt_tavg)
 
     allocate(model%lithot%temp(1:ewn,1:nsn,model%lithot%nlayer)); model%lithot%temp = 0.0
     call coordsystem_allocate(model%general%ice_grid, model%lithot%mask)
@@ -636,7 +641,9 @@ contains
     call coordsystem_allocate(model%general%velo_grid, model%velocity%total_diffu)
     call coordsystem_allocate(model%general%velo_grid, model%velocity%btrc)
     call coordsystem_allocate(model%general%velo_grid, model%velocity%ubas)
+    call coordsystem_allocate(model%general%velo_grid, model%velocity%ubas_tavg)
     call coordsystem_allocate(model%general%velo_grid, model%velocity%vbas)
+    call coordsystem_allocate(model%general%velo_grid, model%velocity%vbas_tavg)
     call coordsystem_allocate(model%general%velo_grid, model%velocity%tau_x)
     call coordsystem_allocate(model%general%velo_grid, model%velocity%tau_y)
 
@@ -692,6 +699,7 @@ contains
     deallocate(model%temper%bwat)
     deallocate(model%temper%stagbwat)
     deallocate(model%temper%bmlt)
+    deallocate(model%temper%bmlt_tavg)
 
     deallocate(model%lithot%temp)
     deallocate(model%lithot%mask)
@@ -706,7 +714,9 @@ contains
     deallocate(model%velocity%total_diffu)
     deallocate(model%velocity%btrc)
     deallocate(model%velocity%ubas)
+    deallocate(model%velocity%ubas_tavg)
     deallocate(model%velocity%vbas)
+    deallocate(model%velocity%vbas_tavg)
     deallocate(model%velocity%tau_x)
     deallocate(model%velocity%tau_y)
 

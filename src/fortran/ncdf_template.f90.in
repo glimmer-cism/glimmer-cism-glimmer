@@ -43,6 +43,8 @@
 #define NCO outfile%nc
 #define NCI infile%nc
 
+!GENVAR_HAVE_AVG!
+
 module NAME_io
   !*FD template for creating subsystem specific I/O routines
   !*FD written by Magnus Hagdorn, 2004
@@ -99,10 +101,20 @@ contains
 
     oc=>model%funits%out_first
     do while(associated(oc))
+#ifdef HAVE_AVG
+       if (oc%do_averages) then
+          call NAME_avg_accumulate(oc,data,model)
+       end if
+#endif
        call glimmer_nc_checkwrite(oc,model,forcewrite)
        if (oc%nc%just_processed) then
           ! write standard variables
           call NAME_io_write(oc,data)
+#ifdef HAVE_AVG
+          if (oc%do_averages) then
+             call NAME_avg_reset(oc,data)
+          end if
+#endif
        end if
        oc=>oc%next
     end do
@@ -129,6 +141,11 @@ contains
     if (pos.ne.0) then
        NCO%vars = NCO%vars(:pos)//hotvars//NCO%vars(pos+4:)
     end if
+    ! checking if we need to handle time averages
+    pos = index(NCO%vars,AVG_SUFF)
+    if (pos.ne.0) then
+       outfile%do_averages = .True.
+    end if    
 
     !GENVAR_VARDEF!
   end subroutine NAME_io_create
@@ -145,9 +162,15 @@ contains
     !*FD the model instance
 
     ! local variables
+    real tavgf
     integer status, varid
     integer up
      
+    tavgf = outfile%total_time
+    if (tavgf.ne.0.) then
+       tavgf = 1./tavgf
+    end if
+
     ! write variables
     !GENVAR_WRITE!
   end subroutine NAME_io_write
@@ -223,6 +246,49 @@ contains
     ! check dimensions
     !GENVAR_CHECKDIM!
   end subroutine NAME_io_checkdim
+
+  !*****************************************************************************
+  ! calculating time averages
+  !*****************************************************************************  
+#ifdef HAVE_AVG
+  subroutine NAME_avg_accumulate(outfile,data,model)
+    use glide_types
+    use DATAMOD
+    use glimmer_ncdf
+    implicit none
+    type(glimmer_nc_output), pointer :: outfile
+    !*FD structure containg output netCDF descriptor
+    type(glide_global_type) :: model
+    type(DATATYPE) :: data
+
+    ! local variables
+    real :: factor
+    integer status, varid
+
+    ! increase total time
+    outfile%total_time = outfile%total_time + model%numerics%tinc
+    factor = model%numerics%tinc
+
+    !GENVAR_CALCAVG!
+  end subroutine NAME_avg_accumulate
+
+  subroutine NAME_avg_reset(outfile,data)
+    use DATAMOD
+    use glimmer_ncdf
+    implicit none
+    type(glimmer_nc_output), pointer :: outfile
+    !*FD structure containg output netCDF descriptor
+    type(DATATYPE) :: data
+
+    ! local variables
+    integer status, varid
+
+    ! reset total time
+    outfile%total_time = 0.
+
+    !GENVAR_RESETAVG!
+  end subroutine NAME_avg_reset
+#endif
 
   !*********************************************************************
   ! lots of accessor subroutines follow

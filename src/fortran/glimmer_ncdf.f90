@@ -112,6 +112,10 @@ module glimmer_ncdf
      !*FD stop writing after this year
      integer :: timecounter=1
      !*FD time counter
+     real :: total_time
+     !*FD accumulate time steps (used for taking time averages)
+
+     logical :: do_averages = .False. !*FD set to .True. if we need to handle averages
      
      type(glimmer_nc_meta) :: metadata
      !*FD structure holding metadata

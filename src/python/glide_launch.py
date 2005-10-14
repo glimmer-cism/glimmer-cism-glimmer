@@ -133,7 +133,7 @@ if __name__ == '__main__':
     else:
         status = open(results_name,'a')
         get_lock(status)
-        status.write('#cfg_file\tusr_time\tsys_time\tdate\t\tversion\tfcflags\n')
+        status.write('#cfg_file\tusr_time\tsys_time\tdate\t\thost\tarch\tversion\tfcflags\n')
         release_lock(status)
         
     prog = os.popen(model,'w')
@@ -143,6 +143,7 @@ if __name__ == '__main__':
     t = os.times()
 
     # extract some info
+    uname = os.uname()
     if prefix!=None:
         if is_src:
             glimmer_cfg = 'sh %s'%os.path.join(prefix,'glimmer-config')
@@ -168,7 +169,7 @@ if __name__ == '__main__':
     
     # get lock
     get_lock(status)
-    status.write('%s\t%f\t%f\t%s\t%s\t%s\n'%(configname,t[2],t[3],get_gmtdate(),version,fcflags))
+    status.write('%s\t%f\t%f\t%s\t%s\t%s\t%s\t%s\n'%(configname,t[2],t[3],get_gmtdate(),uname[1],uname[4],version,fcflags))
 
     # release lock
     release_lock(status)

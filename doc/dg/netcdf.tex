@@ -15,7 +15,7 @@ All netCDF variables are defined in control files, \texttt{MOD\_vars.def}, where
 
 \begin{table}[htbp]
   \centering
-  \begin{tabular}{|l|p{10cm}|}
+  \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}|l|p{10cm}|}
     \hline
     name & description \\
     \hline
@@ -26,14 +26,14 @@ All netCDF variables are defined in control files, \texttt{MOD\_vars.def}, where
     \hline
     \texttt{datamod} & The name of f90 module in which the f90 type, \texttt{datatype}, is defined.\\
     \hline
-  \end{tabular}
+  \end{tabular*}
   \caption{Each variable definition file must have a section, called \texttt{[VARSET]}, containing the parameters described above.}
   \label{dg.tab.vdef}
 \end{table}
 
 \begin{table}[htbp]
  \begin{center}
-  \begin{tabular}{|l|p{10cm}|}
+  \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}|l|p{10cm}|}
     \hline
     name & description \\
     \hline
@@ -46,13 +46,17 @@ All netCDF variables are defined in control files, \texttt{MOD\_vars.def}, where
     \hline
     \texttt{load} & Set to 1 if the variable can be loaded from file. Default: 0.\\
     \hline
+    \texttt{hot} & Set to 1 if the variable should be saved for hot--starting the model (implies \texttt{load}=1)\\
+    \hline
+    \texttt{average} & Set to 1 if the variable should also be available as a mean over the write--out interval. Averages are only calculated if they are required. To store the average in a netCDF output file append \texttt{\_tavg} to the variable.\\
+    \hline
     \texttt{units} & UDUNITS compatible unit string describing the variable units.\\
     \hline
     \texttt{long\_name} & A more descriptive name of the variable.\\
     \hline
     \texttt{standard\_name} & The corresponding standard name defined by the CF standard.\\
     \hline
-  \end{tabular}
+  \end{tabular*}
   \caption{List of accepted variable definition parameters.}
   \label{dg.tab.vdf}
  \end{center}

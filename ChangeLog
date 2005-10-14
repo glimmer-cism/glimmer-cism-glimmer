@@ -1,3 +1,12 @@
+2005-10-14 Magnus Hagdorn
+ * glide_types.f90: add fields for some time averages
+ * glide_vars.def: request time averages for ubas, vbas and bmlt
+ * glimmer_ncdf.f90: add some variables for taking time averages
+ * ncdf_template.f90.in: add code for taking time averages
+ * generate_ncvars.py: handle time averages
+ * netcdf.tex: document changes to code generator
+ * glide_launch.py: save arch and host to results file
+
 2005-10-06 Magnus Hagdorn
  * definitions.tex: change date
  * configure.in: bump version to 0.5.5
