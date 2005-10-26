@@ -1,3 +1,15 @@
+2005-10-26 Magnus Hagdorn
+ * eis_ela.f90: add longitudinal ELA gradient
+ * glide_setup.f90: make fraction of ice lost due to calving a run
+   time parameter
+ * glide.f90: use calving parameter
+ * glide_types.f90: add variables for calving paramter, ice volume and
+   ice area calculations
+ * glide_mask.f90: calculate ice volume and area
+ * glide_vars.def: add ice volume and area variables
+ * glide.tex: document calving parameter
+ * drivers.tex: document longitudinal ELA gradient
+
 2005-10-14 Magnus Hagdorn
  * glide_types.f90: add fields for some time averages
  * glide_vars.def: request time averages for ubas, vbas and bmlt

@@ -294,7 +294,7 @@ contains
 
 !-------------------------------------------------------------------------
 
-  subroutine glide_marinlim(which,whicht,thck,relx,lati,mask,mlimit,eus)
+  subroutine glide_marinlim(which,whicht,thck,relx,lati,mask,mlimit,calving_fraction,eus)
 
     !*FD Removes non-grounded ice, according to one of two altenative
     !*FD criteria, and sets upper surface of non-ice-covered points 
@@ -326,6 +326,8 @@ contains
     real(dp)                              :: mlimit  !*FD Lower limit on topography elevation for
                                                      !*FD ice to be present (scaled). Used with 
                                                      !*FD $\mathtt{which}=0$.
+    real(dp), intent(in) :: calving_fraction         !*FD fraction of ice lost when calving Used with 
+                                                     !*FD $\mathtt{which}=3$.
     real, intent(inout) :: eus                       !*FD eustatic sea level
     
     integer ew,ns
@@ -349,7 +351,7 @@ contains
        do ns = 2,size(thck,2)-1
           do ew = 2,size(thck,1)-1
              if (is_calving(mask(ew,ns))) then
-                thck(ew,ns) =  0.8*thck(ew,ns)
+                thck(ew,ns) =  calving_fraction*thck(ew,ns)
                 !mask(ew,ns) = glide_mask_ocean
              end if
           end do
@@ -654,6 +656,7 @@ contains
     call glimmer_set_msg_level(loglevel)
     call GetValue(section,'ice_limit',model%numerics%thklim)
     call GetValue(section,'marine_limit',model%numerics%mlimit)
+    call GetValue(section,'calving_fraction',model%numerics%calving_fraction)
     call GetValue(section,'geothermal',model%paramets%geot)
     call GetValue(section,'flow_factor',model%paramets%fiddle)
     call GetValue(section,'hydro_time',model%paramets%hydtim)
@@ -680,6 +683,10 @@ contains
     call write_log(message)
     write(message,*) 'marine depth limit    : ',model%numerics%mlimit
     call write_log(message)
+    if (model%options%whichmarn.eq.3) then
+       write(message,*) 'ice fraction lost due to calving :', model%numerics%calving_fraction
+       call write_log(message)
+    end if
     write(message,*) 'geothermal heat flux  : ',model%paramets%geot
     call write_log(message)
     write(message,*) 'flow enhancement      : ',model%paramets%fiddle

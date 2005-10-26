@@ -244,6 +244,8 @@ module glide_types
     integer, dimension(4) :: dom   = 0      !*FD I have no idea what this is for.
     logical               :: empty = .true. !*FD I have no idea what this is for.
 
+    real(dp) :: ivol, iarea !*FD ice volume and ice area
+
   end type glide_geometry
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -382,6 +384,7 @@ module glide_types
     real(dp) :: alphas =    0.5d0 !*FD was a parameter in the original
     real(dp) :: thklim =  100.0   
     real(dp) :: mlimit = -200.0d0
+    real(dp) :: calving_fraction = 0.9
     real(dp) :: dew    =   20.0d3
     real(dp) :: dns    =   20.0d3
     real(dp) :: dt     =    0.0

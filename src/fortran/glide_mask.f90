@@ -71,6 +71,8 @@ contains
     real(dp), parameter :: con = - rhoi / rhoo
 
     MASK = 0
+    model%geometry%iarea = 0.
+    model%geometry%ivol = 0.
     do ns=1,model%general%nsn
        do ew = 1,model%general%ewn
           
@@ -81,6 +83,8 @@ contains
                 MASK(ew,ns) = glide_mask_land
              end if
           else
+             model%geometry%iarea = model%geometry%iarea + 1.
+             model%geometry%ivol = model%geometry%ivol + model%geometry%thck(ew,ns)
              if (model%geometry%topg(ew,ns) - model%climate%eus &                    ! ice
                   < con * model%geometry%thck(ew,ns)) then                           ! floating ice
                 MASK(ew,ns) = glide_mask_shelf
@@ -94,6 +98,8 @@ contains
 
        end do
     end do
+    model%geometry%iarea = model%geometry%iarea * model%numerics%dew * model%numerics%dns
+    model%geometry%ivol = model%geometry%ivol * model%numerics%dew * model%numerics%dns
 
     ! finding boundaries
     do ns=2,model%general%nsn-1

@@ -315,6 +315,7 @@ contains
          model%climate%  lati,      &
          model%geometry%thkmask,    &
          model%numerics%mlimit,     &
+         model%numerics%calving_fraction, &
          model%climate%eus)
 
     ! ------------------------------------------------------------------------

@@ -172,6 +172,20 @@ standard_name: land_ice_thickness
 hot:           1
 coordinates:   lon lat
 
+[ivol]
+dimensions:    time
+units:         km3
+factor:        thk0*len0*len0*1.e-9
+long_name:     ice volume
+data:          data%geometry%ivol
+
+[iarea]
+dimensions:    time
+units:         km2
+long_name:     area covered by ice 
+factor:        len0*len0*1.e-6
+data:          data%geometry%iarea
+
 [thkmask]
 dimensions:    time, y1, x1
 long_name:     mask

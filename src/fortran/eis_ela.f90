@@ -61,6 +61,7 @@ module eis_ela
      real :: bmax_cont = 0.3                     !*FD varies around the ELA
      real :: shelf_ablation = -1.0               !*FD ablation over ice shelf
      character(len=fname_length) :: fname=''     !*FD name of file containing ELA ts
+     character(len=fname_length) :: ew_fname=''  !*FD name of file containing longitude dependance of ELA field
      type(glimmer_tseries) :: ela_ts             !*FD ELA time series 
      real,dimension(:,:),pointer :: ela => null()!*FD ELA field
   end type eis_ela_type
@@ -80,6 +81,7 @@ contains
     call GetSection(config,section,'EIS ELA')
     if (associated(section)) then
        call GetValue(section,'ela_file',ela%fname)
+       call GetValue(section,'ela_ew',ela%ew_fname)
        call GetValue(section,'zmax_mar',ela%zmax_mar)
        call GetValue(section,'bmax_mar',ela%bmax_mar)
        call GetValue(section,'zmax_cont',ela%zmax_cont)
@@ -101,6 +103,10 @@ contains
     call write_log('-------')
     write(message,*) 'ELA file     : ',trim(ela%fname)
     call write_log(message)
+    if (len(trim(ela%ew_fname)).ne.0) then
+       write(message,*) 'ELA depends on longitude: ',trim(ela%ew_fname)
+       call write_log(message)
+    end if
     write(message,*) 'maritime zmax: ',ela%zmax_mar
     call write_log(message)
     write(message,*) 'maritime bmax: ',ela%bmax_mar
@@ -126,6 +132,11 @@ contains
     type(eis_ela_type)      :: ela   !*FD ela data
     type(glide_global_type) :: model !*FD model instance
 
+    ! local variables
+    type(glimmer_tseries) :: ela_ew
+    integer ew,ns
+    real :: ela_m
+
     call glimmer_read_ts(ela%ela_ts,ela%fname)
     
     ! scale parameters
@@ -140,8 +151,18 @@ contains
     ela%ela_c = ela%ela_c/thk0
 
     ! calculate shape of mass balance field
-    allocate(ela%ela(model%general%ewn,model%general%nsn))
+    call coordsystem_allocate(model%general%ice_grid, ela%ela)
     ela%ela = ela_lat(ela%ela_a,ela%ela_b,ela%ela_c,model%climate%lati)
+    if (len(trim(ela%ew_fname)).ne.0) then
+       call glimmer_read_ts(ela_ew,ela%ew_fname)
+       ! loop over grid
+       do ns = 1,model%general%nsn
+          do ew = 1,model%general%ewn
+             call glimmer_ts_linear(ela_ew,model%climate%loni(ew,ns),ela_m)
+             ela%ela(ew,ns) = ela%ela(ew,ns) + ela_m/thk0
+          end do
+       end do
+    end if
   end subroutine eis_init_ela
     
   subroutine eis_massbalance(ela,cony,model,time)
