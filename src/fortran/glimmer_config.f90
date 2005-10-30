@@ -60,13 +60,13 @@ module glimmer_config
   integer, parameter :: linelen=250
 
   type ConfigValue
-     character(len=namelen) :: name
+     character(len=namelen) :: name = ''
      character(len=valuelen) :: value
      type(ConfigValue), pointer :: next=>NULL()
   end type ConfigValue
 
   type ConfigSection
-     character(len=namelen) :: name
+     character(len=namelen) :: name = ''
      logical :: used = .false.
      type(ConfigValue), pointer :: values=>NULL()
      type(ConfigSection), pointer :: next=>NULL()
@@ -300,7 +300,7 @@ contains
     implicit none
     type(ConfigSection), pointer :: section
     character(len=*),intent(in) :: name
-    character(*), pointer, dimension(:) :: val
+    character(len=80), pointer, dimension(:) :: val
     integer,intent(in), optional :: numval
 
     ! local variables
@@ -324,7 +324,6 @@ contains
        if (associated(val)) then
           deallocate(val)
        end if
-       allocate(val(i))
        val = tempval(1:i)
     end if
   end subroutine GetValueCharArray

@@ -1,3 +1,8 @@
+2005-10-30 Magnus Hagdorn
+ * glimmer_CFproj.f90: type definitions of individual projections are now
+   public.
+ * glimmer_config.f90: make the character array fixed length for gfortran.
+
 2005-10-26 Magnus Hagdorn
  * eis_ela.f90: add longitudinal ELA gradient
  * glide_setup.f90: make fraction of ice lost due to calving a run

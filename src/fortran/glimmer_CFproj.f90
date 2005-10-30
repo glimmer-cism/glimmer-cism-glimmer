@@ -51,6 +51,7 @@ module glimmer_CFproj
 
   private
   public  CFproj_projection,CFproj_proj4,CFproj_GetProj,CFproj_PutProj,CFproj_define, CFproj_allocated
+  public  CFproj_laea, CFproj_aea, CFproj_lcc, CFproj_stere
   public  CFP_LAEA,CFP_AEA,CFP_LCC,CFP_STERE
 
   integer, parameter :: proj4len=100
