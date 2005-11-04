@@ -1,4 +1,22 @@
 2005-11-04 Magnus Hagdorn
+ * common/template.tex: new for generating eps files from gnuplot/xfig output
+ * common/definitions.tex: new boolean for html code
+ * common/packages.tex: use graphicx instead of epsfig
+ * dg/dg.tex use includegraphics instead of epsfig
+ * num/basal_bc.tex: ditto
+ * num/grid.tex: ditto
+ * num/kinematics.tex: ditto
+ * num/vert_velo.tex: ditto
+ * ug/glint.tex: ditto
+ * ug/intro.tex: ditto
+ * glimmer.tex.in: add code to autogenerate pngs for html output
+ * make_doc.rules: changed rules so we can generate eps for all graphics
+ * glimmer_html.tex: new master tex file for generating html output
+ * Makefile.am: target for generating html output
+ * num/figs/Makefile.am: generate eps
+ * num/gnu/Makefile.am: ditto
+ 
+2005-11-04 Magnus Hagdorn
  * configure.in: optionally build tools guide
  * doc/Makefile.am: use implicit rules
  * glimmer.tex.in: autogenerate glimmer.tex

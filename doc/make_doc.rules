@@ -1,27 +1,26 @@
 # some rules for generating various graphic files
 
-.fig.pstex_t:
+%.pstex_t:	%.fig
 		$(FIG2DEV) -Lpstex_t -p $*.pstex -m 1.000000 $< $@
-		$(SED) 's#includegraphics{#includegraphics{\\dir/figs/#' $@ > .tmp
-		mv .tmp  $@
-.fig.pstex:
+%.pstex:	%.fig
 		$(FIG2DEV) -Lpstex -m 1.000000 -n $*.pstex $< $*.pstex
-
-.fig.eps:
-		$(FIG2DEV) -Leps -m 1.000000 -n $*.eps $< $*.eps
-
-.dia.eps:
+%.tex:		gnu_%.ps %.pslatex
+		sed "s/FILE/$*.pslatex/" $(top_srcdir)/doc/common/template.tex > $@
+%.tex:		%.pstex_t %.pstex 
+		sed "s/FILE/$*.pstex_t/" $(top_srcdir)/doc/common/template.tex > $@
+%.dvi:		%.tex
+		latex $<
+%.ps:		%.dvi
+		dvips -o $@ $<
+%.eps:		%.ps
+		ps2epsi $< $@
+%.eps:		%.dia
 		$(DIA) -t eps-builtin -n -e $@ $<
-
-.gp.eps:
+gnu_%.ps %.pslatex:	%.gp
 		$(GNUPLOT) $<
-		$(PS2EPSI) $@ .tmp
-		mv .tmp  $@
-
-%.ps %.pslatex: %.gp
-		$(GNUPLOT) $<
-		$(SED) 's#psfile=#psfile=\\dir/gnu/#' $@ > .tmp
+		$(SED) 's#psfile=#psfile=gnu_#' $@ > .tmp
+		mv $*.ps gnu_$*.ps
 		mv .tmp  $@
 
 
-SUFFIXES = .fig .pstex .pstex_t .eps .dia .gp .pslatex
+SUFFIXES = .fig .pstex .pstex_t .eps .dia .gp .pslatex .ps

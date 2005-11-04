@@ -4,7 +4,7 @@ The continuous equations descrining ice physics have to be discretised in order 
 The modelled region ($x\in[0,L_x]$, $y\in[0,L_y]$) is discretised using a regular grid so that $x_i=(i-1)\Delta x$ for $i\in[1,N]$ (and similarly for $y_j$). The model uses two staggered horizontal grids in order to improve stability. Both grids use the same grid spacing, $\Delta x$ and $\Delta y$, but are off-set by half a grid (see Fig. \ref{kin.fig.grid}). 
 \begin{figure}[htbp]
   \begin{center}
-    \input{\dir/figs/grid.pstex_t}
+    \includegraphics{\dir/figs/grid.eps}
     \caption{Horizontal Grid.}
     \label{kin.fig.grid}
   \end{center}
@@ -37,7 +37,7 @@ The model can be run with horizontal periodic boundary conditions, i.e. the west
 
 \begin{figure}[htbp]
   \centering
-  \epsfig{file=\dir/figs/grid_ew.eps,width=0.9\textwidth}
+  \includegraphics[width=0.9\textwidth]{\dir/figs/grid_ew.eps}
   \caption{A row of the numeric grid when the model is used in torus mode. Circles indicate points in $(i,j)$--grid and squares indicate points in the $(r,s)$--grid. Points with the same colour are logically the same.}
   \label{num.fig.grid_ew}
 \end{figure}
@@ -53,7 +53,7 @@ The vertical coordinate, $z$, is scaled by the ice thickness analogous to the $s
 
 \begin{figure}[htbp]
   \begin{center}
-    \input{\dir/figs/scale.pstex_t}
+    \includegraphics{\dir/figs/scale.eps}
     \caption[Vertical scaling of the ice sheet model.]{Vertical scaling of the ice sheet model. The vertical axis is scaled to unity. The horizontal coordinates are not changed.}
     \label{kin.fig.scale}
   \end{center}

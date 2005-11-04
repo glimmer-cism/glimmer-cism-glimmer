@@ -1,4 +1,4 @@
-graphics = w_profile.pslatex wt_sigma.pslatex w_profile.ps wt_sigma.ps
+graphics = w_profile.eps wt_sigma.eps
 
 EXTRA_DIST = w_profile.gp wt_sigma.gp velo/calc2.data  velo/e1-mm.1.data  velo/e1-mm2.1.data  velo/temp_cor.data  velo/temp_uncor.data  velo/velo_cor.data  velo/velo_uncor.data $(graphics)
  

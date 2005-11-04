@@ -127,7 +127,7 @@ This non--linear partial differential equation can be linearised by using the di
 
 \begin{figure}[htbp]
   \centering
-  \input{\dir/figs/staggered_grid.pstex_t}
+  \includegraphics{\dir/figs/staggered_grid.eps}
   \caption{Illustration of the staggered grid used to calculate ice thicknesses, diffusivities and mass fluxes.}
   \label{kin.fig.staggered_grid}
 \end{figure}
@@ -211,7 +211,7 @@ Equation \eqref{kin.eq.evo_matrix_nonlin} is iterated over $\xi$ until the maxim
 
 \begin{figure}[htbp]
   \centering
-  \epsfig{file=\dir/figs/thick_evo.eps,width=0.5\textwidth}
+  \includegraphics[width=0.5\textwidth]{\dir/figs/thick_evo.eps}
   \caption{Flow diagram showing how the linearised solver (on the left) and the non--linear solver work. The inner, linear iteration is contained within the box labeled ``calculate new ice distribution''.}
   \label{kin.fig.solvers}
 \end{figure}
