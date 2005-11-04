@@ -13,30 +13,6 @@ EXTRA_DIST = dg.tex dg_pdf.tex dg_ps.tex glimmer.tex glimmer_pdf.tex glimmer_ps.
 
 CLEANFILES = *~ *.aux *.dvi *.log *.out *.toc
 
-dg.pdf:	dg_pdf.dvi
-	$(DVIPDFT) -o dg.pdf dg_pdf.dvi
-
-dg.ps:	dg_ps.dvi
-	dvips -o dg.ps dg_ps.dvi
-
-num.pdf:	num_pdf.dvi
-	$(DVIPDFT) -o num.pdf num_pdf.dvi
-
-num.ps:	num_ps.dvi
-	dvips -o num.ps num_ps.dvi
-
-ug.pdf:	ug ug_pdf.dvi
-	$(DVIPDFT) -o ug.pdf ug_pdf.dvi
-
-ug.ps:	ug ug_ps.dvi
-	dvips -o ug.ps ug_ps.dvi
-
-glimmer.pdf:	glimmer_pdf.dvi
-	$(DVIPDFT) -o glimmer.pdf glimmer_pdf.dvi
-
-glimmer.ps:	glimmer_ps.dvi
-	dvips -o glimmer.ps glimmer_ps.dvi
-
 code_doc.ps:	code_doc.dvi
 		dvips -o code_doc.ps code_doc.dvi
 
@@ -48,3 +24,9 @@ code_doc.tex:	../src/fortran/*.f90
 	$(BIBTEX) $*
 	$(LATEX) $<
 	$(LATEX) $<
+
+%.ps:	%_ps.dvi
+	dvips -o $@ $<
+
+%.pdf:	%_pdf.dvi
+	$(DVIPDFT) -o $@ $<

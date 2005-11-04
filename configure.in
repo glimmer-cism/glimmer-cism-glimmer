@@ -92,6 +92,19 @@ AC_CHECK_PROGS(SED,[sed])
 AM_CONDITIONAL([DO_DOC_PS],  [test "$DVIPS" != ""])
 AM_CONDITIONAL([DO_DOC_PDF], [test "$DVIPDFT" != ""])
 AM_CONDITIONAL([BUILD_DOCS], [test "$enable_doc" == "yes"])
+# checking if we include GLIMMER tools doc
+AC_MSG_CHECKING([whether we should build tools documentation])
+AC_ARG_ENABLE(toolsdoc, AS_HELP_STRING([--enable-toolsdoc],[Build documentation for GLIMMER tools]),
+if eval "test x$enable_toolsdoc = xyes"; then
+ dotools=true
+fi)
+if test -n "$dotools"; then
+  AC_MSG_RESULT([yes])
+else
+  dotools=false
+  AC_MSG_RESULT([no])
+fi
+AC_SUBST(dotools)
 
 # checking for BLAS library
 AC_ARG_WITH(blas,AS_HELP_STRING([--with-blas],[how to link external BLAS library]),[ac_cv_blas=$withval])
@@ -164,4 +177,4 @@ AC_CONFIG_FILES([Makefile src/Makefile src/python/Makefile src/fortran/Makefile 
 		doc/Makefile doc/common/Makefile doc/dg/Makefile doc/dg/figures/Makefile \
 		doc/ug/Makefile doc/ug/figs/Makefile doc/num/Makefile doc/num/figs/Makefile doc/num/gnu/Makefile \
 		tests/Makefile])
-AC_OUTPUT([glimmer-config src/fortran/glimmer_version.f90.in doc/common/version.tex])
+AC_OUTPUT([glimmer-config src/fortran/glimmer_version.f90.in doc/glimmer.tex doc/common/version.tex])
