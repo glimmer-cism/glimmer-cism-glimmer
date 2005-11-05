@@ -23,7 +23,7 @@ code_doc.tex:	../src/fortran/*.f90
 www::	glimmer.tex
 	install -d www
 	htlatex glimmer_html "html,3,info" "" " -d./www/ -m 644 "
-	find $(SUBDIRS) -name '*.png' -exec install -D {} ./www/{} \;
+	find $(SUBDIRS) -name '*.png' -exec install -m 644 -D {} ./www/{} \;
 
 .tex.dvi::
 	$(LATEX) $<

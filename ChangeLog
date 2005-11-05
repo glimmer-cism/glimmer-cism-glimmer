@@ -1,3 +1,8 @@
+2005-11-05 Magnus Hagdorn
+ * doc/Makefile.am: fix permissions
+ * simple_forcing.f90: fix sign for temp gradient for moving margin, pointed
+   out by Qinghua Yang
+
 2005-11-04 Magnus Hagdorn
  * common/template.tex: new for generating eps files from gnuplot/xfig output
  * common/definitions.tex: new boolean for html code

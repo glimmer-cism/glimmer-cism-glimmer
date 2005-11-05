@@ -55,7 +55,7 @@ module simple_forcing
      !*FD \item[{\bf 1}] EISMINT-1 fixed margin
      !*FD \item[{\bf 2}] EISMINT-1 moving margin
      !*FD \end{description}
-     real(kind=sp), dimension(2) :: airt = (/ -3.150, -1.e-2 /)  
+     real(kind=sp), dimension(2) :: airt = (/ -3.150, 1.e-2 /)  
      !*FD air temperature parameterisation K, K km$^{-3}$
      real(kind=sp), dimension(3) :: nmsb = (/ 0.5, 1.05e-5, 450.0e3 /)
      !*FD mass balance parameterisation m yr$^{-1}$, yr$^{-1}$, m
