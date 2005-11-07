@@ -1,4 +1,7 @@
 2005-11-07 Magnus Hagdorn
+ * src/fortran/Makefile.am: use wildcard function for *.mod
+
+2005-11-07 Magnus Hagdorn
  * glimmer_ncio.f90: print out file name of netCDF file that cannot be read
  * glimmer_config.f90: add logical variables
  * eis_vars.def: load ELA from file if present

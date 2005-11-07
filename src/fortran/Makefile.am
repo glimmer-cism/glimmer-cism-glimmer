@@ -8,7 +8,7 @@ variable_DATA = glide_vars.def eis_vars.def glint_vars.def time_vars.def glint_m
 variabledir = $(pkgdatadir)
 dist_variable_DATA = $(variable_DATA)
 
-nodist_include_HEADERS = *.mod
+nodist_include_HEADERS := $(wildcard *.mod)
 EXTRA_DIST = f90_dep.mak
 BUILT_SOURCES = glide_io.f90 eis_io.f90 glint_io.f90 glint_mbal_io.f90
 CLEANFILES = $(BUILT_SOURCES) f90_dep.mak
