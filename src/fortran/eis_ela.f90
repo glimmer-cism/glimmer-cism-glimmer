@@ -131,14 +131,9 @@ contains
     implicit none
     type(eis_ela_type)      :: ela   !*FD ela data
     type(glide_global_type) :: model !*FD model instance
-
-    ! local variables
-    type(glimmer_tseries) :: ela_ew
-    integer ew,ns
-    real :: ela_m
-
-    call glimmer_read_ts(ela%ela_ts,ela%fname)
     
+    call glimmer_read_ts(ela%ela_ts,ela%fname)
+
     ! scale parameters
     ela%ela_ts%values = ela%ela_ts%values/thk0
     ela%zmax_mar = ela%zmax_mar/thk0
@@ -152,7 +147,23 @@ contains
 
     ! calculate shape of mass balance field
     call coordsystem_allocate(model%general%ice_grid, ela%ela)
-    ela%ela = ela_lat(ela%ela_a,ela%ela_b,ela%ela_c,model%climate%lati)
+    ela%ela = 0.
+  end subroutine eis_init_ela
+    
+  subroutine eis_calc_ela(ela,model)
+    !*FD calculate latitude dependence of ELA field
+    use glide_types
+    use paramets, only: thk0
+    implicit none
+    type(eis_ela_type)      :: ela   !*FD ela data
+    type(glide_global_type) :: model !*FD model instance
+    
+    ! local variables
+    integer ew,ns
+    real :: ela_m
+    type(glimmer_tseries) :: ela_ew
+
+    ela%ela = ela%ela + ela_lat(ela%ela_a,ela%ela_b,ela%ela_c,model%climate%lati)
     if (len(trim(ela%ew_fname)).ne.0) then
        call glimmer_read_ts(ela_ew,ela%ew_fname)
        ! loop over grid
@@ -163,8 +174,8 @@ contains
           end do
        end do
     end if
-  end subroutine eis_init_ela
-    
+  end subroutine eis_calc_ela
+
   subroutine eis_massbalance(ela,cony,model,time)
     !*FD calculate mass balance
     use eis_cony
@@ -218,22 +229,21 @@ contains
           calc_mb = shelf_ablation   ! ablation on ice shelf
           return
        end if
-       z = z - ela
-       zmax = mzmax - (mzmax - czmax)*cony
-       bmax = mbmax - (mbmax - cbmax)*cony
-       if ((zmax.le.0.01).or.(z .ge. zmax)) then
-          ! first condition allows forcing of mb=bmax.
-          calc_mb = bmax
-          return
-       else
-          calc_mb = 2.*z*bmax/zmax - z*z*bmax/(zmax*zmax)
-          return
-       end if
     else
-       calc_mb = 0.
+       z = 0
+    end if
+    z = z - ela
+    zmax = mzmax - (mzmax - czmax)*cony
+    bmax = mbmax - (mbmax - cbmax)*cony
+    if ((zmax.le.0.01).or.(z .ge. zmax)) then
+       ! first condition allows forcing of mb=bmax.
+       calc_mb = bmax
+       return
+    else
+       calc_mb = 2.*z*bmax/zmax - z*z*bmax/(zmax*zmax)
        return
     end if
-  end function calc_mb
+   end function calc_mb
 
   elemental function ela_lat(a,b,c,lat)
     !*FD calculate ELA variation with latitude

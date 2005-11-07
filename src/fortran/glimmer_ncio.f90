@@ -257,7 +257,10 @@ contains
 
     ! open netCDF file
     status = nf90_open(NCI%filename,NF90_NOWRITE,NCI%id)
-    call nc_errorhandle(__FILE__,__LINE__,status)
+    if (status.ne.NF90_NOERR) then
+       call write_log('Error opening file '//trim(NCI%filename)//': '//nf90_strerror(status),&
+            type=GM_FATAL,file=__FILE__,line=__LINE__)
+    end if
     call write_log_div
     call write_log('opening file '//trim(NCI%filename)//' for input')
 

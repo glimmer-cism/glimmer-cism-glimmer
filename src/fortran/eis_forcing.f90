@@ -72,6 +72,9 @@ contains
 
     ! and read first time slice
     call eis_io_readall(climate,model)
+
+    ! calculate shape of ELA (lat and EW dependence)
+    call eis_calc_ela(climate%ela,model)
   end subroutine eis_initialise
 
   subroutine eis_readconfig(climate,config)

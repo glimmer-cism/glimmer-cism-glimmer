@@ -22,6 +22,7 @@ data:          data%ela%ela
 factor:        thk0
 standard_name: equilibrium_line_altitude
 coordinates:   lon lat
+load:          1
 
 [cony]
 dimensions:    time, y1, x1

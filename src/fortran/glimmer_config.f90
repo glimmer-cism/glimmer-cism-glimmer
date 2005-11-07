@@ -73,7 +73,7 @@ module glimmer_config
   end type ConfigSection
 
   interface GetValue
-     module procedure GetValueDouble, GetValueReal, GetValueInt, GetValueChar, &
+     module procedure GetValueDouble, GetValueReal, GetValueInt, GetValueChar, GetValueLogical, &
           GetValueDoubleArray, GetValueRealArray, GetValueIntArray, GetValueCharArray
   end interface
 
@@ -409,6 +409,32 @@ contains
        value=>value%next
     end do
   end subroutine GetValueChar
+
+  subroutine GetValueLogical(section,name,val)
+    !*FD get logical value
+    implicit none
+    type(ConfigSection), pointer :: section
+    character(len=*),intent(in) :: name
+    logical :: val
+
+    ! local variables
+    character(len=valuelen) :: value
+    integer itemp
+    logical ltemp
+    integer ios
+
+    value=''
+    call GetValueChar(section,name,value)
+
+    read(value,*,iostat=ios) itemp
+    if (ios==0) then
+       val = itemp.eq.1
+    end if
+    read(value,*,iostat=ios) ltemp
+    if (ios==0) then
+       val = ltemp
+    end if
+  end subroutine GetValueLogical
 
   !==================================================================================
   ! private procedures

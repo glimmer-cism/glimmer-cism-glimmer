@@ -1,3 +1,10 @@
+2005-11-07 Magnus Hagdorn
+ * glimmer_ncio.f90: print out file name of netCDF file that cannot be read
+ * glimmer_config.f90: add logical variables
+ * eis_vars.def: load ELA from file if present
+ * eis_ela.f90: do not calculate ELA field (presumably so that it can be
+   read from netCDF file), do not set MB to 0 for areas covered by sea
+
 2005-11-05 Magnus Hagdorn
  * doc/Makefile.am: fix permissions
  * simple_forcing.f90: fix sign for temp gradient for moving margin, pointed
