@@ -53,7 +53,7 @@ program eis_glide
   type(glide_global_type) :: model        ! model instance
   type(eis_climate_type) :: climate       ! climate
   type(ConfigSection), pointer :: config  ! configuration stuff
-  character(len=50) :: fname   ! name of paramter file
+  character(len=fname_length) :: fname   ! name of paramter file
   real(kind=rk) time
   
 
@@ -62,7 +62,7 @@ program eis_glide
   read(*,*) fname
   
   ! start logging
-  call open_log(unit=50, fname=trim(fname)//'.log')
+  call open_log(unit=50, fname=logname(fname))
 
   ! read configuration
   call ConfigRead(fname,config)

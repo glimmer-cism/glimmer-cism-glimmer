@@ -69,7 +69,7 @@ module glimmer_log
   !*FD \item \texttt{GM\_FATAL}
   !*FD \end{itemize}
 
-  use glimmer_global, only : fname_length
+  use glimmer_global, only : fname_length,dirsep
 
   integer,parameter :: GM_DIAGNOSTIC = 1 !*FD Numerical identifier for diagnostic messages.
   integer,parameter :: GM_TIMESTEP   = 2 !*FD Numerical identifier for timestep messages.
@@ -94,7 +94,23 @@ module glimmer_log
   character(len=fname_length),private :: glimmer_logname !*FD name of log file
   integer,private :: glimmer_unit=6                      !*FD log unit
 
-contains  
+contains
+  function logname(fname)
+    !*FD derives name of log file from file name by stripping directories and appending .log
+    implicit none
+    character(len=*), intent(in) :: fname
+    character(len=fname_length) :: logname
+    
+    character(len=*), parameter :: suffix='.log'
+    integer i
+    i = scan(fname,dirsep,.True.)
+    if (i.ne.0) then
+       logname = trim(fname(i+1:))//suffix
+    else
+       logname = trim(fname)//suffix
+    end if
+  end function logname
+  
   subroutine open_log(unit,fname)
     !*FD opens log file
     implicit none

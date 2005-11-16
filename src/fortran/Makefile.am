@@ -10,8 +10,8 @@ dist_variable_DATA = $(variable_DATA)
 
 nodist_include_HEADERS := $(wildcard *.mod)
 EXTRA_DIST = f90_dep.mak
-BUILT_SOURCES = glide_io.f90 eis_io.f90 glint_io.f90 glint_mbal_io.f90
-CLEANFILES = $(BUILT_SOURCES) f90_dep.mak
+BUILT_SOURCES = glide_io.f90 eis_io.f90 glint_io.f90 glint_mbal_io.f90 
+CLEANFILES = $(BUILT_SOURCES) glimmer_version.f90 f90_dep.mak
 
 libglimmer_a_SOURCES = glimmer_version.f90 glimmer_CFproj.f90 glimmer_config.f90 glimmer_global.f90 glimmer_utils.f90 glimmer_log.f90 glimmer_ts.f90 \
                 glimmer_ncdf.f90 glimmer_ncio.f90 glimmer_ncparms.f90 glimmer_paramets.f90 glimmer_physcon.f90 kelvin.f90 profile.f90 \
@@ -45,25 +45,25 @@ test_integrate_SOURCES = test_integrate.f90 glimmer_global.f90 glimmer_physcon.f
 
 #some special rules for automatically generating ncdf src code
 glide_io.f90:	glide_vars.def ncdf_template.f90.in
-		$(PYTHON) ../python/generate_ncvars.py $^
+		$(PYTHON) $(top_srcdir)/src/python/generate_ncvars.py $^
 eis_io.f90:	eis_vars.def ncdf_template.f90.in
-		$(PYTHON) ../python/generate_ncvars.py $^
+		$(PYTHON) $(top_srcdir)/src/python/generate_ncvars.py $^
 glint_io.f90:	glint_vars.def ncdf_template.f90.in
-		$(PYTHON) ../python/generate_ncvars.py $^
+		$(PYTHON) $(top_srcdir)/src/python/generate_ncvars.py $^
 glint_mbal_io.f90:	glint_mbal_vars.def ncdf_template.f90.in
-		$(PYTHON) ../python/generate_ncvars.py $^
+		$(PYTHON) $(top_srcdir)/src/python/generate_ncvars.py $^
 
 # handling CVS versioning
 if HAVE_CVS
-glimmer_version.f90:	glimmer_version.f90.in CVS/Entries 
-		$(PYTHON) ../python/cvs_version.py $< $@
+glimmer_version.f90:	$(srcdir)/CVS/Entries glimmer_version.f90.in 
+		$(PYTHON) $(top_srcdir)/src/python/cvs_version.py $(srcdir)/CVS/Entries glimmer_version.f90.in $@
 else
 glimmer_version.f90:	glimmer_version.f90.in
 		cp $< $@
 endif
 
 
-f90_dep.mak:	*.f90 $(BUILT_SOURCES)
-		$(PYTHON) ../python/f90_dependencies.py -o $@ $^
+f90_dep.mak:	$(srcdir)/*.f90 $(BUILT_SOURCES) glimmer_version.f90
+		$(PYTHON) $(top_srcdir)/src/python/f90_dependencies.py -o $@ $^
 
 -include f90_dep.mak

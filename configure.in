@@ -19,6 +19,8 @@ AC_SUBST(GLIMMER_MINOR_VERSION)
 AC_SUBST(GLIMMER_MICRO_VERSION)
 AC_SUBST(GLIMMER_VERSION)
 
+AC_CONFIG_SRCDIR([glimmer-config.in])
+
 AC_PROG_RANLIB
 
 # save compiler flags, autoconf will change them later
@@ -75,11 +77,20 @@ AM_PATH_PYTHON([2.3],,[AC_MSG_RESULT(need at least python 2.3)])
 # checking if we build the docs
 AC_MSG_CHECKING([whether we should build documentation])
 AC_ARG_ENABLE(doc, AS_HELP_STRING([--enable-doc],[Build documentation]),
-[case "${enableval}" in
- yes)  AC_MSG_RESULT([yes]);;	
- no)   AC_MSG_RESULT([no]);;
- *) AC_MSG_ERROR(bad value ${enableval} for --enable-doc) ;;
-esac],[AC_MSG_RESULT([no])])
+if eval "test x$enable_doc = xyes"; then
+ dodocs=true
+fi)
+if test -n "$dodocs"; then
+  if test "$srcdir" != "."; then
+    AC_MSG_RESULT([no])
+    AC_MSG_WARN(Cannot build docs out of src tree)
+    enable_doc=no
+  else
+    AC_MSG_RESULT([yes])
+  fi
+else
+  AC_MSG_RESULT([yes])
+fi
 AC_CHECK_PROGS(LATEX,[latex])
 AC_CHECK_PROGS(BIBTEX,[bibtex])
 AC_CHECK_PROGS(DVIPS,[dvips]) 
@@ -165,7 +176,7 @@ esac],[AC_MSG_RESULT([no])])
 AM_CONDITIONAL([RUN_TESTS], [test "$enable_tests" == "yes"])
 
 # Checking if sources are from CVS
-AC_CHECK_FILE(./src/fortran/CVS/Entries,have_cvs_entries="yes",have_cvs_entries="no")
+AC_CHECK_FILE($srcdir/src/fortran/CVS/Entries,have_cvs_entries="yes",have_cvs_entries="no")
 GLIMMER_CVS_VERS=""
 if test "$have_cvs_entries" == "yes"; then
    GLIMMER_CVS_VERS=" cvs_vers_string"

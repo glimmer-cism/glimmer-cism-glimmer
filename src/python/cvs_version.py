@@ -22,7 +22,10 @@
 
 import time,sys
 
-inname = 'CVS/Entries'
+if len(sys.argv)<2:
+    print 'Error, specify Entries file to be read'
+    sys.exit(1)
+inname = sys.argv[1]
 
 
 # check if file is present
@@ -61,9 +64,9 @@ if len(cvstag)>0:
     cvstag=' '+cvstag
 
 # reading input file and writing to output
-if len(sys.argv) == 3:
-    infile = open(sys.argv[1],'r')
-    outfile = open(sys.argv[2],'w')
+if len(sys.argv) == 4:
+    infile = open(sys.argv[2],'r')
+    outfile = open(sys.argv[3],'w')
 
     for l in infile.readlines():
         l = l.replace('cvs_vers_string','CVS: %s%s'%(cvstime,cvstag))

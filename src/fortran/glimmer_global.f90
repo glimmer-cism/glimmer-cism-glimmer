@@ -86,4 +86,7 @@ module glimmer_global
   !*FD Specifies the length of character string variables used to
   !*FD hold filenames.
 
+  character, parameter :: dirsep = '/'
+  !*FD directory separator
+
 end module glimmer_global

@@ -1,3 +1,16 @@
+2005-11-16 Magnus Hagdorn
+ * configure.in: add some sanity checks and use variables pointing to where 
+   sources live
+ * tests/Makefile.am: use variables pointing to where sources live
+ * src/fortran/Makefile.am: ditto
+ * glide_launch.py: avoid fortran sillyness where strings have to be quoted
+ * cvs_version.py: we now have to specify where Entries file is
+ * glimmer_global.f90: add directory separator constant
+ * glimmer_log.f90: new function for deriving name of logfile
+ * simple_glide.f90: use logname to get name of logfile
+ * eis_glide.f90: ditto
+ * INSTALL: update
+
 2005-11-07 Magnus Hagdorn
  * src/fortran/Makefile.am: use wildcard function for *.mod
 

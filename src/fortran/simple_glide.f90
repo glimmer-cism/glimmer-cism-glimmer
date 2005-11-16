@@ -43,7 +43,7 @@
 program simple_glide
   !*FD This is a simple GLIDE test driver. It can be used to run
   !*FD the EISMINT test cases
-  use glimmer_global, only:rk
+  use glimmer_global, only:rk,fname_length
   use glide
   use simple_forcing
   use glimmer_log
@@ -53,14 +53,14 @@ program simple_glide
   type(glide_global_type) :: model        ! model instance
   type(simple_climate) :: climate         ! climate
   type(ConfigSection), pointer :: config  ! configuration stuff
-  character(len=50) :: fname   ! name of paramter file
+  character(len=fname_length) :: fname   ! name of paramter file
   real(kind=rk) time
 
   write(*,*) 'Enter name of GLIDE configuration file to be read'
   read(*,*) fname
   
   ! start logging
-  call open_log(unit=50, fname=trim(fname)//'.log')
+  call open_log(unit=50, fname=logname(fname))
   
   ! read configuration
   call ConfigRead(fname,config)

@@ -7,4 +7,4 @@ endif
 CLEANFILES = $(BUILT_SOURCES)
 
 .config.nc::
-	../src/python/glide_launch.py --prefix=.. --src $<
+	$(PYTHON) $(top_srcdir)/src/python/glide_launch.py --prefix=$(top_builddir) --src $<
