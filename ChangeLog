@@ -1,3 +1,8 @@
+2005-11-18 Magnus Hagdorn
+ * moved doc to CVS module glimmer-doc
+ * Makefile.am: removed subdir doc
+ * configure.in: removed doc related stuff
+
 2005-11-16 Magnus Hagdorn
  * configure.in: add some sanity checks and use variables pointing to where 
    sources live
