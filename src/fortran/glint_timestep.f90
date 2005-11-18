@@ -116,6 +116,7 @@ contains
     real(rk),dimension(:,:),allocatable :: ablat_temp    ! temporary array for ablation
     integer, dimension(:,:),allocatable :: fudge_mask    ! temporary array for fudging
     real(sp),dimension(:,:),allocatable :: thck_temp     ! temporary array for volume calcs
+    real(sp),dimension(:,:),allocatable :: calve_temp    ! temporary array for calving flux
     real(rk) :: start_volume,end_volume,flux_fudge
 
     ! Assume we always need this, as it's too complicated to work out when we do and don't
@@ -229,6 +230,14 @@ contains
        call glide_tstep_p2(instance%model)
        call glide_tstep_p3(instance%model)
 
+       ! Add the calved ice to the ablation field ------------------------------
+
+       allocate(calve_temp(instance%proj%nx,instance%proj%ny))
+       call glide_get_calving(instance%model,calve_temp)
+
+       ablat_temp=ablat_temp+calve_temp
+       instance%ablt=instance%ablt+calve_temp
+
        ! Calculate flux fudge factor --------------------------------------------
 
        if (out_f%water_out.or.out_f%total_wout.or.out_f%water_in .or.out_f%total_win) then
@@ -339,6 +348,7 @@ contains
 
     if (allocated(accum_temp)) deallocate(accum_temp)
     if (allocated(ablat_temp)) deallocate(ablat_temp)
+    if (allocated(calve_temp)) deallocate(calve_temp)
     deallocate(thck_temp)
 
   end subroutine glint_i_tstep

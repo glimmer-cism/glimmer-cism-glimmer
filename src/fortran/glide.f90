@@ -316,7 +316,8 @@ contains
          model%geometry%thkmask,    &
          model%numerics%mlimit,     &
          model%numerics%calving_fraction, &
-         model%climate%eus)
+         model%climate%eus,         &
+         model%climate%calving)
 
     ! ------------------------------------------------------------------------
     ! update ice/water load if necessary

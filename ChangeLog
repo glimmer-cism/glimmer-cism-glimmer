@@ -1,3 +1,7 @@
+2005-11-18 Ian Rutt
+ * Added calving field to glide. This accessed by glint through accessor
+   functions. The field is calculated in the marine limit routine in glide_setup.f90
+
 2005-11-18 Magnus Hagdorn
  * moved doc to CVS module glimmer-doc
  * Makefile.am: removed subdir doc

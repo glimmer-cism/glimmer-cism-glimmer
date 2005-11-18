@@ -294,7 +294,7 @@ contains
 
 !-------------------------------------------------------------------------
 
-  subroutine glide_marinlim(which,whicht,thck,relx,lati,mask,mlimit,calving_fraction,eus)
+  subroutine glide_marinlim(which,whicht,thck,relx,lati,mask,mlimit,calving_fraction,eus,ablation_field)
 
     !*FD Removes non-grounded ice, according to one of two altenative
     !*FD criteria, and sets upper surface of non-ice-covered points 
@@ -329,21 +329,26 @@ contains
     real(dp), intent(in) :: calving_fraction         !*FD fraction of ice lost when calving Used with 
                                                      !*FD $\mathtt{which}=3$.
     real, intent(inout) :: eus                       !*FD eustatic sea level
-    
+    real(sp),dimension(:,:),intent(inout) :: ablation_field 
+
     integer ew,ns
     real(dp), parameter :: con = - rhoi / rhoo
     !---------------------------------------------------------------------
+
+    ablation_field=0.0
 
     select case (which)
         
     case(1) ! Set thickness to zero if ice is floating
       where (is_float(mask))
+        ablation_field=thck
         thck = 0.0d0
       end where
 
     case(2) ! Set thickness to zero if relaxed bedrock is below a 
        ! given level
        where (relx < mlimit+eus)
+          ablation_field=thck
           thck = 0.0d0
        end where
 
@@ -351,6 +356,7 @@ contains
        do ns = 2,size(thck,2)-1
           do ew = 2,size(thck,1)-1
              if (is_calving(mask(ew,ns))) then
+                ablation_field(ew,ns)=(1.0-calving_fraction)*thck(ew,ns)
                 thck(ew,ns) =  calving_fraction*thck(ew,ns)
                 !mask(ew,ns) = glide_mask_ocean
              end if

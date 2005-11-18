@@ -172,6 +172,14 @@ standard_name: land_ice_thickness
 hot:           1
 coordinates:   lon lat
 
+[calving]
+dimensions:    time, y1, x1
+units:         meter
+long_name:     ice margin calving
+data:          data%climate%calving
+factor:        thk0
+coordinates:   lon lat
+
 [ivol]
 dimensions:    time
 units:         km3

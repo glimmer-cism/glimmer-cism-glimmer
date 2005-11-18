@@ -297,6 +297,7 @@ module glide_types
      real(sp),dimension(:,:),pointer :: artm     => null() !*FD Annual mean air temperature
      real(sp),dimension(:,:),pointer :: lati     => null() !*FD Latitudes of model grid points
      real(sp),dimension(:,:),pointer :: loni     => null() !*FD Longitudes of model grid points
+     real(sp),dimension(:,:),pointer :: calving  => null() !*FD Calving flux (scaled as mass balance, thickness, etc)
      real(sp) :: eus = 0.                                  !*FD eustatic sea level
   end type glide_climate
 
@@ -654,6 +655,7 @@ contains
     call coordsystem_allocate(model%general%ice_grid, model%climate%artm)
     call coordsystem_allocate(model%general%ice_grid, model%climate%lati)
     call coordsystem_allocate(model%general%ice_grid, model%climate%loni)
+    call coordsystem_allocate(model%general%ice_grid, model%climate%calving)
 
     call coordsystem_allocate(model%general%velo_grid, model%geomderv%dthckdew)
     call coordsystem_allocate(model%general%velo_grid, model%geomderv%dusrfdew)
