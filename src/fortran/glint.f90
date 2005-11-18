@@ -132,7 +132,7 @@ contains
 
   subroutine initialise_glint(params,lats,longs,paramfile,latb,lonb,orog,albedo, &
        ice_frac,veg_frac,snowice_frac,snowveg_frac,snow_depth,orog_lats,orog_longs,orog_latb,orog_lonb,output_flag, &
-       daysinyear,snow_model,ice_dt)
+       daysinyear,snow_model,ice_dt,hotstart_files,hotstart_times)
 
     !*FD Initialises the model
 
@@ -174,15 +174,37 @@ contains
     integer,                optional,intent(in)    :: daysinyear  !*FD Number of days in the year
     logical,                optional,intent(out)   :: snow_model  !*FD Set if the mass-balance scheme has a snow-depth model
     integer,                optional,intent(out)   :: ice_dt      !*FD Ice dynamics time-step in hours
+    character(*),dimension(:),optional,intent(in) :: hotstart_files !*FD List of hotstart files for individual instances
+    integer,dimension(:),optional,intent(in) :: hotstart_times !*FD List of hotstart time-slices
 
     ! Internal variables -----------------------------------------------------------------------
 
     type(ConfigSection), pointer :: global_config, instance_config, section  ! configuration stuff
     character(len=100) :: message                 ! For log-writing
     character(fname_length):: instance_fname      ! name of instance specific configuration file
-    integer :: i
+    character(fname_length) :: hsfile
+    integer,dimension(:),allocatable :: hstimes
+    integer :: i,hst
     real(rk),dimension(:,:),allocatable :: orog_temp,if_temp,vf_temp,sif_temp,svf_temp,sd_temp,alb_temp ! Temporary output arrays
     integer,dimension(:),allocatable :: mbts,idts ! Array of mass-balance and ice dynamics timesteps
+
+    ! Check optional hotstart arrays are same length or allocate accordingly  ------------------
+
+    if (present(hotstart_files)) then
+       if (present(hotstart_times)) then
+          if (size(hotstart_files)/=size(hotstart_times)) then
+             call write_log('Hotstart file list and time-slice list must be same length',GM_FATAL,__FILE__,__LINE__)
+          else
+             allocate(hstimes(size(hotstart_files)))
+             hstimes=hotstart_times
+          end if
+       else
+          allocate(hstimes(size(hotstart_files)))
+          hstimes=1
+       end if
+    else
+       hst=1
+    end if
 
     ! Initialise year-length -------------------------------------------------------------------
 
@@ -267,12 +289,22 @@ contains
           call write_log(message,GM_FATAL,__FILE__,__LINE__)
        end if
 
+       ! Deal with optional hotstart file
+
+       if (present(hotstart_files)) then
+          hsfile=hotstart_files(1)
+          hst=hstimes(1)
+       else
+          hsfile=''
+          hst=1
+       end if
+
        ! In this situation, we write the name of the parameter file, and
        ! initialise the single instance
 
        call write_log(trim(paramfile))
        call glint_i_initialise(global_config,params%instances(1),params%g_grid,params%g_grid_orog, &
-            mbts(1),idts(1),params%need_winds,params%enmabal)
+            mbts(1),idts(1),params%need_winds,params%enmabal,hs_file=hsfile,hs_time=hst)
        call write_log('')
 
        ! Update the coverage and normalisation fields
@@ -301,8 +333,17 @@ contains
           call GetValue(section,'name',instance_fname)
           call write_log(trim(instance_fname))
           call ConfigRead(instance_fname,instance_config)
+          ! Deal with optional hotstart file
+
+          if (present(hotstart_files)) then
+             hsfile=hotstart_files(i)
+             hst=hstimes(i)
+          else
+             hsfile=''
+             hst=1
+          end if
           call glint_i_initialise(instance_config,params%instances(i),params%g_grid,params%g_grid_orog, &
-               mbts(i),idts(i),params%need_winds,params%enmabal)
+               mbts(i),idts(i),params%need_winds,params%enmabal,hs_file=hsfile,hs_time=hst)
 
           params%total_coverage = params%total_coverage + params%instances(i)%frac_coverage
           params%total_cov_orog = params%total_cov_orog + params%instances(i)%frac_cov_orog
@@ -402,6 +443,7 @@ contains
     ! Deallocate
 
     deallocate(orog_temp,alb_temp,if_temp,vf_temp,sif_temp,svf_temp,sd_temp)
+    if (allocated(hstimes)) deallocate(hstimes)
 
     ! Sort out snow_model flag
 

@@ -1,6 +1,10 @@
 2005-11-18 Ian Rutt
  * Added calving field to glide. This accessed by glint through accessor
-   functions. The field is calculated in the marine limit routine in glide_setup.f90
+   functions. The field is calculated in the marine limit routine in
+   glide_setup.f90
+ * Added possibility of supplying a list of hotstart files in glint API.
+   This was requested, but is a big fudge, which I'm not terribly happy
+   with. It might not work, either.
 
 2005-11-18 Magnus Hagdorn
  * moved doc to CVS module glimmer-doc
