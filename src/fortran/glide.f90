@@ -115,6 +115,9 @@ contains
 
     ! allocate arrays
     call glide_allocarr(model)
+
+    ! initialise bed softness to uniform parameter
+    model%velocity%bed_softness = model%velowk%btrac_const
     
     ! load sigma file
     call glide_load_sigma(model,dummyunit)

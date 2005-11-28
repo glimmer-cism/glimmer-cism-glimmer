@@ -109,16 +109,12 @@ contains
     model%velowk%trcmin = model%paramets%bpar(3) / scyr
     model%velowk%trcmax = model%paramets%bpar(4) / scyr
     model%velowk%marine = model%paramets%bpar(5)
-    model%velowk%trc0   = vel0 * len0 / (thk0**2)
     model%velowk%trcmax = model%velowk%trcmax / model%velowk%trc0
     model%velowk%trcmin = model%velowk%trcmin / model%velowk%trc0
     model%velowk%c(1)   = (model%velowk%trcmax - model%velowk%trcmin) / 2.0d0 + model%velowk%trcmin
     model%velowk%c(2)   = (model%velowk%trcmax - model%velowk%trcmin) / 2.0d0
     model%velowk%c(3)   = model%velowk%watwd * thk0 / 4.0d0
     model%velowk%c(4)   = model%velowk%watct * 4.0d0 / thk0 
-    model%velowk%btrac_const = model%paramets%btrac_const/model%velowk%trc0/scyr
-    model%velowk%btrac_max = model%paramets%btrac_max/model%velowk%trc0/scyr
-    model%velowk%btrac_slope = model%paramets%btrac_slope*acc0/model%velowk%trc0
 
   end subroutine init_velo
 
@@ -1017,13 +1013,13 @@ contains
     select case(flag)
     case(1)
        ! constant everywhere
-       btrc = model%velowk%btrac_const
+       btrc = model%velocity%bed_softness
     case(2)
        ! constant where basal melt water is present
        do ns = 1,nsn-1
           do ew = 1,ewn-1
              if (0.0d0 < model%temper%stagbwat(ew,ns)) then
-                btrc(ew,ns) = model%velowk%btrac_const
+                btrc(ew,ns) = model%velocity%bed_softness(ew,ns)
              else
                 btrc(ew,ns) = 0.0d0
              end if
@@ -1051,7 +1047,7 @@ contains
              stagbwat = 0.25*sum(model%temper%bmlt(ew:ew+1,ns:ns+1))
              
              if (stagbwat>0.d0) then
-                btrc(ew,ns) = min(model%velowk%btrac_max, model%velowk%btrac_const+model%velowk%btrac_slope*stagbwat)
+                btrc(ew,ns) = min(model%velowk%btrac_max, model%velocity%bed_softness(ew,ns)+model%velowk%btrac_slope*stagbwat)
              else
                 btrc(ew,ns) = 0.0d0
              end if

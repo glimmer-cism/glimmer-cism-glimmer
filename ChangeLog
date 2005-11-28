@@ -1,3 +1,10 @@
+2005-11-28 Magnus Hagdorn
+ * glide_types.f90: add new variable for bed softness
+ * glide_vars.def: ditto
+ * glide.f90: initialise bed softness variable
+ * glide_velo.f90: use bed softness variable to determine sliding parameter
+ * glide_setup.f90: move some parameter scaling from glide_velo.f90 to here
+
 2005-11-18 Ian Rutt
  * Added calving field to glide. This accessed by glint through accessor
    functions. The field is calculated in the marine limit routine in

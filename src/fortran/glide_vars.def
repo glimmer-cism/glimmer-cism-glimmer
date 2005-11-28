@@ -128,6 +128,14 @@ long_name:     basal slip coefficient
 data:          data%velocity%btrc
 factor:        scale2d_f6
 
+[soft]
+dimensions:    time, y0, x0
+units:         meter/pascal/year
+long_name:     bed softness parameter
+data:          data%velocity%bed_softness
+factor:        scale2d_f6
+load:          1
+
 [ubas]
 dimensions:    time, y0, x0
 units:         meter/year

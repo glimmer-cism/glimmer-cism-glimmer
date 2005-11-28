@@ -110,7 +110,7 @@ contains
     !*FD scale parameters
     use glide_types
     use physcon,  only: scyr, gn
-    use paramets, only: thk0,tim0,len0, tau0, vel0, vis0
+    use paramets, only: thk0,tim0,len0, tau0, vel0, vis0, acc0
     implicit none
     type(glide_global_type)  :: model !*FD model instance
 
@@ -127,6 +127,12 @@ contains
     model%numerics%dns = model%numerics%dns / len0
 
     model%numerics%mlimit = model%numerics%mlimit / thk0
+
+    model%velowk%trc0   = vel0 * len0 / (thk0**2)
+    model%velowk%btrac_const = model%paramets%btrac_const/model%velowk%trc0/scyr
+    model%velowk%btrac_max = model%paramets%btrac_max/model%velowk%trc0/scyr
+    model%velowk%btrac_slope = model%paramets%btrac_slope*acc0/model%velowk%trc0
+
   end subroutine glide_scale_params
 
   subroutine glide_read_sigma(model,config)

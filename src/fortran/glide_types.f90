@@ -284,7 +284,8 @@ module glide_types
     real(dp),dimension(:,:)  ,pointer :: ubas_tavg  => null()
     real(dp),dimension(:,:)  ,pointer :: vbas  => null() !*FD 
     real(dp),dimension(:,:)  ,pointer :: vbas_tavg  => null() 
-    real(dp),dimension(:,:)  ,pointer :: btrc  => null() !*FD 
+    real(dp),dimension(:,:)  ,pointer :: bed_softness => null() !*FD bed softness parameter
+    real(dp),dimension(:,:)  ,pointer :: btrc  => null() !*FD  basal traction
     real(dp),dimension(:,:)  ,pointer :: tau_x => null() !*FD basal shear stress, x-dir
     real(dp),dimension(:,:)  ,pointer :: tau_y => null() !*FD basal shear stress, y-dir
   end type glide_velocity
@@ -385,7 +386,7 @@ module glide_types
     real(dp) :: alphas =    0.5d0 !*FD was a parameter in the original
     real(dp) :: thklim =  100.0   
     real(dp) :: mlimit = -200.0d0
-    real(dp) :: calving_fraction = 0.9
+    real(dp) :: calving_fraction = 0.8d0
     real(dp) :: dew    =   20.0d3
     real(dp) :: dns    =   20.0d3
     real(dp) :: dt     =    0.0
@@ -643,6 +644,7 @@ contains
     call coordsystem_allocate(model%general%velo_grid, model%velocity%vflx)
     call coordsystem_allocate(model%general%velo_grid, model%velocity%diffu)
     call coordsystem_allocate(model%general%velo_grid, model%velocity%total_diffu)
+    call coordsystem_allocate(model%general%velo_grid, model%velocity%bed_softness)
     call coordsystem_allocate(model%general%velo_grid, model%velocity%btrc)
     call coordsystem_allocate(model%general%velo_grid, model%velocity%ubas)
     call coordsystem_allocate(model%general%velo_grid, model%velocity%ubas_tavg)
@@ -717,6 +719,7 @@ contains
     deallocate(model%velocity%vflx)
     deallocate(model%velocity%diffu)
     deallocate(model%velocity%total_diffu)
+    deallocate(model%velocity%bed_softness)
     deallocate(model%velocity%btrc)
     deallocate(model%velocity%ubas)
     deallocate(model%velocity%ubas_tavg)
