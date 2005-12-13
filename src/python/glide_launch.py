@@ -34,6 +34,7 @@ def usage():
     print ''
     print 'options'
     print '--help\tthis message'
+    print '-m BINARY --model=BINARY\tmodel binary to be launched'
     print '-r NAME --results=NAME\tname of file where timing info is stored'
     print '--prefix PFX\tGLIMMER prefix'
     print '--src\tassume prefix is source directory'
@@ -89,7 +90,7 @@ def get_gmtdate():
 if __name__ == '__main__':
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:],'hr:',['help','prefix=','results=','src'])
+        opts, args = getopt.getopt(sys.argv[1:],'hr:m:',['help','prefix=','results=','model=','src'])
     except getopt.GetoptError,error:
         # print usage and exit
         print error
@@ -103,12 +104,15 @@ if __name__ == '__main__':
         sys.exit(1)        
 
     prefix=None
+    model = None
     is_src = False
     results_name = 'results'
     for o,a in opts:
         if o in ('-h', '--help'):
             usage()
             sys.exit(0)
+        if o in ('-m', '--model'):
+            model = a
         if o in ('-r', '--results'):
             results_name = a
         if o == '--prefix':
@@ -120,7 +124,8 @@ if __name__ == '__main__':
     config = ConfigParser.ConfigParser()
     config.readfp(open(configname))
 
-    model = get_runtype(config)
+    if model == None:
+        model = get_runtype(config)
     if prefix!=None:
         if is_src:
             model = os.path.join(prefix,'src','fortran',model)

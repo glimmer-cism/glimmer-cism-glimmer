@@ -1,3 +1,10 @@
+2005-12-13 Magnus Hagdorn
+ * m4macros/glimmer.m4: new file containing m4 macro for setting up GLIMMER
+ * m4macros/Makefile.am: install glimmer.m4
+ * Makefile.am: deal with m4macros dir
+ * configure.in: generate m4macros/Makefile
+ * glide_launch.py: add option to run a specific binary
+
 2005-11-28 Magnus Hagdorn
  * glide_types.f90: add new variable for bed softness
  * glide_vars.def: ditto
