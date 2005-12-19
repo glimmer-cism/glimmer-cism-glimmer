@@ -1,3 +1,7 @@
+2005-12-19 Magnus Hagdorn
+ * configure.in: bumb version to 0.5.6
+ * NEWS: update
+
 2005-12-13 Magnus Hagdorn
  * m4macros/glimmer.m4: new file containing m4 macro for setting up GLIMMER
  * m4macros/Makefile.am: install glimmer.m4

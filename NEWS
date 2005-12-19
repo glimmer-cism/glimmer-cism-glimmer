@@ -1,3 +1,13 @@
+Changes in Version 0.5.6
+========================
+* The documentation was moved into a separate module, glimmer-doc.
+* Improved built system. You can now compile GLIMMER out of tree.
+  GLIMMER also installs an m4 macro which you can use to set up paths to
+  GLIMMER.
+* Added time averages for some variables
+* Derive logfile name from config file name
+* Lots of little improvements of the various drivers
+
 Changes in Version 0.5.4
 ========================
 * The way version numbers are handled has changed. Releases have
