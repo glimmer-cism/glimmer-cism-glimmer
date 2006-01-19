@@ -378,7 +378,7 @@ contains
     call nc_errorhandle(__FILE__,__LINE__,status)
     status = nf90_get_att(ncid,mapid,'false_northing',CFproj_get_stere%false_northing)
     call nc_errorhandle(__FILE__,__LINE__,status)
-    status = nf90_get_att(ncid,mapid,'longitude_of_central_meridian',CFproj_get_stere%longitude_of_central_meridian)
+    status = nf90_get_att(ncid,mapid,'longitude_of_projection_origin',CFproj_get_stere%longitude_of_central_meridian)
     call nc_errorhandle(__FILE__,__LINE__,status)
     status = nf90_get_att(ncid,mapid,'latitude_of_projection_origin',CFproj_get_stere%latitude_of_projection_origin)
     call nc_errorhandle(__FILE__,__LINE__,status)
@@ -572,7 +572,11 @@ contains
     call nc_errorhandle(__FILE__,__LINE__,status)
     status = nf90_put_att(ncid,mapid,'false_northing',stere%false_northing)
     call nc_errorhandle(__FILE__,__LINE__,status)
-    status = nf90_put_att(ncid,mapid,'longitude_of_central_meridian',stere%longitude_of_central_meridian)
+    if (stere%polar) then
+       status = nf90_put_att(ncid,mapid,'straight_vertical_longitude_from_pole',stere%longitude_of_central_meridian)
+    else
+       status = nf90_put_att(ncid,mapid,'longitude_of_projection_origin',stere%longitude_of_central_meridian)
+    end if
     call nc_errorhandle(__FILE__,__LINE__,status)
     status = nf90_put_att(ncid,mapid,'latitude_of_projection_origin',stere%latitude_of_projection_origin)
     call nc_errorhandle(__FILE__,__LINE__,status)

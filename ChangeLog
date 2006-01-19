@@ -1,3 +1,8 @@
+2006-01-19 Ian Rutt
+ * Corrected CF mapping compliance in glimmer_CFproj.f90
+ * Added ability to write CF-compilant mapping info to glimmer_proj.f90
+ * (need to combine these two bits of code at some point)
+
 2005-12-19 Magnus Hagdorn
  * configure.in: bump version to 0.5.7 for new development series
 

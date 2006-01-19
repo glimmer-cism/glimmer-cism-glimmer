@@ -520,4 +520,96 @@ contains
 
   end subroutine proj_read_restart
 
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  subroutine proj_write_ncdf_mapping(proj,ncid,name)
+
+    use netcdf
+
+    ! Writes mapping information to an already-open netcdf file
+    ! The dataset must be in define mode when this subroutine is called
+
+    type(projection),intent(in)          :: proj
+    integer,         intent(in)          :: ncid
+    character(*),    intent(in),optional :: name
+    
+    character(40) :: nm
+    integer :: status,mapid
+
+    if (present(name)) then
+       nm=name
+    else
+       nm='mapping'
+    end if
+
+    ! Check to see if mapping variable exists, and if not, create it
+
+    status=nf90_inq_varid(ncid,nm,mapid)
+
+    if (status==NF90_ENOTVAR) then
+       status=nf90_def_var(ncid,nm,NF90_CHAR,varid=mapid)
+    end if
+
+    call nc_errorhandle(__FILE__,__LINE__,status)
+       
+    ! Add appropriate attributes
+
+    select case(proj%p_type)
+    case(1)
+       status=nf90_put_att(ncid,mapid,'grid_mapping_name','lambert_azimuthal_equal_area')
+       call nc_errorhandle(__FILE__,__LINE__,status)
+       status=nf90_put_att(ncid,mapid,'longitude_of_projection_origin',proj%lonc)
+       call nc_errorhandle(__FILE__,__LINE__,status)
+       status=nf90_put_att(ncid,mapid,'latitude_of_projection_origin',proj%latc)
+       call nc_errorhandle(__FILE__,__LINE__,status)
+       status=nf90_put_att(ncid,mapid,'false_easting',proj%cpx*proj%dx)
+       call nc_errorhandle(__FILE__,__LINE__,status)
+       status=nf90_put_att(ncid,mapid,'false_northing',proj%cpy*proj%dy)
+    case(2)
+       status=nf90_put_att(ncid,mapid,'grid_mapping_name','polar_stereographic')
+       call nc_errorhandle(__FILE__,__LINE__,status)
+       status=nf90_put_att(ncid,mapid,'straight_vertical_longitude_from_pole',proj%lonc)
+       call nc_errorhandle(__FILE__,__LINE__,status)
+       if (proj%latc>0.0) then
+          status=nf90_put_att(ncid,mapid,'latitude_of_projection_origin',90.0)
+       else
+          status=nf90_put_att(ncid,mapid,'latitude_of_projection_origin',-90.0)
+       end if
+       call nc_errorhandle(__FILE__,__LINE__,status)
+       status=nf90_put_att(ncid,mapid,'standard_parallel',proj%std_par)
+       call nc_errorhandle(__FILE__,__LINE__,status)
+       status=nf90_put_att(ncid,mapid,'false_easting',proj%cpx*proj%dx)
+       call nc_errorhandle(__FILE__,__LINE__,status)
+       status=nf90_put_att(ncid,mapid,'false_northing',proj%cpy*proj%dy)
+       call nc_errorhandle(__FILE__,__LINE__,status)
+    case(3)
+       status=nf90_put_att(ncid,mapid,'grid_mapping_name','stereographic')
+       call nc_errorhandle(__FILE__,__LINE__,status)
+       status=nf90_put_att(ncid,mapid,'longitude_of_projection_origin',proj%lonc)
+       call nc_errorhandle(__FILE__,__LINE__,status)
+       status=nf90_put_att(ncid,mapid,'latitude_of_projection_origin',proj%latc)
+       call nc_errorhandle(__FILE__,__LINE__,status)
+       status=nf90_put_att(ncid,mapid,'scale_factor_at_projection_origin',1.0)
+       call nc_errorhandle(__FILE__,__LINE__,status)
+       status=nf90_put_att(ncid,mapid,'false_easting',proj%cpx*proj%dx)
+       call nc_errorhandle(__FILE__,__LINE__,status)
+       status=nf90_put_att(ncid,mapid,'false_northing',proj%cpy*proj%dy)
+       call nc_errorhandle(__FILE__,__LINE__,status)
+    case(4)
+       status=nf90_put_att(ncid,mapid,'grid_mapping_name','stereographic')
+       call nc_errorhandle(__FILE__,__LINE__,status)
+       status=nf90_put_att(ncid,mapid,'longitude_of_projection_origin',proj%lonc)
+       call nc_errorhandle(__FILE__,__LINE__,status)
+       status=nf90_put_att(ncid,mapid,'latitude_of_projection_origin',0.0)
+       call nc_errorhandle(__FILE__,__LINE__,status)
+       status=nf90_put_att(ncid,mapid,'scale_factor_at_projection_origin',1.0)
+       call nc_errorhandle(__FILE__,__LINE__,status)
+       status=nf90_put_att(ncid,mapid,'false_easting',proj%cpx*proj%dx)
+       call nc_errorhandle(__FILE__,__LINE__,status)
+       status=nf90_put_att(ncid,mapid,'false_northing',proj%cpy*proj%dy)
+       call nc_errorhandle(__FILE__,__LINE__,status)
+    end select
+
+  end subroutine proj_write_ncdf_mapping
+
 end module glint_proj
