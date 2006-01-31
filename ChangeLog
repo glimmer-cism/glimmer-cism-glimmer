@@ -1,3 +1,7 @@
+2006-01-31 Ian Rutt
+ * Added snow densification to daily PDD scheme, and rewrote core of the
+   scheme to make it more logical. Tested fairly thoroughly.
+
 2006-01-19 Ian Rutt
  * Corrected CF mapping compliance in glimmer_CFproj.f90
  * Added ability to write CF-compilant mapping info to glimmer_proj.f90

@@ -44,7 +44,7 @@
 module glimmer_daily_pdd
 
   use glimmer_global
-  use physcon, only : pi
+  use physcon, only : pi,scyr,rhow,rhoi
 
   implicit none
 
@@ -55,11 +55,17 @@ module glimmer_daily_pdd
 
      real(sp) :: pddfs                  !*FD Later set to \texttt{(rhow / rhoi) * pddfac\_snow}
      real(sp) :: pddfi                  !*FD Later set to \texttt{(rhow / rhoi) * pddfac\_ice}
-     real(sp) :: wmax        = 0.6_sp   !*FD Fraction of melted snow that refreezes
+     real(sp) :: wmax        = 0.6_sp   !*FD Fraction of firn that must be ice before run-off occurs
      real(sp) :: pddfac_ice  = 0.008_sp !*FD PDD factor for ice (m day$^{-1}$ $^{\circ}C$^{-1}$)
      real(sp) :: pddfac_snow = 0.003_sp !*FD PDD factor for snow (m day$^{-1}$ $^{\circ}C$^{-1}$)
      real(sp) :: rain_threshold = 1.0_sp !*FD Threshold for precip melting (degC)
      integer  :: whichrain = 1  !*FD method for determining whether precip is rain or snow.
+     real(sp) :: tau0 = 10.0_sp*scyr       !*FD Snow densification timescale (seconds)
+     real(sp) :: constC = 0.0165_sp        !*FD Snow density profile factor C (m$^{-1}$)
+     real(sp) :: firnbound = 0.872_sp      !*FD Ice-firn boundary as fraction of density of ice
+     real(sp) :: snowdensity = 300.0_sp    !*FD Density of fresh snow ($\mathrm{kg}\,\mathrm{m}^{-3}$)
+     real(sp) :: tstep = 24.0_sp*60.0_sp*60.0_sp !*FD Scheme time-step (seconds)
+     real(sp) :: a1,a2,a3                  !*FD Factors for relaxation of depth
 
   end type glimmer_daily_pdd_params
 
@@ -67,6 +73,7 @@ module glimmer_daily_pdd
 
   private
   public :: glimmer_daily_pdd_params, glimmer_daily_pdd_init, glimmer_daily_pdd_mbal
+
 
 contains
 
@@ -86,6 +93,10 @@ contains
     params%pddfs = (rhow / rhoi) * params%pddfac_snow
     params%pddfi = (rhow / rhoi) * params%pddfac_ice
 
+    params%a1=params%tstep/params%tau0
+    params%a2=1.0-params%a1/2.0
+    params%a3=1.0+params%a1/2.0
+
   end subroutine glimmer_daily_pdd_init
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -101,7 +112,10 @@ contains
 
     ! local variables
     type(ConfigSection), pointer :: section
-    
+    real(sp) :: tau0
+
+    tau0=params%tau0/scyr
+
     call GetSection(config,section,'GLIMMER daily pdd')
     if (associated(section)) then
        call GetValue(section,'wmax',params%wmax)
@@ -109,7 +123,13 @@ contains
        call GetValue(section,'pddfac_snow',params%pddfac_snow)
        call GetValue(section,'rain_threshold',params%rain_threshold)
        call GetValue(section,'whichrain',params%whichrain)
+       call GetValue(section,'tau0',tau0)
+       call GetValue(section,'constC',params%constC)
+       call GetValue(section,'firnbound',params%firnbound)
+       call GetValue(section,'snowdensity',params%snowdensity)
     end if
+
+    params%tau0=tau0*scyr
 
   end subroutine daily_pdd_readconfig
 
@@ -135,6 +155,15 @@ contains
     write(message,*) 'Rain threshold temperature',params%rain_threshold,' degC'
     call write_log(message)
     write(message,*) 'Rain/snow partition method',params%whichrain
+    call write_log(message)
+    write(message,*) 'Snow densification time-scale',params%tau0/scyr,' years'
+    call write_log(message)
+    write(message,*) 'Snow density equilibrium profile factor',params%constC,' m^-1'
+    call write_log(message)
+    write(message,*) 'Ice-firn boundary as fraction of density of ice',params%firnbound
+    call write_log(message)
+    write(message,*) 'Density of fresh snow',params%snowdensity,'kg m^-3'
+    call write_log(message)
     call write_log('')
 
   end subroutine daily_pdd_printconfig
@@ -175,6 +204,7 @@ contains
              call degdaymodel(params,snowd(i,j),siced(i,j),giced(i,j),degd(i,j),rain(i,j),prcp(i,j)) 
              acab(i,j)=snowd(i,j)+siced(i,j)+giced(i,j)-old_snow(i,j)-old_sice(i,j)
              ablt(i,j)=max(prcp(i,j)-acab(i,j),0.0)
+             call firn_densify(params,snowd(i,j),siced(i,j))
           else
              ablt(i,j)=prcp(i,j)
              acab(i,j)=0.0
@@ -271,72 +301,80 @@ contains
     real(sp) :: potablt, wfrac
 
     !-------------------------------------------------------------------------
-
-    ! add snow to snow depth
+    ! Assume snowfall goes into snow, and rainfall goes into superimposed ice
 
     snowdepth = snowdepth + prcp - rain
-
-    ! assume that rain has gone into superimposed ice
-
     sicedepth = sicedepth + rain
 
-    ! this is the depth of superimposed ice that would need to be
-    ! melted before runoff can occur 
+    ! Calculate amount of superimposed ice needed before runoff can occur:
+    ! a fraction of the total depth of the firn layer.
 
     wfrac = params%wmax * (snowdepth + sicedepth)
 
-    ! this is the total potential ablation of SNOW
+    ! Initial potential ablation of snow
 
     potablt = degd * params%pddfs
 
-    ! if not enough snow to cause sice/firn > wfrac
-    ! no net mass loss but melted snow becomes sice
+    ! Start off trying to ablate snow, and add it to superimposed ice
 
-    if ( potablt + sicedepth <= wfrac ) then
+    if (potablt<snowdepth) then
+       snowdepth=snowdepth-potablt
+       sicedepth=sicedepth+potablt
+       potablt=0.0_sp
+    else
+       potablt=potablt-snowdepth
+       sicedepth=sicedepth+snowdepth
+       snowdepth=0.0_sp
+    endif
 
-       snowdepth = snowdepth - potablt
-       sicedepth = sicedepth + potablt
+    ! If we have enough superimposed ice to have runoff, trim it back
 
-    else 
+    if (sicedepth>wfrac) sicedepth=wfrac
 
-       ! have exceeded ablation threshold. now deduct
-       ! potential ablation needed to get sice up to wfrac
-       ! and set sice to this threshold.
+    ! If we have any potential ablation left, use it to melt ice, 
+    ! first from the firn, and then glacial ice
 
-       potablt = potablt - (wfrac - sicedepth)
-
-       snowdepth = snowdepth - (wfrac - sicedepth)
-       sicedepth = wfrac
-
-       ! now determine what to do with remaining potential
-       ! ablation.  if this is not sufficient to get rid of
-       ! all remaining snow then 
-
-       if (potablt < snowdepth) then
-
-          snowdepth = snowdepth - potablt 
-
-       else
-
-          ! now melting ice so change reminaing potential to ice
-          ! start to melt superimposed ice and continue to melt glacier
-          ! ice if necessary
-
-
-          potablt = params%pddfi * (potablt - snowdepth) / params%pddfs
-          snowdepth = 0.0_sp 
-
-	  sicedepth = sicedepth - potablt
-
-          if (sicedepth < 0.0_sp) then
-
-             gicedepth = gicedepth + sicedepth
-             sicedepth = 0.0_sp
-          end if
-
+    if (potablt>0.0) then 
+       potablt = params%pddfi * (potablt - snowdepth) / params%pddfs       
+       if (potablt<sicedepth) then
+          sicedepth=sicedepth-potablt
+        else
+          potablt=potablt-sicedepth
+          sicedepth=0.0_sp
+          gicedepth=gicedepth-potablt
        end if
     end if
 
   end subroutine degdaymodel
+
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  subroutine firn_densify(params,snowdepth,sicedepth)
+
+    type(glimmer_daily_pdd_params) :: params !*FD PDD parameters
+    real(sp), intent(inout) :: snowdepth     !*FD Snow depth (m)
+    real(sp), intent(inout) :: sicedepth     !*FD Superimposed ice depth (m)
+
+    real(sp) :: fracice,fracsnow,firndepth,equfdepth,newdepth
+
+    firndepth = snowdepth+sicedepth
+    fracice   = sicedepth/firndepth
+    fracsnow  = snowdepth/firndepth
+
+    if (fracsnow/=0.0) then
+       equfdepth=(1.0/(params%constC*rhow))*( &
+            rhoi*log((fracsnow*(rhoi-params%snowdensity))/(rhoi*(1.0-params%firnbound))) &
+            +(fracice-params%firnbound)*rhoi+params%snowdensity*fracsnow)
+    else
+       equfdepth=-1.0
+    end if
+
+    if (equfdepth>=0.0.and.equfdepth<firndepth) then
+       newdepth=(params%a1*equfdepth+params%a2*firndepth)/params%a3
+       snowdepth=fracsnow*newdepth
+       sicedepth=fracice*newdepth
+    end if
+
+  end subroutine firn_densify
 
 end module glimmer_daily_pdd
