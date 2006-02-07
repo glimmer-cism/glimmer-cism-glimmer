@@ -1,3 +1,9 @@
+2006-02-07 Ian Rutt
+ * Added subroutine to glimmer_config.f90 to allow arbitrary addition or
+   overwriting of config file entries once file has been read. This is
+   a first step towards allowing the arbitrary passing of runtime
+   parameters through glint API.
+
 2006-01-31 Ian Rutt
  * Added snow densification to daily PDD scheme, and rewrote core of the
    scheme to make it more logical. Tested fairly thoroughly.

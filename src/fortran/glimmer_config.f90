@@ -160,6 +160,67 @@ contains
     end do
   end subroutine PrintConfig
 
+  subroutine ConfigSetValue(config,secname,valname,value)
+    !*FD Either overwrite a given key-value pair,
+    !*FD or create a new one
+
+    type(ConfigSection), pointer :: config
+    character(*) :: secname,valname,value
+    type(ConfigSection), pointer :: found
+    type(ConfigSection), pointer :: newsec
+    type(ConfigValue), pointer :: val
+    type(ConfigValue), pointer :: newval
+
+    ! Find or create correct section
+
+    found=>config
+    do
+       if (associated(found)) then
+          if (trim(secname)==trim(found%name)) then
+             exit
+          else
+             if (associated(found%next)) then
+                found=>found%next
+             else
+                allocate(newsec)
+                found%next=>newsec
+                found=>found%next
+                found%name=trim(secname)
+                exit
+             end if
+          end if
+       end if
+    end do
+ 
+    ! Add or create key-value pair
+
+    if (.not.associated(found%values)) then
+       allocate(newval)
+       found%values=>newval
+       found%values%name=valname
+       found%values%value=value
+    else
+       val=>found%values
+       do
+          if (trim(valname)==trim(val%name)) then
+             val%value=value
+             exit
+          else
+             if (associated(val%next)) then
+                val=>val%next
+             else
+                allocate(newval)
+                val%next=>newval
+                val%next%name=valname
+                val%next%value=value
+                exit
+             end if
+          end if
+       end do
+    end if
+
+  end subroutine ConfigSetValue
+
   subroutine GetSection(config,found,name)
     !*FD Find and return section with name
     implicit none
