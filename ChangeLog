@@ -1,3 +1,9 @@
+2006-02-08 Ian Rutt
+ * Added subroutine to glimmer_config.f90 to allow the merging of two
+   config file types. This means that an additional config file can be read,
+   passed to glint as an instance of ConfigSection, and then merged with
+   another config file. 
+	
 2006-02-07 Ian Rutt
  * Added subroutine to glimmer_config.f90 to allow arbitrary addition or
    overwriting of config file entries once file has been read. This is

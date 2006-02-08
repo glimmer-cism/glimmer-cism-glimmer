@@ -173,6 +173,8 @@ contains
 
     ! Find or create correct section
 
+    if (.not.associated(config)) allocate(config)
+
     found=>config
     do
        if (associated(found)) then
@@ -189,6 +191,8 @@ contains
                 exit
              end if
           end if
+       else
+          exit
        end if
     end do
  
@@ -220,6 +224,38 @@ contains
     end if
 
   end subroutine ConfigSetValue
+
+  subroutine ConfigCombine(config1,config2)
+    !*FD Add the contents of config2 to config1,
+    !*FD overwriting if necessary
+
+    type(ConfigSection), pointer :: config1
+    type(ConfigSection), pointer :: config2
+
+    type(ConfigSection), pointer :: thissec
+    type(ConfigValue),   pointer :: thisval
+    character(namelen) :: thisname
+
+    thissec=>config2
+    do
+       if (associated(thissec)) then
+          thisval=>thissec%values
+          thisname=trim(thissec%name)
+          do
+             if (associated(thisval)) then
+                call ConfigSetValue(config1,thisname,trim(thisval%name),trim(thisval%value))
+                thisval=>thisval%next
+             else
+                exit
+             end if
+          end do
+          thissec=>thissec%next
+       else
+          exit
+       end if
+    end do
+
+  end subroutine ConfigCombine
 
   subroutine GetSection(config,found,name)
     !*FD Find and return section with name
