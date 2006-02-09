@@ -4,10 +4,19 @@
    alternative to a top-level parameter file that points to the
    instances. This is so that we can also supply an array of config file
    types to overwrite parameters read from files, but need to be sure of
-   the ordering when doing so. Changes made to the API also allow this,
-   but I will be changing the nechanism in my next commit because f95
-   inconveniently doesn't allow arrays of pointers.
-
+   the ordering when doing so. 
+ * Added a non-pointer wrapper type to glimmer_config, to allow the
+   creation of arrays of config data types. These can now be passed to
+   glint_initialise using array constructors or whatever method you like,
+   and will overwrite the data loaded from file
+ * Also added some overloaded subroutines to allow access to and
+   combination of these types
+ * For the purposes of identifying config sections where there may be more
+   than one instance in a given file, the value of the key 'tag' is now
+   significant. If one is setting a value in a config file, a tag may now
+   be specified, and if a section with that tag is found, the value is set
+   there, otherwise a new, tagged section is created.
+	
 2006-02-08 Ian Rutt
  * Added subroutine to glimmer_config.f90 to allow the merging of two
    config file types. This means that an additional config file can be read,

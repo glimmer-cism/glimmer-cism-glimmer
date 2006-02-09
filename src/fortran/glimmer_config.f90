@@ -72,9 +72,24 @@ module glimmer_config
      type(ConfigSection), pointer :: next=>NULL()
   end type ConfigSection
 
+  type ConfigData
+     !*FD This type exists so that we can have
+     !*FD arrays of config data, since f90 doesn't
+     !*FD allow arrays of pointers
+     type(ConfigSection), pointer :: config=>null()
+  end type ConfigData
+
   interface GetValue
      module procedure GetValueDouble, GetValueReal, GetValueInt, GetValueChar, GetValueLogical, &
           GetValueDoubleArray, GetValueRealArray, GetValueIntArray, GetValueCharArray
+  end interface
+
+  interface ConfigSetValue
+     module procedure ConfigSetValueData, ConfigSetValueSec
+  end interface
+
+  interface ConfigCombine
+     module procedure ConfigCombineData, ConfigCombineSec, ConfigCombineDataSec, ConfigCombineSecData
   end interface
 
 contains
@@ -160,16 +175,34 @@ contains
     end do
   end subroutine PrintConfig
 
-  subroutine ConfigSetValue(config,secname,valname,value)
+  subroutine ConfigSetValueData(config,secname,valname,value,tag)
     !*FD Either overwrite a given key-value pair,
     !*FD or create a new one
 
+    type(ConfigData) :: config
+    character(*) :: secname,valname,value
+    character(*),optional :: tag
+
+    call ConfigSetValueSec(config%config,secname,valname,value,tag)
+
+  end subroutine ConfigSetValueData
+
+  subroutine ConfigSetValueSec(config,secname,valname,value,tag)
+    !*FD Either overwrite a given key-value pair,
+    !*FD or create a new one
+    !*FD tag is a label that you can give to a particular config section
+    !*FD allowing the identification of the right section when
+    !*FD several with the same name are present (e.g. [CF output])
+
     type(ConfigSection), pointer :: config
     character(*) :: secname,valname,value
+    character(*),optional :: tag
     type(ConfigSection), pointer :: found
     type(ConfigSection), pointer :: newsec
     type(ConfigValue), pointer :: val
     type(ConfigValue), pointer :: newval
+    type(ConfigValue), pointer :: newtag
+    logical :: tagflag
 
     ! Find or create correct section
 
@@ -178,7 +211,12 @@ contains
     found=>config
     do
        if (associated(found)) then
-          if (trim(secname)==trim(found%name)) then
+          if (present(tag)) then
+             tagflag=ConfigSectionHasTag(found,tag)
+          else
+             tagflag=.true.
+          end if
+          if ((trim(secname)==trim(found%name)).and.tagflag) then
              exit
           else
              if (associated(found%next)) then
@@ -188,6 +226,12 @@ contains
                 found%next=>newsec
                 found=>found%next
                 found%name=trim(secname)
+                if (present(tag)) then
+                   allocate(newtag)
+                   newtag%name='tag'
+                   newtag%value=trim(tag)
+                   found%values=>newtag
+                end if
                 exit
              end if
           end if
@@ -223,9 +267,43 @@ contains
        end do
     end if
 
-  end subroutine ConfigSetValue
+  end subroutine ConfigSetValueSec
 
-  subroutine ConfigCombine(config1,config2)
+  subroutine ConfigCombineDataSec(config1,config2)
+    !*FD Add the contents of config2 to config1,
+    !*FD overwriting if necessary
+
+    type(ConfigData) :: config1
+    type(ConfigSection),pointer :: config2
+
+    call ConfigCombineSec(config1%config,config2)
+
+  end subroutine ConfigCombineDataSec
+
+  subroutine ConfigCombineSecData(config1,config2)
+    !*FD Add the contents of config2 to config1,
+    !*FD overwriting if necessary
+
+    type(ConfigSection),pointer :: config1
+    type(ConfigData) :: config2
+
+    call ConfigCombineSec(config1,config2%config)
+
+  end subroutine ConfigCombineSecData
+
+
+  subroutine ConfigCombineData(config1,config2)
+    !*FD Add the contents of config2 to config1,
+    !*FD overwriting if necessary
+
+    type(ConfigData) :: config1
+    type(ConfigData) :: config2
+
+    call ConfigCombineSec(config1%config,config2%config)
+
+  end subroutine ConfigCombineData
+
+  subroutine ConfigCombineSec(config1,config2)
     !*FD Add the contents of config2 to config1,
     !*FD overwriting if necessary
 
@@ -236,6 +314,8 @@ contains
     type(ConfigValue),   pointer :: thisval
     character(namelen) :: thisname
 
+    character(150) :: tag
+
     thissec=>config2
     do
        if (associated(thissec)) then
@@ -243,7 +323,11 @@ contains
           thisname=trim(thissec%name)
           do
              if (associated(thisval)) then
-                call ConfigSetValue(config1,thisname,trim(thisval%name),trim(thisval%value))
+                if (ConfigSectionHasValue(thissec,'tag',tag)) then
+                   call ConfigSetValue(config1,thisname,trim(thisval%name),trim(thisval%value),tag=tag)
+                else
+                   call ConfigSetValue(config1,thisname,trim(thisval%name),trim(thisval%value))
+                end if
                 thisval=>thisval%next
              else
                 exit
@@ -255,7 +339,47 @@ contains
        end if
     end do
 
-  end subroutine ConfigCombine
+  end subroutine ConfigCombineSec
+
+  logical function ConfigSectionHasTag(section,tag)
+    
+    type(ConfigSection), pointer :: section
+    character(*) :: tag
+    character(200) :: testtag
+
+    ConfigSectionHasTag=.false.
+    if (ConfigSectionHasValue(section,'tag',testtag)) then
+       if (trim(tag)==trim(testtag)) then
+          ConfigSectionHasTag=.true.
+       end if
+    end if
+
+  end function ConfigSectionhasTag
+
+  logical function ConfigSectionHasValue(section,valname,val)
+
+    type(ConfigSection), pointer :: section
+    type(ConfigValue), pointer :: thisval
+    character(*) :: valname,val
+
+    ConfigSectionHasValue=.false.
+    val=''
+
+    if (.not.associated(section)) return
+
+    thisval=>section%values
+    do
+       if (.not.associated(thisval)) exit
+       if (trim(valname)==trim(thisval%name)) then
+          val=trim(thisval%value)
+          ConfigSectionHasValue=.true.
+          exit
+       else
+          thisval=>thisval%next
+       end if
+    end do
+ 
+  end function ConfigSectionHasValue
 
   subroutine GetSection(config,found,name)
     !*FD Find and return section with name

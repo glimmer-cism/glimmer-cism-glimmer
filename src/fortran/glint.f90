@@ -172,7 +172,7 @@ contains
     integer,                optional,intent(in)    :: daysinyear  !*FD Number of days in the year
     logical,                optional,intent(out)   :: snow_model  !*FD Set if the mass-balance scheme has a snow-depth model
     integer,                optional,intent(out)   :: ice_dt      !*FD Ice dynamics time-step in hours
-    type(ConfigSection),dimension(:),optional,pointer ::  extraconfigs !*FD Additional configuration information - overwrites
+    type(ConfigData),dimension(:),optional ::  extraconfigs !*FD Additional configuration information - overwrites
                                                                   !*FD config data read from files
 
     ! Internal variables -----------------------------------------------------------------------
@@ -262,8 +262,7 @@ contains
        call ConfigRead(config_fnames(i),instance_config)
        if (present(extraconfigs)) then
           if (size(extraconfigs)>=i) then
-             econf=>extraconfigs(i)
-             call ConfigCombine(instance_config,econf)
+             call ConfigCombine(instance_config,extraconfigs(i))
           end if
        end if
        call glint_i_initialise(instance_config,params%instances(i),params%g_grid,params%g_grid_orog, &
