@@ -195,7 +195,7 @@ program glint_ebm_ex
   call initialise_glint(ice_sheet, &
        climate%grid%lats, &
        climate%grid%lons, &
-       paramfile, &
+       (/paramfile/), &
        orog=orog_out, &
        ice_frac=ice_frac, &
        albedo=albedo, &

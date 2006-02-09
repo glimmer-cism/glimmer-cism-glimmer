@@ -132,7 +132,7 @@ contains
 
   subroutine initialise_glint(params,lats,longs,paramfile,latb,lonb,orog,albedo, &
        ice_frac,veg_frac,snowice_frac,snowveg_frac,snow_depth,orog_lats,orog_longs,orog_latb,orog_lonb,output_flag, &
-       daysinyear,snow_model,ice_dt,hotstart_files,hotstart_times)
+       daysinyear,snow_model,ice_dt,extraconfigs)
 
     !*FD Initialises the model
 
@@ -147,9 +147,7 @@ contains
     type(glint_params),              intent(inout) :: params      !*FD parameters to be set
     real(rk),dimension(:),           intent(in)    :: lats,longs  !*FD location of gridpoints 
                                                                   !*FD in global data.
-    character(*),                    intent(in)    :: paramfile   !*FD name of file containing 
-                                                                  !*FD parameters for all required 
-                                                                  !*FD instances. 
+    character(*),dimension(:),       intent(in)    :: paramfile   !*FD array of configuration filenames.
     real(rk),dimension(:),  optional,intent(in)    :: latb        !*FD Locations of the latitudinal 
                                                                   !*FD boundaries of the grid-boxes.
     real(rk),dimension(:),  optional,intent(in)    :: lonb        !*FD Locations of the longitudinal
@@ -174,37 +172,18 @@ contains
     integer,                optional,intent(in)    :: daysinyear  !*FD Number of days in the year
     logical,                optional,intent(out)   :: snow_model  !*FD Set if the mass-balance scheme has a snow-depth model
     integer,                optional,intent(out)   :: ice_dt      !*FD Ice dynamics time-step in hours
-    character(*),dimension(:),optional,intent(in) :: hotstart_files !*FD List of hotstart files for individual instances
-    integer,dimension(:),optional,intent(in) :: hotstart_times !*FD List of hotstart time-slices
+    type(ConfigSection),dimension(:),optional,pointer ::  extraconfigs !*FD Additional configuration information - overwrites
+                                                                  !*FD config data read from files
 
     ! Internal variables -----------------------------------------------------------------------
 
     type(ConfigSection), pointer :: global_config, instance_config, section  ! configuration stuff
-    character(len=100) :: message                 ! For log-writing
-    character(fname_length):: instance_fname      ! name of instance specific configuration file
-    character(fname_length) :: hsfile
-    integer,dimension(:),allocatable :: hstimes
-    integer :: i,hst
+    character(len=100) :: message                                            ! For log-writing
+    character(fname_length),dimension(:),pointer :: config_fnames=>null()    ! array of config filenames
+    type(ConfigSection), pointer :: econf
+    integer :: i
     real(rk),dimension(:,:),allocatable :: orog_temp,if_temp,vf_temp,sif_temp,svf_temp,sd_temp,alb_temp ! Temporary output arrays
     integer,dimension(:),allocatable :: mbts,idts ! Array of mass-balance and ice dynamics timesteps
-
-    ! Check optional hotstart arrays are same length or allocate accordingly  ------------------
-
-    if (present(hotstart_files)) then
-       if (present(hotstart_times)) then
-          if (size(hotstart_files)/=size(hotstart_times)) then
-             call write_log('Hotstart file list and time-slice list must be same length',GM_FATAL,__FILE__,__LINE__)
-          else
-             allocate(hstimes(size(hotstart_files)))
-             hstimes=hotstart_times
-          end if
-       else
-          allocate(hstimes(size(hotstart_files)))
-          hstimes=1
-       end if
-    else
-       hst=1
-    end if
 
     ! Initialise year-length -------------------------------------------------------------------
 
@@ -245,19 +224,6 @@ contains
     params%g_av_airpress = 0.0
 
     ! ---------------------------------------------------------------
-    ! Open the global configuration file and read in the parameters
-    ! ---------------------------------------------------------------
-
-    call ConfigRead(paramfile,global_config)    ! Load the configuration file into the linked list
-    call glint_readconfig(params,global_config) ! Parse the list
-
-    ! Allocate array of glimmer instances
-    ! and the array of mass-balance timesteps
-
-    allocate(params%instances(params%ninstances))
-    allocate(mbts(params%ninstances),idts(params%ninstances))
-
-    ! ---------------------------------------------------------------
     ! Zero coverage maps and normalisation fields for main grid and
     ! orography grid
     ! ---------------------------------------------------------------
@@ -269,107 +235,46 @@ contains
     params%cov_norm_orog=0.0
 
     ! ---------------------------------------------------------------
+    ! Determine how many instances there are, according to what
+    ! configuration files we've been provided with
+    ! ---------------------------------------------------------------
+
+    if (size(paramfile)==1) then
+       call ConfigRead(paramfile(1),global_config)    ! Load the configuration file into the linked list
+       call glint_readconfig(global_config,params%ninstances,config_fnames,paramfile) ! Parse the list
+    else
+       params%ninstances=size(paramfile)
+       allocate(config_fnames(params%ninstances))
+       config_fnames=paramfile
+    end if
+
+    allocate(params%instances(params%ninstances))
+    allocate(mbts(params%ninstances),idts(params%ninstances))
+
+    ! ---------------------------------------------------------------
     ! Read config files, and initialise instances accordingly
     ! ---------------------------------------------------------------
 
     call write_log('Reading instance configurations')
     call write_log('-------------------------------')
 
-    ! First, see if there are multiple instances --------------------
-
-    call GetSection(global_config,section,'GLINT instance')
-
-    if (.not.associated(section)) then
-
-       ! If there aren't any GLINT instance sections, then we must
-       ! only have one instance. Otherwise, flag an error.
-
-       if (params%ninstances.gt.1) then
-          write(message,*) 'Must specify ',params%ninstances,' instance config files'
-          call write_log(message,GM_FATAL,__FILE__,__LINE__)
-       end if
-
-       ! Deal with optional hotstart file
-
-       if (present(hotstart_files)) then
-          hsfile=hotstart_files(1)
-          hst=hstimes(1)
-       else
-          hsfile=''
-          hst=1
-       end if
-
-       ! In this situation, we write the name of the parameter file, and
-       ! initialise the single instance
-
-       call write_log(trim(paramfile))
-       call glint_i_initialise(global_config,params%instances(1),params%g_grid,params%g_grid_orog, &
-            mbts(1),idts(1),params%need_winds,params%enmabal,hs_file=hsfile,hs_time=hst)
-       call write_log('')
-
-       ! Update the coverage and normalisation fields
-
-
-       params%total_coverage = params%instances(1)%frac_coverage
-       params%total_cov_orog = params%instances(1)%frac_cov_orog
-
-       where (params%total_coverage>0.0) params%cov_normalise=1.0
-       where (params%total_cov_orog>0.0) params%cov_norm_orog=1.0
-
-    else
-
-       ! Otherwise, loop through instances (we do it this way since we've already got
-       ! the first config section, but still need to get the remaining ones).
-
-       i=1
-
-       do 
-          ! The section contains one element, 'name', which
-          ! points to the config file for an individual instance.
-          ! This is read in to instance_config, and passed to the initialisation
-          ! for the instance
-
-          instance_fname = ''
-          call GetValue(section,'name',instance_fname)
-          call write_log(trim(instance_fname))
-          call ConfigRead(instance_fname,instance_config)
-          ! Deal with optional hotstart file
-
-          if (present(hotstart_files)) then
-             hsfile=hotstart_files(i)
-             hst=hstimes(i)
-          else
-             hsfile=''
-             hst=1
+    do i=1,params%ninstances
+       call ConfigRead(config_fnames(i),instance_config)
+       if (present(extraconfigs)) then
+          if (size(extraconfigs)>=i) then
+             econf=>extraconfigs(i)
+             call ConfigCombine(instance_config,econf)
           end if
-          call glint_i_initialise(instance_config,params%instances(i),params%g_grid,params%g_grid_orog, &
-               mbts(i),idts(i),params%need_winds,params%enmabal,hs_file=hsfile,hs_time=hst)
+       end if
+       call glint_i_initialise(instance_config,params%instances(i),params%g_grid,params%g_grid_orog, &
+            mbts(i),idts(i),params%need_winds,params%enmabal)
 
-          params%total_coverage = params%total_coverage + params%instances(i)%frac_coverage
-          params%total_cov_orog = params%total_cov_orog + params%instances(i)%frac_cov_orog
+       params%total_coverage = params%total_coverage + params%instances(i)%frac_coverage
+       params%total_cov_orog = params%total_cov_orog + params%instances(i)%frac_cov_orog
 
-          where (params%total_coverage>0.0) params%cov_normalise=params%cov_normalise+1.0
-          where (params%total_cov_orog>0.0) params%cov_norm_orog=params%cov_norm_orog+1.0
-
-          ! If this is the last section, exit the loop. Otherwise, load the next one
-          ! and go round again.
-          
-          if (i>=params%ninstances) exit
-          i=i+1
-
-          ! Get the next GLINT instance section, and if not present, flag an error
-
-          call GetSection(section%next,section,'GLINT instance')
-          if (.not.associated(section)) then
-             write(message,*) 'Must specify ',params%ninstances,' instance config files'
-             call write_log(message,GM_FATAL,__FILE__,__LINE__)
-          end if
-          ! check if we used all sections
-          call CheckSections(instance_config)
-       end do
-    end if
-    ! check if we used all sections
-    call CheckSections(global_config)
+       where (params%total_coverage>0.0) params%cov_normalise=params%cov_normalise+1.0
+       where (params%total_cov_orog>0.0) params%cov_norm_orog=params%cov_norm_orog+1.0
+    end do
 
     ! Check that all mass-balance time-steps are the same length and 
     ! assign that value to the top-level variable
@@ -443,7 +348,6 @@ contains
     ! Deallocate
 
     deallocate(orog_temp,alb_temp,if_temp,vf_temp,sif_temp,svf_temp,sd_temp)
-    if (allocated(hstimes)) deallocate(hstimes)
 
     ! Sort out snow_model flag
 
@@ -879,9 +783,11 @@ contains
 
   !========================================================
 
-  subroutine glint_readconfig(params,config)
+  subroutine glint_readconfig(config,ninstances,fnames,infnames)
 
-    !*FD read global parameters for GLINT model
+    !*FD Determine whether a given config file is a
+    !*FD top-level glint config file, and return parameters
+    !*FD accordingly.
 
     use glimmer_config
     use glimmer_log
@@ -889,31 +795,44 @@ contains
 
     ! Arguments -------------------------------------------
 
-    type(glint_params),intent(inout) :: params !*FD ice model parameters
-    type(ConfigSection), pointer :: config     !*FD structure holding sections of configuration file
+    type(ConfigSection),      pointer :: config !*FD structure holding sections of configuration file
+    integer,              intent(out) :: ninstances !*FD Number of instances to create
+    character(fname_length),dimension(:),pointer :: fnames !*FD list of filenames (output)
+    character(fname_length),dimension(:) :: infnames !*FD list of filenames (input)
 
     ! Internal variables ----------------------------------
 
     type(ConfigSection), pointer :: section
     character(len=100) :: message
+    integer :: i
 
-    ! -----------------------------------------------------
-    ! If there's a section called 'GLINT' in the config file,
-    ! then we use that information to overwrite the defaults.
-    ! Otherwise, it's one instance with a timestep of one year.
+    if (associated(fnames)) nullify(fnames)
 
     call GetSection(config,section,'GLINT')
     if (associated(section)) then
-       call GetValue(section,'n_instance',params%ninstances)
+       call GetValue(section,'n_instance',ninstances)
+       allocate(fnames(ninstances))
+       do i=1,ninstances
+          call GetSection(section%next,section,'GLINT instance')
+          if (.not.associated(section)) then
+             write(message,*) 'Must specify ',ninstances,' instance config files'
+             call write_log(message,GM_FATAL,__FILE__,__LINE__)
+          end if
+          call GetValue(section,'name',fnames(i))
+       end do
+    else
+       ninstances=1
+       allocate(fnames(1))
+       fnames=infnames
     end if
 
     ! Print some configuration information
 
-    call write_log('GLINT global')
-    call write_log('------------')
-    write(message,*) 'number of instances :',params%ninstances
-    call write_log(message)
-    call write_log('')
+!!$    call write_log('GLINT global')
+!!$    call write_log('------------')
+!!$    write(message,*) 'number of instances :',params%ninstances
+!!$    call write_log(message)
+!!$    call write_log('')
 
   end subroutine glint_readconfig
 

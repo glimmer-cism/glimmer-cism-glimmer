@@ -1,3 +1,13 @@
+2006-02-09 Ian Rutt
+ * Rewrote parts of glint_initialise to allow the specification of an
+   array of parameter files for individual instances in the API, as an
+   alternative to a top-level parameter file that points to the
+   instances. This is so that we can also supply an array of config file
+   types to overwrite parameters read from files, but need to be sure of
+   the ordering when doing so. Changes made to the API also allow this,
+   but I will be changing the nechanism in my next commit because f95
+   inconveniently doesn't allow arrays of pointers.
+
 2006-02-08 Ian Rutt
  * Added subroutine to glimmer_config.f90 to allow the merging of two
    config file types. This means that an additional config file can be read,

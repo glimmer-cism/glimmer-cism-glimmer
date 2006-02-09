@@ -51,7 +51,7 @@ module glint_initialise
 
 contains
 
-  subroutine glint_i_initialise(config,instance,grid,grid_orog,mbts,idts,need_winds,enmabal,hs_file,hs_time)
+  subroutine glint_i_initialise(config,instance,grid,grid_orog,mbts,idts,need_winds,enmabal)
 
     !*FD Initialise a GLINT ice model instance
 
@@ -72,8 +72,6 @@ contains
     integer,               intent(out)   :: idts        !*FD ice dynamics time-step (hours)
     logical,               intent(inout) :: need_winds  !*FD Set if this instance needs wind input
     logical,               intent(inout) :: enmabal     !*FD Set if this instance uses the energy balance mass-bal model
-    character(*),intent(in)   :: hs_file     !*FD Hotstart filename, unused if ''
-    integer,               intent(in)    :: hs_time     !*FD Hotstart time-slice
 
     ! Internal
     real(sp),dimension(:,:),allocatable :: thk
@@ -81,20 +79,6 @@ contains
     ! initialise model
 
     call glide_config(instance%model,config)
-
-    ! Patch in optional hotstart filename and start time. This is quite a fudge,
-    ! and rather unsatisfactory.
-
-    if (trim(hs_file)/='') then
-       instance%model%funits%in_first%nc%filename=trim(hs_file)
-       if (hs_time<1) then
-          instance%model%funits%in_first%current_time=1
-       else
-          instance%model%funits%in_first%current_time=hs_time
-       end if
-       instance%model%options%hotstart=1
-    end if
-
     call glide_initialise(instance%model)
     instance%ice_tstep=get_tinc(instance%model)*years2hours
     idts=instance%ice_tstep
@@ -105,7 +89,7 @@ contains
 
     ! fill dimension variables
     call glide_nc_fillall(instance%model)
-
+ 
     ! read glint configuration
 
     call glint_i_readconfig(instance,config)    

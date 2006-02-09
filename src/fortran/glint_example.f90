@@ -184,7 +184,7 @@ program glint_example
   call initialise_glint(ice_sheet, &
        climate%all_grid%lats, &
        climate%all_grid%lons, &
-       paramfile, &
+       (/paramfile/), &
        orog=orog_out, &
        ice_frac=ice_frac, &
        albedo=albedo, &
