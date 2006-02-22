@@ -607,7 +607,7 @@ contains
     call nc_errorhandle(__FILE__,__LINE__,status)
     status = nf90_put_att(ncid,mapid,'false_northing',laea%false_northing)
     call nc_errorhandle(__FILE__,__LINE__,status)
-    status = nf90_put_att(ncid,mapid,'longitude_of_central_meridian',laea%longitude_of_central_meridian)
+    status = nf90_put_att(ncid,mapid,'longitude_of_projection_origin',laea%longitude_of_central_meridian)
     call nc_errorhandle(__FILE__,__LINE__,status)
     status = nf90_put_att(ncid,mapid,'latitude_of_projection_origin',laea%latitude_of_projection_origin)
     call nc_errorhandle(__FILE__,__LINE__,status)
