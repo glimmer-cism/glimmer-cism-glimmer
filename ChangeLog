@@ -1,3 +1,7 @@
+2006-02-22 Ian Rutt
+ * Corrected CF mapping compliance in glimmer_CFproj.f90; this time,
+ changed LAEA projection.
+
 2006-02-09 Ian Rutt
  * Rewrote parts of glint_initialise to allow the specification of an
    array of parameter files for individual instances in the API, as an

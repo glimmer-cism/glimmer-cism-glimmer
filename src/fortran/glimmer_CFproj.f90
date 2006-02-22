@@ -434,7 +434,7 @@ contains
     call nc_errorhandle(__FILE__,__LINE__,status)
     status = nf90_get_att(ncid,mapid,'false_northing',CFproj_get_laea%false_northing)
     call nc_errorhandle(__FILE__,__LINE__,status)
-    status = nf90_get_att(ncid,mapid,'longitude_of_central_meridian',CFproj_get_laea%longitude_of_central_meridian)
+    status = nf90_get_att(ncid,mapid,'longitude_of_projection_origin',CFproj_get_laea%longitude_of_central_meridian)
     call nc_errorhandle(__FILE__,__LINE__,status)
     status = nf90_get_att(ncid,mapid,'latitude_of_projection_origin',CFproj_get_laea%latitude_of_projection_origin)
     call nc_errorhandle(__FILE__,__LINE__,status)
