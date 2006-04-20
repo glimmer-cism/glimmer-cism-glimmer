@@ -100,7 +100,7 @@ contains
   end subroutine isos_icewaterload
 
   subroutine isos_isostasy(model)
-    !*FD calculate isostatic adjustment due to chaning surface loads
+    !*FD calculate isostatic adjustment due to changing surface loads
     use glide_types
     implicit none
     type(glide_global_type) :: model
@@ -134,6 +134,22 @@ contains
        call calc_elastic(model%isos%rbel,load,load_factors)
     end if
   end subroutine isos_lithosphere
+
+  subroutine isos_relaxed(model)
+    !*FD Calculate the relaxed topography, assuming the isostatic depression
+    !*FD is the equilibrium state for the current topography.
+    use glide_types
+    implicit none
+    type(glide_global_type) :: model
+
+    ! Calculate the load
+    call isos_icewaterload(model)
+    ! Apply lithosphere model
+    call isos_lithosphere(model,model%isos%load,model%isos%load_factors)
+    ! Add to present topography to get relaxed topography
+    model%isos%relx = model%geometry%topg + model%isos%load
+
+  end subroutine isos_relaxed
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! private subroutines

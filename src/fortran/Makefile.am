@@ -1,16 +1,16 @@
 SUBDIRS = SLAP_library
 
 lib_LIBRARIES = libglimmer.a libglide.a libglint.a libclimate.a
-bin_PROGRAMS  =  simple_glide eis_glide glint_example glex_ebm
+bin_PROGRAMS  =  simple_glide eis_glide glint_example glex_ebm eismint3_glide
 check_PROGRAMS = test_config test_setup test_ts test_lithot test_integrate
 
-variable_DATA = glide_vars.def eis_vars.def glint_vars.def time_vars.def glint_mbal_vars.def ncdf_template.f90.in
+variable_DATA = glide_vars.def eis_vars.def glint_vars.def time_vars.def glint_mbal_vars.def eismint3_vars.def ncdf_template.f90.in
 variabledir = $(pkgdatadir)
 dist_variable_DATA = $(variable_DATA)
 
 nodist_include_HEADERS := $(wildcard *.mod)
 EXTRA_DIST = f90_dep.mak
-BUILT_SOURCES = glide_io.f90 eis_io.f90 glint_io.f90 glint_mbal_io.f90 
+BUILT_SOURCES = glide_io.f90 eis_io.f90 glint_io.f90 glint_mbal_io.f90 eismint3_io.f90
 CLEANFILES = $(BUILT_SOURCES) glimmer_version.f90 f90_dep.mak
 
 libglimmer_a_SOURCES = glimmer_version.f90 glimmer_CFproj.f90 glimmer_config.f90 glimmer_global.f90 glimmer_utils.f90 glimmer_log.f90 glimmer_ts.f90 \
@@ -24,8 +24,10 @@ libglide_a_SOURCES = glide.f90 glide_setup.f90 glide_types.f90 glide_temp.f90 gl
 libglint_a_SOURCES = glint_climate.f90 glint_initialise.f90 glint_io.f90 glint_timestep.f90 glint_type.f90 \
 		glint.f90 glint_proj.f90 glint_interp.f90 glint_global_grid.f90 glint_precip_param.f90 \
                 glint_mbal.f90 glint_constants.f90 glint_gmt.f90 glint_mbal_coupling.f90 glint_mbal_io.f90 glint_example_clim.f90 glint_smb.f90 glex_ebm_clim.f90
-libclimate_a_SOURCES = simple_forcing.f90 eis_forcing.f90 eis_ela.f90 eis_temp.f90 eis_slc.f90 eis_cony.f90 glimmer_searchcircle.f90 eis_io.f90 eis_types.f90
+libclimate_a_SOURCES = eismint3_forcing.f90 eismint3_types.f90 simple_forcing.f90 eis_forcing.f90 eis_ela.f90 eis_temp.f90 eis_slc.f90 eis_cony.f90 glimmer_searchcircle.f90 eis_io.f90 eis_types.f90 eismint3_io.f90
 
+eismint3_glide_SOURCES = eismint3_glide.f90
+eismint3_glide_LDADD = libclimate.a libglide.a libglimmer.a SLAP_library/libslap.a
 simple_glide_SOURCES = simple_glide.f90 
 simple_glide_LDADD = libclimate.a libglide.a libglimmer.a SLAP_library/libslap.a
 eis_glide_SOURCES = eis_glide.f90
@@ -47,6 +49,8 @@ test_integrate_SOURCES = test_integrate.f90 glimmer_global.f90 glimmer_physcon.f
 glide_io.f90:	glide_vars.def ncdf_template.f90.in
 		$(PYTHON) $(top_srcdir)/src/python/generate_ncvars.py $^
 eis_io.f90:	eis_vars.def ncdf_template.f90.in
+		$(PYTHON) $(top_srcdir)/src/python/generate_ncvars.py $^
+eismint3_io.f90: eismint3_vars.def ncdf_template.f90.in
 		$(PYTHON) $(top_srcdir)/src/python/generate_ncvars.py $^
 glint_io.f90:	glint_vars.def ncdf_template.f90.in
 		$(PYTHON) $(top_srcdir)/src/python/generate_ncvars.py $^

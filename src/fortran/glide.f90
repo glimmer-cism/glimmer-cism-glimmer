@@ -127,10 +127,15 @@ contains
     ! and read first time slice
     call glide_io_readall(model,model)
 
-    ! handle relaxed topo
-    if (model%options%whichrelaxed.eq.1) then
+    ! handle relaxed/equilibrium topo
+    ! Initialise isostasy first
+    call init_isostasy(model)
+    select case(model%options%whichrelaxed)
+    case(1) ! Supplied topography is relaxed
        model%isos%relx = model%geometry%topg
-    end if
+    case(2) ! Supplied topography is in equilibrium
+       call isos_relaxed(model)
+    end select
 
     ! set uniform basal heat flux
     model%temper%bheatflx = model%paramets%geot
@@ -141,7 +146,6 @@ contains
     call glide_io_createall(model)
 
     ! initialise glide components
-    call init_isostasy(model)
     call init_velo(model)
     call init_temp(model)
     call init_thck(model)

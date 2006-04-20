@@ -128,9 +128,9 @@ module glide_types
     !*FD Ice thickness: 
     !*FD \begin{description} 
     !*FD \item[0] No action 
-    !*FD \item[1] Set thickness to zero if relaxed bedrock is more 
+    !*FD \item[1] Set thickness to zero if floating 
+    !*FD \item[2] Set thickness to zero if relaxed bedrock is more 
     !*FD than certain water depth  
-    !*FD \item[2] Set thickness to zero if floating 
     !*FD \item[3] Lose fraction of ice when edge cell
     !*FD \end{description}
 
@@ -176,6 +176,7 @@ module glide_types
     !*FD \begin{description}
     !*FD \item[0] get relaxed topo from separate variable
     !*FD \item[1] first time slice of input topo is relaxed
+    !*FD \item[2] first time slice of input topo is in isostatic equilibrium
     !*FD \end{description}
 
     integer :: hotstart = 0

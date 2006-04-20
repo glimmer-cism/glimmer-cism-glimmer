@@ -1,3 +1,9 @@
+2006-04-20 Ian Rutt
+ * Added driver for EISMINT3 Greenland scenario, based on Magi's EISMINT
+ 1 & 2 drivers.
+ * Added option to specify topography as being in isostatic equilibrium
+ and thus calculate relaxed topography on the fly.
+
 2006-02-22 Ian Rutt
  * Corrected CF mapping compliance in glimmer_CFproj.f90; this time,
  changed LAEA projection.

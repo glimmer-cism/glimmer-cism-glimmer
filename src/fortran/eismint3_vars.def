@@ -1,0 +1,23 @@
+#[]
+#dimensions:    time, level, y1, x1
+#units:         
+#long_name:     
+#data:          
+#factor:        
+
+# setup for code generator
+[VARSET]
+# prefix of the generated module
+name:     eismint3
+# f90 type containing all necessary data
+datatype: eismint3_climate
+# module where type is defined
+datamod:  eismint3_types
+
+[prcp]
+dimensions:    time,y1,x1
+units:         meter/year
+long_name:     accumulation
+data:          data%prcp
+load:          1
+
