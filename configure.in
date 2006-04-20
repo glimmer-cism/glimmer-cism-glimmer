@@ -37,7 +37,7 @@ f95string=`$FC -V 2>&1`
 f95_moduleinclude="-I"
 f95_preprocessor="-fpp"
 # testing for SUN f95 compiler
-fs=`echo $f95string |$EGREP "Sun"`
+fs=`echo $f95string |$EGREP "Sun|Forte"`
 if test "$fs" != "" ; then
   f95v="SUN f95"
   f95_moduleinclude="-M"
