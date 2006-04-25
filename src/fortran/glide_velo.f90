@@ -278,8 +278,8 @@ contains
     type(glide_global_type) :: model                  !*FD model instance
     integer, intent(in)                 :: flag1      !*FD \texttt{flag1} sets the calculation
                                                       !*FD method to use for the basal velocity
-                                                      !*FD (corresponds to \texttt{whichslip} elsewhere
-                                                      !*FD in the model. 
+                                                      !*FD (corresponded to \texttt{whichslip} in the
+                                                      !*FD old model. 
     real(dp),dimension(:,:),intent(in)   :: btrc     !*FD The basal slip coefficient.
     real(dp),dimension(:,:),intent(out)   :: ubas     !*FD The $x$ basal velocity (scaled)
     real(dp),dimension(:,:),intent(out)   :: vbas     !*FD The $y$ basal velocity (scaled)

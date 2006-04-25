@@ -105,15 +105,6 @@ module glide_types
     !*FD \,\mathrm{Pa}^{-n}$
     !*FD \end{description}
 
-    integer :: whichslip = 4
-
-    !*FD Horizontal bed velocity: 
-    !*FD \begin{description} 
-    !*FD \item[0] Linear function of gravitational driving stress 
-    !*FD \item[1--3] Unknown 
-    !*FD \item[4] Set to zero everywhere 
-    !*FD \end{description}
-
     integer :: whichbwat = 2
 
     !*FD Basal water depth: 
@@ -142,16 +133,6 @@ module glide_types
     !*FD \item[1] Set (non--zero) constant
     !*FD \item[2] Set to (non--zero) constant where where temperature is at pressure melting point of ice, otherwise to zero
     !*FD \item[3] \texttt{tanh} function of basal water depth 
-    !*FD \end{description}
-
-    integer :: whichstrs = 2
-
-    !*FD Stress solution: 
-    !*FD \begin{description}
-    !*FD \item[0] Zeroth-order 
-    !*FD \item[1] First-order 
-    !*FD \item[2] Vertically-integrated first-order 
-    !*FD \item[3] No action (use when velocity found elsewhere) 
     !*FD \end{description}
 
     integer :: whichevol = 0

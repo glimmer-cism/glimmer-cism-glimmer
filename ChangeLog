@@ -1,3 +1,6 @@
+2006-04-25 Ian Rutt
+ * Removed redundant GLIDE options (sliding_law and stress_calc)
+
 2006-04-20 Magnus Hagdorn
  * configure.in: when looking for Sun compiler also grep for Forte
 

@@ -528,11 +528,9 @@ contains
     call GetValue(section,'ioparams',model%funits%ncfile)
     call GetValue(section,'temperature',model%options%whichtemp)
     call GetValue(section,'flow_law',model%options%whichflwa)
-    call GetValue(section,'sliding_law',model%options%whichslip)
     call GetValue(section,'basal_water',model%options%whichbwat)
     call GetValue(section,'marine_margin',model%options%whichmarn)
     call GetValue(section,'slip_coeff',model%options%whichbtrc)
-    call GetValue(section,'stress_calc',model%options%whichstrs)
     call GetValue(section,'evolution',model%options%whichevol)
     call GetValue(section,'vertical_integration',model%options%whichwvel)
     call GetValue(section,'topo_is_relaxed',model%options%whichrelaxed)
@@ -555,12 +553,6 @@ contains
          'Patterson and Budd               ', &
          'Patterson and Budd (temp=-10degC)', &
          'const 1e-16a^-1Pa^-n             ' /)
-    character(len=*), dimension(0:4), parameter :: sliding = (/ &
-         'gravity', &
-         'unknown', &
-         'unknown', &
-         'unknown', &
-         'zero   ' /)
     character(len=*), dimension(0:2), parameter :: basal_water = (/ &
          'local water balance', &
          'local + const flux ', &
@@ -576,11 +568,6 @@ contains
          'const if T>0', &
          '~basal water', &
          '~basal melt '/)
-    character(len=*), dimension(0:3), parameter :: stress = (/ &
-         'zeroth-order                     ', &
-         'first-order                      ', &
-         'vertically-integrated first-order',&
-         'none                             ' /)
     character(len=*), dimension(0:2), parameter :: evolution = (/ &
          'pseudo-diffusion', &
          'ADI scheme      ', &
@@ -603,11 +590,6 @@ contains
     end if
     write(message,*) 'flow law                : ',model%options%whichflwa,flow_law(model%options%whichflwa)
     call write_log(message)
-    if (model%options%whichslip.lt.0 .or. model%options%whichslip.ge.size(sliding)) then
-       call write_log('Error, sliding_law out of range',GM_FATAL)
-    end if
-    write(message,*) 'sliding_law             : ',model%options%whichslip, sliding(model%options%whichslip)
-    call write_log(message)
     if (model%options%whichbwat.lt.0 .or. model%options%whichbwat.ge.size(basal_water)) then
        call write_log('Error, basal_water out of range',GM_FATAL)
     end if
@@ -622,11 +604,6 @@ contains
        call write_log('Error, slip_coeff out of range',GM_FATAL)
     end if
     write(message,*) 'slip_coeff              : ', model%options%whichbtrc, slip_coeff(model%options%whichbtrc)
-    call write_log(message)
-    if (model%options%whichstrs.lt.0 .or. model%options%whichstrs.ge.size(stress)) then
-       call write_log('Error, stress_calc out of range',GM_FATAL)
-    end if
-    write(message,*) 'stress_calc             : ', model%options%whichstrs, stress(model%options%whichstrs)
     call write_log(message)
     if (model%options%whichevol.lt.0 .or. model%options%whichevol.ge.size(evolution)) then
        call write_log('Error, evolution out of range',GM_FATAL)
