@@ -54,6 +54,7 @@ module eismint3_types
      real(sp),dimension(:,:),pointer :: arng !*FD Surface temp half-range
      real(sp),dimension(:,:),pointer :: usrf !*FD Surface elevation
      real(sp),dimension(:,:),pointer :: ablt !*FD Ablation
+     real(sp),dimension(:,:),pointer :: presusurf !*FD Present-day upper-surface elevation
      logical,dimension(:,:),pointer :: landsea !*FD Land-sea mask
      type(glimmer_pdd_params) :: pdd_scheme
   end type eismint3_climate

@@ -76,16 +76,14 @@ program eismint3_glide
   call glide_nc_fillall(model)
   time = model%numerics%tstart
 
-  call eismint3_clim(climate,model)
-  call spinup_lithot(model)
-
-  do while(time.le.model%numerics%tend)
+  do
+     call eismint3_clim(climate,model)
      call glide_tstep_p1(model,time)
      call glide_tstep_p2(model)
      call glide_tstep_p3(model)
      ! override masking stuff for now
      time = time + model%numerics%tinc
-     call eismint3_clim(climate,model)
+     if (time.gt.model%numerics%tend) exit
   end do
 
   ! finalise GLIDE

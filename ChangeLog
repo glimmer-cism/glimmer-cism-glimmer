@@ -1,3 +1,7 @@
+2006-04-27 Ian Rutt
+ * Final version of EISMINT3 Greenland scenario. Builds ice-sheet from
+ scratch with one year's present-day mass-balance as seed.
+
 2006-04-25 Ian Rutt
  * Removed redundant GLIDE options (sliding_law and stress_calc)
 

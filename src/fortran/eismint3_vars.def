@@ -21,3 +21,10 @@ long_name:     accumulation
 data:          data%prcp
 load:          1
 
+[presusurf]
+# Present-day upper surface elevation
+dimensions:    time,y1,x1
+units:         meter
+long_name:     present_surface
+data:          data%presusurf
+load:          1

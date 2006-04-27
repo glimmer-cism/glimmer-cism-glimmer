@@ -58,6 +58,8 @@ contains
     use glide_types
     use glimmer_config
     use eismint3_io
+    use glide_io
+    use glide_setup
 
     implicit none
 
@@ -71,11 +73,29 @@ contains
     call coordsystem_allocate(model%general%ice_grid,climate%acab)
     call coordsystem_allocate(model%general%ice_grid,climate%usrf)
     call coordsystem_allocate(model%general%ice_grid,climate%ablt)
+    call coordsystem_allocate(model%general%ice_grid,climate%presusurf)
     call coordsystem_allocate(model%general%ice_grid,climate%landsea)
 
     call eismint3_io_readall(climate,model)
     call glimmer_pdd_init(climate%pdd_scheme,config)
  
+    ! Calculate initial thickness.
+
+    where (climate%presusurf>0.0)
+       climate%landsea=.true.
+    elsewhere
+       climate%landsea=.false.
+    end where
+
+    call eismint3_temp(climate%artm,climate%arng,climate%presusurf,model%climate%lati)
+    call glimmer_pdd_mbal(climate%pdd_scheme,climate%artm,climate%arng,climate%prcp,climate%ablt,climate%acab,climate%landsea)
+
+    ! Put it into glide
+
+    call glide_set_thk(model,max(0.0,climate%acab*model%numerics%tinc))
+    call glide_calclsrf(model%geometry%thck, model%geometry%topg, model%climate%eus,model%geometry%lsrf)
+    model%geometry%usrf = model%geometry%thck + model%geometry%lsrf
+
   end subroutine eismint3_initialise
 
   subroutine eismint3_clim(climate,model)
@@ -93,9 +113,7 @@ contains
        climate%landsea=.false.
     end where
 
-    climate%artm=49.13-0.007992*max(climate%usrf,20*(model%climate%lati-65.0))-0.7576*model%climate%lati
-    climate%arng=30.38-0.006277*climate%usrf-0.3262*model%climate%lati-climate%artm
-
+    call eismint3_temp(climate%artm,climate%arng,climate%usrf,model%climate%lati)
     call glimmer_pdd_mbal(climate%pdd_scheme,climate%artm,climate%arng,climate%prcp,climate%ablt,climate%acab,climate%landsea)
 
     where (.not.climate%landsea) climate%acab=0.0
@@ -104,5 +122,15 @@ contains
     call glide_set_artm(model,climate%artm)
 
   end subroutine eismint3_clim
+
+  subroutine eismint3_temp(artm,arng,usrf,lati)
+
+    real(sp),dimension(:,:),intent(out) :: artm,arng
+    real(sp),dimension(:,:),intent(in)  :: usrf,lati
+
+    artm=49.13-0.007992*max(usrf,20*(lati-65.0))-0.7576*lati
+    arng=30.78-0.006277*usrf-0.3262*lati-artm
+
+  end subroutine eismint3_temp
 
 end module eismint3_forcing
