@@ -300,7 +300,7 @@ contains
 
 !-------------------------------------------------------------------------
 
-  subroutine glide_marinlim(which,whicht,thck,relx,lati,mask,mlimit,calving_fraction,eus,ablation_field)
+  subroutine glide_marinlim(which,thck,relx,topg,mask,mlimit,calving_fraction,eus,ablation_field)
 
     !*FD Removes non-grounded ice, according to one of two altenative
     !*FD criteria, and sets upper surface of non-ice-covered points 
@@ -322,12 +322,9 @@ contains
                                                      !*FD \item[1] Set thickness to zero if
                                                      !*FD ice is floating.
                                                      !*FD \end{description}
-    integer,                intent(in)    :: whicht  !*FD Thickness calculation option. Only acted on
-                                                     !*FD if equals six.
     real(dp),dimension(:,:),intent(inout) :: thck    !*FD Ice thickness (scaled)
     real(dp),dimension(:,:),intent(in)    :: relx    !*FD Relaxed topography (scaled)
-    real(sp),dimension(:,:),intent(in)    :: lati    !*FD Array of latitudes (only used if 
-                                                     !*FD $\mathtt{whicht}=6$).
+    real(dp),dimension(:,:),intent(in)    :: topg    !*FD Present bedrock topography (scaled)
     integer, dimension(:,:),pointer       :: mask    !*FD grid type mask
     real(dp)                              :: mlimit  !*FD Lower limit on topography elevation for
                                                      !*FD ice to be present (scaled). Used with 
@@ -368,18 +365,16 @@ contains
              end if
           end do
        end do
+
+    case(4) ! Set thickness to zero at marine edge if present
+            ! bedrock is below a given level
+       where (is_marine_ice_edge(mask).and.topg<mlimit+eus)
+          ablation_field=thck
+          thck = 0.0d0
+       end where
+
     end select
 
-    !---------------------------------------------------------------------
-    ! Not sure what this option does - it's only used when whichthck=6
-    !---------------------------------------------------------------------
-
-    select case(whicht)
-    case(6)
-      where (lati == 0.0)
-        thck = 0.0d0
-      end where
-    end select
   end subroutine glide_marinlim
 
   subroutine glide_load_sigma(model,unit)
@@ -557,11 +552,12 @@ contains
          'local water balance', &
          'local + const flux ', &
          'none               ' /)
-    character(len=*), dimension(0:3), parameter :: marine_margin = (/ &
+    character(len=*), dimension(0:4), parameter :: marine_margin = (/ &
          'ignore            ', &
          'no ice shelf      ', &
          'threshold         ', &
-         'const calving rate' /)
+         'const calving rate', &
+         'edge threshold    '/)
     character(len=*), dimension(0:4), parameter :: slip_coeff = (/ &
          'zero        ', &
          'const       ', &

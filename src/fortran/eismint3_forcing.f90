@@ -60,12 +60,16 @@ contains
     use eismint3_io
     use glide_io
     use glide_setup
+    use glimmer_log
 
     implicit none
 
     type(eismint3_climate) :: climate      !*FD structure holding EISMINT3 climate
     type(ConfigSection), pointer :: config !*FD structure holding sections of configuration file   
     type(glide_global_type) :: model       !*FD model instance
+
+    call eismint3_readconfig(climate,config)
+    call eismint3_printconfig(climate)
 
     call coordsystem_allocate(model%general%ice_grid,climate%prcp)
     call coordsystem_allocate(model%general%ice_grid,climate%artm)
@@ -78,25 +82,65 @@ contains
 
     call eismint3_io_readall(climate,model)
     call glimmer_pdd_init(climate%pdd_scheme,config)
- 
-    ! Calculate initial thickness.
 
-    where (climate%presusurf>0.0)
-       climate%landsea=.true.
-    elsewhere
-       climate%landsea=.false.
-    end where
+    select case(climate%loadthk)
+    case(0)
+       ! Calculate initial thickness.
 
-    call eismint3_temp(climate%artm,climate%arng,climate%presusurf,model%climate%lati)
-    call glimmer_pdd_mbal(climate%pdd_scheme,climate%artm,climate%arng,climate%prcp,climate%ablt,climate%acab,climate%landsea)
+       where (climate%presusurf>0.0)
+          climate%landsea=.true.
+       elsewhere
+          climate%landsea=.false.
+       end where
 
-    ! Put it into glide
+       call eismint3_temp(climate%artm,climate%arng,climate%presusurf,model%climate%lati)
+       call glimmer_pdd_mbal(climate%pdd_scheme,climate%artm,climate%arng,climate%prcp,climate%ablt,climate%acab,climate%landsea)
 
-    call glide_set_thk(model,max(0.0,climate%acab*model%numerics%tinc))
-    call glide_calclsrf(model%geometry%thck, model%geometry%topg, model%climate%eus,model%geometry%lsrf)
-    model%geometry%usrf = model%geometry%thck + model%geometry%lsrf
+       ! Put it into glide
+
+       call glide_set_thk(model,max(0.0,climate%acab*model%numerics%tinc))
+       call glide_calclsrf(model%geometry%thck, model%geometry%topg, model%climate%eus,model%geometry%lsrf)
+       model%geometry%usrf = model%geometry%thck + model%geometry%lsrf
+    case(1)
+       ! do nothing
+    case(2)
+       call write_log('Unknown value for climate%loadthk',GM_FATAL)
+    end select
 
   end subroutine eismint3_initialise
+
+  subroutine eismint3_readconfig(climate,config)
+    !*FD read configuration
+    use glimmer_log
+    use glimmer_config
+    implicit none
+    type(eismint3_climate) :: climate         !*FD structure holding climate info
+    type(ConfigSection), pointer :: config  !*FD structure holding sections of configuration file   
+    ! local variables
+    type(ConfigSection), pointer :: section
+
+    call GetSection(config,section,'EISMINT-3')
+    if (associated(section)) then
+       call GetValue(section,'load_thk',climate%loadthk)
+    end if
+
+  end subroutine eismint3_readconfig
+
+  subroutine eismint3_printconfig(climate)
+    !*FD print eismint3 climate configuration
+    use glimmer_log
+    implicit none
+    type(eismint3_climate) :: climate   !*FD structure holding climate info
+    character(len=100) :: message
+
+    call write_log_div
+    call write_log('EISMINT-3 Greenland configuration')
+    call write_log('------------------------------------')
+    write(message,*) 'load thickness  : ',climate%loadthk
+    call write_log(message)
+    call write_log('')
+
+  end subroutine eismint3_printconfig
 
   subroutine eismint3_clim(climate,model)
 

@@ -316,10 +316,9 @@ contains
     ! depth, depending on value of whichmarn
     ! ------------------------------------------------------------------------ 
     call glide_marinlim(model%options%  whichmarn, &
-         0, &                                        !magi a hack, someone explain what whichthck=6 does
          model%geometry% thck,      &
          model%isos% relx,      &
-         model%climate%  lati,      &
+         model%geometry%topg,   &
          model%geometry%thkmask,    &
          model%numerics%mlimit,     &
          model%numerics%calving_fraction, &

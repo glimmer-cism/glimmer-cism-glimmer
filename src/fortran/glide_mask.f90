@@ -57,6 +57,7 @@ module glide_mask
   integer, parameter :: glide_mask_stream_margin  = 32
   integer, parameter :: glide_mask_land_margin    = 64
   integer, parameter :: glide_mask_shelf_front    = 128
+  integer, parameter :: glide_mask_marine_edge    = 256
 
 contains
   subroutine glide_set_mask(model)
@@ -122,6 +123,13 @@ contains
                 MASK(ew,ns) = ior(MASK(ew,ns),glide_mask_grounding_line)
              end if
           end if
+          ! Edge of marine ice, whether floating or not
+          if ((model%geometry%topg(ew,ns) .lt. model%climate%eus.and.&
+               model%geometry%thck(ew,ns)>0.0).and. &
+               (is_ocean(MASK(ew-1,ns)) .or. is_ocean(MASK(ew+1,ns)) .or. &
+               is_ocean(MASK(ew,ns-1)) .or. is_ocean(MASK(ew,ns+1)))) then
+             MASK(ew,ns) = ior(MASK(ew,ns),glide_mask_marine_edge)
+          end if
        end do
     end do
   end subroutine glide_set_mask
@@ -181,4 +189,14 @@ contains
 
     is_calving = (iand(mask,glide_mask_shelf_front) .gt. 0 .and. mask.gt.0)
   end function is_calving
+
+  logical elemental function is_marine_ice_edge(mask)
+    !*FD return .true. if node is at edge of ice and topgraphy is
+    !*FD below sea-level
+    implicit none
+    integer, intent(in) :: mask
+
+    is_marine_ice_edge = (iand(mask,glide_mask_marine_edge) .gt. 0 .and. mask.gt.0)
+  end function is_marine_ice_edge
+
 end module glide_mask

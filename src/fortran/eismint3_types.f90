@@ -57,6 +57,7 @@ module eismint3_types
      real(sp),dimension(:,:),pointer :: presusurf !*FD Present-day upper-surface elevation
      logical,dimension(:,:),pointer :: landsea !*FD Land-sea mask
      type(glimmer_pdd_params) :: pdd_scheme
+     integer :: loadthk=0 !*FD Load thickness from file or start from scratch
   end type eismint3_climate
 
 end module eismint3_types
