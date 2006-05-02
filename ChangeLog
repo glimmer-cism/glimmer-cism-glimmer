@@ -1,6 +1,11 @@
 2006-05-02 Ian Rutt
  * Added temperature half-range to glint output variables as glint_arng
-
+ * Cleared up series of important confusions/bugs in mass-balance
+ calculations in glint. Note that all mass-balance calculations in glint,
+ including in the two PDD schemes are done in terms of water-equivalent
+ depths. The mass balance is then converted to ice-equivalent depth at the
+ point where the glide timestep subroutines are called.
+	
 2006-04-27 Ian Rutt
  * Final version of EISMINT3 Greenland scenario. Can choose to start from
  present-day ice sheet or from no ice.

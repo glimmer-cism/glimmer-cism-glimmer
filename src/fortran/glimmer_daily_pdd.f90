@@ -43,6 +43,10 @@
 
 module glimmer_daily_pdd
 
+  !*FD The daily PDD model.
+  !*FD N.B. all quantities, inputs and outputs are in m water equivalent.
+  !*FD PDD factors are no longer converted to ice equivalent.
+
   use glimmer_global
   use physcon, only : pi,scyr,rhow,rhoi
 
@@ -53,11 +57,9 @@ module glimmer_daily_pdd
      !*FD Holds parameters for daily positive-degree-day mass-balance
      !*FD calculation. 
 
-     real(sp) :: pddfs                  !*FD Later set to \texttt{(rhow / rhoi) * pddfac\_snow}
-     real(sp) :: pddfi                  !*FD Later set to \texttt{(rhow / rhoi) * pddfac\_ice}
      real(sp) :: wmax        = 0.6_sp   !*FD Fraction of firn that must be ice before run-off occurs
-     real(sp) :: pddfac_ice  = 0.008_sp !*FD PDD factor for ice (m day$^{-1}$ $^{\circ}C$^{-1}$)
-     real(sp) :: pddfac_snow = 0.003_sp !*FD PDD factor for snow (m day$^{-1}$ $^{\circ}C$^{-1}$)
+     real(sp) :: pddfac_ice  = 0.008_sp !*FD PDD factor for ice (m water day$^{-1}$ $^{\circ}C$^{-1}$)
+     real(sp) :: pddfac_snow = 0.003_sp !*FD PDD factor for snow (m water day$^{-1}$ $^{\circ}C$^{-1}$)
      real(sp) :: rain_threshold = 1.0_sp !*FD Threshold for precip melting (degC)
      integer  :: whichrain = 1  !*FD method for determining whether precip is rain or snow.
      real(sp) :: tau0 = 10.0_sp*scyr       !*FD Snow densification timescale (seconds)
@@ -89,9 +91,6 @@ contains
 
     call daily_pdd_readconfig(params,config)
     call daily_pdd_printconfig(params)
-
-    params%pddfs = (rhow / rhoi) * params%pddfac_snow
-    params%pddfi = (rhow / rhoi) * params%pddfac_ice
 
     params%a1=params%tstep/params%tau0
     params%a2=1.0-params%a1/2.0
@@ -313,7 +312,7 @@ contains
 
     ! Initial potential ablation of snow
 
-    potablt = degd * params%pddfs
+    potablt = degd * params%pddfac_snow
 
     ! Start off trying to ablate snow, and add it to superimposed ice
 
@@ -335,7 +334,7 @@ contains
     ! first from the firn, and then glacial ice
 
     if (potablt>0.0) then 
-       potablt = params%pddfi * (potablt - snowdepth) / params%pddfs       
+       potablt = params%pddfac_ice * (potablt - snowdepth) / params%pddfac_snow       
        if (potablt<sicedepth) then
           sicedepth=sicedepth-potablt
         else

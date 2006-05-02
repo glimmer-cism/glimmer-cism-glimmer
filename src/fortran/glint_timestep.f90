@@ -71,6 +71,7 @@ contains
     use glint_climate
     use glint_routing
     use glimmer_log
+    use physcon, only: rhow,rhoi
     implicit none
 
     ! ------------------------------------------------------------------------  
@@ -200,6 +201,10 @@ contains
        ! Constrain accumulation according to topography and domain edges -----
 
        call fix_acab(instance%ablt,instance%acab,instance%prcp,thck_temp,instance%local_orog)
+
+       ! Convert mass-balance to ice-equivalent rather than water-equivalent
+
+       instance%acab=instance%acab*(rhow/rhoi)
 
        ! Put climate inputs in the appropriate places, with conversion ----------
 

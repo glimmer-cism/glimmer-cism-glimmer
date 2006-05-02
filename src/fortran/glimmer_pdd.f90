@@ -52,6 +52,9 @@ module glimmer_pdd
   !*FD the integration code.
   !*FD
   !*FD Note also that this code now deals in {\it unscaled} variables.
+  !*FD 
+  !*FD All precip and mass-balance amounts are as meters of water equivalent. PDD
+  !*FD factors are no longer converted in the code.
 
   use glimmer_global, only : dp,sp
 
@@ -86,11 +89,9 @@ module glimmer_pdd
 
     ! Parameters for the PDD calculation
 
-    real(sp) :: pddfs               !*FD Later set to \texttt{(rhow / rhoi) * pddfac\_snow}
-    real(sp) :: pddfi               !*FD Later set to \texttt{(rhow / rhoi) * pddfac\_ice}
     real(sp) :: wmax        = 0.6   !*FD Fraction of melted snow that refreezes
-    real(dp) :: pddfac_ice  = 0.008 !*FD PDD factor for ice (m day$^{-1}$ $^{\circ}C$^{-1}$)
-    real(dp) :: pddfac_snow = 0.003 !*FD PDD factor for snow (m day$^{-1}$ $^{\circ}C$^{-1}$)
+    real(dp) :: pddfac_ice  = 0.008 !*FD PDD factor for ice (m water day$^{-1}$ $^{\circ}C$^{-1}$)
+    real(dp) :: pddfac_snow = 0.003 !*FD PDD factor for snow (m water day$^{-1}$ $^{\circ}C$^{-1}$)
 
   end type glimmer_pdd_params
  	 
@@ -219,7 +220,7 @@ contains
 
           ! this is the total potential ablation of SNOW
     
-          pablt = pdd * params%pddfs
+          pablt = pdd * params%pddfac_snow
 
           ! if the total snow ablation is less than the depth of 
           ! superimposed ice - no runoff occurs
@@ -242,7 +243,7 @@ contains
           else if(pablt > wfrac .and.pablt <= prcp(ew,ns)) then   
             ablt(ew,ns) = pablt - wfrac 
           else
-            ablt(ew,ns) = prcp(ew,ns) - wfrac + params%pddfi*(pdd-prcp(ew,ns)/params%pddfs) 
+            ablt(ew,ns) = prcp(ew,ns) - wfrac + params%pddfac_ice*(pdd-prcp(ew,ns)/params%pddfac_snow) 
           end if
 
           ! Finally, mass-balance is difference between accumulation and
@@ -334,7 +335,6 @@ contains
     !*FD Initialises the positive-degree-day-table.
 
     use glimmer_global, only: sp
-    use physcon, only: rhoi,rhow
     use glimmer_integrate
     use glimmer_log
 
@@ -347,11 +347,6 @@ contains
     real(sp)           :: tma,dtmj
     real(sp),parameter :: twopi = 3.1416 * 2.0 
     integer  :: kx,ky, i,j
-
-    ! Initialise a couple of constants
-
-    params%pddfs = (rhow / rhoi) * params%pddfac_snow
-    params%pddfi = (rhow / rhoi) * params%pddfac_ice
 
     !--------------------------------------------------------------------
     ! Main loops:
