@@ -1,3 +1,6 @@
+2006-05-02 Ian Rutt
+ * Added temperature half-range to glint output variables as glint_arng
+
 2006-04-27 Ian Rutt
  * Final version of EISMINT3 Greenland scenario. Can choose to start from
  present-day ice sheet or from no ice.

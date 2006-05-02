@@ -39,6 +39,13 @@ standard_name: surface_temperature
 data:          data%artm
 coordinates:   lon lat
 
+[glint_arng]
+dimensions:    time, y1, x1
+units:         degreeC
+long_name:     air temperture half-range
+data:          data%arng
+coordinates:   lon lat
+
 [glint_prcp]
 dimensions:    time, y1, x1
 units:         meter/year
