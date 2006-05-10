@@ -201,16 +201,16 @@ module glide_types
     !*FD temporary array used for masking temperature grid
 
     real(dp),dimension(:,:),pointer :: thck => null()
-    !*FD The thickness of the ice, divided by \texttt{thck0}.
+    !*FD The thickness of the ice, divided by \texttt{thk0}.
 
     real(dp),dimension(:,:),pointer :: usrf => null()
-    !*FD The elevation of the upper ice surface, divided by \texttt{thck0}.
+    !*FD The elevation of the upper ice surface, divided by \texttt{thk0}.
 
     real(dp),dimension(:,:),pointer :: lsrf => null() 
-    !*FD The elevation of the lower ice surface, divided by \texttt{thck0}.
+    !*FD The elevation of the lower ice surface, divided by \texttt{thk0}.
 
     real(dp),dimension(:,:),pointer :: topg => null() 
-    !*FD The elevation of the topography, divided by \texttt{thck0}.
+    !*FD The elevation of the topography, divided by \texttt{thk0}.
 
     integer, dimension(:,:),pointer :: mask => null()
     !*FD Set to zero for all points where $\mathtt{thck}=0$, otherwise non-zero.
