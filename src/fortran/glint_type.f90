@@ -132,6 +132,8 @@ module glint_type
      real(sp) :: lapse_rate   =   8.0 !*FD Uniform lapse rate in deg C/km 
      !*FD (N.B. This should be \emph{positive} for 
      !*FD temperature falling with height!)
+     real(sp) :: data_lapse_rate = 8.0 !*FD Implied lapse rate in large-scale data (used for
+     !*FD tuning). Set equal to lapse\_rate if not supplied.
 
      ! Counter for averaging temperature input --------------------------------------
 
@@ -271,6 +273,8 @@ contains
        call GetValue(section,'acab_mode',instance%whichacab)
        call GetValue(section,'ice_albedo',instance%ice_albedo)
        call GetValue(section,'lapse_rate',instance%lapse_rate)
+       instance%data_lapse_rate=instance%lapse_rate
+       call GetValue(section,'data_lapse_rate',instance%data_lapse_rate)
     end if
 
   end subroutine glint_i_readconfig
@@ -302,6 +306,8 @@ contains
     write(message,*) 'ice_albedo  ',instance%ice_albedo
     call write_log(message)
     write(message,*) 'lapse_rate  ',instance%lapse_rate
+    call write_log(message)
+    write(message,*) 'data_lapse_rate',instance%data_lapse_rate
     call write_log(message)
     call write_log('')
 

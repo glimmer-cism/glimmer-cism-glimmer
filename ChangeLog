@@ -1,3 +1,6 @@
+2006-05-10 Ian Rutt
+ * Minor enhancements/bugfixes to EISMINT3GL driver
+
 2006-05-02 Ian Rutt
  * Added temperature half-range to glint output variables as glint_arng
  * Cleared up series of important confusions/bugs in mass-balance

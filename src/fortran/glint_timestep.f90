@@ -146,7 +146,7 @@ contains
        ! sea-level and then back up to high-res orography
        ! ------------------------------------------------------------------------  
 
-       call glint_lapserate(instance%artm,real(instance%global_orog,rk),real(-instance%lapse_rate,rk))
+       call glint_lapserate(instance%artm,real(instance%global_orog,rk),real(-instance%data_lapse_rate,rk))
        call glint_lapserate(instance%artm,real(instance%local_orog,rk), real(instance%lapse_rate,rk))
 
        ! Process the precipitation field if necessary ---------------------------

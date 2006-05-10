@@ -47,7 +47,8 @@ module eismint3_forcing
 
   implicit none
 
-  !*FD Provides climate forcing for EISMINT3 Greeland scenario 1
+  !*FD Provides climate forcing for EISMINT3 Greeland scenario 1.
+  !*FD N.B. Input precip should be water-equivalent not ice equivalent.
 
 contains
 
@@ -61,6 +62,7 @@ contains
     use glide_io
     use glide_setup
     use glimmer_log
+    use physcon, only: rhoi,rhow
 
     implicit none
 
@@ -95,6 +97,10 @@ contains
 
        call eismint3_temp(climate%artm,climate%arng,climate%presusurf,model%climate%lati)
        call glimmer_pdd_mbal(climate%pdd_scheme,climate%artm,climate%arng,climate%prcp,climate%ablt,climate%acab,climate%landsea)
+
+       ! Convert to ice-equivalent depth
+
+       climate%acab=climate%acab*(rhow/rhoi)
 
        ! Put it into glide
 
@@ -146,6 +152,7 @@ contains
 
     use glide_types
     use glide_io
+    use physcon, only: rhoi,rhow
 
     type(eismint3_climate) :: climate      !*FD structure holding EISMINT3 climate
     type(glide_global_type) :: model       !*FD model instance
@@ -161,6 +168,9 @@ contains
     call glimmer_pdd_mbal(climate%pdd_scheme,climate%artm,climate%arng,climate%prcp,climate%ablt,climate%acab,climate%landsea)
 
     where (.not.climate%landsea) climate%acab=0.0
+
+    ! Convert to ice-equivalent depth
+    climate%acab=climate%acab*(rhow/rhoi)
 
     call glide_set_acab(model,climate%acab)
     call glide_set_artm(model,climate%artm)
