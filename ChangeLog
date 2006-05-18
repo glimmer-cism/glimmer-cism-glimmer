@@ -1,3 +1,7 @@
+2006-05-18 Ian Rutt
+ * Minor bugfix to profiling (mistake in glide_stop.f90 - non-existent
+ derived type element)
+
 2006-05-10 Ian Rutt
  * Minor enhancements/bugfixes to EISMINT3GL driver
  * Minor doc change in glide_types.f90 (thanks, Oli)

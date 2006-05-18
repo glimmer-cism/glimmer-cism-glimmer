@@ -78,7 +78,7 @@ contains
 
     ! close profile
 #ifdef PROFILING
-    call profile_close(model%prof)
+    call profile_close(model%profile)
 #endif
     call close_log
   end subroutine glide_finalise
