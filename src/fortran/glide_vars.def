@@ -247,6 +247,7 @@ data:          data%climate%acab
 factor:        scale2d_f1
 standard_name: land_ice_surface_specific_mass_balance
 coordinates:   lon lat
+average:       1
 
 [bheatflx]
 dimensions:    time, y1, x1

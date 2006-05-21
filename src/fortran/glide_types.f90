@@ -277,6 +277,7 @@ module glide_types
   type glide_climate
      !*FD Holds fields used to drive the model
      real(sp),dimension(:,:),pointer :: acab     => null() !*FD Annual mass balance.
+     real(sp),dimension(:,:),pointer :: acab_tavg     => null() !*FD Annual mass balance (time average).
      real(sp),dimension(:,:),pointer :: artm     => null() !*FD Annual mean air temperature
      real(sp),dimension(:,:),pointer :: lati     => null() !*FD Latitudes of model grid points
      real(sp),dimension(:,:),pointer :: loni     => null() !*FD Longitudes of model grid points
@@ -636,6 +637,7 @@ contains
     call coordsystem_allocate(model%general%velo_grid, model%velocity%tau_y)
 
     call coordsystem_allocate(model%general%ice_grid, model%climate%acab)
+    call coordsystem_allocate(model%general%ice_grid, model%climate%acab_tavg)
     call coordsystem_allocate(model%general%ice_grid, model%climate%artm)
     call coordsystem_allocate(model%general%ice_grid, model%climate%lati)
     call coordsystem_allocate(model%general%ice_grid, model%climate%loni)
@@ -711,6 +713,7 @@ contains
     deallocate(model%velocity%tau_y)
 
     deallocate(model%climate%acab)
+    deallocate(model%climate%acab_tavg)
     deallocate(model%climate%artm)
     deallocate(model%climate%lati)
     deallocate(model%climate%loni)
