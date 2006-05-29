@@ -34,7 +34,7 @@ coordinates:   lon lat
 [glint_artm]
 dimensions:    time, y1, x1
 units:         degreeC
-long_name:     air temperture
+long_name:     air temperature
 standard_name: surface_temperature
 data:          data%artm
 coordinates:   lon lat
@@ -42,7 +42,7 @@ coordinates:   lon lat
 [glint_arng]
 dimensions:    time, y1, x1
 units:         degreeC
-long_name:     air temperture half-range
+long_name:     air temperature half-range
 data:          data%arng
 coordinates:   lon lat
 

@@ -1,3 +1,6 @@
+2006-05-29 Ian Rutt
+ * spelling mistakes in glint_vars.def corrected. (Thanks to Oli Browne)
+
 2006-05-21 Stewart Jamieson
  * glide_vars.def: annual massbalance can be averaged over time
  * glide_types.f90: add new variable for averaging annual 
