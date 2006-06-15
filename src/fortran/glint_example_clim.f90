@@ -80,6 +80,7 @@ module glint_example_clim
      ! Other parameters -------------------------------------------------
      integer :: days_in_year=365
      integer :: hours_in_year=365*24
+     real(rk) :: precip_scale=1.0 ! Factor to scale precip by
   end type glex_climate
 
   interface read_ncdf
@@ -132,7 +133,9 @@ contains
        if (ierr>0) call interp_error(ierr,__LINE__)
     end if
 
-    ! Precip
+    ! Precip - first scale it
+
+    params%pclim_load=params%pclim_load*params%precip_scale
 
     if (params%precip_grid==params%all_grid) then
        params%precip_clim=params%pclim_load
@@ -180,6 +183,7 @@ contains
     if (associated(section)) then
        call GetValue(section,'filename',params%precip_file)
        call GetValue(section,'variable',params%precip_varname)
+       call GetValue(section,'scaling',params%precip_scale)
     end if
     call GetSection(config,section,'GLEX temps')
     if (associated(section)) then

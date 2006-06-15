@@ -1,3 +1,6 @@
+2006-06-15 Ian Rutt
+ * Added precip scaling option to glint_example_clim.f90
+
 2006-05-29 Ian Rutt
  * spelling mistakes in glint_vars.def corrected. (Thanks to Oli Browne)
 
