@@ -209,15 +209,15 @@ class PrintDoc(PrintVars):
         self.stream.write("\\hline\n")
 
 class PrintNC_template(PrintVars):
-    """Process ncdf_template.f90.in"""
-    canhandle = 'ncdf_template.f90.in'
+    """Process ncdf_template.F90.in"""
+    canhandle = 'ncdf_template.F90.in'
     
     def __init__(self,filename):
         """Initialise.
 
         filename: name of file to be processed."""
 
-        PrintVars.__init__(self,filename,'%s_io.f90'%module['name'])
+        PrintVars.__init__(self,filename,'%s_io.F90'%module['name'])
         self.numvars = 0
         self.handletoken['!GENVAR_VARDEF!'] = self.print_vardef
         self.handletoken['!GENVAR_WRITE!'] = self.print_var_write
@@ -518,7 +518,7 @@ def usage():
     print 'print variables if no templates are given'
 
 HandleFile={}
-HandleFile['ncdf_template.f90.in'] = PrintNC_template
+HandleFile['ncdf_template.F90.in'] = PrintNC_template
 HandleFile['varlist.tex.in'] = PrintDoc
 
 if __name__ == '__main__':

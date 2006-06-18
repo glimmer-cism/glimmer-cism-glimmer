@@ -48,5 +48,6 @@ if test "$DIE" -eq 1; then
 fi
 
 $ACLOCAL \
+&& autoheader \
 && $AUTOMAKE --gnu --add-missing \
 && autoconf

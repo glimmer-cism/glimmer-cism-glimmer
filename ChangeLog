@@ -1,3 +1,11 @@
+2006-06-18 Magnus Hagdorn
+ * src/fortran/Makefile.am: rename files *.f90 -> *.F90
+ * src/python/generate_ncvars.py: ditto
+ * src/fortran/*.f90: rename to *.F90, add preprocessor machinery to load
+   config.inc
+ * bootstrap: add call to autoheader
+ * configure.in: rename .f90 -> .F90, use autoheader to generate config.inc
+
 2006-06-15 Ian Rutt
  * Added precip scaling option to glint_example_clim.f90
 

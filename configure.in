@@ -8,6 +8,7 @@ m4_define([glimmer_version],
 	[glimmer_major_version.glimmer_minor_version.glimmer_micro_version])
 
 AC_INIT([GLIMMER],[glimmer_version],[glimmer-discuss@forge.nesc.ac.uk])
+AC_CONFIG_HEADERS(config.inc)
 AM_INIT_AUTOMAKE
 
 GLIMMER_MAJOR_VERSION=glimmer_major_version
@@ -69,7 +70,7 @@ fi
 
 AC_MSG_RESULT([$f95v])
 
-FCFLAGS="$FCFLAGS $f95_preprocessor"
+FCFLAGS="$FCFLAGS"
 
 dnl Checking for python
 AM_PATH_PYTHON([2.3],,[AC_MSG_RESULT(need at least python 2.3)])
@@ -106,7 +107,8 @@ AC_ARG_WITH(enmabal,AS_HELP_STRING([--with-enmabal],[location ENMABAL library]),
 if test "$ac_cv_enmabal_prefix" != ""; then
   LIBS="$LIBS -lsmb"
   AC_MSG_RESULT(enmabal location: $ac_cv_enmabal_prefix)
-  FCFLAGS="$FCFLAGS $f95_moduleinclude$ac_cv_enmabal_prefix -DUSE_ENMABAL"
+  AC_DEFINE(USE_ENMABAL,1,[Define to 1 if you want to use ENMABAL])
+  FCFLAGS="$FCFLAGS $f95_moduleinclude$ac_cv_enmabal_prefix"
   LDFLAGS="$LDFLAGS -L$ac_cv_enmabal_prefix"
   AC_MSG_CHECKING([for f90 ENMABAL interface])
   AC_COMPILE_IFELSE([AC_LANG_PROGRAM([],[use smb_mecons])],AC_MSG_RESULT([yes]),AC_MSG_FAILURE([no]))
@@ -117,7 +119,9 @@ AC_LANG_POP(Fortran)
 AC_MSG_CHECKING([whether profilng is enabled])
 AC_ARG_ENABLE(profile, AS_HELP_STRING([--enable-profile],[Turn on profiling]),
 [case "${enableval}" in
- yes)  FCFLAGS="$FCFLAGS -DPROFILING -pg"; AC_MSG_RESULT([yes]);;	
+ yes)  AC_DEFINE(PROFILING,1,[Define to 1 if you want to enable extra profiling])
+       FCFLAGS="$FCFLAGS -pg"
+       AC_MSG_RESULT([yes]);;	
  no)   AC_MSG_RESULT([no]);;
  *) AC_MSG_ERROR(bad value ${enableval} for --enable-profile) ;;
 esac],[AC_MSG_RESULT([no])])
@@ -143,4 +147,4 @@ AM_CONDITIONAL([HAVE_CVS],[test "$have_cvs_entries" == "yes"])
 
 AC_CONFIG_FILES([Makefile m4macros/Makefile src/Makefile src/python/Makefile src/fortran/Makefile src/fortran/SLAP_library/Makefile \
 		tests/Makefile])
-AC_OUTPUT([glimmer-config src/fortran/glimmer_version.f90.in])
+AC_OUTPUT([glimmer-config src/fortran/glimmer_version.F90.in])
