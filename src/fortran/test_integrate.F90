@@ -45,12 +45,12 @@
 #endif
 
 module test_int
+  use glimmer_global, only : dp, sp
 contains
   
   ! integrate $\int_0^\pi\a*sin(x+b)dx$
 
   real(dp) function dfp(x,p)
-    use glimmer_global, only : dp
     implicit none
     real(dp), intent(in) :: x
     real(dp), intent(in), dimension(:) :: p
@@ -59,7 +59,6 @@ contains
   end function dfp
   
   real(dp) function df(x)
-    use glimmer_global, only : dp
     implicit none
     real(dp), intent(in) :: x
 
@@ -69,7 +68,6 @@ contains
   end function df
 
   real(sp) function sfp(x,p)
-    use glimmer_global, only : sp
     implicit none
     real(sp), intent(in) :: x
     real(sp), intent(in), dimension(:) :: p
@@ -78,7 +76,6 @@ contains
   end function sfp
   
   real(sp) function sf(x)
-    use glimmer_global, only : sp
     implicit none
     real(sp), intent(in) :: x
 
