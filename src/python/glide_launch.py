@@ -142,7 +142,7 @@ if __name__ == '__main__':
         release_lock(status)
         
     prog = os.popen(model,'w')
-    prog.write('\"%s\"'%configname)
+    prog.write('\"%s\"\n'%configname)
     prog.close()
 
     t = os.times()

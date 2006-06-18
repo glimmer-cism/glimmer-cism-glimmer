@@ -1,4 +1,7 @@
 2006-06-18 Magnus Hagdorn
+ * src/python/glide_launch.py: need to add \n for gfortran
+
+2006-06-18 Magnus Hagdorn
  * src/fortran/Makefile.am: rename files *.f90 -> *.F90
  * src/python/generate_ncvars.py: ditto
  * src/fortran/*.f90: rename to *.F90, add preprocessor machinery to load
