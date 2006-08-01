@@ -137,13 +137,13 @@ contains
     end do
   end subroutine calc_elastic
 
-  subroutine finialise_elastic(rbel)
+  subroutine finalise_elastic(rbel)
     !*FD clean-up data structure
     implicit none
     type(isostasy_elastic) :: rbel     !*FD structure holding elastic litho data    
 
     deallocate(rbel%w)
-  end subroutine finialise_elastic
+  end subroutine finalise_elastic
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! private subroutines

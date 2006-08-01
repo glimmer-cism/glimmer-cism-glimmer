@@ -1,3 +1,6 @@
+2006-08-01 Ian Rutt
+ * Corrected typo: finialise_elastic -> finalise_elastic
+
 2006-06-18 Magnus Hagdorn
  * src/fortran/test_integrate.F90: minor fix to make it compile with gfortran
 
