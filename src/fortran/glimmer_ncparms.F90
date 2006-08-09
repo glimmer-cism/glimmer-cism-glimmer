@@ -96,6 +96,9 @@ contains
        end if
        call GetSection(section%next,section,'CF input')
     end do
+    
+    output => null()
+    input => null()
 
   end subroutine glimmer_nc_readparams
 

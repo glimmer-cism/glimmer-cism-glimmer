@@ -113,6 +113,7 @@ contains
     call nc_errorhandle(__FILE__,__LINE__,status)
     call write_log_div
     write(message,*) 'Opening file ',trim(NCO%filename),' for output; '
+    call write_log(trim(message))
     write(message,*) '  Starting output at ',outfile%next_write,' and write every ',outfile%freq,' years'
     call write_log(trim(message))
     if (outfile%end_write .lt. glimmer_nc_max_time) then

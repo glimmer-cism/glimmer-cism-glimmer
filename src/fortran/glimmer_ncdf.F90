@@ -273,6 +273,11 @@ contains
 
     type(glimmer_nc_output),pointer :: output
 
+    if (.not.associated(output)) then
+       Print*,'*** Output section not associated'
+       return
+    end if
+
     call nc_print_stat(output%nc)
     print*,'freq:       ',output%freq
     print*,'next_write: ',output%next_write

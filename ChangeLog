@@ -1,3 +1,7 @@
+2006-08-09 Ian Rutt
+ * Fixed pointer nullification bug in glimmer_ncparms.F90 (Thanks to Oli
+ Browne for finding this one).
+
 2006-08-01 Ian Rutt
  * Corrected typo: finialise_elastic -> finalise_elastic
 
