@@ -438,6 +438,7 @@ contains
 
     use glimmer_global, only : dp 
     use glide_stop
+    use glimmer_log
   !use pcgdwk 
   !use funits, only : ulog
 
@@ -498,6 +499,7 @@ contains
       print *, model%pcgdwk%pcgval
       write(*,*) model%numerics%time
       call glide_finalise(model,.true.)
+      call close_log
       stop
     end if
 

@@ -84,6 +84,6 @@ contains
 #ifdef PROFILING
     call profile_close(model%profile)
 #endif
-    call close_log
+
   end subroutine glide_finalise
 end module glide_stop

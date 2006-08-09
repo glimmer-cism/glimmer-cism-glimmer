@@ -103,4 +103,6 @@ program test_lithot
 
   ! finalise GLIDE
   call glide_finalise(model)
+  call close_log
+
 end program test_lithot

@@ -95,4 +95,6 @@ program eis_glide
 
   ! finalise GLIDE
   call glide_finalise(model)
+  call close_log
+
 end program eis_glide

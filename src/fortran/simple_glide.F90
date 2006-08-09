@@ -94,4 +94,6 @@ program simple_glide
 
   ! finalise GLIDE
   call glide_finalise(model)
+  call close_log
+
 end program simple_glide

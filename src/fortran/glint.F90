@@ -682,6 +682,7 @@ contains
 
     !*FD perform tidying-up operations for glimmer
     use glint_initialise
+    use glimmer_log
     implicit none
 
     type(glint_params),intent(inout) :: params          !*FD parameters for this run
@@ -692,6 +693,8 @@ contains
     do i=1,params%ninstances
        call glint_i_end(params%instances(i))
     enddo
+
+    call close_log
 
   end subroutine end_glint
 

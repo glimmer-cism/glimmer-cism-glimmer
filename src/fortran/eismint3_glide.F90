@@ -92,5 +92,6 @@ program eismint3_glide
 
   ! finalise GLIDE
   call glide_finalise(model)
+  call close_log
 
 end program eismint3_glide

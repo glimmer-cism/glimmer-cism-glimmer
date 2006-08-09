@@ -155,6 +155,7 @@ contains
     use glide_types
     use glide_mask
     use glide_stop
+    use glimmer_log
     implicit none
     type(glide_global_type),intent(inout) :: model       !*FD model instance
 
@@ -198,6 +199,7 @@ contains
       print *, 'pcg error ', ierr, itmax, iter
       write(*,*) model%numerics%time
       call glide_finalise(model,.true.)
+      call close_log
       stop
     end if
 

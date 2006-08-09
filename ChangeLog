@@ -1,6 +1,9 @@
 2006-08-09 Ian Rutt
  * Fixed pointer nullification bug in glimmer_ncparms.F90 (Thanks to Oli
  Browne for finding this one).
+ * Fixed glint logging bug - multiple instances generated fort.101
+ file. Moved close log outside glide_finalise and updated all driver
+ programs accordingly.
 
 2006-08-01 Ian Rutt
  * Corrected typo: finialise_elastic -> finalise_elastic
