@@ -1,3 +1,6 @@
+2006-08-14 Ian Rutt
+ * Fixed tiny bug in glint.f90 - orog argument is now intent(in), not intent(inout).
+
 2006-08-09 Ian Rutt
  * Fixed pointer nullification bug in glimmer_ncparms.F90 (Thanks to Oli
  Browne for finding this one).

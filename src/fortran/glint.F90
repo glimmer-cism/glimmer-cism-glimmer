@@ -402,7 +402,7 @@ contains
     real(rk),dimension(:,:),         intent(in)    :: precip          !*FD Precipitation rate        (mm/s)
     real(rk),dimension(:,:),         intent(in)    :: zonwind,merwind !*FD Zonal and meridional components 
                                                                       !*FD of the wind field         (m/s)
-    real(rk),dimension(:,:),         intent(inout) :: orog            !*FD The large-scale orography (m)
+    real(rk),dimension(:,:),         intent(in)    :: orog            !*FD The large-scale orography (m)
     real(rk),dimension(:,:),optional,intent(in)    :: humid           !*FD Surface humidity (%)
     real(rk),dimension(:,:),optional,intent(in)    :: lwdown          !*FD Downwelling longwave (W/m^2)
     real(rk),dimension(:,:),optional,intent(in)    :: swdown          !*FD Downwelling shortwave (W/m^2)
