@@ -1,3 +1,6 @@
+2006-08-16 Ian Rutt
+ * Removed long-redundant restart code in glint_proj.F90
+
 2006-08-14 Ian Rutt
  * Fixed tiny bug in glint.f90 - orog argument is now intent(in), not intent(inout).
 
