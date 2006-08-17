@@ -1,3 +1,9 @@
+2006-08-17 Ian Rutt
+ * Added beginnings of consolidated projection code:
+	glimmer_map_types.F90
+	glimmer_map_init.F90
+	glimmer_map_trans.F90
+
 2006-08-16 Ian Rutt
  * Removed long-redundant restart code in glint_proj.F90
 
