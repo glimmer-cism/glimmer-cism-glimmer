@@ -78,11 +78,11 @@ contains
     if (associated(proj%laea)) then
        call glimmap_laea(lon,lat,xx,yy,proj%laea)
     else if (associated(proj%aea)) then
-   !    call glimmap_albers(lon,lat,xx,yy,proj%aea)
+       call glimmap_aea(lon,lat,xx,yy,proj%aea)
     else if (associated(proj%lcc)) then
-   !    call glimmap_lambconf(lon,lat,xx,yy,proj%lcc)
+       call glimmap_lcc(lon,lat,xx,yy,proj%lcc)
     else if (associated(proj%stere)) then
-   !    call glimmap_stereo(lon,lat,xx,yy,proj%stere)
+       call glimmap_stere(lon,lat,xx,yy,proj%stere)
     else
        call write_log('No known projection found!',GM_WARNING)
     end if
@@ -122,16 +122,16 @@ contains
     if (associated(proj%laea)) then
        call glimmap_ilaea(lon,lat,xx,yy,proj%laea)
     else if (associated(proj%aea)) then
-   !    call glimmap_ialbers(lon,lat,xx,yy,proj%aea)
+       call glimmap_iaea(lon,lat,xx,yy,proj%aea)
     else if (associated(proj%lcc)) then
-   !    call glimmap_ilambconf(lon,lat,xx,yy,proj%lcc)
+       call glimmap_ilcc(lon,lat,xx,yy,proj%lcc)
     else if (associated(proj%stere)) then
-   !    call glimmap_istereo(lon,lat,xx,yy,proj%stere)
+       call glimmap_istere(lon,lat,xx,yy,proj%stere)
     else
        call write_log('No known projection found!',GM_WARNING)
     end if
 
-    lon=loncorrect(lon)
+    lon=loncorrect(lon,0.0_rk)
 
   end subroutine xy_to_ll
   
@@ -160,13 +160,7 @@ contains
 
     ! Check domain of longitude
 
-    do while (dlon.lt.-180.0)
-       dlon=dlon+360.0
-    enddo
-
-    do while (dlon.gt.180.0)
-       dlon=dlon-360.0
-    enddo
+    dlon = loncorrect(dlon,-180.0_rk)
 
     ! Convert to radians and calculate sine and cos
 
@@ -245,6 +239,207 @@ contains
   end subroutine glimmap_ilaea
 
   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  ! Albers equal area conic projection
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  subroutine glimmap_aea(lon,lat,x,y,params)
+
+    real(rk),intent(in)  :: lon
+    real(rk),intent(in)  :: lat
+    real(rk),intent(out) :: x
+    real(rk),intent(out) :: y
+    type(proj_aea),intent(in) :: params
+
+    real(rk) :: dlon,theta,sint,cost,rho
+
+    dlon = lon-params%longitude_of_central_meridian
+
+    ! Check domain of longitude
+
+    dlon = loncorrect(dlon,-180.0_rk)
+    theta = params%n * dlon * D2R
+    call sincos(theta,sint,cost)
+
+    rho = params%i_n*sqrt(params%c - 2.0*params%n*sin(lat*D2R))
+
+    x = EQ_RAD * rho * sint
+    y = EQ_RAD * (params%rho0_R - rho * cost)
+
+    ! Apply false eastings and northings
+
+    x = x + params%false_easting
+    y = y + params%false_northing
+
+  end subroutine glimmap_aea
+
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  subroutine glimmap_iaea(lon,lat,x,y,params)
+
+    real(rk),intent(out) :: lon
+    real(rk),intent(out) :: lat
+    real(rk),intent(in)  :: x
+    real(rk),intent(in)  :: y
+    type(proj_aea),intent(in) :: params
+
+    real(rk) :: xx,yy,rho,theta
+
+    xx=x ; yy=y
+
+    ! Account for false eastings and northings
+
+    xx = xx - params%false_easting
+    yy = yy - params%false_northing
+
+    rho = sqrt(xx**2.0 + (params%rho0 - yy)**2.0)
+    if (params%n >0.0) then
+       theta = atan2(xx,(params%rho0-yy))
+    else
+       theta = atan2(-xx,(yy-params%rho0))
+    end if
+
+    lat = asin((params%c-(rho*params%n/EQ_RAD)**2.0)*0.5*params%i_n)
+    lon = params%longitude_of_central_meridian+R2D*theta*params%i_n
+
+  end subroutine glimmap_iaea
+
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  ! Lambert conformal conic projection
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  subroutine glimmap_lcc(lon,lat,x,y,params)
+
+    real(rk),intent(in)  :: lon
+    real(rk),intent(in)  :: lat
+    real(rk),intent(out) :: x
+    real(rk),intent(out) :: y
+    type(proj_lcc),intent(in) :: params
+
+    real(rk) :: dlon,rho,theta,sint,cost
+
+    dlon = lon-params%longitude_of_central_meridian
+
+    ! Check domain of longitude
+
+    dlon = loncorrect(dlon,-180.0_rk)
+    rho  = EQ_RAD * params%f/(tan(M_PI_4+lat*D2R/2.0))**params%n
+    theta = params%n*dlon*D2R
+    call sincos(theta,sint,cost)
+
+    x = rho * sint
+    y = params%rho0 - rho * cost
+
+    ! Apply false eastings and northings
+
+    x = x + params%false_easting
+    y = y + params%false_northing
+
+  end subroutine glimmap_lcc
+
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  subroutine glimmap_ilcc(lon,lat,x,y,params)
+
+    real(rk),intent(out) :: lon
+    real(rk),intent(out) :: lat
+    real(rk),intent(in)  :: x
+    real(rk),intent(in)  :: y
+    type(proj_lcc),intent(in) :: params
+
+    real(rk) :: xx,yy,rho,theta
+
+    xx=x ; yy=y
+
+    ! Account for false eastings and northings
+
+    xx = xx - params%false_easting
+    yy = yy - params%false_northing
+
+    rho = sign(sqrt(xx**2.0 + (params%rho0-yy)**2.0),params%n)
+    if (params%n > 0.0) then
+       theta = atan2(xx,(params%rho0-yy))
+    else
+       theta = atan2(-xx,(yy-params%rho0))
+    end if
+
+    if (abs(rho) < CONV_LIMIT) then
+       lat = sign(90.0,params%n)
+    else
+       lat = R2D * (2.0 * atan(EQ_RAD*params%f/rho)**params%i_n - M_PI_2)
+    end if
+
+    lon = params%longitude_of_central_meridian+R2D*theta*params%i_n
+
+  end subroutine glimmap_ilcc
+
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  ! Stereographic projection
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  subroutine glimmap_stere(lon,lat,x,y,params)
+
+    use glimmer_log
+
+    real(rk),intent(in)  :: lon
+    real(rk),intent(in)  :: lat
+    real(rk),intent(out) :: x
+    real(rk),intent(out) :: y
+    type(proj_stere),intent(in) :: params
+
+    real(rk) :: dlon,k,dlat,slat,clat,slon,clon
+    character(80) :: errtxt
+
+    dlon = lon-params%longitude_of_central_meridian
+
+    ! Check domain of longitude
+
+    dlon = loncorrect(dlon,-180.0_rk)
+    dlon = dlon * D2R
+    dlat = lat  * D2R
+    call sincos(dlon,slon,clon)
+
+    select case(params%pole)
+    case(1)  ! North pole
+       x =  2.0 * params%k0 * tan(M_PI_4 - dlat/2.0)*slon
+       y = -2.0 * params%k0 * tan(M_PI_4 - dlat/2.0)*clon
+    case(2)  ! South pole
+       x = 2.0 * params%k0 * tan(M_PI_4 + dlat/2.0)*slon
+       y = 2.0 * params%k0 * tan(M_PI_4 + dlat/2.0)*clon
+    case(3)  ! Oblique
+       call sincos(dlat,slat,clat)
+       if (params%equatorial) then
+          k = 2.0 * params%k0 / (1.0 + clat*clon)
+          y = k * slat
+       else
+          k = 2.0 * params%k0 / (1.0 + params%sinp*slat + params%cosp*clat*clon)
+          y = k * (params%cosp*slat - params%sinp*clat*clon)
+       end if
+       x = k * clat * slon
+    case default 
+       write(errtxt,*)'Stereographic projection error:',params%pole
+       call write_log(trim(errtxt),GM_FATAL,__FILE__,__LINE__)
+    end select
+
+    ! Apply false eastings and northings
+
+    x = x + params%false_easting
+    y = y + params%false_northing
+
+  end subroutine glimmap_stere
+
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  subroutine glimmap_istere(lon,lat,x,y,params)
+
+    real(rk),intent(out) :: lon
+    real(rk),intent(out) :: lat
+    real(rk),intent(in)  :: x
+    real(rk),intent(in)  :: y
+    type(proj_stere),intent(in) :: params
+
+  end subroutine glimmap_istere
+
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
   ! Utility routines
   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -303,20 +498,24 @@ contains
 
   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  real(rk) function loncorrect(lon)
+  real(rk) function loncorrect(lon,minimum)
 
-    !*FD Normalises a value of longitude to the range 0 to 360 degrees.
+    !*FD Normalises a value of longitude to the range starting at min degrees.
     !*RV The normalised value of longitude.
 
-    real(rk),intent(in) :: lon !*FD The longitude under consideration (degrees east)
+    real(rk),intent(in) :: lon     !*FD The longitude under consideration (degrees east)
+    real(rk),intent(in) :: minimum !*FD The lower end of the output range (degrees east)
 
-    loncorrect=lon
+    real(rk) :: maximum
 
-    do while (loncorrect>360.0)
+    loncorrect = lon
+    maximum = minimum + 360.0
+
+    do while (loncorrect >= maximum)
        loncorrect=loncorrect-360.0
     enddo
 
-    do while (loncorrect<0.0)
+    do while (loncorrect < minimum)
        loncorrect=loncorrect+360.0
     enddo
 

@@ -65,19 +65,6 @@ module glimmer_map_types
 
   !-------------------------------------------------------------
 
-  type proj_stere
-     !*FD Stereographic projection derived type 
-     logical :: polar                               !*FD Polar projection?
-     real :: longitude_of_central_meridian          
-     real :: latitude_of_projection_origin          
-     real :: scale_factor_at_proj_origin = 0. 
-     real :: standard_parallel = 0.                 
-     real :: false_easting          
-     real :: false_northing
-  end type proj_stere
-
-  !-------------------------------------------------------------
-
   type proj_laea
      !*FD Lambert Azimuthal Equal Area
      real :: longitude_of_central_meridian
@@ -86,7 +73,7 @@ module glimmer_map_types
      real :: false_northing
      real :: sinp    !*FD Sine of latitude_of_projection_origin
      real :: cosp    !*FD Cosine of latitude_of_projection_origin
-     integer :: pole !&FD Set to 1 for N pole, -1 for S pole, 0 otherise
+     integer :: pole !*FD Set to 1 for N pole, -1 for S pole, 0 otherwise
   end type proj_laea
 
   !-------------------------------------------------------------
@@ -98,6 +85,11 @@ module glimmer_map_types
      real :: latitude_of_projection_origin
      real :: false_easting
      real :: false_northing
+     real :: rho0 !*FD Convenience constant
+     real :: rho0_R !*FD Convenience constant (is rho0/EQ_RAD)
+     real :: c    !*FD Convenience constant
+     real :: n    !*FD Convenience constant
+     real :: i_n  !*FD Convenience constant (inverse of n)
   end type proj_aea
 
   !-------------------------------------------------------------
@@ -109,7 +101,27 @@ module glimmer_map_types
      real :: latitude_of_projection_origin
      real :: false_easting
      real :: false_northing
+     real :: rho0 !*FD Convenience constant
+     real :: f    !*FD Convenience constant
+     real :: n    !*FD Convenience constant
+     real :: i_n  !*FD Convenience constant (inverse of n)
   end type proj_lcc
+
+  !-------------------------------------------------------------
+
+  type proj_stere
+     !*FD Stereographic projection derived type 
+     real :: longitude_of_central_meridian          
+     real :: latitude_of_projection_origin          
+     real :: scale_factor_at_proj_origin = 0. 
+     real :: standard_parallel = 0.                 
+     real :: false_easting          
+     real :: false_northing
+     integer :: pole  !*FD Set to 1 for N pole, -1 for S pole, 0 otherwise
+     logical :: equatorial !*FD Set true if equatorial aspect
+     real :: k0 !*FD scale factor or std par converted to scale factor
+     real :: sinp,cosp !*FD sin and cos of latitude_of_projection_origin
+  end type proj_stere
 
   ! Global mapping parameters ----------------------------------
 

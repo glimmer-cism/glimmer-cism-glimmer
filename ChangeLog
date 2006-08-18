@@ -1,3 +1,7 @@
+2006-08-18 Ian Rutt
+ * More work on projection code. Only inverse of stereographic projection
+ still to do
+
 2006-08-17 Ian Rutt
  * Added beginnings of consolidated projection code:
 	glimmer_map_types.F90

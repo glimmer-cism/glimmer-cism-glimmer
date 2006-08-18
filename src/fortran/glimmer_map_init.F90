@@ -64,14 +64,93 @@ contains
 
     ! Check whether polar
 
-    if (params%latitude_of_projection_origin==90.0) then
+    if (abs(params%latitude_of_projection_origin-90.0)<CONV_LIMIT) then
        params%pole=1
-    else if (params%latitude_of_projection_origin==-90) then
+    else if (abs(params%latitude_of_projection_origin+90)<CONV_LIMIT) then
        params%pole=-1
     else
        params%pole=0
     end if
 
   end subroutine glimmap_laea_init
+
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  subroutine glimmap_aea_init(params)
+
+    type(proj_aea),intent(inout) :: params
+
+    params%n = 0.5*(sin(params%standard_parallel(1)*D2R) &
+         + sin(params%standard_parallel(2)*D2R))
+    params%i_n = 1.0/params%n
+    params%c = cos(params%standard_parallel(1)*D2R)**2.0 &
+         + 2.0*params%n*sin(params%standard_parallel(1)*D2R)
+    params%rho0_R = params%i_n * sqrt(params%c - &
+         2.0*params%n*sin(params%latitude_of_projection_origin*D2R))
+    params%rho0 = params%rho0_R * EQ_RAD
+
+  end subroutine glimmap_aea_init
+
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  subroutine glimmap_lcc_init(params)
+
+    type(proj_lcc),intent(inout) :: params
+
+    if (params%standard_parallel(1)==params%standard_parallel(2)) then
+       params%n = sin(params%standard_parallel(1)*D2R)
+    else
+       params%n = log(cos(params%standard_parallel(1)*D2R)/cos(params%standard_parallel(2)*D2R))/ &
+            log(tan(M_PI_4+params%standard_parallel(2)*D2R/2.0)/tan(M_PI_4+params%standard_parallel(1)*D2R/2.0))
+    end if
+
+    params%f = params%i_n*cos(params%standard_parallel(1)*D2R)* &
+         (tan(M_PI_4+params%standard_parallel(1)*D2R/2.0))**params%n
+    params%rho0 = EQ_RAD * params%f/(tan(M_PI_4+params%latitude_of_projection_origin*D2R/2.0))**params%n
+
+  end subroutine glimmap_lcc_init
+
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  subroutine glimmap_stere_init(params)
+
+    type(proj_stere),intent(inout) :: params
+
+    ! Determine polar/equatorial, etc.
+
+    if (abs(params%latitude_of_projection_origin-90.0)<CONV_LIMIT) then
+       params%pole=1
+    else if (abs(params%latitude_of_projection_origin+90)<CONV_LIMIT) then
+       params%pole=-1
+    else
+       params%pole=0
+       if (abs(params%latitude_of_projection_origin)<CONV_LIMIT) then
+          params%equatorial = .true.
+       else
+          params%equatorial = .false.
+       end if
+    end if
+
+    ! Set up constants accordingly
+
+    if (params%pole==1.or.params%pole==-1) then
+       if (params%standard_parallel/=0.0) then
+          params%k0 = EQ_RAD * (1 + sin(D2R*params%standard_parallel))/2.0
+       else if (params%scale_factor_at_proj_origin/=0.0) then
+          params%k0 = EQ_RAD * params%scale_factor_at_proj_origin
+       else
+          params%k0 = EQ_RAD
+       end if
+    else
+       if (params%scale_factor_at_proj_origin/=0.0) then
+          params%k0 = EQ_RAD * params%scale_factor_at_proj_origin
+       else
+          params%k0 = EQ_RAD
+       end if
+       params%sinp = sin(D2R * params%latitude_of_projection_origin)
+       params%cosp = cos(D2R * params%latitude_of_projection_origin)
+    end if
+
+  end subroutine glimmap_stere_init
 
 end module glimmer_map_init
