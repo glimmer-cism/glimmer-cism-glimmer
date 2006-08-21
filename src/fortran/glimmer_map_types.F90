@@ -152,6 +152,177 @@ contains
 
   !-------------------------------------------------------------------------
 
+  subroutine glimmap_readconfig(proj,config)
+    !*FD read projection configuration from file
+    use glimmer_config
+    use glimmer_log
+    implicit none
+    type(glimmap_proj),intent(inout) :: proj !*FD The projection parameters to be initialised
+    type(ConfigSection), pointer :: config !*FD structure holding sections of configuration file   
+
+    ! local variables
+    type(ConfigSection), pointer :: section
+    real :: lonc,latc,efalse,nfalse,stdp1,stdp2,scale_factor
+    real,dimension(:),pointer :: std_par => null()
+    character(10) :: ptype
+    logical :: stdp,scfac
+    integer :: ptval
+
+    scale_factor = 0.0
+
+    call GetSection(config,section,'projection')
+    if (associated(section)) then
+       call GetValue(section,'type',ptype)
+       call GetValue(section,'centre_longitude',lonc)
+       call GetValue(section,'centre_latitude',latc)
+       call GetValue(section,'false_easting',efalse)
+       call GetValue(section,'false_northing',nfalse)
+       call GetValue(section,'std parallel',std_par)
+       call GetValue(section,'scale_factor',scale_factor)
+    end if
+
+    ! Parse the projection type
+
+    if (index(ptype,'LAEA')/=0.or.index(ptype,'laea')/=0) then
+       ptval = GMAP_LAEA
+    else if (index(ptype,'AEA')/=0.or.index(ptype,'aea')/=0) then
+       ptval = GMAP_AEA
+    else if (index(ptype,'LCC')/=0.or.index(ptype,'lcc')/=0) then
+       ptval = GMAP_LCC
+    else if (index(ptype,'STERE')/=0.or.index(ptype,'stere')/=0) then
+       ptval = GMAP_STERE
+    else
+       call write_log('Unrecognised type in [projection]',GM_FATAL,__FILE__,__LINE__)
+    end if
+
+    ! Deal with presence or not of standard parallel(s)
+
+    if (associated(std_par)) then
+       stdp = .true.
+       select case (size(std_par))
+       case(1)
+          stdp1 = std_par(1) ; stdp2 = std_par(1)
+       case(2)
+          stdp1 = std_par(1) ; stdp2 = std_par(2)
+       case default
+          stdp=.false.
+       end select
+    else
+       stdp = .false.
+    end if
+
+    ! Deal with scale factor
+
+    if (scale_factor/=0.0) then
+       scfac = .true.
+    else
+       scfac = .false.
+    end if
+
+    ! Check for conflict
+
+    if (stdp.and.scfac) then
+       call write_log('You cannot specify both a standard parallel and a scale factor.', &
+            GM_FATAL,__FILE__,__LINE__)
+    end if
+
+    ! Initialise the projection
+
+    if (stdp) then
+       call glimmap_proj_define(proj,ptval, &
+       lonc,latc,efalse,nfalse, &
+       standard_parallel = stdp1, &
+       standard_parallel_2 = stdp2)
+    else if (scfac) then
+       call glimmap_proj_define(proj,ptval, &
+       lonc,latc,efalse,nfalse, &
+       scale_factor_at_proj_origin = scale_factor)
+    else
+       call glimmap_proj_define(proj,ptval, &
+       lonc,latc,efalse,nfalse)
+    end if
+
+  end subroutine glimmap_readconfig
+
+  !-------------------------------------------------------------------------
+
+  subroutine glimmap_printproj(proj)
+    use glimmer_log
+
+    type(glimmap_proj),intent(in) :: proj
+
+    character(len=100) :: message
+
+    call write_log('Projection')
+    call write_log('----------')
+    if (.not.proj%found) then
+       call write_log('No projection found')
+       return
+    end if
+
+    if (associated(proj%laea)) then
+
+       call write_log('Type: Lambert Azimuthal Equal Area')
+       write(*,message)'Longitude of central meridian: ',proj%laea%longitude_of_central_meridian
+       call write_log(message)
+       write(*,message)'Latitude of projection origin: ',proj%laea%latitude_of_projection_origin
+       call write_log(message)
+       write(*,message)'False easting:  ',proj%laea%false_easting
+       call write_log(message)
+       write(*,message)'False northing: ',proj%laea%false_northing
+       call write_log(message)
+
+    else if (associated(proj%aea)) then
+
+       call write_log('Type: Albers Equal Area Conic')
+       write(*,message)'Longitude of central meridian: ',proj%aea%longitude_of_central_meridian
+       call write_log(message)
+       write(*,message)'Latitude of projection origin: ',proj%aea%latitude_of_projection_origin
+       call write_log(message)
+       write(*,message)'False easting:  ',proj%aea%false_easting
+       call write_log(message)
+       write(*,message)'False northing: ',proj%aea%false_northing
+       call write_log(message)
+       write(*,message)'Standard parallels: ', &
+            proj%aea%standard_parallel(1),proj%aea%standard_parallel(2)
+       call write_log(message)
+
+    else if (associated(proj%lcc)) then
+
+       call write_log('Type: Lambert Conformal Conic')
+       write(*,message)'Longitude of central meridian: ',proj%lcc%longitude_of_central_meridian
+       call write_log(message)
+       write(*,message)'Latitude of projection origin: ',proj%lcc%latitude_of_projection_origin
+       call write_log(message)
+       write(*,message)'False easting:  ',proj%lcc%false_easting
+       call write_log(message)
+       write(*,message)'False northing: ',proj%lcc%false_northing
+       call write_log(message)
+       write(*,message)'Standard parallels: ', &
+            proj%lcc%standard_parallel(1),proj%lcc%standard_parallel(2)
+       call write_log(message)
+
+    else if (associated(proj%stere)) then
+
+       call write_log('Type: Stereographic')
+       write(*,message)'Longitude of central meridian: ',proj%stere%longitude_of_central_meridian
+       call write_log(message)
+       write(*,message)'Latitude of projection origin: ',proj%stere%latitude_of_projection_origin
+       call write_log(message)
+       write(*,message)'False easting:  ',proj%stere%false_easting
+       call write_log(message)
+       write(*,message)'False northing: ',proj%stere%false_northing
+       call write_log(message)
+       write(*,message)'Standard parallel: ',proj%stere%standard_parallel
+       call write_log(message)
+       write(*,message)'Scale factor: ',proj%stere%scale_factor_at_proj_origin
+
+    end if
+
+  end subroutine glimmap_printproj
+
+  !-------------------------------------------------------------------------
+
   subroutine glimmap_proj_define(cfp,ptype, &
        longitude_of_central_meridian, &
        latitude_of_projection_origin, &
