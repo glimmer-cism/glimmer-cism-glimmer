@@ -437,6 +437,39 @@ contains
     real(rk),intent(in)  :: y
     type(proj_stere),intent(in) :: params
 
+    real(rk) :: xx,yy,rho,c,sinc,cosc
+
+    xx=x ; yy=y
+
+    ! Account for false eastings and northings
+
+    xx = xx - params%false_easting
+    yy = yy - params%false_northing
+
+    rho = hypot(xx,yy)
+    call sincos(c,sinc,cosc)
+
+    if (abs(rho)<CONV_LIMIT) then
+       lon = params%longitude_of_central_meridian
+       lat = params%latitude_of_projection_origin
+    else
+       c = 2.0 * atan2(rho,(2.0*EQ_RAD*params%k0))
+       select case(params%pole)
+       case(0)
+          lat = asin(cosc*params%sinp+(yy*sinc*params%cosp/rho))*R2D
+          lon = params%longitude_of_central_meridian + &
+               atan2(xx * sinc,(rho*params%cosp*cosc-yy*params%sinp*sinc))*R2D
+       case(1)
+          lat = asin(cosc)*R2D
+          lon = params%longitude_of_central_meridian + &
+               atan2(xx,-yy) * R2D
+       case(-1)
+          lat = asin(-cosc)*R2D
+          lon = params%longitude_of_central_meridian + &
+               atan2(xx,yy) * R2D
+       end select
+    end if
+
   end subroutine glimmap_istere
 
   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
