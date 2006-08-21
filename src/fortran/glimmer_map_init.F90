@@ -97,7 +97,7 @@ contains
 
     type(proj_lcc),intent(inout) :: params
 
-    if (params%standard_parallel(1)==params%standard_parallel(2)) then
+    if (abs(params%standard_parallel(1)-params%standard_parallel(2))<CONV_LIMIT) then
        params%n = sin(params%standard_parallel(1)*D2R)
     else
        params%n = log(cos(params%standard_parallel(1)*D2R)/cos(params%standard_parallel(2)*D2R))/ &
@@ -113,6 +113,8 @@ contains
   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine glimmap_stere_init(params)
+
+    use glimmer_log
 
     type(proj_stere),intent(inout) :: params
 
@@ -147,6 +149,8 @@ contains
        else
           params%k0 = EQ_RAD
        end if
+       if (params%standard_parallel/=0.0) &
+            call write_log('Stereographic projection not polar: ignoring standard parallel',GM_WARNING)
        params%sinp = sin(D2R * params%latitude_of_projection_origin)
        params%cosp = cos(D2R * params%latitude_of_projection_origin)
     end if

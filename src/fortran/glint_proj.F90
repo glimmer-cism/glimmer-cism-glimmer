@@ -78,9 +78,9 @@ module glint_proj
      real(rk)       :: latc,lonc                  !*FD The location of the projection centre in lat/lon space (lat and lon)
      real(rk)       :: std_par=90.0               !*FD Standard parallel (polar stereographic only)
      real(rk)       :: radea=6.37e6               !*FD Radius of the earth (m)
-     real(rk),dimension(:,:),pointer :: sintheta => NULL()  !*FD sines of grid angle relative to north.
-     real(rk),dimension(:,:),pointer :: costheta => NULL()  !*FD coses of grid angle relative to north.
-     real(rk),dimension(:,:),pointer :: latitudes => NULL() !*FD The latitude of each grid-point
+!!$     real(rk),dimension(:,:),pointer :: sintheta => NULL()  !*FD sines of grid angle relative to north.
+!!$     real(rk),dimension(:,:),pointer :: costheta => NULL()  !*FD coses of grid angle relative to north.
+!!$     real(rk),dimension(:,:),pointer :: latitudes => NULL() !*FD The latitude of each grid-point
   end type projection
 
   real(rk),parameter :: pi=3.141592654  !*FD The value of pi
@@ -174,36 +174,9 @@ contains
     if (present(lonc))    proj%lonc=lonc
     if (present(std_par)) proj%std_par=std_par
 
-    call proj_allocate(proj)
-
-    proj%sintheta=0.0 ; proj%costheta=0.0
-
     call gmt_set(proj%p_type,proj%latc,proj%lonc,proj%radea,proj%std_par,proj%gmt_params)
 
-    call calc_grid_angle(proj)
-
   end subroutine new_proj
-
-  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-  subroutine proj_allocate(proj)
-
-    !*FD Allocates the array pointers in the \texttt{projection} type.
-
-    implicit none
-
-    type(projection),intent(inout) :: proj     !*FD The projection being initialised
-
-    ! First, deallocate if necessary
-
-    if (associated(proj%costheta))  deallocate(proj%costheta)
-    if (associated(proj%sintheta))  deallocate(proj%sintheta)
-    if (associated(proj%latitudes)) deallocate(proj%latitudes)
-
-    allocate(proj%costheta(proj%nx,proj%ny),proj%sintheta(proj%nx,proj%ny))
-    allocate(proj%latitudes(proj%nx,proj%ny))
-
-  end subroutine proj_allocate
 
   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -325,64 +298,6 @@ contains
   end subroutine calc_lats
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-  subroutine calc_grid_angle(proj)
-
-    !*FD Calculates the angle the projected 
-    !*FD grid makes with north at each point and stores the cos 
-    !*FD and sin of that angle in the relevant arrays in \texttt{proj}.
-
-    type(projection),intent(inout) :: proj !*FD The projection to be used
-
-    integer :: i,j
-    real(rk) :: latn,lonn,lats,lons,lat,lon,dlat,dlon,temp
-
-    do i=1,proj%nx
-
-       ! Main, central block
-
-       do j=2,proj%ny-1
-          call xy_to_ll(lonn,latn,real(i,rk),real(j+1,rk),proj)
-          call xy_to_ll(lon,lat,real(i,rk),real(j,rk),proj)
-          call xy_to_ll(lons,lats,real(i,rk),real(j-1,rk),proj)
-          dlat=latn-lats
-          dlon=lonn-lons
-          if (dlon<-90) dlon=dlon+360
-          temp=atan(dlon/dlat)
-          proj%sintheta(i,j)=sin(temp)
-          proj%costheta(i,j)=cos(temp)
-          proj%latitudes(i,j)=lat
-       enddo
-
-       ! bottom row
-
-       call xy_to_ll(lonn,latn,real(i,rk),real(2,rk),proj)
-       call xy_to_ll(lon,lat,real(i,rk),real(1,rk),proj)
-       dlat=latn-lat
-       dlon=lonn-lon
-       if (dlon<-90) dlon=dlon+360
-       temp=atan(dlon/dlat)
-       proj%sintheta(i,1)=sin(temp)
-       proj%costheta(i,1)=cos(temp)
-       proj%latitudes(i,1)=lat
-
-       ! top row
-
-       call xy_to_ll(lon,lat,real(i,rk),real(proj%ny,rk),proj)
-       call xy_to_ll(lons,lats,real(i,rk),real(proj%ny-1,rk),proj)
-       dlat=lat-lats
-       dlon=lon-lons
-       if (dlon<-90) dlon=dlon+360
-       temp=atan(dlon/dlat)
-       proj%sintheta(i,proj%ny)=sin(temp)
-       proj%costheta(i,proj%ny)=cos(temp)
-       proj%latitudes(i,proj%ny)=lat
-
-    enddo
-
-  end subroutine calc_grid_angle
-
-  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine print_corners(proj)
 

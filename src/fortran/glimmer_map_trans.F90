@@ -70,7 +70,7 @@ contains
     real(rk),intent(in)  :: lat !*FD The location of the point in lat-lon space (Latitude)
     real(rk),intent(out) :: x   !*FD The location of the point in $x$-$y$ space ($x$ coordinate)
     real(rk),intent(out) :: y   !*FD The location of the point in $x$-$y$ space ($y$ coordinate)
-    type(projection),      intent(in) :: proj !*FD The projection being used
+    type(glimmap_proj),    intent(in) :: proj !*FD The projection being used
     type(coordsystem_type),intent(in) :: grid !*FD the grid definition
 
     real(rk) :: xx,yy ! These are real-space distances in meters
@@ -110,7 +110,7 @@ contains
     real(rk),intent(out) :: lat !*FD The location of the point in lat-lon space (Latitude)
     real(rk),intent(in)  :: x   !*FD The location of the point in $x$-$y$ space ($x$ coordinate)
     real(rk),intent(in)  :: y   !*FD The location of the point in $x$-$y$ space ($y$ coordinate)
-    type(projection),      intent(in) :: proj !*FD The projection being used
+    type(glimmap_proj),    intent(in) :: proj !*FD The projection being used
     type(coordsystem_type),intent(in) :: grid !*FD the grid definition
 
     real(rk) :: xx,yy ! These are real-space distances in meters

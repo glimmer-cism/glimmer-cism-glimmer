@@ -72,6 +72,8 @@ module glint_interp
                                                          !*FD interpolation domain.
      real(rk),dimension(:,:),  pointer :: xfrac => null()
      real(rk),dimension(:,:),  pointer :: yfrac => null()
+     real(rk),dimension(:,:),pointer :: sintheta => NULL()  !*FD sines of grid angle relative to north.
+     real(rk),dimension(:,:),pointer :: costheta => NULL()  !*FD coses of grid angle relative to north.
 
   end type downscale
 
@@ -121,10 +123,16 @@ contains
     allocate(downs%yfrac(proj%nx,proj%ny))
     allocate(downs%llons(proj%nx,proj%ny))
     allocate(downs%llats(proj%nx,proj%ny))
-
+    allocate(downs%sintheta(proj%nx,proj%ny))
+    allocate(downs%costheta(proj%nx,proj%ny))
+  
     ! index local boxes
 
     call index_local_boxes(downs%xloc,downs%yloc,downs%xfrac,downs%yfrac,grid,proj)
+
+    ! Calculate grid angle
+
+    call calc_grid_angle(downs,proj)
 
     ! Find lats and lons
 
@@ -171,8 +179,8 @@ contains
 
     ! Apply rotation
 
-    xwind=tempzw*proj%costheta-tempmw*proj%sintheta
-    ywind=tempzw*proj%sintheta+tempmw*proj%costheta
+    xwind=tempzw*downs%costheta-tempmw*downs%sintheta
+    ywind=tempzw*downs%sintheta+tempmw*downs%costheta
 
   end subroutine interp_wind_to_local
 
@@ -660,6 +668,62 @@ contains
     enddo
 
   end subroutine index_local_boxes
+
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  subroutine calc_grid_angle(downs,proj)
+
+    !*FD Calculates the angle the projected 
+    !*FD grid makes with north at each point and stores the cos 
+    !*FD and sin of that angle in the relevant arrays in \texttt{proj}.
+
+    type(downscale),intent(inout) :: downs !*FD The projection to be used
+    type(projection),intent(in) :: proj
+
+    integer :: i,j
+    real(rk) :: latn,lonn,lats,lons,lat,lon,dlat,dlon,temp
+
+    do i=1,proj%nx
+
+       ! Main, central block
+
+       do j=2,proj%ny-1
+          call xy_to_ll(lonn,latn,real(i,rk),real(j+1,rk),proj)
+          call xy_to_ll(lon,lat,real(i,rk),real(j,rk),proj)
+          call xy_to_ll(lons,lats,real(i,rk),real(j-1,rk),proj)
+          dlat=latn-lats
+          dlon=lonn-lons
+          if (dlon<-90) dlon=dlon+360
+          temp=atan(dlon/dlat)
+          downs%sintheta(i,j)=sin(temp)
+          downs%costheta(i,j)=cos(temp)
+       enddo
+
+       ! bottom row
+
+       call xy_to_ll(lonn,latn,real(i,rk),real(2,rk),proj)
+       call xy_to_ll(lon,lat,real(i,rk),real(1,rk),proj)
+       dlat=latn-lat
+       dlon=lonn-lon
+       if (dlon<-90) dlon=dlon+360
+       temp=atan(dlon/dlat)
+       downs%sintheta(i,1)=sin(temp)
+       downs%costheta(i,1)=cos(temp)
+
+       ! top row
+
+       call xy_to_ll(lon,lat,real(i,rk),real(proj%ny,rk),proj)
+       call xy_to_ll(lons,lats,real(i,rk),real(proj%ny-1,rk),proj)
+       dlat=lat-lats
+       dlon=lon-lons
+       if (dlon<-90) dlon=dlon+360
+       temp=atan(dlon/dlat)
+       downs%sintheta(i,proj%ny)=sin(temp)
+       downs%costheta(i,proj%ny)=cos(temp)
+
+    enddo
+
+  end subroutine calc_grid_angle
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
