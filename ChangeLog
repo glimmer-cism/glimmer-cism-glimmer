@@ -1,3 +1,9 @@
+2006-08-22 Ian Rutt
+ * Finished consolidated projection code. Tested against exisiting
+ projection code where available, and against itself (i.e. forward and
+ reverse transformations agree) where projection is new. Ready to be
+ plumbed in.
+
 2006-08-21 Ian Rutt
  * Completed first go through re-jigging of projection transformation and
  CF handling code. Still to be integrated into build and tested.

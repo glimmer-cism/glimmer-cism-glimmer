@@ -58,7 +58,7 @@ module glimmer_map_CFproj
   implicit none
 
   private
-  public  CFproj_GetProj,CFproj_PutProj
+  public  glimmap_CFGetProj,glimmap_CFPutProj
 
 contains
   
@@ -66,7 +66,7 @@ contains
   ! public functions
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  function CFproj_GetProj(ncid)
+  function glimmap_CFGetProj(ncid)
 
     !*FD Read projection from a given netCDF file, returning
     !*FD an instance of type \texttt{glimmap\_proj}.
@@ -77,7 +77,7 @@ contains
 
     implicit none
 
-    type(glimmap_proj) :: CFproj_GetProj
+    type(glimmap_proj) :: glimmap_CFGetProj
     integer, intent(in) :: ncid                !*FD Handle of the file to be read.
     
     !local variables
@@ -110,35 +110,35 @@ contains
     end do
 
     if (found_map) then
-       CFproj_GetProj%found = .true.
+       glimmap_CFGetProj%found = .true.
        if (index(mapname,'lambert_azimuthal_equal_area').ne.0) then
-          CFproj_GetProj%laea => CFproj_get_laea(ncid,varid)
-          call glimmap_laea_init(CFproj_GetProj%laea)
+          glimmap_CFGetProj%laea => CFproj_get_laea(ncid,varid)
+          call glimmap_laea_init(glimmap_CFGetProj%laea)
        else if (index(mapname,'albers_conical_equal_area').ne.0) then
-          CFproj_GetProj%aea => CFproj_get_aea(ncid,varid)
-          call glimmap_aea_init(CFproj_GetProj%aea)
+          glimmap_CFGetProj%aea => CFproj_get_aea(ncid,varid)
+          call glimmap_aea_init(glimmap_CFGetProj%aea)
        else if (index(mapname,'lambert_conformal_conic').ne.0) then
-          CFproj_GetProj%lcc => CFproj_get_lcc(ncid,varid)
-          call glimmap_lcc_init(CFproj_GetProj%lcc)
+          glimmap_CFGetProj%lcc => CFproj_get_lcc(ncid,varid)
+          call glimmap_lcc_init(glimmap_CFGetProj%lcc)
        else if (index(mapname,'polar_stereographic').ne.0) then
-          CFproj_GetProj%stere => CFproj_get_stere_polar(ncid,varid)
-          call glimmap_stere_init(CFproj_GetProj%stere)
+          glimmap_CFGetProj%stere => CFproj_get_stere_polar(ncid,varid)
+          call glimmap_stere_init(glimmap_CFGetProj%stere)
        else if (index(mapname,'stereographic').ne.0) then
-          CFproj_GetProj%stere => CFproj_get_stere(ncid,varid)
-          call glimmap_stere_init(CFproj_GetProj%stere)
+          glimmap_CFGetProj%stere => CFproj_get_stere(ncid,varid)
+          call glimmap_stere_init(glimmap_CFGetProj%stere)
        else
-          CFproj_GetProj%found = .false.
+          glimmap_CFGetProj%found = .false.
           call write_log('Do not know about this projection: '//(mapname),GM_ERROR)
        end if
     else
-        CFproj_GetProj%found = .false.
+        glimmap_CFGetProj%found = .false.
        call write_log('No map projection found',GM_WARNING)
     end if
-  end function CFproj_GetProj
+  end function glimmap_CFGetProj
 
   !-------------------------------------------------------------------------
 
-  subroutine CFproj_PutProj(ncid,mapid,proj)
+  subroutine glimmap_CFPutProj(ncid,mapid,proj)
 
     !*FD write projection to a netCDF file.
 
@@ -171,7 +171,7 @@ contains
     else
        call write_log('No known projection found!',GM_WARNING)
     end if
-  end subroutine CFproj_PutProj
+  end subroutine glimmap_CFPutProj
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! private readers

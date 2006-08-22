@@ -23,7 +23,10 @@ libglimmer_a_SOURCES = glimmer_version.F90 glimmer_CFproj.F90 \
                        profile.F90 glimmer_pdd.F90 glimmer_routing.F90 \
                        glimmer_daily_pdd.F90 glint_global_interp.F90 \
                        glimmer_sparse.F90 glimmer_coordinates.F90 \
-                       glimmer_integrate.F90 ncdf_utils.F90
+                       glimmer_integrate.F90 ncdf_utils.F90 \
+                       glimmer_map_CFproj.F90 glimmer_map_proj4.F90 \
+                       glimmer_map_types.F90 glimmer_map_init.F90 \
+                       glimmer_map_trans.F90
 nodist_libglimmer_a_SOURCES = glimmer_version.F90
 libglide_a_SOURCES = glide.F90 glide_setup.F90 glide_types.F90 glide_temp.F90 \
                      glide_thck.F90 glide_velo.F90 glide_mask.F90 \

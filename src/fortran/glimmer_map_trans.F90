@@ -51,11 +51,11 @@ module glimmer_map_trans
   implicit none
 
   private
-  public :: ll_to_xy, xy_to_ll
+  public :: glimmap_ll_to_xy, glimmap_xy_to_ll
 
 contains
 
-  subroutine ll_to_xy(lon,lat,x,y,proj,grid)
+  subroutine glimmap_ll_to_xy(lon,lat,x,y,proj,grid)
 
     !*FD Convert lat-long coordinates to grid coordinates. Note that
     !*FD The subroutine returns the x-y coordinates as real values,
@@ -89,13 +89,13 @@ contains
 
     ! Now convert the real-space distances to grid-points using the grid type
 
-    call coordsystem_space2grid(xx,yy,x,y,grid)
+    call space2grid(xx,yy,x,y,grid)
 
-  end subroutine ll_to_xy
+  end subroutine glimmap_ll_to_xy
 
   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine xy_to_ll(lon,lat,x,y,proj,grid)
+  subroutine glimmap_xy_to_ll(lon,lat,x,y,proj,grid)
 
     !*FD Convert grid coordinates to lat-lon coordinates. The 
     !*FD subroutine returns the lat-lon coordinates as real values,
@@ -117,7 +117,7 @@ contains
 
     ! First convert grid-point space to real space
 
-    call coordsystem_grid2space(xx,yy,x,y,grid)
+    call grid2space(xx,yy,x,y,grid)
 
     if (associated(proj%laea)) then
        call glimmap_ilaea(lon,lat,xx,yy,proj%laea)
@@ -133,7 +133,7 @@ contains
 
     lon=loncorrect(lon,0.0_rk)
 
-  end subroutine xy_to_ll
+  end subroutine glimmap_xy_to_ll
   
   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
   ! PRIVATE subroutines follow
@@ -298,7 +298,7 @@ contains
        theta = atan2(-xx,(yy-params%rho0))
     end if
 
-    lat = asin((params%c-(rho*params%n/EQ_RAD)**2.0)*0.5*params%i_n)
+    lat = asin((params%c-(rho*params%n/EQ_RAD)**2.0)*0.5*params%i_n)*R2D
     lon = params%longitude_of_central_meridian+R2D*theta*params%i_n
 
   end subroutine glimmap_iaea
@@ -365,7 +365,7 @@ contains
     if (abs(rho) < CONV_LIMIT) then
        lat = sign(90.0,params%n)
     else
-       lat = R2D * (2.0 * atan(EQ_RAD*params%f/rho)**params%i_n - M_PI_2)
+       lat = R2D * (2.0 * atan((EQ_RAD*params%f/rho)**params%i_n) - M_PI_2)
     end if
 
     lon = params%longitude_of_central_meridian+R2D*theta*params%i_n
@@ -405,7 +405,7 @@ contains
     case(2)  ! South pole
        x = 2.0 * params%k0 * tan(M_PI_4 + dlat/2.0)*slon
        y = 2.0 * params%k0 * tan(M_PI_4 + dlat/2.0)*clon
-    case(3)  ! Oblique
+    case(0)  ! Oblique
        call sincos(dlat,slat,clat)
        if (params%equatorial) then
           k = 2.0 * params%k0 / (1.0 + clat*clon)
@@ -447,13 +447,13 @@ contains
     yy = yy - params%false_northing
 
     rho = hypot(xx,yy)
-    call sincos(c,sinc,cosc)
 
     if (abs(rho)<CONV_LIMIT) then
        lon = params%longitude_of_central_meridian
        lat = params%latitude_of_projection_origin
     else
-       c = 2.0 * atan2(rho,(2.0*EQ_RAD*params%k0))
+       c = 2.0 * atan(rho*0.5*params%ik0)
+       call sincos(c,sinc,cosc)
        select case(params%pole)
        case(0)
           lat = asin(cosc*params%sinp+(yy*sinc*params%cosp/rho))*R2D
@@ -488,8 +488,8 @@ contains
     real(rk),intent(in)  :: gy !*FD y-location in grid space
     type(coordsystem_type), intent(in) :: coordsys  !*FD coordinate system
 
-    x=coordsys%origin%pt(1) + (gx - 1)*coordsys%delta%pt(1)
-    y=coordsys%origin%pt(2) + (gy - 1)*coordsys%delta%pt(2)
+    x=coordsys%origin%pt(1) + real(gx - 1)*coordsys%delta%pt(1)
+    y=coordsys%origin%pt(2) + real(gy - 1)*coordsys%delta%pt(2)
 
   end subroutine grid2space
 
@@ -507,8 +507,8 @@ contains
     real(rk),intent(out) :: gy !*FD y-location in grid space
     type(coordsystem_type), intent(in) :: coordsys  !*FD coordinate system
 
-    gx = 1 + (x - coordsys%origin%pt(1))/coordsys%delta%pt(1)
-    gy = 1 + (y - coordsys%origin%pt(2))/coordsys%delta%pt(2)
+    gx = 1.0 + (x - coordsys%origin%pt(1))/coordsys%delta%pt(1)
+    gy = 1.0 + (y - coordsys%origin%pt(2))/coordsys%delta%pt(2)
 
   end subroutine space2grid
 
