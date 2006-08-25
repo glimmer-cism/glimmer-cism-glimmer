@@ -115,18 +115,18 @@ contains
     ! Internal variables
     ! ------------------------------------------------------------------------  
 
-    real(rk),dimension(:,:),allocatable :: upscale_temp  ! temporary array for upscaling
-    real(rk),dimension(:,:),allocatable :: routing_temp  ! temporary array for flow routing
-    real(rk),dimension(:,:),allocatable :: accum_temp    ! temporary array for accumulation
-    real(rk),dimension(:,:),allocatable :: ablat_temp    ! temporary array for ablation
-    integer, dimension(:,:),allocatable :: fudge_mask    ! temporary array for fudging
-    real(sp),dimension(:,:),allocatable :: thck_temp     ! temporary array for volume calcs
-    real(sp),dimension(:,:),allocatable :: calve_temp    ! temporary array for calving flux
+    real(rk),dimension(:,:),pointer :: upscale_temp => null() ! temporary array for upscaling
+    real(rk),dimension(:,:),pointer :: routing_temp => null() ! temporary array for flow routing
+    real(rk),dimension(:,:),pointer :: accum_temp   => null() ! temporary array for accumulation
+    real(rk),dimension(:,:),pointer :: ablat_temp   => null() ! temporary array for ablation
+    integer, dimension(:,:),pointer :: fudge_mask   => null() ! temporary array for fudging
+    real(sp),dimension(:,:),pointer :: thck_temp    => null() ! temporary array for volume calcs
+    real(sp),dimension(:,:),pointer :: calve_temp   => null() ! temporary array for calving flux
     real(rk) :: start_volume,end_volume,flux_fudge
 
     ! Assume we always need this, as it's too complicated to work out when we do and don't
 
-    allocate(thck_temp(instance%proj%nx,instance%proj%ny))
+    call coordsystem_allocate(instance%lgrid,thck_temp)
     ice_tstep=.false.
 
     if (.not.mbal_skip) then
@@ -225,8 +225,8 @@ contains
        ! Do water budget accounting ---------------------------------------------
 
        if (out_f%water_out.or.out_f%total_wout.or.out_f%water_in .or.out_f%total_win) then
-          allocate(accum_temp(instance%proj%nx,instance%proj%ny))
-          allocate(ablat_temp(instance%proj%nx,instance%proj%ny))
+          call coordsystem_allocate(instance%lgrid,accum_temp)
+          call coordsystem_allocate(instance%lgrid,ablat_temp)
           accum_temp=instance%prcp
           ablat_temp=instance%ablt
        endif
@@ -241,7 +241,7 @@ contains
 
        ! Add the calved ice to the ablation field ------------------------------
 
-       allocate(calve_temp(instance%proj%nx,instance%proj%ny))
+       call coordsystem_allocate(instance%lgrid,calve_temp)
        call glide_get_calving(instance%model,calve_temp)
 
        ablat_temp=ablat_temp+calve_temp
@@ -251,7 +251,7 @@ contains
 
        if (out_f%water_out.or.out_f%total_wout.or.out_f%water_in .or.out_f%total_win) then
 
-          allocate(fudge_mask(instance%proj%nx,instance%proj%ny))
+          call coordsystem_allocate(instance%lgrid,fudge_mask)
 
           call glide_get_thk(instance%model,thck_temp)
           end_volume=sum(thck_temp)
@@ -269,6 +269,9 @@ contains
           where(thck_temp>0.0)
              ablat_temp=ablat_temp+flux_fudge
           endwhere
+          
+          deallocate(fudge_mask)
+          fudge_mask => null()
 
        endif
 
@@ -276,7 +279,7 @@ contains
        ! First water input (i.e. mass balance + ablation)
 
        if (out_f%water_in) then
-          allocate(upscale_temp(instance%proj%nx,instance%proj%ny))
+          call coordsystem_allocate(instance%lgrid,upscale_temp)
 
           where (thck_temp>0.0)
              upscale_temp=accum_temp
@@ -289,13 +292,14 @@ contains
                g_water_in,     &
                instance%out_mask)
           deallocate(upscale_temp)
+          upscale_temp => null()
        endif
 
        ! Now water output (i.e. ablation) - and do routing
 
        if (out_f%water_out) then
-          allocate(upscale_temp(instance%proj%nx,instance%proj%ny))
-          allocate(routing_temp(instance%proj%nx,instance%proj%ny))
+          call coordsystem_allocate(instance%lgrid,upscale_temp)
+          call coordsystem_allocate(instance%lgrid,routing_temp)
 
           where (thck_temp>0.0)
              upscale_temp=ablat_temp
@@ -308,25 +312,29 @@ contains
                upscale_temp, &
                routing_temp, &
                instance%out_mask, &
-               instance%proj%dx, &
-               instance%proj%dy)
+               instance%lgrid%delta%pt(1), &
+               instance%lgrid%delta%pt(2))
 
           call mean_to_global(instance%ups,   &
                routing_temp,   &
                g_water_out,    &
                instance%out_mask)
           deallocate(upscale_temp,routing_temp)
+          upscale_temp => null()
+          routing_temp => null()
 
        endif
 
        ! Sum water fluxes and convert if necessary ------------------------------
 
        if (out_f%total_win) then
-          t_win  = sum(accum_temp)*instance%proj%dx*instance%proj%dy
+          t_win  = sum(accum_temp)*instance%lgrid%delta%pt(1)* &
+               instance%lgrid%delta%pt(2)
        endif
 
        if (out_f%total_wout) then
-          t_wout = sum(ablat_temp)*instance%proj%dx*instance%proj%dy
+          t_wout = sum(ablat_temp)*instance%lgrid%delta%pt(1)* &
+               instance%lgrid%delta%pt(2)
        endif
     else
        call glide_io_writeall(instance%model,instance%model)
@@ -345,7 +353,8 @@ contains
 
     if (out_f%ice_vol) then
        call glide_get_thk(instance%model,thck_temp)
-       ice_vol=sum(thck_temp)*instance%proj%dx*instance%proj%dy
+       ice_vol=sum(thck_temp)*instance%lgrid%delta%pt(1)* &
+            instance%lgrid%delta%pt(2)
     endif
 
     ! Write glint data to file -----------------------------------------------
@@ -355,10 +364,23 @@ contains
 
     ! Tidy up ----------------------------------------------------------------
 
-    if (allocated(accum_temp)) deallocate(accum_temp)
-    if (allocated(ablat_temp)) deallocate(ablat_temp)
-    if (allocated(calve_temp)) deallocate(calve_temp)
+    if (associated(accum_temp)) then 
+       deallocate(accum_temp)
+       accum_temp => null()
+    end if
+
+    if (associated(ablat_temp)) then
+       deallocate(ablat_temp)
+       ablat_temp => null()
+    end if
+
+    if (associated(calve_temp)) then
+       deallocate(calve_temp)
+       calve_temp => null()
+    end if
+
     deallocate(thck_temp)
+    thck_temp => null()
 
   end subroutine glint_i_tstep
 

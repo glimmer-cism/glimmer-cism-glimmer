@@ -422,6 +422,7 @@ contains
 
   subroutine GetValueDoubleArray(section,name,val,numval)
     !*FD get real array value
+    use glimmer_log
     implicit none
     type(ConfigSection), pointer :: section
     character(len=*),intent(in) :: name
@@ -429,9 +430,9 @@ contains
     integer,intent(in), optional :: numval
 
     ! local variables
-    character(len=valuelen) :: value
+    character(len=valuelen) :: value,tmp
     real(kind=dp), dimension(:),allocatable :: tempval
-    integer i,numv
+    integer i,numv,inds,indc,ind
 
     if (present(numval)) then
        numv=numval
@@ -442,8 +443,28 @@ contains
     value=''
     call GetValueChar(section,name,value)
     if (value.eq.'') return
-    read(value,*,end=10) (tempval(i),i=1,numv)
-10  i=i-1
+
+    i=1
+    do
+       inds=index(value,' ') ; indc=index(value,',')
+       if (inds==0.and.indc==0) then
+          exit
+       else if (inds==1.or.indc==1) then
+          value=value(2:)
+          cycle
+       else if (inds==0) then
+          ind=indc
+       else if (indc==0) then
+          ind=inds
+       else
+          ind=min(inds,indc)
+       end if
+       tmp=value(1:ind-1)
+       read(tmp,*,err=10)tempval(i)
+       value=value(ind+1:)
+       if (trim(value)=='') exit
+       i=i+1
+    end do
     if (i.ge.1) then
        if (associated(val)) then
           deallocate(val)
@@ -451,10 +472,15 @@ contains
        allocate(val(i))
        val = tempval(1:i)
     end if
+    return
+    
+10  call write_log('Array error in config file - check syntax',GM_FATAL)
+
   end subroutine GetValueDoubleArray
 
   subroutine GetValueRealArray(section,name,val,numval)
     !*FD get real array value
+    use glimmer_log
     implicit none
     type(ConfigSection), pointer :: section
     character(len=*),intent(in) :: name
@@ -462,9 +488,9 @@ contains
     integer,intent(in), optional :: numval
 
     ! local variables
-    character(len=valuelen) :: value
+    character(len=valuelen) :: value,tmp
     real, dimension(:),allocatable :: tempval
-    integer i,numv
+    integer i,numv,inds,indc,ind
 
     if (present(numval)) then
        numv=numval
@@ -475,8 +501,29 @@ contains
     value=''
     call GetValueChar(section,name,value)
     if (value.eq.'') return
-    read(value,*,end=10) (tempval(i),i=1,numv)
-10  i=i-1
+
+    i=1
+    do
+       inds=index(value,' ') ; indc=index(value,',')
+       if (inds==0.and.indc==0) then
+          exit
+       else if (inds==1.or.indc==1) then
+          value=value(2:)
+          cycle
+       else if (inds==0) then
+          ind=indc
+       else if (indc==0) then
+          ind=inds
+       else
+          ind=min(inds,indc)
+       end if
+       tmp=value(1:ind-1)
+       read(tmp,*,err=10)tempval(i)
+       value=value(ind+1:)
+       if (trim(value)=='') exit
+       i=i+1
+    end do
+
     if (i.ge.1) then
        if (associated(val)) then
           deallocate(val)
@@ -484,10 +531,15 @@ contains
        allocate(val(i))
        val = tempval(1:i)
     end if
+    return
+    
+10  call write_log('Array error in config file - check syntax',GM_FATAL)
+
   end subroutine GetValueRealArray
 
   subroutine GetValueIntArray(section,name,val,numval)
     !*FD get integer array value
+    use glimmer_log
     implicit none
     type(ConfigSection), pointer :: section
     character(len=*),intent(in) :: name
@@ -495,9 +547,9 @@ contains
     integer,intent(in), optional :: numval
 
     ! local variables
-    character(len=valuelen) :: value
+    character(len=valuelen) :: value,tmp
     integer, dimension(:),allocatable :: tempval
-    integer i,numv
+    integer i,numv,inds,indc,ind
 
     if (present(numval)) then
        numv=numval
@@ -508,8 +560,28 @@ contains
     value=''
     call GetValueChar(section,name,value)
     if (value.eq.'') return
-    read(value,*,end=20) (tempval(i),i=1,numv)
-20  i=i-1
+
+    i=1
+    do
+       inds=index(value,' ') ; indc=index(value,',')
+       if (inds==0.and.indc==0) then
+          exit
+       else if (inds==1.or.indc==1) then
+          value=value(2:)
+          cycle
+       else if (inds==0) then
+          ind=indc
+       else if (indc==0) then
+          ind=inds
+       else
+          ind=min(inds,indc)
+       end if
+       tmp=value(1:ind-1)
+       read(tmp,*,err=10)tempval(i)
+       value=value(ind+1:)
+       if (trim(value)=='') exit
+       i=i+1
+    end do
 
     if (i.ge.1) then
        if (associated(val)) then
@@ -518,10 +590,15 @@ contains
        allocate(val(i))
        val = tempval(1:i)
     end if
+    return
+    
+10  call write_log('Array error in config file - check syntax',GM_FATAL)
+
   end subroutine GetValueIntArray
 
   subroutine GetValueCharArray(section,name,val,numval)
     !*FD get character array value
+    use glimmer_log
     implicit none
     type(ConfigSection), pointer :: section
     character(len=*),intent(in) :: name
@@ -531,7 +608,7 @@ contains
     ! local variables
     character(len=valuelen) :: value
     character(80), dimension(:),allocatable :: tempval
-    integer i,numv
+    integer i,numv,inds,indc,ind
 
     if (present(numval)) then
        numv=numval
@@ -542,15 +619,39 @@ contains
     value=''
     call GetValueChar(section,name,value)
     if (value.eq.'') return
-    read(value,*,end=20) (tempval(i),i=1,numv)
-20  i=i-1
+
+    i=1
+    do
+       inds=index(value,' ') ; indc=index(value,',')
+       if (inds==0.and.indc==0) then
+          exit
+       else if (inds==1.or.indc==1) then
+          value=value(2:)
+          cycle
+       else if (inds==0) then
+          ind=indc
+       else if (indc==0) then
+          ind=inds
+       else
+          ind=min(inds,indc)
+       end if
+       tempval(i)=value(1:ind-1)
+       value=value(ind+1:)
+       if (trim(value)=='') exit
+       i=i+1
+    end do
 
     if (i.ge.1) then
        if (associated(val)) then
           deallocate(val)
        end if
+       allocate(val(i))
        val = tempval(1:i)
     end if
+    return
+    
+10  call write_log('Array error in config file - check syntax',GM_FATAL)
+
   end subroutine GetValueCharArray
 
   subroutine GetValueReal(section,name,val)

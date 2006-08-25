@@ -47,7 +47,6 @@
 module glint_mbal_coupling
 
   use glint_mbal
-  use glint_proj
   use glimmer_config
 
   !*FD Module to handle the accumulation of inputs and calculation of mass-balance
@@ -78,10 +77,12 @@ module glint_mbal_coupling
 
 contains
 
-  subroutine glint_mbc_init(params,proj,config,whichacab,snowd,siced,nx,ny,dx)
+  subroutine glint_mbc_init(params,lgrid,config,whichacab,snowd,siced,nx,ny,dx)
+
+    use glimmer_coordinates
 
     type(glint_mbc)  :: params
-    type(projection) :: proj
+    type(coordsystem_type) :: lgrid
     type(ConfigSection), pointer :: config !*FD structure holding sections of configuration file
     integer          :: whichacab
     real(sp),dimension(:,:),intent(in) :: snowd !*FD Initial snow-depth field
@@ -112,24 +113,24 @@ contains
 
     ! Allocate arrays and zero
 
-    allocate(params%prcp_save(proj%nx,proj%ny));  params%prcp_save = 0.0
-    allocate(params%ablt_save(proj%nx,proj%ny));  params%ablt_save = 0.0
-    allocate(params%acab_save(proj%nx,proj%ny));  params%acab_save = 0.0
-    allocate(params%artm_save(proj%nx,proj%ny));  params%artm_save = 0.0
-    allocate(params%snowd(proj%nx,proj%ny));      params%snowd = 0.0
-    allocate(params%siced(proj%nx,proj%ny));      params%siced = 0.0
-    allocate(params%prcp(proj%nx,proj%ny));       params%prcp = 0.0
-    allocate(params%ablt(proj%nx,proj%ny));       params%ablt = 0.0
-    allocate(params%acab(proj%nx,proj%ny));       params%acab = 0.0
-    allocate(params%artm(proj%nx,proj%ny));       params%artm = 0.0
-    allocate(params%xwind(proj%nx,proj%ny));      params%xwind = 0.0
-    allocate(params%ywind(proj%nx,proj%ny));      params%ywind = 0.0
-    allocate(params%humidity(proj%nx,proj%ny));   params%humidity = 0.0
-    allocate(params%SWdown(proj%nx,proj%ny));     params%SWdown = 0.0
-    allocate(params%LWdown(proj%nx,proj%ny));     params%LWdown = 0.0
-    allocate(params%Psurf(proj%nx,proj%ny));      params%Psurf = 0.0
-    allocate(params%snowd_save(proj%nx,proj%ny)); params%snowd_save = 0.0
-    allocate(params%siced_save(proj%nx,proj%ny)); params%siced_save = 0.0
+    call coordsystem_allocate(lgrid,params%prcp_save);  params%prcp_save = 0.0
+    call coordsystem_allocate(lgrid,params%ablt_save);  params%ablt_save = 0.0
+    call coordsystem_allocate(lgrid,params%acab_save);  params%acab_save = 0.0
+    call coordsystem_allocate(lgrid,params%artm_save);  params%artm_save = 0.0
+    call coordsystem_allocate(lgrid,params%snowd);      params%snowd = 0.0
+    call coordsystem_allocate(lgrid,params%siced);      params%siced = 0.0
+    call coordsystem_allocate(lgrid,params%prcp);       params%prcp = 0.0
+    call coordsystem_allocate(lgrid,params%ablt);       params%ablt = 0.0
+    call coordsystem_allocate(lgrid,params%acab);       params%acab = 0.0
+    call coordsystem_allocate(lgrid,params%artm);       params%artm = 0.0
+    call coordsystem_allocate(lgrid,params%xwind);      params%xwind = 0.0
+    call coordsystem_allocate(lgrid,params%ywind);      params%ywind = 0.0
+    call coordsystem_allocate(lgrid,params%humidity);   params%humidity = 0.0
+    call coordsystem_allocate(lgrid,params%SWdown);     params%SWdown = 0.0
+    call coordsystem_allocate(lgrid,params%LWdown);     params%LWdown = 0.0
+    call coordsystem_allocate(lgrid,params%Psurf);      params%Psurf = 0.0
+    call coordsystem_allocate(lgrid,params%snowd_save); params%snowd_save = 0.0
+    call coordsystem_allocate(lgrid,params%siced_save); params%siced_save = 0.0
 
     ! Initialise the mass-balance scheme and other components
 

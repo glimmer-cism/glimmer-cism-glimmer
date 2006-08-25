@@ -1,3 +1,12 @@
+2006-08-25 Ian Rutt
+ * Plumbed in new projection code. Tested successfully.
+ * Retained capability to pase [GLINT projection] config section, but
+ warning issued. This is a deprecated feature and should be removed at
+ some point.
+ * Fixed bug in glimmer_config.F90. Array-reading code now correctly
+ parses arrays with varying sizes - a pointer array of the correct length
+ is returned.
+
 2006-08-22 Ian Rutt
  * Finished consolidated projection code. Tested against exisiting
  projection code where available, and against itself (i.e. forward and

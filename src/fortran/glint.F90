@@ -140,7 +140,6 @@ contains
 
     !*FD Initialises the model
 
-    use glint_proj
     use glimmer_config
     use glint_initialise
     use glimmer_log
@@ -853,6 +852,8 @@ contains
     !*FD points, both latitudinally and longitudinally, although 
     !*FD this isn't strictly true for a Gaussian grid.
 
+    use glimmer_map_trans, only: loncorrect
+
     implicit none
 
     real(rk),dimension(:),intent(in) :: lon,lat    !*FD locations of global grid-points (degrees)
@@ -883,7 +884,7 @@ contains
        dlon=lon(1)-lon(nxg)
     endif
     lonb(1)=lon(nxg)+dlon/2
-    lonb(1)=loncorrect(lonb(1))      
+    lonb(1)=loncorrect(lonb(1),0.0_rk)      
 
     lonb(nxg+1)=lonb(1)
 
@@ -894,7 +895,7 @@ contains
           dlon=lon(i)-lon(i-1)
        endif
        lonb(i)=lon(i-1)+dlon/2
-       lonb(i)=loncorrect(lonb(i))      
+       lonb(i)=loncorrect(lonb(i),0.0_rk)      
     enddo
 
   end subroutine calc_bounds

@@ -103,27 +103,30 @@ contains
 
     call CheckSections(config)
 
-    ! New projection and downscaling
+    ! New grid and downscaling
 
-    call new_proj(instance%proj, &                       ! Initialise the projection
-                  nx=get_ewn(instance%model), &
-                  ny=get_nsn(instance%model), &
-                  dx=real(get_dew(instance%model),rk), &
-                  dy=real(get_dns(instance%model),rk))
-    call new_downscale(instance%downs,instance%proj,grid)     ! Initialise the downscaling
+    instance%lgrid = coordsystem_new(0.d0, 0.d0, &
+         get_dew(instance%model), &
+         get_dns(instance%model), &
+         get_ewn(instance%model), &
+         get_nsn(instance%model))
+
+    call new_downscale(instance%downs,instance%model%projection,grid,instance%lgrid)    ! Initialise the downscaling
 
     call glint_i_allocate(instance,grid%nx,grid%ny,grid_orog%nx,grid_orog%ny)           ! Allocate arrays appropriately
     call glint_i_readdata(instance)
-    call new_upscale(instance%ups,grid,instance%proj,instance%out_mask) ! Initialise upscaling parameters
-    call new_upscale(instance%ups_orog,grid_orog,instance%proj,instance%out_mask) ! Initialise upscaling parameters
+    call new_upscale(instance%ups,grid,instance%model%projection, &
+         instance%out_mask,instance%lgrid) ! Initialise upscaling parameters
+    call new_upscale(instance%ups_orog,grid_orog,instance%model%projection, &
+         instance%out_mask,instance%lgrid) ! Initialise upscaling parameters
 
-    call calc_coverage(instance%proj, &                         ! Calculate coverage map
+    call calc_coverage(instance%lgrid, &                         ! Calculate coverage map
                        instance%ups,  &             
                        grid,          &
                        instance%out_mask, &
                        instance%frac_coverage)
 
-    call calc_coverage(instance%proj, &                         ! Calculate coverage map for orog
+    call calc_coverage(instance%lgrid, &                         ! Calculate coverage map for orog
                        instance%ups_orog,  &             
                        grid_orog,     &
                        instance%out_mask, &
@@ -131,9 +134,13 @@ contains
 
     ! initialise the mass-balance accumulation
 
-    call glint_mbc_init(instance%mbal_accum,instance%proj,config,instance%whichacab, &
+    call glint_mbc_init(instance%mbal_accum, &
+         instance%lgrid, &
+         config,instance%whichacab, &
          instance%snowd,instance%siced, &
-         instance%proj%nx,instance%proj%ny,instance%proj%dx)
+         instance%lgrid%size%pt(1), &
+         instance%lgrid%size%pt(2), &
+         instance%lgrid%delta%pt(1))
     instance%mbal_tstep=instance%mbal_accum%mbal%tstep
     mbts=instance%mbal_tstep
 
@@ -200,19 +207,19 @@ contains
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine calc_coverage(proj,ups,grid,mask,frac_coverage)
+  subroutine calc_coverage(lgrid,ups,grid,mask,frac_coverage)
 
     !*FD Calculates the fractional
     !*FD coverage of the global grid-boxes by the ice model
     !*FD domain.
 
-    use glint_proj
+    use glimmer_map_types
+    use glimmer_coordinates
     use glint_global_grid
-    use gmt, only: D2R
 
     ! Arguments
 
-    type(projection),       intent(in)  :: proj          !*FD Projection to be used
+    type(coordsystem_type), intent(in)  :: lgrid         !*FD Local grid
     type(upscale),          intent(in)  :: ups           !*FD Upscaling used
     type(global_grid),      intent(in)  :: grid          !*FD Global grid used
     integer, dimension(:,:),intent(in)  :: mask          !*FD Mask of points for upscaling
@@ -227,8 +234,8 @@ contains
 
     tempcount=0
 
-    do i=1,proj%nx
-       do j=1,proj%ny
+    do i=1,lgrid%size%pt(1)
+       do j=1,lgrid%size%pt(2)
           tempcount(ups%gboxx(i,j),ups%gboxy(i,j))=tempcount(ups%gboxx(i,j),ups%gboxy(i,j))+mask(i,j)
        enddo
     enddo
@@ -238,8 +245,8 @@ contains
           if (tempcount(i,j)==0) then
              frac_coverage(i,j)=0.0
           else
-             frac_coverage(i,j)=(tempcount(i,j)*proj%dx*proj%dy)/ &
-                  (lon_diff(grid%lon_bound(i+1),grid%lon_bound(i))*D2R*proj%radea**2*    &
+             frac_coverage(i,j)=(tempcount(i,j)*lgrid%delta%pt(1)*lgrid%delta%pt(2))/ &
+                  (lon_diff(grid%lon_bound(i+1),grid%lon_bound(i))*D2R*EQ_RAD**2*    &
                   (sin(grid%lat_bound(j)*D2R)-sin(grid%lat_bound(j+1)*D2R)))
           endif
        enddo

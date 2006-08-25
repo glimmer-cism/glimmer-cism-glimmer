@@ -96,7 +96,8 @@ contains
     !*FD create a new netCDF file
     use glimmer_log
     use glide_types
-    use glimmer_CFproj
+    use glimmer_map_CFproj
+    use glimmer_map_types
     implicit none
     type(glimmer_nc_output), pointer :: outfile
     !*FD structure containg output netCDF descriptor
@@ -150,10 +151,10 @@ contains
     status = nf90_put_att(NCO%id, NCO%timevar, 'calendar', 'none')
 
     ! adding projection info
-    if (CFproj_allocated(model%projection)) then
+    if (glimmap_allocated(model%projection)) then
        status = nf90_def_var(NCO%id,glimmer_nc_mapvarname,NF90_CHAR,mapid)
        call nc_errorhandle(__FILE__,__LINE__,status)
-       call CFproj_PutProj(NCO%id,mapid,model%projection)
+       call glimmap_CFPutProj(NCO%id,mapid,model%projection)
     end if
 
     ! setting the size of the level dimension
@@ -243,7 +244,8 @@ contains
   subroutine glimmer_nc_openfile(infile,model)
     !*FD open an existing netCDF file
     use glide_types
-    use glimmer_cfproj
+    use glimmer_map_cfproj
+    use glimmer_map_types
     use glimmer_log
     use paramets, only: len0
     implicit none
@@ -269,8 +271,8 @@ contains
     call write_log_div
     call write_log('opening file '//trim(NCI%filename)//' for input')
 
-    ! getting projections
-    model%projection = CFproj_GetProj(NCI%id)
+    ! getting projection, if none defined already
+    if (.not.glimmap_allocated(model%projection)) model%projection = glimmap_CFGetProj(NCI%id)
 
     ! getting time dimension
     status = nf90_inq_dimid(NCI%id, 'time', NCI%timedim)

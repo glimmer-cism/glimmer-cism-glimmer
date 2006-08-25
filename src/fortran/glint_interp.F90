@@ -50,7 +50,7 @@ module glint_interp
   !*FD routines for use in GLIMMER.
 
   use glimmer_global
-  use glint_proj
+  use glimmer_map_types
 
   implicit none
 
@@ -97,9 +97,12 @@ module glint_interp
 
 contains
 
-  subroutine new_downscale(downs,proj,grid)
+  subroutine new_downscale(downs,proj,ggrid,lgrid)
 
     use glint_global_grid
+    use glimmer_map_trans
+    use glimmer_map_types
+    use glimmer_coordinates
 
     !*FD Initialises a downscale variable,
     !*FD according to given projected and global grids
@@ -107,8 +110,9 @@ contains
     ! Arguments
 
     type(downscale),intent(out)      :: downs   !*FD Downscaling variable to be set
-    type(projection),intent(in)      :: proj    !*FD Projection to use
-    type(global_grid),intent(in)     :: grid    !*FD Global grid to use
+    type(glimmap_proj),intent(in)    :: proj    !*FD Projection to use
+    type(global_grid),intent(in)     :: ggrid   !*FD Global grid to use
+    type(coordsystem_type),intent(in) :: lgrid  !*FD Local (ice) grid 
 
     ! Internal variables
 
@@ -117,28 +121,28 @@ contains
 
     ! Allocate arrays
 
-    allocate(downs%xloc (proj%nx,proj%ny,4))
-    allocate(downs%yloc (proj%nx,proj%ny,4))
-    allocate(downs%xfrac(proj%nx,proj%ny))
-    allocate(downs%yfrac(proj%nx,proj%ny))
-    allocate(downs%llons(proj%nx,proj%ny))
-    allocate(downs%llats(proj%nx,proj%ny))
-    allocate(downs%sintheta(proj%nx,proj%ny))
-    allocate(downs%costheta(proj%nx,proj%ny))
+    allocate(downs%xloc(lgrid%size%pt(1),lgrid%size%pt(2),4))
+    allocate(downs%yloc(lgrid%size%pt(1),lgrid%size%pt(2),4))
+    call coordsystem_allocate(lgrid,downs%xfrac)
+    call coordsystem_allocate(lgrid,downs%yfrac)
+    call coordsystem_allocate(lgrid,downs%llons)
+    call coordsystem_allocate(lgrid,downs%llats)
+    call coordsystem_allocate(lgrid,downs%sintheta)
+    call coordsystem_allocate(lgrid,downs%costheta)
   
     ! index local boxes
 
-    call index_local_boxes(downs%xloc,downs%yloc,downs%xfrac,downs%yfrac,grid,proj)
+    call index_local_boxes(downs%xloc,downs%yloc,downs%xfrac,downs%yfrac,ggrid,proj,lgrid)
 
     ! Calculate grid angle
 
-    call calc_grid_angle(downs,proj)
+    call calc_grid_angle(downs,proj,lgrid)
 
     ! Find lats and lons
 
-    do i=1,proj%nx
-       do j=1,proj%ny
-          call xy_to_ll(llon,llat,real(i,rk),real(j,rk),proj)
+    do i=1,lgrid%size%pt(1)
+       do j=1,lgrid%size%pt(2)
+          call glimmap_xy_to_ll(llon,llat,real(i,rk),real(j,rk),proj,lgrid)
           downs%llons(i,j)=llon
           downs%llats(i,j)=llat
        end do
@@ -148,16 +152,17 @@ contains
 
   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine interp_wind_to_local(proj,zonwind,merwind,downs,xwind,ywind)
+  subroutine interp_wind_to_local(lgrid,zonwind,merwind,downs,xwind,ywind)
 
     !*FD Interpolates a global wind field 
     !*FD (or any vector field) onto a given projected grid.
 
     use glimmer_utils
+    use glimmer_coordinates
 
     ! Argument declarations
 
-    type(projection),       intent(in)  :: proj             !*FD Target map projection
+    type(coordsystem_type), intent(in)  :: lgrid            !*FD Target grid
     real(rk),dimension(:,:),intent(in)  :: zonwind          !*FD Zonal component (input)
     real(rk),dimension(:,:),intent(in)  :: merwind          !*FD Meridional components (input)
     type(downscale),        intent(in)  :: downs            !*FD Downscaling parameters
@@ -174,8 +179,8 @@ contains
 
     ! Interpolate onto the projected grid
 
-    call interp_to_local(proj,zonwind,downs,localdp=tempzw)
-    call interp_to_local(proj,merwind,downs,localdp=tempmw)
+    call interp_to_local(lgrid,zonwind,downs,localdp=tempzw)
+    call interp_to_local(lgrid,merwind,downs,localdp=tempmw)
 
     ! Apply rotation
 
@@ -186,7 +191,7 @@ contains
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine interp_to_local(proj,global,downs,localsp,localdp,localrk,global_fn)
+  subroutine interp_to_local(lgrid,global,downs,localsp,localdp,localrk,global_fn)
 
     !*FD Interpolate a global scalar field
     !*FD onto a projected grid. 
@@ -199,11 +204,12 @@ contains
     !*FD which precision output is required.
 
     use glimmer_utils
+    use glimmer_coordinates
     use glimmer_log
 
     ! Argument declarations
 
-    type(projection),        intent(in)           :: proj      !*FD Target map projection
+    type(coordsystem_type),  intent(in)           :: lgrid     !*FD Local grid
     real(rk), dimension(:,:),intent(in)           :: global    !*FD Global field (input)
     type(downscale),         intent(in)           :: downs     !*FD Downscaling parameters
     real(sp),dimension(:,:), intent(out),optional :: localsp   !*FD Local field on projected grid (output) sp
@@ -230,8 +236,8 @@ contains
 
     ! Main interpolation loop
 
-    do i=1,proj%nx
-       do j=1,proj%ny
+    do i=1,lgrid%size%pt(1)
+       do j=1,lgrid%size%pt(2)
 
           ! Compile the temporary array f from adjacent points 
 
@@ -260,22 +266,25 @@ contains
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine mean_to_local(proj,grid,global,localsp,localdp,global_fn)
+  subroutine mean_to_local(proj,lgrid,ggrid,global,localsp,localdp,global_fn)
 
     !*FD Average a high-resolution global field onto the projected grid
     !*FD This assumes that the global field is sufficiently high-resolution 
     !*FD compared with the local grid - it just averages the points contained 
     !*FD in each local grid-box.
 
-    use glint_proj
+    use glimmer_map_types
+    use glimmer_map_trans
+    use glimmer_coordinates
     use glimmer_utils
     use glimmer_log
     use glint_global_grid
 
     ! Argument declarations
 
-    type(projection),                intent(in)  :: proj      !*FD Target map projection
-    type(global_grid),               intent(in)  :: grid      !*FD Global grid information
+    type(glimmap_proj),              intent(in)  :: proj      !*FD Target map projection
+    type(coordsystem_type),          intent(in)  :: lgrid     !*FD Local grid information
+    type(global_grid),               intent(in)  :: ggrid     !*FD Global grid information
     real(rk),dimension(:,:),         intent(in)  :: global    !*FD Global field (input)
     real(sp),dimension(:,:),optional,intent(out) :: localsp   !*FD Local field on projected grid (output) sp
     real(dp),dimension(:,:),optional,intent(out) :: localdp   !*FD Local field on projected grid (output) dp
@@ -288,11 +297,11 @@ contains
 
     integer :: i,j,xbox,ybox
     real(rk) :: lat,lon,x,y
-    real(dp),dimension(proj%nx,proj%ny) :: temp_out
-    real(rk),dimension(proj%nx,proj%ny) :: mean_count
+    real(dp),dimension(lgrid%size%pt(1),lgrid%size%pt(2)) :: temp_out
+    real(rk),dimension(lgrid%size%pt(1),lgrid%size%pt(2)) :: mean_count
 
     if (.not.present(global_fn)) then 
-       if ((grid%nx/=size(grid%lons)).or.(grid%ny/=size(grid%lats))) then
+       if ((lgrid%size%pt(1)/=size(ggrid%lons)).or.(lgrid%size%pt(2)/=size(ggrid%lats))) then
           call write_log('Size mismatch in interp_to_local',GM_FATAL,__FILE__,__LINE__)
        end if
     end if
@@ -310,29 +319,29 @@ contains
 
     ! Loop over all global points
 
-    do i=1,grid%nx
+    do i=1,lgrid%size%pt(1)
 
-       lon=grid%lons(i)
+       lon=ggrid%lons(i)
 
-       do j=1,grid%ny
+       do j=1,lgrid%size%pt(2)
 
           ! Find location in local coordinates
 
-          lat=grid%lats(j)  ! (Have already found lat above)
-          call ll_to_xy(lon,lat,x,y,proj)
+          lat=ggrid%lats(j)  ! (Have already found lat above)
+          call glimmap_ll_to_xy(lon,lat,x,y,proj,lgrid)
           xbox=nint(x)
           ybox=nint(y)
 
           ! Add to appropriate location and update count
 
-          if (xbox.ge.1.and.xbox.le.proj%nx.and. &
-               ybox.ge.1.and.ybox.le.proj%ny) then
+          if (xbox.ge.1.and.xbox.le.lgrid%size%pt(1).and. &
+               ybox.ge.1.and.ybox.le.lgrid%size%pt(2)) then
              if (present(global_fn)) then
-                temp_out(xbox,ybox)=temp_out(xbox,ybox)+global_fn(i,j)*grid%box_areas(xbox,ybox)
+                temp_out(xbox,ybox)=temp_out(xbox,ybox)+global_fn(i,j)*ggrid%box_areas(xbox,ybox)
              else
-                temp_out(xbox,ybox)=temp_out(xbox,ybox)+global(i,j)*grid%box_areas(xbox,ybox)
+                temp_out(xbox,ybox)=temp_out(xbox,ybox)+global(i,j)*ggrid%box_areas(xbox,ybox)
              end if
-             mean_count(xbox,ybox)=mean_count(xbox,ybox)+grid%box_areas(xbox,ybox)
+             mean_count(xbox,ybox)=mean_count(xbox,ybox)+ggrid%box_areas(xbox,ybox)
           end if
 
        end do
@@ -347,7 +356,7 @@ contains
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine pointwise_to_global(proj,local,lons,lats,global)
+  subroutine pointwise_to_global(proj,lgrid,local,lons,lats,global)
 
     !*FD Upscale to global domain by
     !*FD pointwise sampling.
@@ -355,9 +364,13 @@ contains
     !*FD Note that this is the mathematically inverse process of the 
     !*FD \texttt{interp\_to\_local} routine.
 
+    use glimmer_coordinates
+    use glimmer_map_trans
+
     ! Arguments
 
-    type(projection),       intent(in)  :: proj      !*FD Projection to use
+    type(glimmap_proj),     intent(in)  :: proj      !*FD Projection to use
+    type(coordsystem_type), intent(in)  :: lgrid     !*FD Local grid
     real(rk),dimension(:,:),intent(in)  :: local     !*FD Local field (input)
     real(rk),dimension(:,:),intent(out) :: global    !*FD Global field (output)
     real(rk),dimension(:),  intent(in)  :: lats      !*FD Latitudes of grid-points (degrees)
@@ -375,7 +388,7 @@ contains
 
     do i=1,nxg
        do j=1,nyg
-          call ll_to_xy(lons(i),lats(j),x,y,proj)
+          call glimmap_ll_to_xy(lons(i),lats(j),x,y,proj,lgrid)
           xx=int(x) ; yy=int(y)
           if (nint(x)<=1.or.nint(x)>nxl-1.or.nint(y)<=1.or.nint(y)>nyl-1) then
              global(i,j)=0.0
@@ -573,41 +586,44 @@ contains
 
   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine index_local_boxes(xloc,yloc,xfrac,yfrac,grid,proj)
+  subroutine index_local_boxes(xloc,yloc,xfrac,yfrac,ggrid,proj,lgrid)
 
     !*FD Indexes the corners of the
     !*FD global grid box in which each local grid box sits.
 
     use glimmer_utils
     use glint_global_grid
+    use glimmer_coordinates
+    use glimmer_map_trans
 
     ! Arguments
 
     integer, dimension(:,:,:),intent(out) :: xloc,yloc   !*FD Array of indicies (see \texttt{downscale} type)
     real(rk),dimension(:,:),  intent(out) :: xfrac,yfrac !*FD Fractional off-sets of grid points
-    type(global_grid),        intent(in)  :: grid        !*FD Global grid to be used
-    type(projection),         intent(in)  :: proj        !*FD Projection to be used
+    type(global_grid),        intent(in)  :: ggrid       !*FD Global grid to be used
+    type(glimmap_proj),       intent(in)  :: proj        !*FD Projection to be used
+    type(coordsystem_type),   intent(in)  :: lgrid       !*FD Local grid
 
     ! Internal variables
 
     integer :: i,j,il,jl,temp
     real(rk) :: ilon,jlat,xa,ya,xb,yb,xc,yc,xd,yd
 
-    do i=1,proj%nx
-       do j=1,proj%ny
+    do i=1,lgrid%size%pt(1)
+       do j=1,lgrid%size%pt(2)
 
           ! Find out where point i,j is in lat-lon space
 
-          call xy_to_ll(ilon,jlat,real(i,rk),real(j,rk),proj)
+          call glimmap_xy_to_ll(ilon,jlat,real(i,rk),real(j,rk),proj,lgrid)
 
           ! Index that location onto the global grid
 
-          call find_ll_index(il,jl,ilon,jlat,grid%lons,grid%lats)
+          call find_ll_index(il,jl,ilon,jlat,ggrid%lons,ggrid%lats)
 
           xloc(i,j,1)=il  ! This is the starting point - we now need to find
           yloc(i,j,1)=jl  ! three other points that enclose the interpolation target
 
-          if (jlat>grid%lats(grid%ny)) then
+          if (jlat>ggrid%lats(ggrid%ny)) then
 
              ! For all points except on the bottom row
 
@@ -620,9 +636,9 @@ contains
              xloc(i,j,4)=il
              yloc(i,j,4)=jl-1
 
-             call fix_bcs2d(xloc(i,j,2) ,yloc(i,j,2),grid%nx,grid%ny)
-             call fix_bcs2d(xloc(i,j,3) ,yloc(i,j,3),grid%nx,grid%ny)
-             call fix_bcs2d(xloc(i,j,4) ,yloc(i,j,4),grid%nx,grid%ny)
+             call fix_bcs2d(xloc(i,j,2) ,yloc(i,j,2),ggrid%nx,ggrid%ny)
+             call fix_bcs2d(xloc(i,j,3) ,yloc(i,j,3),ggrid%nx,ggrid%ny)
+             call fix_bcs2d(xloc(i,j,4) ,yloc(i,j,4),ggrid%nx,ggrid%ny)
 
              if (jl==1) then
                 temp=xloc(i,j,3)
@@ -643,9 +659,9 @@ contains
              xloc(i,j,4)=il
              yloc(i,j,4)=jl+1
 
-             call fix_bcs2d(xloc(i,j,2) ,yloc(i,j,2),grid%nx,grid%ny)
-             call fix_bcs2d(xloc(i,j,3) ,yloc(i,j,3),grid%nx,grid%ny)
-             call fix_bcs2d(xloc(i,j,4) ,yloc(i,j,4),grid%nx,grid%ny)
+             call fix_bcs2d(xloc(i,j,2) ,yloc(i,j,2),ggrid%nx,ggrid%ny)
+             call fix_bcs2d(xloc(i,j,3) ,yloc(i,j,3),ggrid%nx,ggrid%ny)
+             call fix_bcs2d(xloc(i,j,4) ,yloc(i,j,4),ggrid%nx,ggrid%ny)
 
              temp=xloc(i,j,3)
              xloc(i,j,3)=xloc(i,j,4)
@@ -656,10 +672,10 @@ contains
           ! Now, find out where each of those points is on the projected
           ! grid, and calculate fractional displacements accordingly
 
-          call ll_to_xy(grid%lons(xloc(i,j,1)),grid%lats(yloc(i,j,1)),xa,ya,proj)
-          call ll_to_xy(grid%lons(xloc(i,j,2)),grid%lats(yloc(i,j,2)),xb,yb,proj)
-          call ll_to_xy(grid%lons(xloc(i,j,3)),grid%lats(yloc(i,j,3)),xc,yc,proj)
-          call ll_to_xy(grid%lons(xloc(i,j,4)),grid%lats(yloc(i,j,4)),xd,yd,proj)
+          call glimmap_ll_to_xy(ggrid%lons(xloc(i,j,1)),ggrid%lats(yloc(i,j,1)),xa,ya,proj,lgrid)
+          call glimmap_ll_to_xy(ggrid%lons(xloc(i,j,2)),ggrid%lats(yloc(i,j,2)),xb,yb,proj,lgrid)
+          call glimmap_ll_to_xy(ggrid%lons(xloc(i,j,3)),ggrid%lats(yloc(i,j,3)),xc,yc,proj,lgrid)
+          call glimmap_ll_to_xy(ggrid%lons(xloc(i,j,4)),ggrid%lats(yloc(i,j,4)),xd,yd,proj,lgrid)
 
           call calc_fractional(xfrac(i,j),yfrac(i,j),real(i,rk),real(j,rk), &
                xa,ya,xb,yb,xc,yc,xd,yd)
@@ -671,26 +687,30 @@ contains
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine calc_grid_angle(downs,proj)
+  subroutine calc_grid_angle(downs,proj,lgrid)
 
     !*FD Calculates the angle the projected 
     !*FD grid makes with north at each point and stores the cos 
     !*FD and sin of that angle in the relevant arrays in \texttt{proj}.
 
+    use glimmer_coordinates
+    use glimmer_map_trans
+
     type(downscale),intent(inout) :: downs !*FD The projection to be used
-    type(projection),intent(in) :: proj
+    type(glimmap_proj),intent(in) :: proj
+    type(coordsystem_type),intent(in) :: lgrid
 
     integer :: i,j
     real(rk) :: latn,lonn,lats,lons,lat,lon,dlat,dlon,temp
 
-    do i=1,proj%nx
+    do i=1,lgrid%size%pt(1)
 
        ! Main, central block
 
-       do j=2,proj%ny-1
-          call xy_to_ll(lonn,latn,real(i,rk),real(j+1,rk),proj)
-          call xy_to_ll(lon,lat,real(i,rk),real(j,rk),proj)
-          call xy_to_ll(lons,lats,real(i,rk),real(j-1,rk),proj)
+       do j=2,lgrid%size%pt(2)-1
+          call glimmap_xy_to_ll(lonn,latn,real(i,rk),real(j+1,rk),proj,lgrid)
+          call glimmap_xy_to_ll(lon,lat,real(i,rk),real(j,rk),proj,lgrid)
+          call glimmap_xy_to_ll(lons,lats,real(i,rk),real(j-1,rk),proj,lgrid)
           dlat=latn-lats
           dlon=lonn-lons
           if (dlon<-90) dlon=dlon+360
@@ -701,8 +721,8 @@ contains
 
        ! bottom row
 
-       call xy_to_ll(lonn,latn,real(i,rk),real(2,rk),proj)
-       call xy_to_ll(lon,lat,real(i,rk),real(1,rk),proj)
+       call glimmap_xy_to_ll(lonn,latn,real(i,rk),real(2,rk),proj,lgrid)
+       call glimmap_xy_to_ll(lon,lat,real(i,rk),real(1,rk),proj,lgrid)
        dlat=latn-lat
        dlon=lonn-lon
        if (dlon<-90) dlon=dlon+360
@@ -712,14 +732,14 @@ contains
 
        ! top row
 
-       call xy_to_ll(lon,lat,real(i,rk),real(proj%ny,rk),proj)
-       call xy_to_ll(lons,lats,real(i,rk),real(proj%ny-1,rk),proj)
+       call glimmap_xy_to_ll(lon,lat,real(i,rk),real(lgrid%size%pt(2),rk),proj,lgrid)
+       call glimmap_xy_to_ll(lons,lats,real(i,rk),real(lgrid%size%pt(2)-1,rk),proj,lgrid)
        dlat=lat-lats
        dlon=lon-lons
        if (dlon<-90) dlon=dlon+360
        temp=atan(dlon/dlat)
-       downs%sintheta(i,proj%ny)=sin(temp)
-       downs%costheta(i,proj%ny)=cos(temp)
+       downs%sintheta(i,lgrid%size%pt(2))=sin(temp)
+       downs%costheta(i,lgrid%size%pt(2))=cos(temp)
 
     enddo
 
@@ -727,10 +747,12 @@ contains
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine new_upscale(ups,grid,proj,mask)
+  subroutine new_upscale(ups,ggrid,proj,mask,lgrid)
 
     use glint_global_grid
     use glimmer_log
+    use glimmer_map_trans
+    use glimmer_coordinates
 
     !*FD Compiles an index of which global grid box contains a given
     !*FD grid box on the projected grid, and sets derived type \texttt{ups}
@@ -739,9 +761,10 @@ contains
     ! Arguments
 
     type(upscale),         intent(out) :: ups        !*FD Upscaling type to be set
-    type(global_grid),     intent(in)  :: grid       !*FD Global grid to be used
-    type(projection),      intent(in)  :: proj       !*FD Projection being used
+    type(global_grid),     intent(in)  :: ggrid      !*FD Global grid to be used
+    type(glimmap_proj),    intent(in)  :: proj       !*FD Projection being used
     integer,dimension(:,:),intent(in)  :: mask       !*FD Upscaling mask to be used
+    type(coordsystem_type),intent(in)  :: lgrid      !*FD local grid
 
     ! Internal variables
 
@@ -754,25 +777,25 @@ contains
     if (associated(ups%gboxy)) deallocate(ups%gboxy)
     if (associated(ups%gboxn)) deallocate(ups%gboxn)
 
-    allocate(ups%gboxx(proj%nx,proj%ny))
-    allocate(ups%gboxy(proj%nx,proj%ny))     
-    allocate(ups%gboxn(grid%nx,grid%ny))
+    allocate(ups%gboxx(lgrid%size%pt(1),lgrid%size%pt(2)))
+    allocate(ups%gboxy(lgrid%size%pt(1),lgrid%size%pt(2)))     
+    allocate(ups%gboxn(ggrid%nx,ggrid%ny))
 
-    gnx=grid%nx ; gny=grid%ny
-    nx =proj%nx ; ny =proj%ny
+    gnx=ggrid%nx ; gny=ggrid%ny
+    nx =lgrid%size%pt(1) ; ny =lgrid%size%pt(2)
 
     ups%gboxx=0 ; ups%gboxy=0
 
     do i=1,nx
        do j=1,ny
-          call xy_to_ll(plon,plat,real(i,rk),real(j,rk),proj)
+          call glimmap_xy_to_ll(plon,plat,real(i,rk),real(j,rk),proj,lgrid)
           ii=1 ; jj=1
           do
              ups%gboxx(i,j)=ii
              if (ii>gnx) then
                 call write_log('global index failure',GM_FATAL,__FILE__,__LINE__)
              endif
-             if (lon_between(grid%lon_bound(ii),grid%lon_bound(ii+1),plon)) exit
+             if (lon_between(ggrid%lon_bound(ii),ggrid%lon_bound(ii+1),plon)) exit
              ii=ii+1
           enddo
 
@@ -783,7 +806,7 @@ contains
              if (jj>gny) then
                 call write_log('global index failure',GM_FATAL,__FILE__,__LINE__)
              endif
-             if ((grid%lat_bound(jj)>=plat).and.(plat>grid%lat_bound(jj+1))) exit
+             if ((ggrid%lat_bound(jj)>=plat).and.(plat>ggrid%lat_bound(jj+1))) exit
              jj=jj+1
           enddo
 

@@ -63,6 +63,7 @@ contains
     use isostasy
     use glimmer_ncparams
     use glimmer_config
+    use glimmer_map_init
     implicit none
     type(glide_global_type) :: model        !*FD model instance
     type(ConfigSection), pointer :: config  !*FD structure holding sections of configuration file
@@ -77,6 +78,15 @@ contains
     ! read isostasy configuration file
     call isos_readconfig(model%isos,config)
     call isos_printconfig(model%isos)
+    ! read mapping from config file
+    ! **** Use of dew and dns here is an ugly fudge that
+    ! **** allows the use of old [GLINT projection] config section
+    ! **** for backwards compatibility. It will be deleted soon.
+    ! **** (You have been warned!)
+    ! **** N.B. Here, dew and dns are unscaled - i.e. real distances in m
+    call glimmap_readconfig(model%projection,config, &
+         model%numerics%dew, &
+         model%numerics%dns)
 
     ! netCDF I/O
     if (trim(model%funits%ncfile).eq.'') then
@@ -99,6 +109,7 @@ contains
     use glimmer_scales
     use glide_mask
     use isostasy
+    use glimmer_map_init
     implicit none
     type(glide_global_type) :: model        !*FD model instance
 
@@ -130,6 +141,8 @@ contains
     call openall_in(model)
     ! and read first time slice
     call glide_io_readall(model,model)
+    ! Write projection info to log
+    call glimmap_printproj(model%projection)
 
     ! handle relaxed/equilibrium topo
     ! Initialise isostasy first

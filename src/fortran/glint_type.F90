@@ -49,7 +49,6 @@ module glint_type
   !*FD contains type definitions for GLINT
 
   use glimmer_global
-  use glint_proj
   use glint_interp
   use glide_types
   use glint_mbal_coupling
@@ -60,7 +59,7 @@ module glint_type
 
      !*FD Derived type holding information about ice model instance. 
 
-     type(projection)                 :: proj               !*FD The projection definition of the instance.
+     type(coordsystem_type)           :: lgrid              !*FD Local grid for interfacing with glide
      type(downscale)                  :: downs              !*FD Downscaling parameters.
      type(upscale)                    :: ups                !*FD Upscaling parameters
      type(upscale)                    :: ups_orog           !*FD Upscaling parameters for orography (to cope
@@ -268,9 +267,6 @@ contains
 
     type(ConfigSection), pointer :: section
 
-    ! GLINT projection parameters
-    call proj_readconfig(instance%proj,config)         ! read glint projection configuration
-
     call GetSection(config,section,'GLINT climate')
     if (associated(section)) then
        call GetValue(section,'precip_mode',instance%whichprecip)
@@ -298,8 +294,6 @@ contains
     ! Internal
 
     character(len=100) :: message
-
-    call proj_printconfig(instance%proj)  ! Print projection info
 
     call write_log('GLINT climate')
     call write_log('-------------')
@@ -350,7 +344,7 @@ contains
 
     ! Internal variables -------------------------------------------------------------------------------
 
-    real(rk),dimension(:,:),allocatable :: temp
+    real(rk),dimension(:,:),pointer :: temp => null()
 
     ! --------------------------------------------------------------------------------------------------
     ! Orography
@@ -361,7 +355,7 @@ contains
          instance%out_mask)
     orog=thk0*orog
 
-    allocate(temp(instance%proj%nx,instance%proj%ny))
+    call coordsystem_allocate(instance%lgrid,temp)
 
     ! Ice-no-snow fraction
     where (instance%mbal_accum%snowd==0.0.and.instance%model%geometry%thck>0.0)
@@ -415,6 +409,7 @@ contains
     endwhere
 
     deallocate(temp)
+    temp => null()
 
   end subroutine get_i_upscaled_fields
 

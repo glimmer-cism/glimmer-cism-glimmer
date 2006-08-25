@@ -124,7 +124,7 @@ contains
     use glide_types
     use DATAMOD
     use glimmer_ncdf
-    use glimmer_CFproj
+    use glimmer_map_types
     use glimmer_log
     implicit none
     type(glimmer_nc_output), pointer :: outfile

@@ -65,7 +65,7 @@ module glide_types
   use isostasy_types
   use profile
   use glimmer_coordinates
-  use glimmer_cfproj, only : CFproj_projection
+  use glimmer_map_types, only : glimmap_proj
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -524,7 +524,7 @@ module glide_types
     type(glide_thckwk)   :: thckwk
     type(glide_tempwk)   :: tempwk
     type(glide_paramets) :: paramets
-    type(CFproj_projection) :: projection
+    type(glimmap_proj) :: projection
     type(profile_type)   :: profile
     type(glide_prof_type) :: glide_prof
     type(isos_type)      :: isos

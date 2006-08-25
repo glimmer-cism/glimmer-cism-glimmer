@@ -54,23 +54,31 @@ module glimmer_map_init
 
 contains
 
-  subroutine glimmap_readconfig(proj,config)
+  subroutine glimmap_readconfig(proj,config,dx,dy)
     !*FD read projection configuration from file
     use glimmer_config
     use glimmer_log
+    use glimmer_global
     implicit none
     type(glimmap_proj),intent(inout) :: proj !*FD The projection parameters to be initialised
-    type(ConfigSection), pointer :: config !*FD structure holding sections of configuration file   
+    type(ConfigSection), pointer :: config !*FD structure holding sections of configuration file 
+    real(dp),intent(in) :: dx,dy
 
     ! local variables
     type(ConfigSection), pointer :: section
-    real(rk) :: lonc,latc,efalse,nfalse,stdp1,stdp2,scale_factor
-    real(rk),dimension(:),pointer :: std_par => null()
+    real(rk) :: lonc,latc,efalse,nfalse,stdp1,stdp2,scale_factor,cpx,cpy
+    real(rk),dimension(:),pointer :: std_par
     character(10) :: ptype
     logical :: stdp,scfac
-    integer :: ptval
+    integer :: ptval,ptold
 
+    ptype   = ''
+    lonc    = 0.0 ; latc   = 0.0
+    efalse  = 0.0 ; nfalse = 0.0
+    std_par => null()
     scale_factor = 0.0
+    stdp1=0.0
+    stdp2=0.0
 
     call GetSection(config,section,'projection')
     if (associated(section)) then
@@ -79,47 +87,77 @@ contains
        call GetValue(section,'centre_latitude',latc)
        call GetValue(section,'false_easting',efalse)
        call GetValue(section,'false_northing',nfalse)
-       call GetValue(section,'std parallel',std_par)
+       call GetValue(section,'standard_parallel',std_par)
        call GetValue(section,'scale_factor',scale_factor)
-    end if
 
-    ! Parse the projection type
+       ! Parse the projection type
+       if (index(ptype,'LAEA')/=0.or.index(ptype,'laea')/=0) then
+          ptval = GMAP_LAEA
+       else if (index(ptype,'AEA')/=0.or.index(ptype,'aea')/=0) then
+          ptval = GMAP_AEA
+       else if (index(ptype,'LCC')/=0.or.index(ptype,'lcc')/=0) then
+          ptval = GMAP_LCC
+       else if (index(ptype,'STERE')/=0.or.index(ptype,'stere')/=0) then
+          ptval = GMAP_STERE
+       else
+          call write_log('Unrecognised type in [projection]',GM_FATAL,__FILE__,__LINE__)
+       end if
+ 
+       ! Deal with presence or not of standard parallel(s)
+       if (associated(std_par)) then
+          stdp = .true.
+          select case (size(std_par))
+          case(1)
+             stdp1 = std_par(1) ; stdp2 = std_par(1)
+          case(2)
+             stdp1 = std_par(1) ; stdp2 = std_par(2)
+          case(0)
+             stdp=.false.
+          case default
+             call write_log('More than two Standard parallels given',GM_FATAL,__FILE__,__LINE__)
+          end select
+       else
+          stdp = .false.
+       end if
 
-    if (index(ptype,'LAEA')/=0.or.index(ptype,'laea')/=0) then
-       ptval = GMAP_LAEA
-    else if (index(ptype,'AEA')/=0.or.index(ptype,'aea')/=0) then
-       ptval = GMAP_AEA
-    else if (index(ptype,'LCC')/=0.or.index(ptype,'lcc')/=0) then
-       ptval = GMAP_LCC
-    else if (index(ptype,'STERE')/=0.or.index(ptype,'stere')/=0) then
-       ptval = GMAP_STERE
+       ! Deal with scale factor
+       if (scale_factor/=0.0) then
+          scfac = .true.
+       else
+          scfac = .false.
+       end if
+
     else
-       call write_log('Unrecognised type in [projection]',GM_FATAL,__FILE__,__LINE__)
-    end if
-
-    ! Deal with presence or not of standard parallel(s)
-
-    if (associated(std_par)) then
-       stdp = .true.
-       select case (size(std_par))
+       call GetSection(config,section,'GLINT projection')
+       if(.not.associated(section)) return
+       call write_log('Using [GLINT projection] config section',GM_WARNING)
+       call write_log('This config option has been deprecated, and will be removed at some point.',GM_WARNING)
+       call write_log('Use [projection] instead',GM_WARNING)
+       call GetValue(section,'projection',ptold)
+       call GetValue(section,'lonc',lonc)
+       call GetValue(section,'latc',latc)
+       call GetValue(section,'cpx',cpx)
+       call GetValue(section,'cpy',cpy)
+       call GetValue(section,'std_parallel',stdp1)
+       select case(ptold)
        case(1)
-          stdp1 = std_par(1) ; stdp2 = std_par(1)
-       case(2)
-          stdp1 = std_par(1) ; stdp2 = std_par(2)
+          ptval = GMAP_LAEA
+       case(2:4)
+          ptval = GMAP_STERE
        case default
-          stdp=.false.
+          call write_log('Unsupported projection in [GLINT projection] config section',GM_FATAL)
        end select
-    else
-       stdp = .false.
+       efalse = dx*(cpx-1)
+       nfalse = dy*(cpy-1)
+       if (stdp1/=0.0) then
+          stdp2=stdp1
+          stdp=.true.
+       else
+          stdp=.false.
+       end if
+       scfac=.false.
     end if
 
-    ! Deal with scale factor
-
-    if (scale_factor/=0.0) then
-       scfac = .true.
-    else
-       scfac = .false.
-    end if
 
     ! Check for conflict
 

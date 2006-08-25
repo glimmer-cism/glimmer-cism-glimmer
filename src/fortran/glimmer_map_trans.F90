@@ -51,7 +51,8 @@ module glimmer_map_trans
   implicit none
 
   private
-  public :: glimmap_ll_to_xy, glimmap_xy_to_ll
+  public :: glimmap_ll_to_xy, glimmap_xy_to_ll, loncorrect
+
 
 contains
 

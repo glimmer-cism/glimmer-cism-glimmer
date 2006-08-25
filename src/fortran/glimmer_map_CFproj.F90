@@ -74,6 +74,7 @@ contains
 
     use netcdf
     use glimmer_log
+    use glimmer_map_init
 
     implicit none
 

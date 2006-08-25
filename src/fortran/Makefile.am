@@ -15,7 +15,7 @@ BUILT_SOURCES = glide_io.F90 eis_io.F90 glint_io.F90 glint_mbal_io.F90 \
                 eismint3_io.F90
 CLEANFILES = $(BUILT_SOURCES) glimmer_version.F90 f90_dep.mak
 
-libglimmer_a_SOURCES = glimmer_version.F90 glimmer_CFproj.F90 \
+libglimmer_a_SOURCES = glimmer_version.F90 \
                        glimmer_config.F90 glimmer_global.F90 glimmer_utils.F90\
                        glimmer_log.F90 glimmer_ts.F90 glimmer_ncdf.F90 \
                        glimmer_ncio.F90 glimmer_ncparms.F90 \
@@ -36,9 +36,9 @@ libglide_a_SOURCES = glide.F90 glide_setup.F90 glide_types.F90 glide_temp.F90 \
                      glide_lithot1d.F90 glide_profile.F90
 libglint_a_SOURCES = glint_climate.F90 glint_initialise.F90 glint_io.F90 \
                      glint_timestep.F90 glint_type.F90 glint.F90 \
-                     glint_proj.F90 glint_interp.F90 glint_global_grid.F90 \
+                     glint_interp.F90 glint_global_grid.F90 \
                      glint_precip_param.F90 glint_mbal.F90 glint_constants.F90\
-                     glint_gmt.F90 glint_mbal_coupling.F90 glint_mbal_io.F90 \
+                     glint_mbal_coupling.F90 glint_mbal_io.F90 \
                      glint_example_clim.F90 glint_smb.F90 glex_ebm_clim.F90
 libclimate_a_SOURCES = eismint3_forcing.F90 eismint3_types.F90 \
                        simple_forcing.F90 eis_forcing.F90 eis_ela.F90 \

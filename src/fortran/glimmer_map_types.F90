@@ -151,4 +151,57 @@ contains
     glimmap_allocated = proj%found
   end function glimmap_allocated
 
+  subroutine glimmap_diag(proj)
+
+    !*FD This is incomplete diagnostics code to output full
+    !*FD content of projection type. Only does
+	!*FD Stereographic projections so far.
+
+    use glimmer_log
+
+    type(glimmap_proj) :: proj
+
+    if (associated(proj%stere)) then
+       call glimmap_diag_stere(proj%stere)
+    else
+       call write_log('Stereographic projection not found')
+    end if
+
+  end subroutine glimmap_diag
+
+  subroutine glimmap_diag_stere(params)
+
+    use glimmer_log
+
+    type(proj_stere) :: params
+    character(80) :: message
+    
+    call write_log('***** Stereographic *****')
+    write(message,*)'longitude_of_central_meridian:', params%longitude_of_central_meridian
+    call write_log(message)
+    write(message,*)'latitude_of_projection_origin:', params%latitude_of_projection_origin
+    call write_log(message)
+    write(message,*)'scale_factor_at_proj_origin:', params%scale_factor_at_proj_origin
+    call write_log(message)
+    write(message,*)'standard_parallel:', params%standard_parallel
+    call write_log(message)
+    write(message,*)'false_easting:', params%false_easting
+    call write_log(message)
+    write(message,*)'false_northing:', params%false_northing
+    call write_log(message)
+    write(message,*)'pole:', params%pole
+    call write_log(message)
+    write(message,*)'equatorial:', params%equatorial
+    call write_log(message)
+    write(message,*)'k0:', params%k0
+    call write_log(message)
+    write(message,*)'ik0:', params%ik0
+    call write_log(message)
+    write(message,*)'sinp:', params%sinp
+    call write_log(message)
+    write(message,*)'cosp:', params%cosp
+    call write_log(message)
+
+  end subroutine glimmap_diag_stere
+
 end module glimmer_map_types
