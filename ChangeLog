@@ -1,3 +1,9 @@
+2006-09-06 Ian Rutt
+ * Began adding base code for restart-on-demand. This is
+ glimmer_restart_common.F90, which provides a set of NetCDF routines for
+ dumping arbitrary sequences of variables/arrays to file and retrieving
+ them.
+
 2006-08-25 Ian Rutt
  * Plumbed in new projection code. Tested successfully.
  * Retained capability to pase [GLINT projection] config section, but
