@@ -18,6 +18,7 @@ module glimmer_restart_common
 
   interface write_var
      module procedure write_var_int_scalar, write_var_real_sp_scalar, write_var_real_dp_scalar
+     module procedure write_var_char_scalar, write_var_logical_scalar
      module procedure write_var_int_1d, write_var_real_sp_1d, write_var_real_dp_1d
      module procedure write_var_int_2d, write_var_real_sp_2d, write_var_real_dp_2d
      module procedure write_var_int_3d, write_var_real_sp_3d, write_var_real_dp_3d
@@ -25,7 +26,10 @@ module glimmer_restart_common
 
   interface read_var
      module procedure read_var_int_scalar, read_var_real_sp_scalar, read_var_real_dp_scalar
-     module procedure read_var_real_sp_2d
+     module procedure read_var_char_scalar, read_var_logical_scalar
+     module procedure read_var_int_1d, read_var_real_sp_1d, read_var_real_dp_1d
+     module procedure read_var_int_2d, read_var_real_sp_2d, read_var_real_dp_2d
+     module procedure read_var_int_3d, read_var_real_sp_3d, read_var_real_dp_3d
   end interface
 
 contains
@@ -38,7 +42,7 @@ contains
     
     new_restart_file%fname=fname
     status = nf90_create(fname,NF90_CLOBBER,new_restart_file%ncid)
-    if (status/=0) call ncdf_err(status)
+    if (status/=0) call ncdf_err(status,__LINE__)
     new_restart_file%def = .true.
     new_restart_file%count = 0
     
@@ -54,7 +58,7 @@ contains
     
     open_restart_file%fname=fname
     status = nf90_open(fname,NF90_NOWRITE,open_restart_file%ncid)
-    if (status/=0) call ncdf_err(status)
+    if (status/=0) call ncdf_err(status,__LINE__)
     open_restart_file%def = .false.
     open_restart_file%count = 0
     
@@ -68,7 +72,7 @@ contains
     integer :: status
 
     status = nf90_close(file%ncid)
-    if (status/=0) call ncdf_err(status)
+    if (status/=0) call ncdf_err(status,__LINE__)
 
   end subroutine close_restart_file
 
@@ -94,9 +98,9 @@ contains
        return
     else if (status==NF90_EBADDIM) then
        status=nf90_def_dim(file%ncid,dimname,len,id)
-       if (status==NF90_EBADDIM) call ncdf_err(status)
+       if (status==NF90_EBADDIM) call ncdf_err(status,__LINE__)
     else
-       call ncdf_err(status)
+       call ncdf_err(status,__LINE__)
     end if
 
   end subroutine new_dimension
@@ -110,7 +114,7 @@ contains
 
     if (.not.file%def) then
        status = nf90_redef(file%ncid)
-       if (status/=NF90_NOERR) call ncdf_err(status)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
        file%def=.true.
     end if
 
@@ -125,7 +129,7 @@ contains
 
     if (file%def) then
        status = nf90_enddef(file%ncid)
-       if (status/=NF90_NOERR) call ncdf_err(status)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
        file%def=.false.
     end if
 
@@ -148,7 +152,7 @@ contains
 
     call write_scalar_common(file,prefix,name,NF90_INT,varid)
     status=nf90_put_var(file%ncid,varid,values)
-    if (status/=NF90_NOERR) call ncdf_err(status)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
 
   end subroutine write_var_int_scalar
 
@@ -165,7 +169,7 @@ contains
 
     call write_scalar_common(file,prefix,name,NF90_FLOAT,varid)
     status=nf90_put_var(file%ncid,varid,values)
-    if (status/=NF90_NOERR) call ncdf_err(status)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
 
   end subroutine write_var_real_sp_scalar
 
@@ -182,9 +186,49 @@ contains
 
     call write_scalar_common(file,prefix,name,NF90_DOUBLE,varid)
     status=nf90_put_var(file%ncid,varid,values)
-    if (status/=NF90_NOERR) call ncdf_err(status)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
 
   end subroutine write_var_real_dp_scalar
+
+  !------------------------------------------------------------------
+
+  subroutine write_var_char_scalar(file,prefix,name,values)
+
+    type(restart_file),intent(inout) :: file
+    character(*),      intent(in)    :: prefix
+    character(*),      intent(in)    :: name
+    character(*),      intent(in)    :: values
+
+    integer :: status,varid
+
+    call write_scalar_common(file,prefix,name,NF90_CHAR,varid)
+    call set_define(file)
+    status=nf90_put_att(file%ncid,varid,'value',trim(values))
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    call end_define(file)
+
+  end subroutine write_var_char_scalar
+
+  !------------------------------------------------------------------
+
+  subroutine write_var_logical_scalar(file,prefix,name,values)
+
+    type(restart_file),intent(inout) :: file
+    character(*),      intent(in)    :: prefix
+    character(*),      intent(in)    :: name
+    logical,           intent(in)    :: values
+
+    integer :: status,varid
+
+    call write_scalar_common(file,prefix,name,NF90_INT,varid)
+    if (values) then
+       status=nf90_put_var(file%ncid,varid,1)
+    else
+       status=nf90_put_var(file%ncid,varid,0)
+    end if
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+
+  end subroutine write_var_logical_scalar
 
   !------------------------------------------------------------------
 
@@ -204,9 +248,9 @@ contains
     ! Create new variable, and label it
     call set_define(file)
     status=nf90_def_var(file%ncid,varname,typecode,varid=varid)
-    if (status/=NF90_NOERR) call ncdf_err(status)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
     status=nf90_put_att(file%ncid,varid,name='varname',values=name)
-    if (status/=NF90_NOERR) call ncdf_err(status)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
 
     call end_define(file)
     file%count=file%count+1
@@ -234,7 +278,7 @@ contains
 
     if (associated(values)) then
        status=nf90_put_var(file%ncid,varid,values)
-       if (status/=NF90_NOERR) call ncdf_err(status)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
     end if
 
   end subroutine write_var_int_1d
@@ -258,7 +302,7 @@ contains
 
     if (associated(values)) then
        status=nf90_put_var(file%ncid,varid,values)
-       if (status/=NF90_NOERR) call ncdf_err(status)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
     end if
 
   end subroutine write_var_real_sp_1d
@@ -282,7 +326,7 @@ contains
 
     if (associated(values)) then
        status=nf90_put_var(file%ncid,varid,values)
-       if (status/=NF90_NOERR) call ncdf_err(status)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
     end if
 
   end subroutine write_var_real_dp_1d
@@ -308,17 +352,17 @@ contains
        call new_dimension(file,'x',nx,dimid)
        call set_define(file)
        status=nf90_def_var(file%ncid,varname,typecode,(/dimid/),varid)
-       if (status/=NF90_NOERR) call ncdf_err(status)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
     else
        call set_define(file)
        status=nf90_def_var(file%ncid,varname,typecode,varid=varid)
-       if (status/=NF90_NOERR) call ncdf_err(status)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
        status=nf90_put_att(file%ncid,varid,name='NULL',values='NULL')
-       if (status/=NF90_NOERR) call ncdf_err(status)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
     endif
 
     status=nf90_put_att(file%ncid,varid,name='varname',values=name)
-    if (status/=NF90_NOERR) call ncdf_err(status)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
 
     call end_define(file)
     file%count=file%count+1
@@ -349,7 +393,7 @@ contains
 
     if (associated(values)) then
        status=nf90_put_var(file%ncid,varid,values)
-       if (status/=NF90_NOERR) call ncdf_err(status)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
     end if
 
   end subroutine write_var_int_2d
@@ -376,7 +420,7 @@ contains
 
     if (associated(values)) then
        status=nf90_put_var(file%ncid,varid,values)
-       if (status/=NF90_NOERR) call ncdf_err(status)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
     end if
 
   end subroutine write_var_real_sp_2d
@@ -403,7 +447,7 @@ contains
 
     if (associated(values)) then
        status=nf90_put_var(file%ncid,varid,values)
-       if (status/=NF90_NOERR) call ncdf_err(status)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
     end if
 
   end subroutine write_var_real_dp_2d
@@ -431,17 +475,17 @@ contains
        call new_dimension(file,'y',ny,dimid2)
        call set_define(file)
        status=nf90_def_var(file%ncid,varname,typecode,(/dimid1,dimid2/),varid)
-       if (status/=NF90_NOERR) call ncdf_err(status)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
     else
        call set_define(file)
        status=nf90_def_var(file%ncid,varname,typecode,varid=varid)
-       if (status/=NF90_NOERR) call ncdf_err(status)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
        status=nf90_put_att(file%ncid,varid,name='NULL',values='NULL')
-       if (status/=NF90_NOERR) call ncdf_err(status)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
     endif
 
     status=nf90_put_att(file%ncid,varid,name='varname',values=name)
-    if (status/=NF90_NOERR) call ncdf_err(status)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
 
     call end_define(file)
     file%count=file%count+1
@@ -473,7 +517,7 @@ contains
 
     if (associated(values)) then
        status=nf90_put_var(file%ncid,varid,values)
-       if (status/=NF90_NOERR) call ncdf_err(status)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
     end if
 
   end subroutine write_var_int_3d
@@ -501,7 +545,7 @@ contains
 
     if (associated(values)) then
        status=nf90_put_var(file%ncid,varid,values)
-       if (status/=NF90_NOERR) call ncdf_err(status)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
     end if
 
   end subroutine write_var_real_sp_3d
@@ -529,7 +573,7 @@ contains
 
     if (associated(values)) then
        status=nf90_put_var(file%ncid,varid,values)
-       if (status/=NF90_NOERR) call ncdf_err(status)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
     end if
 
   end subroutine write_var_real_dp_3d
@@ -559,17 +603,17 @@ contains
        call new_dimension(file,'t',nt,dimid3)
        call set_define(file)
        status=nf90_def_var(file%ncid,varname,typecode,(/dimid1,dimid2,dimid3/),varid)
-       if (status/=NF90_NOERR) call ncdf_err(status)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
     else
        call set_define(file)
        status=nf90_def_var(file%ncid,varname,typecode,varid=varid)
-       if (status/=NF90_NOERR) call ncdf_err(status)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
        status=nf90_put_att(file%ncid,varid,name='NULL',values='NULL')
-       if (status/=NF90_NOERR) call ncdf_err(status)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
     endif
 
     status=nf90_put_att(file%ncid,varid,name='varname',values=name)
-    if (status/=NF90_NOERR) call ncdf_err(status)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
 
     call end_define(file)
     file%count=file%count+1
@@ -594,7 +638,7 @@ contains
     call read_scalar_common(file,prefix,name,varid)
 
     status=nf90_get_var(file%ncid,varid,values)
-    if (status/=NF90_NOERR) call ncdf_err(status)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
 
   end subroutine read_var_int_scalar
 
@@ -612,7 +656,7 @@ contains
     call read_scalar_common(file,prefix,name,varid)
 
     status=nf90_get_var(file%ncid,varid,values)
-    if (status/=NF90_NOERR) call ncdf_err(status)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
 
   end subroutine read_var_real_sp_scalar
 
@@ -630,9 +674,60 @@ contains
     call read_scalar_common(file,prefix,name,varid)
 
     status=nf90_get_var(file%ncid,varid,values)
-    if (status/=NF90_NOERR) call ncdf_err(status)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
 
   end subroutine read_var_real_dp_scalar
+
+  !------------------------------------------------------------------
+
+  subroutine read_var_char_scalar(file,prefix,name,values)
+
+    type(restart_file),intent(inout) :: file
+    character(*),      intent(in)    :: prefix
+    character(*),      intent(in)    :: name
+    character(*),      intent(out)   :: values
+
+    integer :: varid,status,attlen
+    character(500) :: tmpchar
+
+    call read_scalar_common(file,prefix,name,varid)
+
+    status=nf90_inquire_attribute(file%ncid,varid,'value',len=attlen)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    status=nf90_get_att(file%ncid,varid,'value',tmpchar)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+
+    values=tmpchar(:attlen)
+
+  end subroutine read_var_char_scalar
+
+  !------------------------------------------------------------------
+
+  subroutine read_var_logical_scalar(file,prefix,name,values)
+
+    use glimmer_log
+
+    type(restart_file),intent(inout) :: file
+    character(*),      intent(in)    :: prefix
+    character(*),      intent(in)    :: name
+    logical,           intent(out)   :: values
+
+    integer :: varid,status,tmp
+
+    call read_scalar_common(file,prefix,name,varid)
+
+    status=nf90_get_var(file%ncid,varid,tmp)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+
+    if (tmp==0) then
+       values=.false.
+    else if (tmp==1) then
+       values=.true.
+    else
+       call write_log('Error in logical type for RESTART',GM_FATAL)
+    end if
+
+  end subroutine read_var_logical_scalar
 
   !------------------------------------------------------------------
 
@@ -651,12 +746,12 @@ contains
     call new_varname(varname,prefix,file%count)
 
     status=nf90_inq_varid(file%ncid,varname,varid)
-    if (status/=NF90_NOERR) call ncdf_err(status)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
 
     status=nf90_inquire_attribute(file%ncid,varid,'varname',len=namelen)
-    if (status/=NF90_NOERR) call ncdf_err(status)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
     status=nf90_get_att(file%ncid,varid,'varname',nametest)
-    if (status/=NF90_NOERR) call ncdf_err(status)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
     if (namelen>varnamelen) then
        call write_log('Variable name too long',GM_FATAL,__FILE__,__LINE__)
     end if
@@ -670,6 +765,98 @@ contains
     file%count=file%count+1
 
   end subroutine read_scalar_common
+
+  !------------------------------------------------------------------
+  ! 1D pointer arrays
+  !------------------------------------------------------------------
+
+  subroutine read_var_int_1d(file,prefix,name,values)
+
+    use glimmer_log
+
+    type(restart_file),intent(inout) :: file
+    character(*),      intent(in)    :: prefix
+    character(*),      intent(in)    :: name
+    integer,dimension(:),pointer     :: values
+
+    integer :: varid,status
+    integer,dimension(1) :: dimlens
+    logical :: nullt
+
+    if(associated(values)) then
+       deallocate(values)
+       values => null()
+    end if
+
+    call read_array_common(file,prefix,name,varid,nullt,dimlens)
+
+    if (.not.nullt) then
+       allocate(values(dimlens(1)))
+       status=nf90_get_var(file%ncid,varid,values)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    end if
+
+  end subroutine read_var_int_1d
+
+  !------------------------------------------------------------------
+
+  subroutine read_var_real_sp_1d(file,prefix,name,values)
+
+    use glimmer_log
+
+    type(restart_file),intent(inout) :: file
+    character(*),      intent(in)    :: prefix
+    character(*),      intent(in)    :: name
+    real(sp),dimension(:),pointer    :: values
+
+    integer :: varid,status
+    integer,dimension(1) :: dimlens
+    logical :: nullt
+
+    if(associated(values)) then
+       deallocate(values)
+       values => null()
+    end if
+
+    call read_array_common(file,prefix,name,varid,nullt,dimlens)
+
+    if (.not.nullt) then
+       allocate(values(dimlens(1)))
+       status=nf90_get_var(file%ncid,varid,values)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    end if
+
+  end subroutine read_var_real_sp_1d
+
+  !------------------------------------------------------------------
+
+  subroutine read_var_real_dp_1d(file,prefix,name,values)
+
+    use glimmer_log
+
+    type(restart_file),intent(inout) :: file
+    character(*),      intent(in)    :: prefix
+    character(*),      intent(in)    :: name
+    real(dp),dimension(:),pointer    :: values
+
+    integer :: varid,status
+    integer,dimension(1) :: dimlens
+    logical :: nullt
+
+    if(associated(values)) then
+       deallocate(values)
+       values => null()
+    end if
+
+    call read_array_common(file,prefix,name,varid,nullt,dimlens)
+
+    if (.not.nullt) then
+       allocate(values(dimlens(1)))
+       status=nf90_get_var(file%ncid,varid,values)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    end if
+
+  end subroutine read_var_real_dp_1d
 
   !------------------------------------------------------------------
   ! 2D pointer arrays
@@ -698,7 +885,7 @@ contains
     if (.not.nullt) then
        allocate(values(dimlens(1),dimlens(2)))
        status=nf90_get_var(file%ncid,varid,values)
-       if (status/=NF90_NOERR) call ncdf_err(status)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
     end if
 
   end subroutine read_var_int_2d
@@ -728,10 +915,132 @@ contains
     if (.not.nullt) then
        allocate(values(dimlens(1),dimlens(2)))
        status=nf90_get_var(file%ncid,varid,values)
-       if (status/=NF90_NOERR) call ncdf_err(status)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
     end if
 
   end subroutine read_var_real_sp_2d
+
+  !------------------------------------------------------------------
+
+  subroutine read_var_real_dp_2d(file,prefix,name,values)
+
+    use glimmer_log
+
+    type(restart_file),intent(inout) :: file
+    character(*),      intent(in)    :: prefix
+    character(*),      intent(in)    :: name
+    real(dp),dimension(:,:),pointer  :: values
+
+    integer :: varid,status
+    integer,dimension(2) :: dimlens
+    logical :: nullt
+
+    if(associated(values)) then
+       deallocate(values)
+       values => null()
+    end if
+
+    call read_array_common(file,prefix,name,varid,nullt,dimlens)
+
+    if (.not.nullt) then
+       allocate(values(dimlens(1),dimlens(2)))
+       status=nf90_get_var(file%ncid,varid,values)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    end if
+
+  end subroutine read_var_real_dp_2d
+
+  !------------------------------------------------------------------
+  ! 3D Pointer arrays
+  !------------------------------------------------------------------
+
+  subroutine read_var_int_3d(file,prefix,name,values)
+
+    use glimmer_log
+
+    type(restart_file),intent(inout) :: file
+    character(*),      intent(in)    :: prefix
+    character(*),      intent(in)    :: name
+    integer,dimension(:,:,:),pointer :: values
+
+    integer :: varid,status
+    integer,dimension(3) :: dimlens
+    logical :: nullt
+
+    if(associated(values)) then
+       deallocate(values)
+       values => null()
+    end if
+
+    call read_array_common(file,prefix,name,varid,nullt,dimlens)
+
+    if (.not.nullt) then
+       allocate(values(dimlens(1),dimlens(2),dimlens(3)))
+       status=nf90_get_var(file%ncid,varid,values)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    end if
+
+  end subroutine read_var_int_3d
+
+  !------------------------------------------------------------------
+
+  subroutine read_var_real_sp_3d(file,prefix,name,values)
+
+    use glimmer_log
+
+    type(restart_file),intent(inout) :: file
+    character(*),      intent(in)    :: prefix
+    character(*),      intent(in)    :: name
+    real(sp),dimension(:,:,:),pointer :: values
+
+    integer :: varid,status
+    integer,dimension(3) :: dimlens
+    logical :: nullt
+
+    if(associated(values)) then
+       deallocate(values)
+       values => null()
+    end if
+
+    call read_array_common(file,prefix,name,varid,nullt,dimlens)
+
+    if (.not.nullt) then
+       allocate(values(dimlens(1),dimlens(2),dimlens(3)))
+       status=nf90_get_var(file%ncid,varid,values)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    end if
+
+  end subroutine read_var_real_sp_3d
+
+  !------------------------------------------------------------------
+
+  subroutine read_var_real_dp_3d(file,prefix,name,values)
+
+    use glimmer_log
+
+    type(restart_file),intent(inout) :: file
+    character(*),      intent(in)    :: prefix
+    character(*),      intent(in)    :: name
+    real(dp),dimension(:,:,:),pointer :: values
+
+    integer :: varid,status
+    integer,dimension(3) :: dimlens
+    logical :: nullt
+
+    if(associated(values)) then
+       deallocate(values)
+       values => null()
+    end if
+
+    call read_array_common(file,prefix,name,varid,nullt,dimlens)
+
+    if (.not.nullt) then
+       allocate(values(dimlens(1),dimlens(2),dimlens(3)))
+       status=nf90_get_var(file%ncid,varid,values)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    end if
+
+  end subroutine read_var_real_dp_3d
 
   !------------------------------------------------------------------
 
@@ -753,12 +1062,12 @@ contains
     call new_varname(varname,prefix,file%count)
 
     status=nf90_inq_varid(file%ncid,varname,varid)
-    if (status/=NF90_NOERR) call ncdf_err(status)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
 
     status=nf90_inquire_attribute(file%ncid,varid,'varname',len=namelen)
-    if (status/=NF90_NOERR) call ncdf_err(status)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
     status=nf90_get_att(file%ncid,varid,'varname',nametest)
-    if (status/=NF90_NOERR) call ncdf_err(status)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
     if (namelen>varnamelen) then
        call write_log('Variable name too long',GM_FATAL,__FILE__,__LINE__)
     end if
@@ -776,13 +1085,13 @@ contains
     case(NF90_ENOTATT)
        nullt=.false.
        status=nf90_inquire_variable(file%ncid,varid,dimids=dimids)
-       if (status/=NF90_NOERR) call ncdf_err(status)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
        do i = 1,size(dimlens)
           status=nf90_inquire_dimension(file%ncid,dimids(i),len=dimlens(i))
-          if (status/=NF90_NOERR) call ncdf_err(status)
+          if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
        end do
     case default
-       call ncdf_err(status)
+       call ncdf_err(status,__LINE__)
     end select
 
     file%count=file%count+1
@@ -806,11 +1115,89 @@ contains
 
   !------------------------------------------------------------------
 
-  subroutine ncdf_err(status)
+  subroutine write_pointer(file,prefix,name,assoc)
+
+    type(restart_file), intent(inout) :: file
+    character(*) :: prefix
+    character(*) :: name
+    logical :: assoc
+
+    character(varnamelen) :: varname
+    integer :: varid,status
+
+    call set_define(file)
+
+    call new_varname(varname,prefix,file%count)
+    status=nf90_def_var(file%ncid,varname,NF90_CHAR,varid=varid)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    status=nf90_put_att(file%ncid,varid,name='varname',values=name)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+
+    if (.not.assoc) then
+       status=nf90_put_att(file%ncid,varid,name='NULL',values='NULL')
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    end if
+
+    call end_define(file)
+    file%count=file%count+1
+
+  end subroutine write_pointer
+
+  !------------------------------------------------------------------
+
+  subroutine read_pointer(file,prefix,name,assoc)
+
+    use glimmer_log
+
+    type(restart_file), intent(inout) :: file
+    character(*) :: prefix
+    character(*) :: name
+    logical :: assoc
+
+    character(varnamelen) :: varname,nametest,nulltest
+    integer :: varid,status,namelen
+
+    call new_varname(varname,prefix,file%count)
+
+    status=nf90_inq_varid(file%ncid,varname,varid)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+
+    status=nf90_inquire_attribute(file%ncid,varid,'varname',len=namelen)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    status=nf90_get_att(file%ncid,varid,'varname',nametest)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    if (namelen>varnamelen) then
+       call write_log('Variable name too long',GM_FATAL,__FILE__,__LINE__)
+    end if
+    nametest(namelen+1:)=repeat(' ',varnamelen-namelen)
+
+    if (name/=nametest) then
+       call write_log('Restart read mismatch: '//trim(varname)//', ' &
+            //trim(name)//', '//trim(nametest),GM_FATAL)
+    end if
+
+    status=nf90_get_att(file%ncid,varid,'NULL',nulltest)
+    select case(status)
+    case(NF90_NOERR)
+       assoc=.false.
+    case(NF90_ENOTATT)
+       assoc=.true.
+    case default
+       call ncdf_err(status,__LINE__)
+    end select
+
+    file%count=file%count+1
+
+  end subroutine read_pointer
+
+  !------------------------------------------------------------------
+
+  subroutine ncdf_err(status,line)
 
     integer :: status
+    integer :: line
 
-    print*,'NetCDF ERROR: ',trim(nf90_strerror(status))
+    print*,'NetCDF ERROR: ',trim(nf90_strerror(status)),' at ',line
     stop
 
   end subroutine ncdf_err
