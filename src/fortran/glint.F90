@@ -505,7 +505,11 @@ contains
 
        ! Allocate output fields
 
-       allocate(orog_out_temp(size(orog_out,1),size(orog_out,2)))
+       if (present(orog_out)) then
+          allocate(orog_out_temp(size(orog_out,1),size(orog_out,2)))
+       else
+          allocate(orog_out_temp(params%g_grid_orog%nx,params%g_grid_orog%ny))
+       end if
        allocate(albedo_temp(size(orog,1),size(orog,2)))
        allocate(if_temp(size(orog,1),size(orog,2)))
        allocate(vf_temp(size(orog,1),size(orog,2)))

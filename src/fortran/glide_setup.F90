@@ -354,7 +354,7 @@ contains
 
     case(2) ! Set thickness to zero if relaxed bedrock is below a 
        ! given level
-       where (relx < mlimit+eus)
+       where (relx <= mlimit+eus)
           ablation_field=thck
           thck = 0.0d0
        end where

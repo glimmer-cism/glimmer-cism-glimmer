@@ -1,3 +1,8 @@
+2006-09-11 Ian Rutt
+ * Slightly changed behaviour of depth-dependent calving. Now calves if
+ depth <= specified level, rather than just less-than.
+ * Fixed some bugs with water-budget accounting in glint.
+
 2006-09-06 Ian Rutt
  * Began adding base code for restart-on-demand. This is
  glimmer_restart_common.F90, which provides a set of NetCDF routines for

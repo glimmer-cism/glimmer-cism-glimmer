@@ -197,29 +197,27 @@ contains
        call glint_get_mbal(instance%mbal_accum,instance%artm,instance%prcp,instance%ablt, &
             instance%acab,instance%snowd,instance%siced)
 
-       ! Calculate the initial ice volume (scaled) ------------------------------
+       ! Calculate the initial ice volume (scaled and converted to water equi)
 
        call glide_get_thk(instance%model,thck_temp)
+       thck_temp=thck_temp*real(rhoi/rhow)
        start_volume=sum(thck_temp)
 
        ! Constrain accumulation according to topography and domain edges -----
 
        call fix_acab(instance%ablt,instance%acab,instance%prcp,thck_temp,instance%local_orog)
 
-       ! Convert mass-balance to ice-equivalent rather than water-equivalent
-
-       instance%acab=instance%acab*(rhow/rhoi)
-
        ! Put climate inputs in the appropriate places, with conversion ----------
 
-       call glide_set_acab(instance%model,instance%acab/real(instance%ice_tstep*hours2years,sp))
+       call glide_set_acab(instance%model,instance%acab*real(rhow/rhoi)/real(instance%ice_tstep*hours2years,sp))
        call glide_set_artm(instance%model,instance%artm)
 
-       ! Adjust acab for output. This is done here otherwise roundoff error leaves a 
+       ! Adjust acab and ablt for output. This is done here otherwise roundoff error leaves a 
        ! residual thickness when it's taken away from the current ice
 
        where (instance%acab<-thck_temp)
           instance%acab=-thck_temp
+          instance%ablt=thck_temp
        end where
 
        ! Do water budget accounting ---------------------------------------------
@@ -244,8 +242,10 @@ contains
        call coordsystem_allocate(instance%lgrid,calve_temp)
        call glide_get_calving(instance%model,calve_temp)
 
+       calve_temp=calve_temp*real(rhoi/rhow)
        ablat_temp=ablat_temp+calve_temp
        instance%ablt=instance%ablt+calve_temp
+       instance%acab=instance%acab-calve_temp
 
        ! Calculate flux fudge factor --------------------------------------------
 
