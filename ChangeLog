@@ -1,3 +1,8 @@
+2006-09-15 Ian Rutt
+ * Reorganisation and extension of restart-on-demand code
+ * Added glimmer_restart_statscal.F90, which deals with static scalar
+ variables.
+
 2006-09-11 Ian Rutt
  * Slightly changed behaviour of depth-dependent calving. Now calves if
  depth <= specified level, rather than just less-than.

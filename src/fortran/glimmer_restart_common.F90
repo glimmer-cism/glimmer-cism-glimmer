@@ -8,6 +8,7 @@ module glimmer_restart_common
 
   integer,parameter :: restartflen = 80
   integer,parameter :: varnamelen = 50
+  character(1),dimension(3) :: com_dims=(/'x','y','t'/)
 
   type restart_file
      character(restartflen) :: fname
@@ -16,23 +17,64 @@ module glimmer_restart_common
      integer :: count
   end type restart_file
 
-  interface write_var
-     module procedure write_var_int_scalar, write_var_real_sp_scalar, write_var_real_dp_scalar
-     module procedure write_var_char_scalar, write_var_logical_scalar
-     module procedure write_var_int_1d, write_var_real_sp_1d, write_var_real_dp_1d
-     module procedure write_var_int_2d, write_var_real_sp_2d, write_var_real_dp_2d
-     module procedure write_var_int_3d, write_var_real_sp_3d, write_var_real_dp_3d
+  ! Interfaces ----------------------------------------
+  ! Pointer scalar variables
+
+!!$  interface write_pointscalvar
+!!$
+!!$  end interface
+!!$
+!!$  interface read_pointscalvar
+!!$
+!!$  end interface
+
+  ! Static arrays
+
+  interface write_statarr
+     module procedure write_statarr_int_1d, write_statarr_realsp_1d, write_statarr_realdp_1d
+     module procedure write_statarr_int_2d, write_statarr_realsp_2d, write_statarr_realdp_2d
+     module procedure write_statarr_int_3d, write_statarr_realsp_3d, write_statarr_realdp_3d
   end interface
 
-  interface read_var
-     module procedure read_var_int_scalar, read_var_real_sp_scalar, read_var_real_dp_scalar
-     module procedure read_var_char_scalar, read_var_logical_scalar
-     module procedure read_var_int_1d, read_var_real_sp_1d, read_var_real_dp_1d
-     module procedure read_var_int_2d, read_var_real_sp_2d, read_var_real_dp_2d
-     module procedure read_var_int_3d, read_var_real_sp_3d, read_var_real_dp_3d
+  interface read_statarr
+     module procedure read_statarr_int_1d, read_statarr_realsp_1d, read_statarr_realdp_1d
+     module procedure read_statarr_int_2d, read_statarr_realsp_2d, read_statarr_realdp_2d
+     module procedure read_statarr_int_3d, read_statarr_realsp_3d, read_statarr_realdp_3d
   end interface
+
+  ! Pointer arrays
+
+  interface write_pointarr
+     module procedure write_pointarr_int_1d, write_pointarr_realsp_1d, write_pointarr_realdp_1d
+     module procedure write_pointarr_int_2d, write_pointarr_realsp_2d, write_pointarr_realdp_2d
+     module procedure write_pointarr_int_3d, write_pointarr_realsp_3d, write_pointarr_realdp_3d
+  end interface
+
+  interface read_pointarr
+     module procedure read_pointarr_int_1d, read_pointarr_realsp_1d, read_pointarr_realdp_1d
+     module procedure read_pointarr_int_2d, read_pointarr_realsp_2d, read_pointarr_realdp_2d
+     module procedure read_pointarr_int_3d, read_pointarr_realsp_3d, read_pointarr_realdp_3d
+  end interface
+
+  ! Allocatable arrays
+
+!!$  interface write_allocarr
+!!$     module procedure write_allocarr_int_1d, write_allocarr_realsp_1d, write_allocarr_realdp_1d
+!!$     module procedure write_allocarr_int_2d, write_allocarr_realsp_2d, write_allocarr_realdp_2d
+!!$     module procedure write_allocarr_int_3d, write_allocarr_realsp_3d, write_allocarr_realdp_3d
+!!$  end interface
+!!$
+!!$  interface read_allocarr
+!!$     module procedure read_allocarr_int_1d, read_allocarr_realsp_1d, read_allocarr_realdp_1d
+!!$     module procedure read_allocarr_int_2d, read_allocarr_realsp_2d, read_allocarr_realdp_2d
+!!$     module procedure read_allocarr_int_3d, read_allocarr_realsp_3d, read_allocarr_realdp_3d
+!!$  end interface
 
 contains
+
+  !-----------------------------------------------------------------
+  ! Shared stuff
+  !-----------------------------------------------------------------
 
   function new_restart_file(fname)
 
@@ -134,134 +176,514 @@ contains
     end if
 
   end subroutine end_define
+
+  !------------------------------------------------------------------
+  ! STATIC ARRAYS
+  !------------------------------------------------------------------
+  ! WRITE code - 1D
+  !------------------------------------------------------------------
+
+  subroutine write_statarr_int_1d(file,prefix,name,values)
+
+    type(restart_file),intent(inout) :: file
+    character(*),      intent(in)    :: prefix
+    character(*),      intent(in)    :: name
+    integer,dimension(:),intent(in)  :: values
+
+    integer :: status,varid
+    character(varnamelen) :: varname
+    integer :: nx
+
+    nx=size(values)
+
+    call write_stat_common(file,prefix,name,NF90_INT,(/nx/),varid)
+
+    status=nf90_put_var(file%ncid,varid,values)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+ 
+  end subroutine write_statarr_int_1d
+
+  !------------------------------------------------------------------
+
+  subroutine write_statarr_realsp_1d(file,prefix,name,values)
+
+    type(restart_file),intent(inout) :: file
+    character(*),      intent(in)    :: prefix
+    character(*),      intent(in)    :: name
+    real(sp),dimension(:),intent(in) :: values
+
+    integer :: status,varid
+    character(varnamelen) :: varname
+    integer :: nx
+
+    nx=size(values)
+
+    call write_stat_common(file,prefix,name,NF90_FLOAT,(/nx/),varid)
+
+    status=nf90_put_var(file%ncid,varid,values)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+ 
+  end subroutine write_statarr_realsp_1d
+
+  !------------------------------------------------------------------
+
+  subroutine write_statarr_realdp_1d(file,prefix,name,values)
+
+    type(restart_file),intent(inout) :: file
+    character(*),      intent(in)    :: prefix
+    character(*),      intent(in)    :: name
+    real(dp),dimension(:),intent(in) :: values
+
+    integer :: status,varid
+    character(varnamelen) :: varname
+    integer :: nx
+
+    nx=size(values)
+
+    call write_stat_common(file,prefix,name,NF90_DOUBLE,(/nx/),varid)
+
+    status=nf90_put_var(file%ncid,varid,values)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+ 
+  end subroutine write_statarr_realdp_1d
+
+  !------------------------------------------------------------------
+  ! STATIC ARRAYS
+  !------------------------------------------------------------------
+  ! WRITE code - 2D
+  !------------------------------------------------------------------
+
+  subroutine write_statarr_int_2d(file,prefix,name,values)
+
+    type(restart_file),intent(inout) :: file
+    character(*),      intent(in)    :: prefix
+    character(*),      intent(in)    :: name
+    integer,dimension(:,:),intent(in)  :: values
+
+    integer :: status,varid
+    character(varnamelen) :: varname
+
+    call write_stat_common(file,prefix,name,NF90_INT,shape(values),varid)
+
+    status=nf90_put_var(file%ncid,varid,values)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+ 
+  end subroutine write_statarr_int_2d
+
+  !------------------------------------------------------------------
+
+  subroutine write_statarr_realsp_2d(file,prefix,name,values)
+
+    type(restart_file),intent(inout) :: file
+    character(*),      intent(in)    :: prefix
+    character(*),      intent(in)    :: name
+    real(sp),dimension(:,:),intent(in)  :: values
+
+    integer :: status,varid
+    character(varnamelen) :: varname
+
+    call write_stat_common(file,prefix,name,NF90_FLOAT,shape(values),varid)
+
+    status=nf90_put_var(file%ncid,varid,values)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+ 
+  end subroutine write_statarr_realsp_2d
+
+  !------------------------------------------------------------------
+
+  subroutine write_statarr_realdp_2d(file,prefix,name,values)
+
+    type(restart_file),intent(inout) :: file
+    character(*),      intent(in)    :: prefix
+    character(*),      intent(in)    :: name
+    real(dp),dimension(:,:),intent(in)  :: values
+
+    integer :: status,varid
+    character(varnamelen) :: varname
+
+    call write_stat_common(file,prefix,name,NF90_DOUBLE,shape(values),varid)
+
+    status=nf90_put_var(file%ncid,varid,values)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+ 
+  end subroutine write_statarr_realdp_2d
+
+  !------------------------------------------------------------------
+  ! STATIC ARRAYS
+  !------------------------------------------------------------------
+  ! WRITE code - 3D
+  !------------------------------------------------------------------
+
+  subroutine write_statarr_int_3d(file,prefix,name,values)
+
+    type(restart_file),intent(inout) :: file
+    character(*),      intent(in)    :: prefix
+    character(*),      intent(in)    :: name
+    integer,dimension(:,:,:),intent(in)  :: values
+
+    integer :: status,varid
+    character(varnamelen) :: varname
+
+    call write_stat_common(file,prefix,name,NF90_INT,shape(values),varid)
+
+    status=nf90_put_var(file%ncid,varid,values)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+ 
+  end subroutine write_statarr_int_3d
+
+  !------------------------------------------------------------------
+
+  subroutine write_statarr_realsp_3d(file,prefix,name,values)
+
+    type(restart_file),intent(inout) :: file
+    character(*),      intent(in)    :: prefix
+    character(*),      intent(in)    :: name
+    real(sp),dimension(:,:,:),intent(in)  :: values
+
+    integer :: status,varid
+    character(varnamelen) :: varname
+
+    call write_stat_common(file,prefix,name,NF90_FLOAT,shape(values),varid)
+
+    status=nf90_put_var(file%ncid,varid,values)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+ 
+  end subroutine write_statarr_realsp_3d
   
   !------------------------------------------------------------------
-  ! Write_var specific subroutines
-  !------------------------------------------------------------------
-  ! Scalar variables
-  !------------------------------------------------------------------
 
-  subroutine write_var_int_scalar(file,prefix,name,values)
+  subroutine write_statarr_realdp_3d(file,prefix,name,values)
 
     type(restart_file),intent(inout) :: file
     character(*),      intent(in)    :: prefix
     character(*),      intent(in)    :: name
-    integer,           intent(in)    :: values
+    real(dp),dimension(:,:,:),intent(in)  :: values
 
     integer :: status,varid
+    character(varnamelen) :: varname
 
-    call write_scalar_common(file,prefix,name,NF90_INT,varid)
+    call write_stat_common(file,prefix,name,NF90_DOUBLE,shape(values),varid)
+
     status=nf90_put_var(file%ncid,varid,values)
     if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
-
-  end subroutine write_var_int_scalar
-
-  !------------------------------------------------------------------
-
-  subroutine write_var_real_sp_scalar(file,prefix,name,values)
-
-    type(restart_file),intent(inout) :: file
-    character(*),      intent(in)    :: prefix
-    character(*),      intent(in)    :: name
-    real(sp),          intent(in)    :: values
-
-    integer :: status,varid
-
-    call write_scalar_common(file,prefix,name,NF90_FLOAT,varid)
-    status=nf90_put_var(file%ncid,varid,values)
-    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
-
-  end subroutine write_var_real_sp_scalar
+ 
+  end subroutine write_statarr_realdp_3d
 
   !------------------------------------------------------------------
-
-  subroutine write_var_real_dp_scalar(file,prefix,name,values)
-
-    type(restart_file),intent(inout) :: file
-    character(*),      intent(in)    :: prefix
-    character(*),      intent(in)    :: name
-    real(dp),          intent(in)    :: values
-
-    integer :: status,varid
-
-    call write_scalar_common(file,prefix,name,NF90_DOUBLE,varid)
-    status=nf90_put_var(file%ncid,varid,values)
-    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
-
-  end subroutine write_var_real_dp_scalar
-
+  ! STATIC ARRAYS
+  !------------------------------------------------------------------
+  ! WRITE code - common
   !------------------------------------------------------------------
 
-  subroutine write_var_char_scalar(file,prefix,name,values)
+  subroutine write_stat_common(file,prefix,name,typecode,sizes,varid)
 
-    type(restart_file),intent(inout) :: file
-    character(*),      intent(in)    :: prefix
-    character(*),      intent(in)    :: name
-    character(*),      intent(in)    :: values
-
-    integer :: status,varid
-
-    call write_scalar_common(file,prefix,name,NF90_CHAR,varid)
-    call set_define(file)
-    status=nf90_put_att(file%ncid,varid,'value',trim(values))
-    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
-    call end_define(file)
-
-  end subroutine write_var_char_scalar
-
-  !------------------------------------------------------------------
-
-  subroutine write_var_logical_scalar(file,prefix,name,values)
-
-    type(restart_file),intent(inout) :: file
-    character(*),      intent(in)    :: prefix
-    character(*),      intent(in)    :: name
-    logical,           intent(in)    :: values
-
-    integer :: status,varid
-
-    call write_scalar_common(file,prefix,name,NF90_INT,varid)
-    if (values) then
-       status=nf90_put_var(file%ncid,varid,1)
-    else
-       status=nf90_put_var(file%ncid,varid,0)
-    end if
-    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
-
-  end subroutine write_var_logical_scalar
-
-  !------------------------------------------------------------------
-
-  subroutine write_scalar_common(file,prefix,name,typecode,varid)
-
-    type(restart_file),intent(inout) :: file
-    character(*),      intent(in)    :: prefix
-    character(*),      intent(in)    :: name
-    integer,           intent(in)    :: typecode
-    integer,           intent(out)   :: varid
+    type(restart_file),  intent(inout) :: file
+    character(*),        intent(in)    :: prefix
+    character(*),        intent(in)    :: name
+    integer,             intent(in)    :: typecode
+    integer,dimension(:),intent(in)    :: sizes
+    integer,             intent(out)   :: varid
 
     character(varnamelen) :: varname
     integer :: status
+    integer,dimension(size(sizes)) :: dimid
+    integer :: rank,i
+
+    rank = size(sizes)
 
     call new_varname(varname,prefix,file%count)
 
-    ! Create new variable, and label it
+    do i=1,rank
+       call new_dimension(file,com_dims(i),sizes(i),dimid(i))
+    end do
     call set_define(file)
-    status=nf90_def_var(file%ncid,varname,typecode,varid=varid)
+    status=nf90_def_var(file%ncid,varname,typecode,dimid,varid)
     if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+
     status=nf90_put_att(file%ncid,varid,name='varname',values=name)
     if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
 
     call end_define(file)
     file%count=file%count+1
 
-  end subroutine write_scalar_common
+  end subroutine write_stat_common
 
   !------------------------------------------------------------------
-  ! 1D pointer arrays
+  ! STATIC ARRAYS
   !------------------------------------------------------------------
-    
-  subroutine write_var_int_1d(file,prefix,name,values)
+  ! READ code - 1D
+  !------------------------------------------------------------------
+
+  subroutine read_statarr_int_1d(file,prefix,name,values)
+
+    use glimmer_log
+
+    type(restart_file),  intent(inout) :: file
+    character(*),        intent(in)    :: prefix
+    character(*),        intent(in)    :: name
+    integer,dimension(:),intent(out)   :: values
+
+    integer :: varid,status
+    integer,dimension(1) :: dimlens
+ 
+    call read_statarr_common(file,prefix,name,varid,dimlens)
+
+    if (all(dimlens==shape(values))) then
+       status=nf90_get_var(file%ncid,varid,values)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    end if
+
+  end subroutine read_statarr_int_1d
+
+  !------------------------------------------------------------------
+
+  subroutine read_statarr_realsp_1d(file,prefix,name,values)
+
+    use glimmer_log
+
+    type(restart_file),  intent(inout) :: file
+    character(*),        intent(in)    :: prefix
+    character(*),        intent(in)    :: name
+    real(sp),dimension(:),intent(out)  :: values
+
+    integer :: varid,status
+    integer,dimension(1) :: dimlens
+ 
+    call read_statarr_common(file,prefix,name,varid,dimlens)
+
+    if (all(dimlens==shape(values))) then
+       status=nf90_get_var(file%ncid,varid,values)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    end if
+
+  end subroutine read_statarr_realsp_1d
+
+  !------------------------------------------------------------------
+
+  subroutine read_statarr_realdp_1d(file,prefix,name,values)
+
+    use glimmer_log
+
+    type(restart_file),  intent(inout) :: file
+    character(*),        intent(in)    :: prefix
+    character(*),        intent(in)    :: name
+    real(dp),dimension(:),intent(out)  :: values
+
+    integer :: varid,status
+    integer,dimension(1) :: dimlens
+ 
+    call read_statarr_common(file,prefix,name,varid,dimlens)
+
+    if (all(dimlens==shape(values))) then
+       status=nf90_get_var(file%ncid,varid,values)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    end if
+
+  end subroutine read_statarr_realdp_1d
+
+  !------------------------------------------------------------------
+  ! STATIC ARRAYS
+  !------------------------------------------------------------------
+  ! READ code - 2D
+  !------------------------------------------------------------------
+
+  subroutine read_statarr_int_2d(file,prefix,name,values)
+
+    use glimmer_log
+
+    type(restart_file),  intent(inout) :: file
+    character(*),        intent(in)    :: prefix
+    character(*),        intent(in)    :: name
+    integer,dimension(:,:),intent(out) :: values
+
+    integer :: varid,status
+    integer,dimension(2) :: dimlens
+ 
+    call read_statarr_common(file,prefix,name,varid,dimlens)
+
+    if (all(dimlens==shape(values))) then
+       status=nf90_get_var(file%ncid,varid,values)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    end if
+
+  end subroutine read_statarr_int_2d
+
+  !------------------------------------------------------------------
+
+  subroutine read_statarr_realsp_2d(file,prefix,name,values)
+
+    use glimmer_log
+
+    type(restart_file),  intent(inout) :: file
+    character(*),        intent(in)    :: prefix
+    character(*),        intent(in)    :: name
+    real(sp),dimension(:,:),intent(out) :: values
+
+    integer :: varid,status
+    integer,dimension(2) :: dimlens
+ 
+    call read_statarr_common(file,prefix,name,varid,dimlens)
+
+    if (all(dimlens==shape(values))) then
+       status=nf90_get_var(file%ncid,varid,values)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    end if
+
+  end subroutine read_statarr_realsp_2d
+
+  !------------------------------------------------------------------
+
+  subroutine read_statarr_realdp_2d(file,prefix,name,values)
+
+    use glimmer_log
+
+    type(restart_file),  intent(inout) :: file
+    character(*),        intent(in)    :: prefix
+    character(*),        intent(in)    :: name
+    real(dp),dimension(:,:),intent(out)  :: values
+
+    integer :: varid,status
+    integer,dimension(2) :: dimlens
+ 
+    call read_statarr_common(file,prefix,name,varid,dimlens)
+
+    if (all(dimlens==shape(values))) then
+       status=nf90_get_var(file%ncid,varid,values)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    end if
+
+  end subroutine read_statarr_realdp_2d
+
+  !------------------------------------------------------------------
+  ! STATIC ARRAYS
+  !------------------------------------------------------------------
+  ! READ code - 2D
+  !------------------------------------------------------------------
+
+  subroutine read_statarr_int_3d(file,prefix,name,values)
+
+    use glimmer_log
+
+    type(restart_file),  intent(inout) :: file
+    character(*),        intent(in)    :: prefix
+    character(*),        intent(in)    :: name
+    integer,dimension(:,:,:),intent(out) :: values
+
+    integer :: varid,status
+    integer,dimension(3) :: dimlens
+ 
+    call read_statarr_common(file,prefix,name,varid,dimlens)
+
+    if (all(dimlens==shape(values))) then
+       status=nf90_get_var(file%ncid,varid,values)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    end if
+
+  end subroutine read_statarr_int_3d
+
+  !------------------------------------------------------------------
+
+  subroutine read_statarr_realsp_3d(file,prefix,name,values)
+
+    use glimmer_log
+
+    type(restart_file),  intent(inout) :: file
+    character(*),        intent(in)    :: prefix
+    character(*),        intent(in)    :: name
+    real(sp),dimension(:,:,:),intent(out) :: values
+
+    integer :: varid,status
+    integer,dimension(3) :: dimlens
+ 
+    call read_statarr_common(file,prefix,name,varid,dimlens)
+
+    if (all(dimlens==shape(values))) then
+       status=nf90_get_var(file%ncid,varid,values)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    end if
+
+  end subroutine read_statarr_realsp_3d
+
+  !------------------------------------------------------------------
+
+  subroutine read_statarr_realdp_3d(file,prefix,name,values)
+
+    use glimmer_log
+
+    type(restart_file),  intent(inout) :: file
+    character(*),        intent(in)    :: prefix
+    character(*),        intent(in)    :: name
+    real(dp),dimension(:,:,:),intent(out)  :: values
+
+    integer :: varid,status
+    integer,dimension(3) :: dimlens
+ 
+    call read_statarr_common(file,prefix,name,varid,dimlens)
+
+    if (all(dimlens==shape(values))) then
+       status=nf90_get_var(file%ncid,varid,values)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    end if
+
+  end subroutine read_statarr_realdp_3d
+
+  !------------------------------------------------------------------
+  ! STATIC ARRAYS
+  !------------------------------------------------------------------
+  ! READ code - common
+  !------------------------------------------------------------------
+
+  subroutine read_statarr_common(file,prefix,name,varid,dimlens)
+
+    use glimmer_log
+
+    type(restart_file),intent(inout) :: file
+    character(*),      intent(in)    :: prefix
+    character(*),      intent(in)    :: name
+    integer,           intent(out)   :: varid
+    integer,dimension(:),intent(out) :: dimlens
+
+    character(varnamelen) :: varname,nametest,nulltest
+    integer :: status,namelen,i
+    integer,dimension(size(dimlens)) :: dimids
+
+    call new_varname(varname,prefix,file%count)
+
+    status=nf90_inq_varid(file%ncid,varname,varid)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+
+    status=nf90_inquire_attribute(file%ncid,varid,'varname',len=namelen)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    status=nf90_get_att(file%ncid,varid,'varname',nametest)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    if (namelen>varnamelen) then
+       call write_log('Variable name too long',GM_FATAL,__FILE__,__LINE__)
+    end if
+    nametest(namelen+1:)=repeat(' ',varnamelen-namelen)
+
+    if (name/=nametest) then
+       call write_log('Restart read mismatch: '//trim(varname)//', ' &
+            //trim(name)//', '//trim(nametest),GM_FATAL)
+    end if
+
+    status=nf90_inquire_variable(file%ncid,varid,dimids=dimids)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    do i = 1,size(dimlens)
+       status=nf90_inquire_dimension(file%ncid,dimids(i),len=dimlens(i))
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    end do
+
+    file%count=file%count+1
+
+  end subroutine read_statarr_common
+
+  !------------------------------------------------------------------
+  ! POINTER ARRAYS
+  !------------------------------------------------------------------
+  ! WRITE code - 1D
+  !------------------------------------------------------------------
+
+  subroutine write_pointarr_int_1d(file,prefix,name,values)
 
     type(restart_file),intent(inout) :: file
     character(*),      intent(in)    :: prefix
@@ -281,11 +703,11 @@ contains
        if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
     end if
 
-  end subroutine write_var_int_1d
+  end subroutine write_pointarr_int_1d
 
   !------------------------------------------------------------------
     
-  subroutine write_var_real_sp_1d(file,prefix,name,values)
+  subroutine write_pointarr_realsp_1d(file,prefix,name,values)
 
     type(restart_file),intent(inout) :: file
     character(*),      intent(in)    :: prefix
@@ -305,11 +727,11 @@ contains
        if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
     end if
 
-  end subroutine write_var_real_sp_1d
+  end subroutine write_pointarr_realsp_1d
 
   !------------------------------------------------------------------
     
-  subroutine write_var_real_dp_1d(file,prefix,name,values)
+  subroutine write_pointarr_realdp_1d(file,prefix,name,values)
 
     type(restart_file),intent(inout) :: file
     character(*),      intent(in)    :: prefix
@@ -329,7 +751,7 @@ contains
        if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
     end if
 
-  end subroutine write_var_real_dp_1d
+  end subroutine write_pointarr_realdp_1d
 
   !------------------------------------------------------------------
 
@@ -370,10 +792,12 @@ contains
   end subroutine write_1d_common
 
   !------------------------------------------------------------------
-  ! 2D pointer arrays
+  ! POINTER ARRAYS
+  !------------------------------------------------------------------
+  ! WRITE code - 2D
   !------------------------------------------------------------------
     
-  subroutine write_var_int_2d(file,prefix,name,values)
+  subroutine write_pointarr_int_2d(file,prefix,name,values)
 
     type(restart_file),intent(inout) :: file
     character(*),      intent(in)    :: prefix
@@ -396,11 +820,11 @@ contains
        if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
     end if
 
-  end subroutine write_var_int_2d
+  end subroutine write_pointarr_int_2d
 
   !------------------------------------------------------------------
   
-  subroutine write_var_real_sp_2d(file,prefix,name,values)
+  subroutine write_pointarr_realsp_2d(file,prefix,name,values)
 
     type(restart_file),intent(inout) :: file
     character(*),      intent(in)    :: prefix
@@ -423,11 +847,11 @@ contains
        if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
     end if
 
-  end subroutine write_var_real_sp_2d
+  end subroutine write_pointarr_realsp_2d
 
   !------------------------------------------------------------------
  
-  subroutine write_var_real_dp_2d(file,prefix,name,values)
+  subroutine write_pointarr_realdp_2d(file,prefix,name,values)
 
     type(restart_file),intent(inout) :: file
     character(*),      intent(in)    :: prefix
@@ -450,7 +874,7 @@ contains
        if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
     end if
 
-  end subroutine write_var_real_dp_2d
+  end subroutine write_pointarr_realdp_2d
 
   !------------------------------------------------------------------
 
@@ -491,12 +915,14 @@ contains
     file%count=file%count+1
 
   end subroutine write_2d_common
-
-  !------------------------------------------------------------------
-  ! 3D pointer arrays
-  !------------------------------------------------------------------
     
-  subroutine write_var_int_3d(file,prefix,name,values)
+  !------------------------------------------------------------------
+  ! POINTER ARRAYS
+  !------------------------------------------------------------------
+  ! WRITE code - 3D
+  !------------------------------------------------------------------
+
+  subroutine write_pointarr_int_3d(file,prefix,name,values)
 
     type(restart_file),intent(inout) :: file
     character(*),      intent(in)    :: prefix
@@ -520,11 +946,11 @@ contains
        if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
     end if
 
-  end subroutine write_var_int_3d
+  end subroutine write_pointarr_int_3d
 
   !------------------------------------------------------------------
     
-  subroutine write_var_real_sp_3d(file,prefix,name,values)
+  subroutine write_pointarr_realsp_3d(file,prefix,name,values)
 
     type(restart_file),intent(inout) :: file
     character(*),      intent(in)    :: prefix
@@ -548,11 +974,11 @@ contains
        if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
     end if
 
-  end subroutine write_var_real_sp_3d
+  end subroutine write_pointarr_realsp_3d
 
   !------------------------------------------------------------------
     
-  subroutine write_var_real_dp_3d(file,prefix,name,values)
+  subroutine write_pointarr_realdp_3d(file,prefix,name,values)
 
     type(restart_file),intent(inout) :: file
     character(*),      intent(in)    :: prefix
@@ -576,7 +1002,7 @@ contains
        if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
     end if
 
-  end subroutine write_var_real_dp_3d
+  end subroutine write_pointarr_realdp_3d
 
   !------------------------------------------------------------------
 
@@ -619,158 +1045,14 @@ contains
     file%count=file%count+1
 
   end subroutine write_3d_common
-
+    
   !------------------------------------------------------------------
-  ! read_var specific subroutines
+  ! POINTER ARRAYS
   !------------------------------------------------------------------
-  ! Scalar variables
-  !------------------------------------------------------------------
-
-  subroutine read_var_int_scalar(file,prefix,name,values)
-
-    type(restart_file),intent(inout) :: file
-    character(*),      intent(in)    :: prefix
-    character(*),      intent(in)    :: name
-    integer,           intent(out)   :: values
-
-    integer :: varid,status
-
-    call read_scalar_common(file,prefix,name,varid)
-
-    status=nf90_get_var(file%ncid,varid,values)
-    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
-
-  end subroutine read_var_int_scalar
-
+  ! READ code - 1D
   !------------------------------------------------------------------
 
-  subroutine read_var_real_sp_scalar(file,prefix,name,values)
-
-    type(restart_file),intent(inout) :: file
-    character(*),      intent(in)    :: prefix
-    character(*),      intent(in)    :: name
-    real(sp),          intent(out)   :: values
-
-    integer :: varid,status
-
-    call read_scalar_common(file,prefix,name,varid)
-
-    status=nf90_get_var(file%ncid,varid,values)
-    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
-
-  end subroutine read_var_real_sp_scalar
-
-  !------------------------------------------------------------------
-
-  subroutine read_var_real_dp_scalar(file,prefix,name,values)
-
-    type(restart_file),intent(inout) :: file
-    character(*),      intent(in)    :: prefix
-    character(*),      intent(in)    :: name
-    real(dp),          intent(out)   :: values
-
-    integer :: varid,status
-
-    call read_scalar_common(file,prefix,name,varid)
-
-    status=nf90_get_var(file%ncid,varid,values)
-    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
-
-  end subroutine read_var_real_dp_scalar
-
-  !------------------------------------------------------------------
-
-  subroutine read_var_char_scalar(file,prefix,name,values)
-
-    type(restart_file),intent(inout) :: file
-    character(*),      intent(in)    :: prefix
-    character(*),      intent(in)    :: name
-    character(*),      intent(out)   :: values
-
-    integer :: varid,status,attlen
-    character(500) :: tmpchar
-
-    call read_scalar_common(file,prefix,name,varid)
-
-    status=nf90_inquire_attribute(file%ncid,varid,'value',len=attlen)
-    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
-    status=nf90_get_att(file%ncid,varid,'value',tmpchar)
-    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
-
-    values=tmpchar(:attlen)
-
-  end subroutine read_var_char_scalar
-
-  !------------------------------------------------------------------
-
-  subroutine read_var_logical_scalar(file,prefix,name,values)
-
-    use glimmer_log
-
-    type(restart_file),intent(inout) :: file
-    character(*),      intent(in)    :: prefix
-    character(*),      intent(in)    :: name
-    logical,           intent(out)   :: values
-
-    integer :: varid,status,tmp
-
-    call read_scalar_common(file,prefix,name,varid)
-
-    status=nf90_get_var(file%ncid,varid,tmp)
-    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
-
-    if (tmp==0) then
-       values=.false.
-    else if (tmp==1) then
-       values=.true.
-    else
-       call write_log('Error in logical type for RESTART',GM_FATAL)
-    end if
-
-  end subroutine read_var_logical_scalar
-
-  !------------------------------------------------------------------
-
-  subroutine read_scalar_common(file,prefix,name,varid)
-
-    use glimmer_log
-
-    type(restart_file),intent(inout) :: file
-    character(*),      intent(in)    :: prefix
-    character(*),      intent(in)    :: name
-    integer,           intent(inout) :: varid
-
-    character(varnamelen) :: varname,nametest
-    integer :: status,namelen
-
-    call new_varname(varname,prefix,file%count)
-
-    status=nf90_inq_varid(file%ncid,varname,varid)
-    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
-
-    status=nf90_inquire_attribute(file%ncid,varid,'varname',len=namelen)
-    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
-    status=nf90_get_att(file%ncid,varid,'varname',nametest)
-    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
-    if (namelen>varnamelen) then
-       call write_log('Variable name too long',GM_FATAL,__FILE__,__LINE__)
-    end if
-    nametest(namelen+1:)=repeat(' ',varnamelen-namelen)
-
-    if (name/=nametest) then
-       call write_log('Restart read mismatch: '//trim(varname)//', ' &
-            //trim(name)//', '//trim(nametest),GM_FATAL)
-    end if
-
-    file%count=file%count+1
-
-  end subroutine read_scalar_common
-
-  !------------------------------------------------------------------
-  ! 1D pointer arrays
-  !------------------------------------------------------------------
-
-  subroutine read_var_int_1d(file,prefix,name,values)
+  subroutine read_pointarr_int_1d(file,prefix,name,values)
 
     use glimmer_log
 
@@ -796,11 +1078,11 @@ contains
        if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
     end if
 
-  end subroutine read_var_int_1d
+  end subroutine read_pointarr_int_1d
 
   !------------------------------------------------------------------
 
-  subroutine read_var_real_sp_1d(file,prefix,name,values)
+  subroutine read_pointarr_realsp_1d(file,prefix,name,values)
 
     use glimmer_log
 
@@ -826,11 +1108,11 @@ contains
        if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
     end if
 
-  end subroutine read_var_real_sp_1d
+  end subroutine read_pointarr_realsp_1d
 
   !------------------------------------------------------------------
 
-  subroutine read_var_real_dp_1d(file,prefix,name,values)
+  subroutine read_pointarr_realdp_1d(file,prefix,name,values)
 
     use glimmer_log
 
@@ -856,13 +1138,15 @@ contains
        if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
     end if
 
-  end subroutine read_var_real_dp_1d
+  end subroutine read_pointarr_realdp_1d
 
   !------------------------------------------------------------------
-  ! 2D pointer arrays
+  ! POINTER ARRAYS
+  !------------------------------------------------------------------
+  ! READ code - 2D
   !------------------------------------------------------------------
 
-  subroutine read_var_int_2d(file,prefix,name,values)
+  subroutine read_pointarr_int_2d(file,prefix,name,values)
 
     use glimmer_log
 
@@ -888,11 +1172,11 @@ contains
        if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
     end if
 
-  end subroutine read_var_int_2d
+  end subroutine read_pointarr_int_2d
 
   !------------------------------------------------------------------
 
-  subroutine read_var_real_sp_2d(file,prefix,name,values)
+  subroutine read_pointarr_realsp_2d(file,prefix,name,values)
 
     use glimmer_log
 
@@ -918,11 +1202,11 @@ contains
        if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
     end if
 
-  end subroutine read_var_real_sp_2d
+  end subroutine read_pointarr_realsp_2d
 
   !------------------------------------------------------------------
 
-  subroutine read_var_real_dp_2d(file,prefix,name,values)
+  subroutine read_pointarr_realdp_2d(file,prefix,name,values)
 
     use glimmer_log
 
@@ -948,13 +1232,15 @@ contains
        if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
     end if
 
-  end subroutine read_var_real_dp_2d
-
+  end subroutine read_pointarr_realdp_2d
+    
   !------------------------------------------------------------------
-  ! 3D Pointer arrays
+  ! POINTER ARRAYS
+  !------------------------------------------------------------------
+  ! READ code - 3D
   !------------------------------------------------------------------
 
-  subroutine read_var_int_3d(file,prefix,name,values)
+  subroutine read_pointarr_int_3d(file,prefix,name,values)
 
     use glimmer_log
 
@@ -980,11 +1266,11 @@ contains
        if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
     end if
 
-  end subroutine read_var_int_3d
+  end subroutine read_pointarr_int_3d
 
   !------------------------------------------------------------------
 
-  subroutine read_var_real_sp_3d(file,prefix,name,values)
+  subroutine read_pointarr_realsp_3d(file,prefix,name,values)
 
     use glimmer_log
 
@@ -1010,11 +1296,11 @@ contains
        if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
     end if
 
-  end subroutine read_var_real_sp_3d
+  end subroutine read_pointarr_realsp_3d
 
   !------------------------------------------------------------------
 
-  subroutine read_var_real_dp_3d(file,prefix,name,values)
+  subroutine read_pointarr_realdp_3d(file,prefix,name,values)
 
     use glimmer_log
 
@@ -1040,7 +1326,7 @@ contains
        if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
     end if
 
-  end subroutine read_var_real_dp_3d
+  end subroutine read_pointarr_realdp_3d
 
   !------------------------------------------------------------------
 
@@ -1113,6 +1399,83 @@ contains
 
   end subroutine new_varname
 
+  !------------------------------------------------------------------
+
+  subroutine write_allocatable(file,prefix,name,alloc)
+
+    type(restart_file), intent(inout) :: file
+    character(*) :: prefix
+    character(*) :: name
+    logical :: alloc
+
+    character(varnamelen) :: varname
+    integer :: varid,status
+
+    call set_define(file)
+
+    call new_varname(varname,prefix,file%count)
+    status=nf90_def_var(file%ncid,varname,NF90_CHAR,varid=varid)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    status=nf90_put_att(file%ncid,varid,name='varname',values=name)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+
+    if (.not.alloc) then
+       status=nf90_put_att(file%ncid,varid,name='UNALLOC',values='UNALLOC')
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    end if
+
+    call end_define(file)
+    file%count=file%count+1
+
+  end subroutine write_allocatable
+
+  !------------------------------------------------------------------
+
+  subroutine read_allocatable(file,prefix,name,alloc)
+
+    use glimmer_log
+
+    type(restart_file), intent(inout) :: file
+    character(*) :: prefix
+    character(*) :: name
+    logical :: alloc
+
+    character(varnamelen) :: varname,nametest,nulltest
+    integer :: varid,status,namelen
+
+    call new_varname(varname,prefix,file%count)
+
+    status=nf90_inq_varid(file%ncid,varname,varid)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+
+    status=nf90_inquire_attribute(file%ncid,varid,'varname',len=namelen)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    status=nf90_get_att(file%ncid,varid,'varname',nametest)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    if (namelen>varnamelen) then
+       call write_log('Variable name too long',GM_FATAL,__FILE__,__LINE__)
+    end if
+    nametest(namelen+1:)=repeat(' ',varnamelen-namelen)
+
+    if (name/=nametest) then
+       call write_log('Restart read mismatch: '//trim(varname)//', ' &
+            //trim(name)//', '//trim(nametest),GM_FATAL)
+    end if
+
+    status=nf90_get_att(file%ncid,varid,'UNALLOC',nulltest)
+    select case(status)
+    case(NF90_NOERR)
+       alloc=.false.
+    case(NF90_ENOTATT)
+       alloc=.true.
+    case default
+       call ncdf_err(status,__LINE__)
+    end select
+
+    file%count=file%count+1
+
+  end subroutine read_allocatable
+  
   !------------------------------------------------------------------
 
   subroutine write_pointer(file,prefix,name,assoc)
