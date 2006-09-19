@@ -14,7 +14,8 @@ EXTRA_DIST = f90_dep.mak
 BUILT_SOURCES = glide_io.F90 eis_io.F90 glint_io.F90 glint_mbal_io.F90 \
                 eismint3_io.F90
 CLEANFILES = $(BUILT_SOURCES) glimmer_version.F90 f90_dep.mak
-
+RESTART_SOURCES = glimmer_restart_common.F90 glimmer_restart_statscal.F90 glimmer_restart_statarr.F90
+RESTART_OBJ = glimmer_restart_common.o glimmer_restart_statscal.o glimmer_restart_statarr.o
 libglimmer_a_SOURCES = glimmer_version.F90 \
                        glimmer_config.F90 glimmer_global.F90 glimmer_utils.F90\
                        glimmer_log.F90 glimmer_ts.F90 glimmer_ncdf.F90 \
@@ -26,9 +27,7 @@ libglimmer_a_SOURCES = glimmer_version.F90 \
                        glimmer_integrate.F90 ncdf_utils.F90 \
                        glimmer_map_CFproj.F90 glimmer_map_proj4.F90 \
                        glimmer_map_types.F90 glimmer_map_init.F90 \
-                       glimmer_map_trans.F90 \
-                       glimmer_restart_common.F90 glimmer_restart_statscal.F90 \
-                       glimmer_restart_statarr.F90
+                       glimmer_map_trans.F90 $(RESTART_SOURCES)
 nodist_libglimmer_a_SOURCES = glimmer_version.F90
 libglide_a_SOURCES = glide.F90 glide_setup.F90 glide_types.F90 glide_temp.F90 \
                      glide_thck.F90 glide_velo.F90 glide_mask.F90 \
@@ -83,9 +82,9 @@ glint_mbal_io.F90:	glint_mbal_vars.def ncdf_template.F90.in
 		$(PYTHON) $(top_srcdir)/src/python/generate_ncvars.py $^
 
 # Pattern rule for restart include files
-%_rst_body.inc: %.F90
+%_rst_body.inc: %.F90 $(RESTART_OBJ)
 		$(PYTHON) $(top_srcdir)/src/python/make_restarts.py $^
-%_rst_head.inc: %.F90
+%_rst_head.inc: %.F90 $(RESTART_OBJ)
 		$(PYTHON) $(top_srcdir)/src/python/make_restarts.py $^
 
 # handling CVS versioning
