@@ -138,7 +138,12 @@ module glimmer_map_types
   integer, parameter :: GMAP_LCC=3
   integer, parameter :: GMAP_STERE=4
 
+  !MAKE_RESTART glimmer_map_types_rst
+  include "glimmer_map_types_rst_head.inc"
+
 contains
+
+  include "glimmer_map_types_rst_body.inc"
 
   function glimmap_allocated(proj)
 

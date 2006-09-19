@@ -132,7 +132,12 @@ module glint_main
   private glint_allocate_arrays,pi
   private glint_readconfig,calc_bounds,check_init_args
 
+  !MAKE_RESTART glint_main_rst
+  include "glint_main_rst_head.inc"
+
 contains
+
+  include "glint_main_rst_body.inc"
 
   subroutine initialise_glint(params,lats,longs,paramfile,latb,lonb,orog,albedo, &
        ice_frac,veg_frac,snowice_frac,snowveg_frac,snow_depth,orog_lats,orog_longs,orog_latb,orog_lonb,output_flag, &

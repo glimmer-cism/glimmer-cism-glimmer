@@ -61,7 +61,12 @@ module profile
      character(len=50), dimension(max_prof) :: pname !*FD name for each profile
   end type profile_type
 
+  !MAKE_RESTART profile_rst
+  include "profile_rst_head.inc"
+
 contains
+
+  include "profile_rst_body.inc"
   
   subroutine profile_init(prof,name)
     !*FD initialise a profile

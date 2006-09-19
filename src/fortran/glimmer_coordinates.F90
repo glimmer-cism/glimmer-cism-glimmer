@@ -80,8 +80,14 @@ module glimmer_coordinates
 #ifdef DEBUG_COORDS
   character(len=100), private :: message
 #endif
+  !NO_RESTART message
+  !MAKE_RESTART glimmer_coordinates_rst
+  include "glimmer_coordinates_rst_head.inc"
 
 contains
+
+  include "glimmer_coordinates_rst_body.inc"
+
   subroutine coordsystem_print(coord, unit)
     !*FD print coordsystem info to unit
     implicit none

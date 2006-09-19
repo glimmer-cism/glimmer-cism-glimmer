@@ -164,7 +164,12 @@ module glint_type
      logical :: ice_vol      !*FD Set if we need to calculate the total ice volume
   end type output_flags
 
+  !MAKE_RESTART glint_type_rst
+  include "glint_type_rst_head.inc"
+
 contains
+
+  include "glint_type_rst_body.inc"
 
   subroutine glint_i_allocate(instance,nxg,nyg,nxgo,nygo)
 

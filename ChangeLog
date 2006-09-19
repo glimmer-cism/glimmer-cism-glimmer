@@ -1,3 +1,6 @@
+2006-09-19 Ian Rutt
+ * First rough go at restart on demand completed. Not quite complete yet.
+
 2006-09-15 Ian Rutt
  * Reorganisation and extension of restart-on-demand code
  * Added glimmer_restart_statscal.F90, which deals with static scalar

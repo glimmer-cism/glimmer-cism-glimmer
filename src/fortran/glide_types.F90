@@ -65,7 +65,7 @@ module glide_types
   use isostasy_types
   use profile
   use glimmer_coordinates
-  use glimmer_map_types, only : glimmap_proj
+  use glimmer_map_types, pi_dummy=>pi
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -352,6 +352,7 @@ module glide_types
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   type glide_funits
+     !NO_RESTART out_first in_first
     character(fname_length) :: sigfile=''                      !*FD sigma coordinates file
     character(fname_length) :: ncfile=''                       !*FD configuration file for netCDF I/O
     type(glimmer_nc_output),pointer :: out_first=>NULL()       !*FD first element of linked list defining netCDF outputs
@@ -473,7 +474,7 @@ module glide_types
     real(dp),dimension(8)             :: c        = 0.0
     real(dp),dimension(2)             :: slide_f
     real(dp) :: noflow      = -1
-    real(dp) :: advconst(2) = 0.0
+    real(dp),dimension(2) :: advconst = 0.0
     real(dp) :: zbed        = 0.0
     real(dp) :: dupn        = 0.0
     real(dp) :: wmax        = 0.0
@@ -530,7 +531,12 @@ module glide_types
     type(isos_type)      :: isos
   end type glide_global_type
 
+  !MAKE_RESTART glide_types_rst
+  include "glide_types_rst_head.inc"
+
 contains
+
+  include "glide_types_rst_body.inc"
   
   subroutine glide_allocarr(model)
     

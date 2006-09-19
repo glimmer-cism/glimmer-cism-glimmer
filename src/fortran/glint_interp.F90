@@ -95,7 +95,12 @@ module glint_interp
      module procedure mean_to_global_sp,mean_to_global_dp
   end interface
 
+  !MAKE_RESTART glint_interp_rst
+  include "glint_interp_rst_head.inc"
+
 contains
+
+  include "glint_interp_rst_body.inc"
 
   subroutine new_downscale(downs,proj,ggrid,lgrid)
 

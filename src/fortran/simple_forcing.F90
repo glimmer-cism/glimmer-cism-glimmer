@@ -69,7 +69,13 @@ module simple_forcing
      !*FD EISMINT amplitude of mass balance time-dep climate forcing
   end type simple_climate
 
+  !MAKE_RESTART simple_forcing_rst
+  include "simple_forcing_rst_head.inc"
+
 contains
+
+  include "simple_forcing_rst_body.inc"
+
   subroutine simple_initialise(climate,config)
     !*FD initialise simple climate model
     use paramets, only: thk0, acc0, scyr

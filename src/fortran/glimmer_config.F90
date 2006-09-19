@@ -96,7 +96,13 @@ module glimmer_config
      module procedure ConfigCombineData, ConfigCombineSec, ConfigCombineDataSec, ConfigCombineSecData
   end interface
 
+  !MAKE_RESTART glimmer_config_rst
+  include "glimmer_config_rst_head.inc"
+
 contains
+
+  include "glimmer_config_rst_body.inc"
+
   subroutine ConfigRead(fname,config)
     !*FD read configuration file
     use glimmer_log

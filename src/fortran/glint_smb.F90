@@ -60,7 +60,12 @@ module smb_dummy
      character(40) :: dummypath
   end type smb_params
 
+  !MAKE_RESTART smb_dummy_rst
+  include "smb_dummy_rst_head.inc"
+
 contains
+
+  include "smb_dummy_rst_body.inc"
 
   subroutine SMBInitWrapper(params,nx,ny,dxr,tstep,path)
 

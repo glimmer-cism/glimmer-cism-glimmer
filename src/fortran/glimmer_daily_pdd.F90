@@ -80,8 +80,12 @@ module glimmer_daily_pdd
   private
   public :: glimmer_daily_pdd_params, glimmer_daily_pdd_init, glimmer_daily_pdd_mbal
 
+  !MAKE_RESTART glimmer_daily_pdd_rst
+  include "glimmer_daily_pdd_rst_head.inc"
 
 contains
+
+  include "glimmer_daily_pdd_rst_body.inc"
 
   subroutine glimmer_daily_pdd_init(params,config)
 

@@ -57,7 +57,13 @@ module glimmer_sparse
   ! size of sparse matrix 
   integer, parameter, private :: chunksize=1000
 
+  !MAKE_RESTART glimmer_sparse_rst
+  include "glimmer_sparse_rst_head.inc"
+
 contains
+
+  include "glimmer_sparse_rst_body.inc"
+
   subroutine new_sparse_matrix(n,mat)
     !*FD create a new sparse matrix
     implicit none

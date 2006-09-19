@@ -75,7 +75,12 @@ module glint_mbal_coupling
      type(glint_mbal_params) :: mbal
   end type glint_mbc
 
+  !MAKE_RESTART glint_mbal_coupling_rst
+  include "glint_mbal_coupling_rst_head.inc"
+
 contains
+
+  include "glint_mbal_coupling_rst_body.inc"
 
   subroutine glint_mbc_init(params,lgrid,config,whichacab,snowd,siced,nx,ny,dx)
 

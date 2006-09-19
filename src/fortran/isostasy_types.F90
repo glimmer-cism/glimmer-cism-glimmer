@@ -95,7 +95,13 @@ module isostasy_types
      !*FD temporary used for load calculation
   end type isos_type  
 
+  !MAKE_RESTART isostasy_types_rst
+  include "isostasy_types_rst_head.inc"
+
 contains
+
+  include "isostasy_types_rst_body.inc"
+
    subroutine isos_allocate(isos, ewn, nsn)
     !*FD allocate data for isostasy calculations
     implicit none
