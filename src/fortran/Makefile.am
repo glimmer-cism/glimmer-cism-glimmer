@@ -82,6 +82,12 @@ glint_io.F90:	glint_vars.def ncdf_template.F90.in
 glint_mbal_io.F90:	glint_mbal_vars.def ncdf_template.F90.in
 		$(PYTHON) $(top_srcdir)/src/python/generate_ncvars.py $^
 
+# Pattern rule for restart include files
+%_rst_body.inc: %.F90
+		$(PYTHON) $(top_srcdir)/src/python/make_restarts.py $^
+%_rst_head.inc: %.F90
+		$(PYTHON) $(top_srcdir)/src/python/make_restarts.py $^
+
 # handling CVS versioning
 if HAVE_CVS
 glimmer_version.F90:	$(srcdir)/CVS/Entries glimmer_version.F90.in 
