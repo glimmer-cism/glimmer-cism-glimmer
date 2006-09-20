@@ -93,4 +93,11 @@ module glimmer_global
   character, parameter :: dirsep = '/'
   !*FD directory separator
 
+  character, parameter :: linefeed = achar(10)
+  character, parameter :: char_ret = achar(13)
+  character(2), parameter :: cr_lf = char_ret//linefeed
+  character, parameter :: endline = linefeed
+  !*FD ASCII linefeed and carriage-return characters,
+  !*FD and set up default newline appropriate for UNIX-type systems
+
 end module glimmer_global

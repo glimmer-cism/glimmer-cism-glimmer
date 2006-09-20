@@ -1,7 +1,7 @@
 SUBDIRS = SLAP_library
 
 lib_LIBRARIES = libglimmer.a libglide.a libglint.a libclimate.a
-bin_PROGRAMS  =  simple_glide eis_glide glint_example glex_ebm eismint3_glide
+bin_PROGRAMS  =  simple_glide eis_glide glint_example glex_ebm eismint3_glide nc2config
 check_PROGRAMS = test_config test_setup test_ts test_lithot test_integrate
 
 variable_DATA = glide_vars.def eis_vars.def glint_vars.def time_vars.def \
@@ -59,6 +59,8 @@ glint_example_SOURCES = glint_example.F90
 glint_example_LDADD = libglint.a libglide.a libglimmer.a SLAP_library/libslap.a
 glex_ebm_SOURCES = glex_ebm.F90
 glex_ebm_LDADD = libglint.a libglide.a libglimmer.a SLAP_library/libslap.a
+nc2config_SOURCES = nc2config.F90
+nc2config_LDADD = libglimmer.a
 
 test_config_SOURCES = test_config.F90 glimmer_config.F90 glimmer_log.F90
 test_setup_SOURCES = test_setup.F90

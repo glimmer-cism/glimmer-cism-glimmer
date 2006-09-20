@@ -112,7 +112,7 @@ program glint_example
   ! Executable code starts here - Basic initialisation
   ! -------------------------------------------------------------------------------------
 
-#ifdef GLEX_COM_LINE
+#ifdef COMMAND_LINE
 
   ! Non-f95-standard command-line interface using Intel Compiler
   ! features - possibly portable to other compilers, but untested
@@ -132,7 +132,7 @@ program glint_example
      Print*,'Enter name of ice model configuration file:'
      read*,paramfile
 
-#ifdef GLEX_COM_LINE
+#ifdef COMMAND_LINE
   endif
 #endif
 

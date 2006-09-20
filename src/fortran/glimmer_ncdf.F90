@@ -101,6 +101,8 @@ module glimmer_ncdf
      !*FD netCDF file history string
      character(len=glimmer_nc_meta_len) :: comment = ''
      !*FD some comments
+     character(len=10000) :: config = ''
+     !*FD the contents of the glide config file
   end type glimmer_nc_meta
 
   type glimmer_nc_output

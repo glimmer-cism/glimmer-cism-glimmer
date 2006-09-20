@@ -70,6 +70,10 @@ contains
     type(ConfigSection), pointer :: section
     type(glimmer_nc_output), pointer :: output => null()
     type(glimmer_nc_input), pointer :: input => null()
+    character(10000) :: configstring
+
+    ! get config string
+    call ConfigAsString(config,configstring)
 
     ! get default meta data
     call GetSection(config,section,'CF default')
@@ -80,7 +84,7 @@ contains
     ! setup outputs
     call GetSection(config,section,'CF output')
     do while(associated(section))
-       output => handle_output(section,output,model%numerics%tstart)
+       output => handle_output(section,output,model%numerics%tstart,configstring)
        if (.not.associated(model%funits%out_first)) then
           model%funits%out_first => output
        end if
@@ -142,7 +146,7 @@ contains
     end if
   end subroutine handle_metadata
   
-  function handle_output(section, output, start_yr)
+  function handle_output(section, output, start_yr, configstring)
     use glimmer_ncdf
     use glimmer_config
     use glimmer_log
@@ -151,6 +155,7 @@ contains
     type(glimmer_nc_output), pointer :: output
     type(glimmer_nc_output), pointer :: handle_output
     real, intent(in) :: start_yr
+    character(*),intent(in) :: configstring
 
     handle_output=>add(output)
     
@@ -162,6 +167,9 @@ contains
     call GetValue(section,'stop',handle_output%end_write)
     call GetValue(section,'frequency',handle_output%freq)
     call GetValue(section,'variables',handle_output%nc%vars)
+
+    ! add config data
+    handle_output%metadata%config=trim(configstring)
 
     ! get metadata
     call handle_metadata(section, handle_output%metadata,.false.)

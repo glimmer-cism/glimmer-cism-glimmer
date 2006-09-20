@@ -179,6 +179,30 @@ contains
     end do
   end subroutine PrintConfig
 
+  subroutine ConfigAsString(config,string)
+    use glimmer_global, only: endline
+    implicit none
+    type(ConfigSection), pointer :: config
+    character(*),intent(out) :: string
+
+    type(ConfigSection), pointer :: sec
+    type(ConfigValue), pointer ::  val
+    
+    string=''
+
+    sec=>config
+    do while(associated(sec))
+       string=trim(string)//'['//trim(sec%name)//']'//trim(endline)
+       val=>sec%values
+       do while(associated(val))
+          string=trim(string)//trim(val%name)//': '//trim(val%value)//trim(endline)
+          val=>val%next
+       end do
+       write(*,*)
+       sec=>sec%next
+    end do
+  end subroutine ConfigAsString
+
   subroutine ConfigSetValueData(config,secname,valname,value,tag)
     !*FD Either overwrite a given key-value pair,
     !*FD or create a new one

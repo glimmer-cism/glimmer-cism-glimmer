@@ -137,6 +137,8 @@ contains
     call nc_errorhandle(__FILE__,__LINE__,status)
     status = nf90_put_att(NCO%id, NF90_GLOBAL,'comment',trim(outfile%metadata%comment))
     call nc_errorhandle(__FILE__,__LINE__,status)
+    status = nf90_put_att(NCO%id, NF90_GLOBAL,'configuration',trim(outfile%metadata%config))
+    call nc_errorhandle(__FILE__,__LINE__,status)
   
     ! defining time dimension and variable
     status = nf90_def_dim(NCO%id,'time',NF90_UNLIMITED,NCO%timedim)
