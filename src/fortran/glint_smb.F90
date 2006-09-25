@@ -60,12 +60,20 @@ module smb_dummy
      character(40) :: dummypath
   end type smb_params
 
-  !MAKE_RESTART glint_smb_rst
-  include "glint_smb_rst_head.inc"
+  !MAKE_RESTART
+#ifdef RESTARTS
+#define RST_SMB_DUMMY
+#include "glimmer_rst_head.inc"
+#undef RST_SMB_DUMMY
+#endif
 
 contains
 
-  include "glint_smb_rst_body.inc"
+#ifdef RESTARTS
+#define RST_SMB_DUMMY
+#include "glimmer_rst_body.inc"
+#undef RST_SMB_DUMMY
+#endif
 
   subroutine SMBInitWrapper(params,nx,ny,dxr,tstep,path)
 

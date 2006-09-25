@@ -69,12 +69,20 @@ module simple_forcing
      !*FD EISMINT amplitude of mass balance time-dep climate forcing
   end type simple_climate
 
-  !MAKE_RESTART simple_forcing_rst
-  include "simple_forcing_rst_head.inc"
+  !MAKE_RESTART
+#ifdef RESTARTS
+#define RST_SIMPLE_FORCING
+#include "glimmer_rst_head.inc"
+#undef RST_SIMPLE_FORCING
+#endif
 
 contains
 
-  include "simple_forcing_rst_body.inc"
+#ifdef RESTARTS
+#define RST_SIMPLE_FORCING
+#include "glimmer_rst_body.inc"
+#undef RST_SIMPLE_FORCING
+#endif
 
   subroutine simple_initialise(climate,config)
     !*FD initialise simple climate model

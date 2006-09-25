@@ -61,13 +61,21 @@ module profile
      character(len=50), dimension(max_prof) :: pname !*FD name for each profile
   end type profile_type
 
-  !MAKE_RESTART profile_rst
-  include "profile_rst_head.inc"
+  !MAKE_RESTART
+#ifdef RESTARTS
+#define RST_PROFILE
+#include "glimmer_rst_head.inc"
+#undef RST_PROFILE
+#endif
 
 contains
 
-  include "profile_rst_body.inc"
-  
+#ifdef RESTARTS
+#define RST_PROFILE
+#include "glimmer_rst_body.inc"
+#undef RST_PROFILE
+#endif
+ 
   subroutine profile_init(prof,name)
     !*FD initialise a profile
     implicit none

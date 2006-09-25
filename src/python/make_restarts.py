@@ -112,7 +112,7 @@ def var_read(var,file,prefix,dtype=''):
             else:
                 file.write("      call %s(file,%s)\n" % (read_type_name(var),varname))
 
-def write_common_restart(mod,headfile,bodyfile):
+def write_common_restart(headfile,bodyfile):
     headfile.write('!++++++++++++++++++++++++++++++++++++++++\n')
     headfile.write('! WARNING: this file was automatically generated on\n! %s\n'
                    %(time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.gmtime())))
@@ -318,21 +318,20 @@ def write_type_restart(t,headfile,bodyfile):
     bodyfile.write('end subroutine %s\n'%(rparrn_1d))
     bodyfile.write('\n')
 
-def generate_restart(fort_fname):
-    print 'Generating code for ',fort_fname
+def generate_restart(fort_fname,headfile,bodyfile):
+    print 'Generating restart code for',fort_fname
     parsed_lines=ParseFortran(fort_fname)
     filestruct=InterpFortFile(parsed_lines)
     # Go through each module in turn
     for mod in filestruct.modules:
-        restart_fname=get_re_fname(mod)
-        headfile=open(restart_fname+'_head.inc','w')
-        bodyfile=open(restart_fname+'_body.inc','w')
-        write_common_restart(mod,headfile,bodyfile)
+        defname='RST_'+mod.name.upper()
+        headfile.write('#ifdef %s\n' %(defname))
+        bodyfile.write('#ifdef %s\n' %(defname))
         write_mod_restart(mod,headfile,bodyfile)
         for t in mod.typedefs:
             write_type_restart(t,headfile,bodyfile)
-        headfile.close()
-        bodyfile.close()
+        headfile.write('#endif\n')
+        bodyfile.write('#endif\n')
 
 def usage():
     "short help message"
@@ -340,11 +339,12 @@ def usage():
     print 'generate restart include files for a set of f90/95 files'
     print ''
     print '  -h, --help\n\tthis message'
+    print '  -o <filename>\n\tstem of output file'
 
 if __name__ == '__main__':
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:],'h',['help'])
+        opts, args = getopt.getopt(sys.argv[1:],'ho:',['help','outstem'])
     except getopt.GetoptError:
         # print usage and exit
         usage()
@@ -355,11 +355,27 @@ if __name__ == '__main__':
         usage()
         sys.exit(2)
 
+    outstem=''
+
     for o,a in opts:
         if o in ('-h', '--help'):
             usage()
             sys.exit(0)
+        if o in ('-o', '--outstem'):
+            outstem=a
 
+    if outstem=='':
+        print 'ERROR: No output stem supplied'
+        usage()
+        sys.exit(0)
+
+    headfile=open(outstem+'_head.inc','w')
+    bodyfile=open(outstem+'_body.inc','w')
+    write_common_restart(headfile,bodyfile)
+    
     for arg in args:
-        if check_restart(arg): generate_restart(arg)
+        if check_restart(arg): generate_restart(arg,headfile,bodyfile)
+        
+    headfile.close()
+    bodyfile.close()
 

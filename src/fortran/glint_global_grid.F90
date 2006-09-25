@@ -118,12 +118,20 @@ module glint_global_grid
      module procedure grid_alloc_2d,grid_alloc_3d
   end interface
 
-  !MAKE_RESTART glint_global_grid_rst
-  include "glint_global_grid_rst_head.inc"
+  !MAKE_RESTART
+#ifdef RESTARTS
+#define RST_GLINT_GLOBAL_GRID
+#include "glimmer_rst_head.inc"
+#undef RST_GLINT_GLOBAL_GRID
+#endif
 
 contains
 
-  include "glint_global_grid_rst_body.inc"
+#ifdef RESTARTS
+#define RST_GLINT_GLOBAL_GRID
+#include "glimmer_rst_body.inc"
+#undef RST_GLINT_GLOBAL_GRID
+#endif
 
   subroutine new_global_grid(grid,lons,lats,lonb,latb,radius,correct)
 

@@ -531,12 +531,20 @@ module glide_types
     type(isos_type)      :: isos
   end type glide_global_type
 
-  !MAKE_RESTART glide_types_rst
-  include "glide_types_rst_head.inc"
+  !MAKE_RESTART
+#ifdef RESTARTS
+#define RST_GLIDE_TYPES
+#include "glimmer_rst_head.inc"
+#undef RST_GLIDE_TYPES
+#endif
 
 contains
 
-  include "glide_types_rst_body.inc"
+#ifdef RESTARTS
+#define RST_GLIDE_TYPES
+#include "glimmer_rst_body.inc"
+#undef RST_GLIDE_TYPES
+#endif
   
   subroutine glide_allocarr(model)
     

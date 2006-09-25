@@ -81,12 +81,20 @@ module glimmer_coordinates
   character(len=100), private :: message
 #endif
   !NO_RESTART message
-  !MAKE_RESTART glimmer_coordinates_rst
-  include "glimmer_coordinates_rst_head.inc"
+  !MAKE_RESTART
+#ifdef RESTARTS
+#define RST_GLIMMER_COORDINATES
+#include "glimmer_rst_head.inc"
+#undef RST_GLIMMER_COORDINATES
+#endif
 
 contains
 
-  include "glimmer_coordinates_rst_body.inc"
+#ifdef RESTARTS
+#define RST_GLIMMER_COORDINATES
+#include "glimmer_rst_body.inc"
+#undef RST_GLIMMER_COORDINATES
+#endif
 
   subroutine coordsystem_print(coord, unit)
     !*FD print coordsystem info to unit

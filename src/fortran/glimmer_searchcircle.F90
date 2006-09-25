@@ -60,12 +60,20 @@ module searchcircle
      real, pointer, dimension(:,:) :: weight        ! reciprocal weights
   end type searchdata
 
-  !MAKE_RESTART glimmer_searchcircle_rst
-  include "glimmer_searchcircle_rst_head.inc"
+  !MAKE_RESTART
+#ifdef RESTARTS
+#define RST_GLIMMER_SEARCHCIRCLE
+#include "glimmer_rst_head.inc"
+#undef RST_GLIMMER_SEARCHCIRCLE
+#endif
 
 contains
 
-  include "glimmer_searchcircle_rst_body.inc"
+#ifdef RESTARTS
+#define RST_GLIMMER_SEARCHCIRCLE
+#include "glimmer_rst_body.inc"
+#undef RST_GLIMMER_SEARCHCIRCLE
+#endif
 
   function sc_initdata(radius,istart,jstart,isize,jsize,searchgrid)
     implicit none

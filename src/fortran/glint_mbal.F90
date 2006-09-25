@@ -68,12 +68,20 @@ module glint_mbal
      integer :: tstep !*FD Timestep of mass-balance scheme in hours
   end type glint_mbal_params
 
-  !MAKE_RESTART glint_mbal_rst
-  include "glint_mbal_rst_head.inc"
+  !MAKE_RESTART
+#ifdef RESTARTS
+#define RST_GLINT_MBAL
+#include "glimmer_rst_head.inc"
+#undef RST_GLINT_MBAL
+#endif
 
 contains
 
-  include "glint_mbal_rst_body.inc"
+#ifdef RESTARTS
+#define RST_GLINT_MBAL
+#include "glimmer_rst_body.inc"
+#undef RST_GLINT_MBAL
+#endif
 
   subroutine glint_mbal_init(params,config,which,nx,ny,dxr)
 

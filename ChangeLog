@@ -3,6 +3,7 @@
  option --enable-restarts)
  * Rewrote restart generation to produce only two include files (one for
  the header info, one for the module body).
+ * Wrote top-level interface code for restarts
 
 2006-09-19 Ian Rutt
  * First rough go at restart on demand completed.

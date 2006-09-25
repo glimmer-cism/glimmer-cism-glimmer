@@ -95,12 +95,20 @@ module glint_interp
      module procedure mean_to_global_sp,mean_to_global_dp
   end interface
 
-  !MAKE_RESTART glint_interp_rst
-  include "glint_interp_rst_head.inc"
+  !MAKE_RESTART
+#ifdef RESTARTS
+#define RST_GLINT_INTERP
+#include "glimmer_rst_head.inc"
+#undef RST_GLINT_INTERP
+#endif
 
 contains
 
-  include "glint_interp_rst_body.inc"
+#ifdef RESTARTS
+#define RST_GLINT_INTERP
+#include "glimmer_rst_body.inc"
+#undef RST_GLINT_INTERP
+#endif
 
   subroutine new_downscale(downs,proj,ggrid,lgrid)
 

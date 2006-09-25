@@ -95,12 +95,20 @@ module isostasy_types
      !*FD temporary used for load calculation
   end type isos_type  
 
-  !MAKE_RESTART isostasy_types_rst
-  include "isostasy_types_rst_head.inc"
+  !MAKE_RESTART
+#ifdef RESTARTS
+#define RST_ISOSTASY_TYPES
+#include "glimmer_rst_head.inc"
+#undef RST_ISOSTASY_TYPES
+#endif
 
 contains
 
-  include "isostasy_types_rst_body.inc"
+#ifdef RESTARTS
+#define RST_ISOSTASY_TYPES
+#include "glimmer_rst_body.inc"
+#undef RST_ISOSTASY_TYPES
+#endif
 
    subroutine isos_allocate(isos, ewn, nsn)
     !*FD allocate data for isostasy calculations

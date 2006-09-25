@@ -132,12 +132,20 @@ module glint_main
   private glint_allocate_arrays,pi
   private glint_readconfig,calc_bounds,check_init_args
 
-  !MAKE_RESTART glint_rst
-  include "glint_rst_head.inc"
+  !MAKE_RESTART
+#ifdef RESTARTS
+#define RST_GLINT_MAIN
+#include "glimmer_rst_head.inc"
+#undef RST_GLINT_MAIN
+#endif
 
 contains
 
-  include "glint_rst_body.inc"
+#ifdef RESTARTS
+#define RST_GLINT_MAIN
+#include "glimmer_rst_body.inc"
+#undef RST_GLINT_MAIN
+#endif
 
   subroutine initialise_glint(params,lats,longs,paramfile,latb,lonb,orog,albedo, &
        ice_frac,veg_frac,snowice_frac,snowveg_frac,snow_depth,orog_lats,orog_longs,orog_latb,orog_lonb,output_flag, &
@@ -742,6 +750,118 @@ contains
     cov_orog=params%total_cov_orog
 
   end function glint_coverage_map
+
+  !=====================================================
+
+  subroutine glint_write_mod_rst(rfile)
+
+    use glimmer_log
+    use glimmer_restart_common
+
+#ifdef RESTARTS
+    use glint_global_grid
+    use glint_interp
+    use glint_mbal_coupling
+    use glint_mbal
+    use smb_dummy
+    use glint_type
+#endif
+
+    type(restart_file) :: rfile      !*FD Open restart file 
+
+#ifdef RESTARTS
+    call glint_main_modrsw(rfile)
+    call glint_global_grid_modrsw(rfile)
+    call glint_interp_modrsw(rfile)
+    call glint_mbal_coupling_modrsw(rfile)
+    call glint_mbal_modrsw(rfile)
+    call smb_dummy_modrsw(rfile)
+    call glint_type_modrsw(rfile)
+#else
+    call write_log('No restart code available - rebuild GLIMMER with --enable-restarts',GM_FATAL)
+#endif
+
+  end subroutine glint_write_mod_rst
+
+  !=====================================================
+
+  subroutine glint_read_mod_rst(rfile)
+
+    use glimmer_log
+    use glimmer_restart_common
+
+#ifdef RESTARTS
+    use glint_global_grid
+    use glint_interp
+    use glint_mbal_coupling
+    use glint_mbal
+    use smb_dummy
+    use glint_type
+#endif
+
+    type(restart_file) :: rfile      !*FD Open restart file 
+
+#ifdef RESTARTS
+    call glint_main_modrsr(rfile)
+    call glint_global_grid_modrsr(rfile)
+    call glint_interp_modrsr(rfile)
+    call glint_mbal_coupling_modrsr(rfile)
+    call glint_mbal_modrsr(rfile)
+    call smb_dummy_modrsr(rfile)
+    call glint_type_modrsr(rfile)
+#else
+    call write_log('No restart code available - rebuild GLIMMER with --enable-restarts',GM_FATAL)
+#endif
+    
+  end subroutine glint_read_mod_rst
+
+  !-------------------------------------------------------------------
+
+  subroutine glint_write_restart(model,rfile)
+
+    use glimmer_log
+    use glimmer_restart
+    use glimmer_restart_common
+    use glide
+    implicit none
+
+    type(glint_params) :: model !*FD model instance
+    type(restart_file) :: rfile !*FD Open restart file     
+
+#ifdef RESTARTS
+    call glimmer_write_mod_rst(rfile)
+    call glide_write_mod_rst(rfile)
+    call glint_write_mod_rst(rfile)
+    call rsw_glint_params(rfile,model)
+#else
+    call write_log('No restart code available - rebuild GLIMMER with --enable-restarts',GM_FATAL)
+#endif
+
+  end subroutine glint_write_restart
+
+  !-------------------------------------------------------------------
+
+  subroutine glint_read_restart(model,rfile)
+
+    use glimmer_log
+    use glimmer_restart
+    use glimmer_restart_common
+    use glide
+    implicit none
+
+    type(glint_params) :: model !*FD model instance
+    type(restart_file) :: rfile !*FD Open restart file     
+
+#ifdef RESTARTS
+    call glimmer_read_mod_rst(rfile)
+    call glide_read_mod_rst(rfile)
+    call glint_read_mod_rst(rfile)
+    call rsr_glint_params(rfile,model)
+#else
+    call write_log('No restart code available - rebuild GLIMMER with --enable-restarts',GM_FATAL)
+#endif
+
+  end subroutine glint_read_restart
 
   !----------------------------------------------------------------------
   ! PRIVATE INTERNAL GLIMMER SUBROUTINES FOLLOW.............

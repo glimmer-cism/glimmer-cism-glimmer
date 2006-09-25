@@ -156,12 +156,20 @@ module glimmer_ncdf
      module procedure add_output, add_input
   end interface
 
-  !MAKE_RESTART glimmer_ncdf_rst
-  include "glimmer_ncdf_rst_head.inc"
+  !MAKE_RESTART
+#ifdef RESTARTS
+#define RST_GLIMMER_NCDF
+#include "glimmer_rst_head.inc"
+#undef RST_GLIMMER_NCDF
+#endif
 
 contains
 
-  include "glimmer_ncdf_rst_body.inc"
+#ifdef RESTARTS
+#define RST_GLIMMER_NCDF
+#include "glimmer_rst_body.inc"
+#undef RST_GLIMMER_NCDF
+#endif
 
   function delete_output(oc, cf)
     !*FD remove element from linked list

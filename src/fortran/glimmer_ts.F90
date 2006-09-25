@@ -66,12 +66,20 @@ module glimmer_ts
 
   private :: get_i
 
-  !MAKE_RESTART glimmer_ts_rst
-  include "glimmer_ts_rst_head.inc"
+  !MAKE_RESTART
+#ifdef RESTARTS
+#define RST_GLIMMER_TS
+#include "glimmer_rst_head.inc"
+#undef RST_GLIMMER_TS
+#endif
 
 contains
 
-  include "glimmer_ts_rst_body.inc"
+#ifdef RESTARTS
+#define RST_GLIMMER_TS
+#include "glimmer_rst_body.inc"
+#undef RST_GLIMMER_TS
+#endif
   
   subroutine glimmer_read_ts(ts,fname,numv)
     !*FD read time series from file
