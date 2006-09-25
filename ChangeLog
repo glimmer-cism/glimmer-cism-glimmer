@@ -1,3 +1,9 @@
+2006-09-25 Ian Rutt
+ * Made restart compilation and generation optional (using configure
+ option --enable-restarts)
+ * Rewrote restart generation to produce only two include files (one for
+ the header info, one for the module body).
+
 2006-09-19 Ian Rutt
  * First rough go at restart on demand completed.
 
