@@ -470,6 +470,8 @@ contains
     use glimmer_log
     use glimmer_restart
     use glimmer_restart_common
+    use glimmer_ncdf
+    use glimmer_ncio
     implicit none
 
     type(glide_global_type) :: model !*FD model instance
@@ -479,6 +481,12 @@ contains
     call glimmer_read_mod_rst(rfile)
     call glide_read_mod_rst(rfile)
     call rsr_glide_global_type(rfile,model)
+    call nc_repair_outpoint(model%funits%out_first)
+    call nc_repair_inpoint(model%funits%in_first)
+    call nc_prefix_outfiles(model%funits%out_first,'RESTART_')
+    call openall_out(model)
+    call glide_io_createall(model)
+    call glide_nc_fillall(model)
 #else
     call write_log('No restart code available - rebuild GLIMMER with --enable-restarts',GM_FATAL)
 #endif

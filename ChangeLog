@@ -1,3 +1,9 @@
+2006-09-26 Ian Rutt
+ * Fixed various bugs - lower array bounds now handled
+ correctly.
+ * Implemented glint- and glide-specific interfaces
+ * Wrote basic code to handle file information in restart files
+
 2006-09-25 Ian Rutt
  * Made restart compilation and generation optional (using configure
  option --enable-restarts)

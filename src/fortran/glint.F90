@@ -850,13 +850,19 @@ contains
     implicit none
 
     type(glint_params) :: model !*FD model instance
-    type(restart_file) :: rfile !*FD Open restart file     
+    type(restart_file) :: rfile !*FD Open restart file  
+    integer :: i
 
 #ifdef RESTARTS
     call glimmer_read_mod_rst(rfile)
     call glide_read_mod_rst(rfile)
     call glint_read_mod_rst(rfile)
     call rsr_glint_params(rfile,model)
+    do i=1,model%ninstances
+       call nc_repair_outpoint(model%instances(i)%model%funits%out_first)
+       call nc_repair_inpoint(model%instances(i)%model%funits%in_first)
+       call nc_prefix_outfiles(model%instances(i)%model%funits%out_first,'RESTART_')
+    end do
 #else
     call write_log('No restart code available - rebuild GLIMMER with --enable-restarts',GM_FATAL)
 #endif

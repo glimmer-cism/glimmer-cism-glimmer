@@ -66,4 +66,19 @@ module paramets
 
   real(sp), parameter :: conv = tim0 / scyr
 
+  !MAKE_RESTART
+#ifdef RESTARTS
+#define RST_PARAMETS
+#include "glimmer_rst_head.inc"
+#undef RST_PARAMETS
+#endif
+
+contains
+
+#ifdef RESTARTS
+#define RST_PARAMETS
+#include "glimmer_rst_body.inc"
+#undef RST_PARAMETS
+#endif
+
 end module paramets

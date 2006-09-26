@@ -352,7 +352,6 @@ module glide_types
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   type glide_funits
-     !NO_RESTART out_first in_first
     character(fname_length) :: sigfile=''                      !*FD sigma coordinates file
     character(fname_length) :: ncfile=''                       !*FD configuration file for netCDF I/O
     type(glimmer_nc_output),pointer :: out_first=>NULL()       !*FD first element of linked list defining netCDF outputs

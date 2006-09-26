@@ -427,7 +427,7 @@ class FortLine:
         return (self.statements[0]=='module')
 
     def isendmodule(self,name):
-        if self.statements[0:1]==['end','module']:
+        if self.statements[0:2]==['end','module']:
             if self.statements[2]==name:
                 return True
             else:

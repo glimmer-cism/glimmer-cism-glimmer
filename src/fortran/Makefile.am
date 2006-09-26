@@ -21,7 +21,7 @@ RESTART_CODE = glide_types.F90 glimmer_config.F90 glimmer_coordinates.F90 \
                   glimmer_pdd.F90 glimmer_searchcircle.F90 glimmer_sparse.F90 \
                   glimmer_ts.F90 glint.F90 glint_global_grid.F90 glint_interp.F90 \
                   glint_mbal_coupling.F90 glint_mbal.F90 glint_smb.F90 glint_type.F90 \
-                  isostasy_types.F90 profile.F90 simple_forcing.F90
+                  isostasy_types.F90 profile.F90 simple_forcing.F90 glimmer_paramets.F90
 libglimmer_a_SOURCES = glimmer_version.F90 \
                        glimmer_config.F90 glimmer_global.F90 glimmer_utils.F90\
                        glimmer_log.F90 glimmer_ts.F90 glimmer_ncdf.F90 \

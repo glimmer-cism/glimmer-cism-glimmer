@@ -163,6 +163,9 @@ contains
     call GetValue(section,'frequency',handle_output%freq)
     call GetValue(section,'variables',handle_output%nc%vars)
 
+    ! Make copy of variables for future reference
+    handle_output%nc%vars_copy=handle_output%nc%vars
+
     ! get metadata
     call handle_metadata(section, handle_output%metadata,.false.)
     if (handle_output%nc%filename(1:1).eq.' ') then

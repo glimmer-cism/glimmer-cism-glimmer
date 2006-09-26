@@ -47,6 +47,7 @@ def get_no_restart(a):
 
 def var_write(var,file,prefix,dtype=''):
     varname=dtype+''+var.name
+    if var.parameter: return
     if var.type in types:
         if var.array:
             if var.pointer:
