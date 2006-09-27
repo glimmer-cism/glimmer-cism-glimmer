@@ -1,3 +1,6 @@
+2006-09-27 Ian Rutt
+ * Fixed minor bug in nc2config
+
 2006-09-20 Ian Rutt
  * Added feature so that config file data is automatically added to output
  netcdf files as attribute.

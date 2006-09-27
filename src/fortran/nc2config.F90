@@ -136,10 +136,10 @@ program nc2config
   do 
      if (trim(config(i:))=='') exit
      if (config(i:i+ellen-1)==endline) then
-        write(unit,'(A)'),''
+        write(unit,'(A)')''
         i=i+ellen
      else if (config(i:i)=='[') then
-        write(unit,'(A)'),''
+        write(unit,'(A)')''
         write(unit,'(A)',advance='no')config(i:i)
         i=i+1
      else
