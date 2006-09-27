@@ -6,7 +6,10 @@ from fort_parser import *
 marker='make_restart'
 restart_marker='!'+marker
 
-usefiles='      use glimmer_restart_common\n'+'      use glimmer_restart_statscal\n'+'      use glimmer_restart_statarr\n'
+usefiles='      use glimmer_restart_common\n'
+usefiles=usefiles+'      use glimmer_restart_statscal\n'
+usefiles=usefiles+'      use glimmer_restart_statarr\n'
+usefiles=usefiles+'      use glimmer_restart_pointarr\n'
 
 # Top-level code for generating restarts
 

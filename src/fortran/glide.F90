@@ -465,7 +465,7 @@ contains
 
   !-------------------------------------------------------------------
 
-  subroutine glide_read_restart(model,rfile)
+  subroutine glide_read_restart(model,rfile,prefix)
 
     use glimmer_log
     use glimmer_restart
@@ -475,7 +475,16 @@ contains
     implicit none
 
     type(glide_global_type) :: model !*FD model instance
-    type(restart_file) :: rfile      !*FD Open restart file     
+    type(restart_file) :: rfile      !*FD Open restart file 
+    character(*),optional,intent(in) :: prefix !*FD prefix for new output files
+
+    character(40) :: pf
+
+    if (present(prefix)) then
+       pf = prefix
+    else
+       pf = 'RESTART_'
+    end if
 
 #ifdef RESTARTS
     call glimmer_read_mod_rst(rfile)
@@ -483,7 +492,7 @@ contains
     call rsr_glide_global_type(rfile,model)
     call nc_repair_outpoint(model%funits%out_first)
     call nc_repair_inpoint(model%funits%in_first)
-    call nc_prefix_outfiles(model%funits%out_first,'RESTART_')
+    call nc_prefix_outfiles(model%funits%out_first,trim(pf))
     call openall_out(model)
     call glide_io_createall(model)
     call glide_nc_fillall(model)

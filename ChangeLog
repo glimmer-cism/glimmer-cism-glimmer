@@ -1,3 +1,6 @@
+2006-09-27 Ian Rutt
+ * Tested restarts with glint, and tidied up a few loose ends
+
 2006-09-26 Ian Rutt
  * Fixed various bugs - lower array bounds now handled
  correctly.

@@ -841,17 +841,29 @@ contains
 
   !-------------------------------------------------------------------
 
-  subroutine glint_read_restart(model,rfile)
+  subroutine glint_read_restart(model,rfile,prefix)
 
     use glimmer_log
     use glimmer_restart
     use glimmer_restart_common
     use glide
+    use glint_io
+    use glint_mbal_io
+    use glimmer_ncio
     implicit none
 
     type(glint_params) :: model !*FD model instance
     type(restart_file) :: rfile !*FD Open restart file  
     integer :: i
+    character(*),optional,intent(in) :: prefix !*FD prefix for new output files
+
+    character(40) :: pf
+
+    if (present(prefix)) then
+       pf = prefix
+    else
+       pf = 'RESTART_'
+    end if
 
 #ifdef RESTARTS
     call glimmer_read_mod_rst(rfile)
@@ -861,7 +873,12 @@ contains
     do i=1,model%ninstances
        call nc_repair_outpoint(model%instances(i)%model%funits%out_first)
        call nc_repair_inpoint(model%instances(i)%model%funits%in_first)
-       call nc_prefix_outfiles(model%instances(i)%model%funits%out_first,'RESTART_')
+       call nc_prefix_outfiles(model%instances(i)%model%funits%out_first,trim(pf))
+       call openall_out(model%instances(i)%model)
+       call glide_io_createall(model%instances(i)%model)
+       call glint_io_createall(model%instances(i)%model)
+       call glint_mbal_io_createall(model%instances(i)%model)
+       call glide_nc_fillall(model%instances(i)%model)
     end do
 #else
     call write_log('No restart code available - rebuild GLIMMER with --enable-restarts',GM_FATAL)
