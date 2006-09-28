@@ -70,7 +70,11 @@ contains
 
     oc=>model%funits%out_first
     do while(associated(oc))
-       call glimmer_nc_createfile(oc,model)
+       if (oc%append) then
+          call glimmer_nc_openappend(oc,model)
+       else
+          call glimmer_nc_createfile(oc,model)
+       end if
        oc=>oc%next
     end do
   end subroutine openall_out
@@ -91,6 +95,49 @@ contains
     end do
     model%funits%out_first=>NULL()
   end subroutine closeall_out
+
+  subroutine glimmer_nc_openappend(outfile,model)
+    !*FD open netCDF file for appending
+    use glimmer_log
+    use glide_types
+    use glimmer_map_CFproj
+    use glimmer_map_types
+    implicit none
+    type(glimmer_nc_output), pointer :: outfile
+    !*FD structure containg output netCDF descriptor
+    type(glide_global_type) :: model
+    !*FD the model instance
+
+    ! local variables
+    integer :: status,timedimid,ntime,timeid
+    real(sp),dimension(1) :: last_time
+    character(len=msglen) :: message
+
+    ! open existing netCDF file
+    status = nf90_open(NCO%filename,NF90_WRITE,NCO%id)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    call write_log_div
+    write(message,*) 'Reopening file ',trim(NCO%filename),' for output; '
+    call write_log(trim(message))
+    ! Find out when last time-slice was
+    status = nf90_inq_dimid(NCO%id,'time',timedimid)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    status = nf90_inquire_dimension(NCO%id,timedimid,len=ntime)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    ! Set timecounter
+    outfile%timecounter=ntime+1
+    write(message,*) '  Starting output at ',outfile%next_write,' and write every ',outfile%freq,' years'
+    call write_log(trim(message))
+    
+    ! Get time varid
+    status = nf90_inq_varid(NCO%id,'time',NCO%timevar)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+
+    ! Put dataset into define mode
+    status = nf90_redef(NCO%id)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+
+  end subroutine glimmer_nc_openappend
 
   subroutine glimmer_nc_createfile(outfile,model)
     !*FD create a new netCDF file
@@ -188,6 +235,7 @@ contains
           
           outfile%timecounter = outfile%timecounter + 1
           status = nf90_sync(NCO%id)
+          call nc_errorhandle(__FILE__,__LINE__,status)
           NCO%just_processed = .FALSE.
        end if
     end if
@@ -201,6 +249,7 @@ contains
           NCO%processsed_time = model%numerics%time
           ! write time
           status = nf90_put_var(NCO%id,NCO%timevar,model%numerics%time,(/outfile%timecounter/))
+          call nc_errorhandle(__FILE__,__LINE__,status)
           NCO%just_processed = .TRUE.         
        end if
     end if

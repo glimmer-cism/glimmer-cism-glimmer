@@ -130,6 +130,8 @@ module glimmer_ncdf
      !*FD next element in list
      type(glimmer_nc_output), pointer :: previous=>NULL()
      !*FD previous element in list
+     logical :: append = .false.
+     !*FD Set to true if we are appending onto an existing file.
   end type glimmer_nc_output
 
   type glimmer_nc_input

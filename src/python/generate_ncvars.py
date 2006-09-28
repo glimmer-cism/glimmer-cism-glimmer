@@ -295,6 +295,9 @@ class PrintNC_template(PrintVars):
             self.stream.write("      NCO%%vars(pos+1:pos+%d) = '%s'\n"%(len(var['name']),len(var['name'])*' '))
             self.stream.write("    end if\n")
             self.stream.write("    if (pos.ne.0 .and. status.eq.nf90_enotvar) then\n")
+        else:
+            spaces=3
+            self.stream.write("    if (.not.outfile%append) then\n")
         self.stream.write("%s    call write_log('Creating variable %s')\n"%(spaces*' ',var['name']))
         self.stream.write("%s    status = nf90_def_var(NCO%%id,'%s',NF90_%s,(/%s/),%s)\n"%(spaces*' ',
                                                                                            var['name'],
@@ -314,6 +317,8 @@ class PrintNC_template(PrintVars):
             self.stream.write("%s       status = nf90_put_att(NCO%%id, %s, 'grid_mapping',glimmer_nc_mapvarname)\n"%(spaces*' ',idstring))
             self.stream.write("%s    end if\n"%(spaces*' '))
             self.stream.write("%s  end if\n"%(spaces*' '))
+        else:
+            self.stream.write("%s  end if\n"%(spaces*' '))
         self.stream.write("\n")
 
     def print_dimensions(self):
@@ -328,7 +333,11 @@ class PrintNC_template(PrintVars):
         self.stream.write("\n    ! defining dimensions\n")
         for d in dims:
             if dimensions[d]!='-1': # create a new dimension
-                self.stream.write("    status = nf90_def_dim(NCO%%id,'%s',%s,%s)\n"%(d,dimensions[d],dimid(d)))
+                self.stream.write("    if (.not.outfile%append) then\n")
+                self.stream.write("       status = nf90_def_dim(NCO%%id,'%s',%s,%s)\n"%(d,dimensions[d],dimid(d)))
+                self.stream.write("    else\n")
+                self.stream.write("       status = nf90_inq_dimid(NCO%%id,'%s',%s)\n"%(d,dimid(d)))
+                self.stream.write("    endif\n")
             else:
                 self.stream.write("    status = nf90_inq_dimid(NCO%%id,'%s',%s)\n"%(d,dimid(d)))
             self.stream.write("    call nc_errorhandle(__FILE__,__LINE__,status)\n")

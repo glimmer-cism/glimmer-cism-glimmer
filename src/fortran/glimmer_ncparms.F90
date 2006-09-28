@@ -156,10 +156,12 @@ contains
     type(glimmer_nc_output), pointer :: handle_output
     real, intent(in) :: start_yr
     character(*),intent(in) :: configstring
+    character(10) :: mode_str
 
     handle_output=>add(output)
     
     handle_output%next_write = start_yr
+    mode_str=''
 
     ! get filename
     call GetValue(section,'name',handle_output%nc%filename)
@@ -167,6 +169,14 @@ contains
     call GetValue(section,'stop',handle_output%end_write)
     call GetValue(section,'frequency',handle_output%freq)
     call GetValue(section,'variables',handle_output%nc%vars)
+    call GetValue(section,'mode',mode_str)
+
+    ! handle mode field
+    if (trim(mode_str)=='append'.or.trim(mode_str)=='APPEND') then
+       handle_output%append = .true.
+    else
+       handle_output%append = .false.
+    end if
 
     ! add config data
     handle_output%metadata%config=trim(configstring)

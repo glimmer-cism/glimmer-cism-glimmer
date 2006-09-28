@@ -62,7 +62,7 @@ contains
 
     oc=>model%funits%out_first
     do while(associated(oc))
-       call glide_nc_filldvars(oc,model)
+       if (.not.oc%append) call glide_nc_filldvars(oc,model)
        oc=>oc%next
     end do
   end subroutine glide_nc_fillall

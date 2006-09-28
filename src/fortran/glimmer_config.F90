@@ -198,7 +198,6 @@ contains
           string=trim(string)//trim(val%name)//': '//trim(val%value)//trim(endline)
           val=>val%next
        end do
-       write(*,*)
        sec=>sec%next
     end do
   end subroutine ConfigAsString
