@@ -364,7 +364,7 @@ contains
     end if
 
     if (abs(rho) < CONV_LIMIT) then
-       lat = sign(90.0,params%n)
+       lat = sign(real(90.0,kind=rk),params%n)
     else
        lat = R2D * (2.0 * atan((EQ_RAD*params%f/rho)**params%i_n) - M_PI_2)
     end if

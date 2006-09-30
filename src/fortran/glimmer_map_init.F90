@@ -100,7 +100,8 @@ contains
        else if (index(ptype,'STERE')/=0.or.index(ptype,'stere')/=0) then
           ptval = GMAP_STERE
        else
-          call write_log('Unrecognised type in [projection]',GM_FATAL,__FILE__,__LINE__)
+          call write_log('Unrecognised type in [projection]', &
+               GM_FATAL,__FILE__,__LINE__)
        end if
  
        ! Deal with presence or not of standard parallel(s)
@@ -114,7 +115,8 @@ contains
           case(0)
              stdp=.false.
           case default
-             call write_log('More than two Standard parallels given',GM_FATAL,__FILE__,__LINE__)
+             call write_log('More than two Standard parallels given', &
+                  GM_FATAL,__FILE__,__LINE__)
           end select
        else
           stdp = .false.
@@ -340,7 +342,8 @@ contains
        cfp%stere%false_northing = false_northing
        if(present(scale_factor_at_proj_origin).and.present(standard_parallel)) then
           if (scale_factor_at_proj_origin/=0.0.and.standard_parallel/=0.0) &
-               call write_log('Both standard parallel and scale factor specified',GM_FATAL,__FILE__,__LINE__)
+               call write_log('Both standard parallel and scale factor specified', &
+               GM_FATAL,__FILE__,__LINE__)
        end if
        if(present(scale_factor_at_proj_origin)) &
             cfp%stere%scale_factor_at_proj_origin = scale_factor_at_proj_origin
@@ -348,7 +351,8 @@ contains
             cfp%stere%standard_parallel = standard_parallel
        call glimmap_stere_init(cfp%stere)
     case default
-       call write_log('Unrecognised projection type',GM_FATAL,__FILE__,__LINE__)
+       call write_log('Unrecognised projection type', &
+            GM_FATAL,__FILE__,__LINE__)
     end select
 
   end subroutine glimmap_proj_define
