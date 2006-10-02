@@ -1,6 +1,8 @@
 SUBDIRS = SLAP_library
 RESTART_STEM=glimmer_rst
 RESTART_INCS=$(RESTART_STEM)_body.inc $(RESTART_STEM)_head.inc
+RESTART_COMMON=glimmer_restart_common.F90 glimmer_restart_pointarr.F90 \
+               glimmer_restart_statarr.F90 glimmer_restart_statscal.F90
 
 lib_LIBRARIES = libglimmer.a libglide.a libglint.a libclimate.a
 bin_PROGRAMS  =  simple_glide eis_glide glint_example glex_ebm eismint3_glide
@@ -92,8 +94,9 @@ glint_mbal_io.F90:	glint_mbal_vars.def ncdf_template.F90.in
 
 # Pattern rule for restart include files
 if BUILD_RESTARTS
-$(RESTART_STEM)_body.inc: $(RESTART_CODE) Makefile
-		$(PYTHON) $(top_srcdir)/src/python/make_restarts.py -o $(RESTART_STEM) $^
+$(RESTART_STEM)_body.inc $(RESTART_STEM)_head.inc: $(RESTART_CODE) Makefile
+		$(PYTHON) $(top_srcdir)/src/python/make_restarts.py -o $(RESTART_STEM) $(RESTART_CODE)
+$(RESTART_CODE:.F90=.o): $(RESTART_COMMON:.F90=.o)
 else
 $(RESTART_STEM)_body.inc $(RESTART_STEM)_head.inc: Makefile
 		echo '! Dummy include file - restarts not enabled' > $@

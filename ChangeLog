@@ -1,5 +1,6 @@
 2006-10-02
  * Minor bug-fix (spotted by Magi)
+ * Fixed build bug (hopefully)
 
 2006-09-27 Ian Rutt
  * Tested restarts with glint, and tidied up a few loose ends
