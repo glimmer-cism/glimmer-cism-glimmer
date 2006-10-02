@@ -73,9 +73,9 @@ module paramets
 #undef RST_PARAMETS
 #endif
 
+#ifdef RESTARTS
 contains
 
-#ifdef RESTARTS
 #define RST_PARAMETS
 #include "glimmer_rst_body.inc"
 #undef RST_PARAMETS

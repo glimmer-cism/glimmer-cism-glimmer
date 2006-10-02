@@ -56,9 +56,9 @@ contains
   subroutine glimmer_write_mod_rst(rfile)
 
     use glimmer_log
+    use glimmer_restart_common
 
 #ifdef RESTARTS
-    use glimmer_restart_common
     use glimmer_config
     use glimmer_coordinates
     use glimmer_daily_pdd
@@ -95,9 +95,9 @@ contains
   subroutine glimmer_read_mod_rst(rfile)
 
     use glimmer_log
+    use glimmer_restart_common
 
 #ifdef RESTARTS
-    use glimmer_restart_common
     use glimmer_config
     use glimmer_coordinates
     use glimmer_daily_pdd
