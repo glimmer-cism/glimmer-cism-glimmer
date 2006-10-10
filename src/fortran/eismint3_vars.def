@@ -18,7 +18,7 @@ datamod:  eismint3_types
 dimensions:    time,y1,x1
 units:         meter/year
 long_name:     accumulation
-data:          data%prcp
+data:          data%presprcp
 load:          1
 
 [presusurf]
@@ -28,3 +28,15 @@ units:         meter
 long_name:     present_surface
 data:          data%presusurf
 load:          1
+
+[arng]
+dimensions:    time,y1,x1
+units:         meter/year
+long_name:     accumulation
+data:          data%arng
+
+[EISMINT_prcp]
+dimensions:    time,y1,x1
+units:         meter/year
+long_name:     accumulation
+data:          data%prcp

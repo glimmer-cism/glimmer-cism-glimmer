@@ -59,9 +59,12 @@ module eismint3_types
      real(sp),dimension(:,:),pointer :: usrf !*FD Surface elevation
      real(sp),dimension(:,:),pointer :: ablt !*FD Ablation
      real(sp),dimension(:,:),pointer :: presusurf !*FD Present-day upper-surface elevation
+     real(sp),dimension(:,:),pointer :: presartm  !*FD Present-day surface temperature
+     real(sp),dimension(:,:),pointer :: presprcp  !*FD Present-day precip (water-equivalent)
      logical,dimension(:,:),pointer :: landsea !*FD Land-sea mask
      type(glimmer_pdd_params) :: pdd_scheme
      integer :: loadthk=0 !*FD Load thickness from file or start from scratch
+     real(sp) :: pfac=1.0533 !*FD Precip enhancement factor (default is supposed EISMINT value)
   end type eismint3_climate
 
 end module eismint3_types

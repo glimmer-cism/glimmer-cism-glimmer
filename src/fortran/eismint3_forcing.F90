@@ -84,6 +84,8 @@ contains
     call coordsystem_allocate(model%general%ice_grid,climate%usrf)
     call coordsystem_allocate(model%general%ice_grid,climate%ablt)
     call coordsystem_allocate(model%general%ice_grid,climate%presusurf)
+    call coordsystem_allocate(model%general%ice_grid,climate%presprcp)
+    call coordsystem_allocate(model%general%ice_grid,climate%presartm)
     call coordsystem_allocate(model%general%ice_grid,climate%landsea)
 
     call eismint3_io_readall(climate,model)
@@ -100,7 +102,7 @@ contains
        end where
 
        call eismint3_temp(climate%artm,climate%arng,climate%presusurf,model%climate%lati)
-       call glimmer_pdd_mbal(climate%pdd_scheme,climate%artm,climate%arng,climate%prcp,climate%ablt,climate%acab,climate%landsea)
+       call glimmer_pdd_mbal(climate%pdd_scheme,climate%artm,climate%arng,climate%presprcp,climate%ablt,climate%acab,climate%landsea)
 
        ! Convert to ice-equivalent depth
 
@@ -117,6 +119,10 @@ contains
        call write_log('Unknown value for climate%loadthk',GM_FATAL)
     end select
 
+    ! Work out present-day temperature for precip enhancement calculation
+
+    call eismint3_temp(climate%presartm,climate%arng,climate%presusurf,model%climate%lati)
+
   end subroutine eismint3_initialise
 
   subroutine eismint3_readconfig(climate,config)
@@ -132,6 +138,7 @@ contains
     call GetSection(config,section,'EISMINT-3')
     if (associated(section)) then
        call GetValue(section,'load_thk',climate%loadthk)
+       call GetValue(section,'precip_enhance',climate%pfac)
     end if
 
   end subroutine eismint3_readconfig
@@ -146,7 +153,9 @@ contains
     call write_log_div
     call write_log('EISMINT-3 Greenland configuration')
     call write_log('------------------------------------')
-    write(message,*) 'load thickness  : ',climate%loadthk
+    write(message,*) 'load thickness            : ',climate%loadthk
+    call write_log(message)
+    write(message,*) 'precip enhancement factor : ',climate%pfac
     call write_log(message)
     call write_log('')
 
@@ -169,6 +178,7 @@ contains
     end where
 
     call eismint3_temp(climate%artm,climate%arng,climate%usrf,model%climate%lati)
+    call eismint3_prcp(climate%prcp,climate%artm,climate%presartm,climate%presprcp,climate%pfac)
     call glimmer_pdd_mbal(climate%pdd_scheme,climate%artm,climate%arng,climate%prcp,climate%ablt,climate%acab,climate%landsea)
 
     where (.not.climate%landsea) climate%acab=0.0
@@ -180,6 +190,16 @@ contains
     call glide_set_artm(model,climate%artm)
 
   end subroutine eismint3_clim
+
+  subroutine eismint3_prcp(prcp,artm,presartm,presprcp,pfac)
+
+    real(sp),dimension(:,:),intent(out) :: prcp
+    real(sp),dimension(:,:),intent(in)  :: artm,presartm,presprcp
+    real(sp) :: pfac
+
+    prcp = presprcp * pfac**(artm - presartm)
+
+  end subroutine eismint3_prcp
 
   subroutine eismint3_temp(artm,arng,usrf,lati)
 

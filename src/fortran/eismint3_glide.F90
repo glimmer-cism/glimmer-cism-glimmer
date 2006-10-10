@@ -54,6 +54,7 @@ program eismint3_glide
   use glimmer_log
   use glimmer_config
   use eismint3_forcing
+  use eismint3_io
   implicit none
 
   type(glide_global_type) :: model        ! model instance
@@ -75,6 +76,7 @@ program eismint3_glide
   call glide_config(model,config)
   call glide_initialise(model)
   call eismint3_initialise(climate,config,model)
+  call eismint3_io_createall(model)
   call CheckSections(config)
   ! fill dimension variables
   call glide_nc_fillall(model)
@@ -82,6 +84,7 @@ program eismint3_glide
 
   do
      call eismint3_clim(climate,model)
+     call eismint3_io_writeall(climate,model)
      call glide_tstep_p1(model,time)
      call glide_tstep_p2(model)
      call glide_tstep_p3(model)
