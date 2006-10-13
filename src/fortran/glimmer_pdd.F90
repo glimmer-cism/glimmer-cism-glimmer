@@ -361,12 +361,12 @@ contains
 
     call write_log('Calculating PDD table...',GM_DIAGNOSTIC)
 
-    do j=0,params%ny-2
+    do j=0,params%ny-1
        tma=params%iy + j*params%dy
 
        ky = findgrid(tma,real(params%iy),real(params%dy))
 
-       do i=0,params%nx-2
+       do i=0,params%nx-1
           dtmj = params%ix + i*params%dx
 
           mean_july_temp = tma + dtmj   

@@ -1,3 +1,10 @@
+2006-10-13 Ian Rutt
+ * Corrected bug with initialisation of precip enhancement in EISMINT3-GL
+ * Made romberg integration functions recursive. This corrects a serious
+   bug in the annual PDD scheme
+ * Corrected problem with annual PDD scheme whereby two edges of the PDD
+   table weren't being initialised.
+	
 2006-10-10 Ian Rutt
  * Added precip enhancement to eismint3-greenland code
 

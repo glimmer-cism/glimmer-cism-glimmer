@@ -67,6 +67,7 @@ contains
     use glide_setup
     use glimmer_log
     use physcon, only: rhoi,rhow
+    use paramets, only: thk0
 
     implicit none
 
@@ -90,6 +91,11 @@ contains
 
     call eismint3_io_readall(climate,model)
     call glimmer_pdd_init(climate%pdd_scheme,config)
+
+    ! Calculate the present ice surface
+    call glide_calclsrf(model%geometry%thck, model%geometry%topg, model%climate%eus,model%geometry%lsrf)
+    climate%presusurf = (model%geometry%thck + model%geometry%lsrf)*thk0
+    model%geometry%usrf = model%geometry%thck + model%geometry%lsrf
 
     select case(climate%loadthk)
     case(0)

@@ -57,7 +57,7 @@ module glimmer_integrate
 
 contains
 
-  real(sp) function sromberg_int(fct,lgr,rgr)
+  recursive real(sp) function sromberg_int(fct,lgr,rgr)
 
     !*FD Function to perform Romberg Integration on function \texttt{fct}, between
     !*FD limits \texttt{lgr} and \texttt{rgr}. The precision of the routine is 
@@ -114,7 +114,7 @@ contains
   end function sromberg_int
 
 
-  real(sp) function sromberg_int_prms(fct,lgr,rgr,params)
+  recursive real(sp) function sromberg_int_prms(fct,lgr,rgr,params)
 
     !*FD Function to perform Romberg Integration on function \texttt{fct}, between
     !*FD limits \texttt{lgr} and \texttt{rgr}. \texttt{params} is an array 
@@ -173,7 +173,7 @@ contains
 
   end function sromberg_int_prms
 
-  real(dp) function dromberg_int(fct,lgr,rgr)
+  recursive real(dp) function dromberg_int(fct,lgr,rgr)
 
     !*FD Function to perform Romberg Integration on function \texttt{fct}, between
     !*FD limits \texttt{lgr} and \texttt{rgr}. The precision of the routine is 
@@ -230,7 +230,7 @@ contains
   end function dromberg_int
 
 
-  real(dp) function dromberg_int_prms(fct,lgr,rgr,params)
+  recursive real(dp) function dromberg_int_prms(fct,lgr,rgr,params)
 
     !*FD Function to perform Romberg Integration on function \texttt{fct}, between
     !*FD limits \texttt{lgr} and \texttt{rgr}. \texttt{params} is an array 

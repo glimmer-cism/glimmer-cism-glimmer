@@ -84,10 +84,10 @@ program eismint3_glide
 
   do
      call eismint3_clim(climate,model)
-     call eismint3_io_writeall(climate,model)
      call glide_tstep_p1(model,time)
      call glide_tstep_p2(model)
      call glide_tstep_p3(model)
+     call eismint3_io_writeall(climate,model)
      ! override masking stuff for now
      time = time + model%numerics%tinc
      if (time.gt.model%numerics%tend) exit

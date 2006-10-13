@@ -40,3 +40,15 @@ dimensions:    time,y1,x1
 units:         meter/year
 long_name:     accumulation
 data:          data%prcp
+
+[presartm]
+dimensions:    time,y1,x1
+units:         degC
+long_name:     present_surface_temperature
+data:          data%presartm
+
+[presprcp]
+dimensions:    time,y1,x1
+units:         meter/year
+long_name:     accumulation_present
+data:          data%presprcp
