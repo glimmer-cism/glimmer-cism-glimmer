@@ -199,6 +199,7 @@ program glint_ebm_ex
   call initialise_glint(ice_sheet, &
        climate%grid%lats, &
        climate%grid%lons, &
+       climate%climate_tstep, &
        (/paramfile/), &
        orog=orog_out, &
        ice_frac=ice_frac, &
@@ -214,51 +215,21 @@ program glint_ebm_ex
     stop
   endif
 
-  ! Do initial timesteps ---------------------------------------------------------------------------
+  ! Do timesteps ---------------------------------------------------------------------------
 
-  time=0
+  time=climate%climate_tstep
 
   do
      call ebm_ex_climate(climate,precip,temp,zonwind,merwind,humid,lwdown,swdown,airpress,real(time,rk))
-     call glint(ice_sheet,time,temp,precip,zonwind,merwind,orog, &
-          humid=humid, lwdown=lwdown, swdown=swdown, airpress=airpress, &
+     call glint(ice_sheet,time,temp,precip,orog, &
+          zonwind=zonwind,     merwind=merwind,       humid=humid, &
+          lwdown=lwdown,       swdown=swdown,         airpress=airpress, &
           orog_out=orog_out,   albedo=albedo,         output_flag=out, &
           ice_frac=ice_frac,   water_out=fw,          water_in=fw_in, &
           total_water_in=twin, total_water_out=twout, ice_volume=ice_vol) 
      time=time+climate%climate_tstep
-     if (time>climate%initial_years*climate%hours_in_year) exit
+     if (time>climate%total_years*climate%hours_in_year) exit
   end do
-
-  ! Do main loop
-
-  do
-     do i=1,climate%hours_in_year,climate%climate_tstep
-        call ebm_ex_climate(climate,precip,temp,zonwind,merwind,humid,lwdown,swdown,airpress,real(time,rk))
-        call glint(ice_sheet,time,temp,precip,zonwind,merwind,orog, &
-             humid=humid, lwdown=lwdown, swdown=swdown, airpress=airpress, &
-             orog_out=orog_out,   albedo=albedo,         output_flag=out, &
-             ice_frac=ice_frac,   water_out=fw,          water_in=fw_in, &
-             total_water_in=twin, total_water_out=twout, ice_volume=ice_vol)
-        time=time+climate%climate_tstep
-        if (time>climate%total_years*climate%hours_in_year) exit
-     end do
-
-     if (time>climate%total_years*climate%hours_in_year) exit
-     time=time+climate%hours_in_year-climate%climate_tstep
-
-     do i=1,climate%years_ratio-1
-        call glint(ice_sheet,time,temp,precip,zonwind,merwind,orog, &
-             humid=humid, lwdown=lwdown, swdown=swdown, airpress=airpress, &
-             orog_out=orog_out,   albedo=albedo,         output_flag=out, &
-             ice_frac=ice_frac,   water_out=fw,          water_in=fw_in, &
-             total_water_in=twin, total_water_out=twout, ice_volume=ice_vol, &
-             skip_mbal=.true.)
-        time=time+climate%hours_in_year
-     end do
-
-     time=time-climate%hours_in_year+climate%climate_tstep
-     if (time>climate%total_years*climate%hours_in_year) exit
-  enddo
 
   ! Finalise/tidy up everything ------------------------------------------------------------
 

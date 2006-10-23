@@ -156,6 +156,7 @@ contains
     ! local variables
     character(len=250) :: msg
     integer :: local_type
+    character(len=6) :: line_num
 
     local_type = 0
     if (present(type)) then
@@ -168,7 +169,8 @@ contains
 
     ! constructing message
     if (present(file) .and. present(line)) then
-       write(msg,*) trim(msg_prefix(local_type))//' (',file,line,') '//message
+       write(line_num,'(I6)')line
+       write(msg,*) trim(msg_prefix(local_type))//' (',trim(file),':',trim(adjustl(line_num)),') '//message
     else
        write(msg,*) trim(msg_prefix(local_type))//' '//message
     end if

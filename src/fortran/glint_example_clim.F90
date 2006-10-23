@@ -56,8 +56,6 @@ module glint_example_clim
   type glex_climate
      ! Mass-balance coupling timing parameters --------------------------
      integer                 :: total_years=10    ! Length of run in years
-     integer                 :: initial_years=1   ! Initial number of years (for mass-balance)
-     integer                 :: years_ratio=10    ! Number of ice model years pre mass-balance calculation
      integer                 :: climate_tstep=6   ! Climate time-step in hours
      real(rk)                :: diurnal_cycle=0.0 ! Imposed Diurnal cycle (degC)
      ! Filenames --------------------------------------------------------
@@ -203,8 +201,6 @@ contains
     if (associated(section)) then
        call GetValue(section,'days_in_year',params%days_in_year)
        call GetValue(section,'total_years',params%total_years)
-       call GetValue(section,'initial_years',params%initial_years)
-       call GetValue(section,'years_ratio',params%years_ratio)
        call GetValue(section,'climate_tstep',params%climate_tstep)
        call GetValue(section,'diurnal_cycle',params%diurnal_cycle)
        params%hours_in_year=params%days_in_year*24

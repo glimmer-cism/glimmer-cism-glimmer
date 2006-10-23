@@ -55,7 +55,7 @@ module glint_initialise
 
 contains
 
-  subroutine glint_i_initialise(config,instance,grid,grid_orog,mbts,idts,need_winds,enmabal)
+  subroutine glint_i_initialise(config,instance,grid,grid_orog,mbts,idts,need_winds,enmabal,force_start,force_dt)
 
     !*FD Initialise a GLINT ice model instance
 
@@ -64,6 +64,7 @@ contains
     use glint_io
     use glint_mbal_io
     use glide
+    use glimmer_log
     use glint_constants
     implicit none
 
@@ -76,6 +77,8 @@ contains
     integer,               intent(out)   :: idts        !*FD ice dynamics time-step (hours)
     logical,               intent(inout) :: need_winds  !*FD Set if this instance needs wind input
     logical,               intent(inout) :: enmabal     !*FD Set if this instance uses the energy balance mass-bal model
+    integer,               intent(in)    :: force_start !*FD The glint forcing start time (hours)
+    integer,               intent(in)    :: force_dt    !*FD The glint forcing time step (hours)
 
     ! Internal
     real(sp),dimension(:,:),allocatable :: thk
@@ -85,6 +88,7 @@ contains
     call glide_config(instance%model,config)
     call glide_initialise(instance%model)
     instance%ice_tstep=get_tinc(instance%model)*years2hours
+    instance%glide_time=instance%model%numerics%tstart
     idts=instance%ice_tstep
 
     ! create glint variables
@@ -144,6 +148,43 @@ contains
     instance%mbal_tstep=instance%mbal_accum%mbal%tstep
     mbts=instance%mbal_tstep
 
+    instance%next_time = force_start-force_dt+instance%mbal_tstep
+
+    ! Mass-balance accumulation length
+
+    if (instance%mbal_accum_time==-1) then
+       instance%mbal_accum_time = max(instance%ice_tstep,instance%mbal_tstep)
+    end if
+
+    if (instance%mbal_accum_time<instance%mbal_tstep) then
+       call write_log('Mass-balance accumulation timescale must be as '//&
+            'long as mass-balance time-step',GM_FATAL,__FILE__,__LINE__)
+    end if
+
+    if (mod(instance%mbal_accum_time,instance%mbal_tstep)/=0) then
+       call write_log('Mass-balance accumulation timescale must be an '// &
+            'integer multiple of the mass-balance time-step',GM_FATAL,__FILE__,__LINE__)
+    end if
+
+    if (.not.(mod(instance%mbal_accum_time,instance%ice_tstep)==0.or.&
+         mod(instance%ice_tstep,instance%mbal_accum_time)==0)) then
+       call write_log('Mass-balance accumulation timescale and ice dynamics '//&
+            'timestep must divide into one another',GM_FATAL,__FILE__,__LINE__)
+    end if
+
+    if (instance%ice_tstep_multiply/=1.and.mod(instance%mbal_accum_time,int(years2hours))/=0.0) then
+       call write_log('For ice time-step multiplication, mass-balance accumulation timescale '//&
+            'must be an integer number of years',GM_FATAL,__FILE__,__LINE__)
+    end if
+
+    ! Initialise some other stuff
+
+    if (instance%mbal_accum_time>instance%ice_tstep) then
+       instance%n_icetstep = instance%ice_tstep_multiply*instance%mbal_accum_time/instance%ice_tstep
+    else
+       instance%n_icetstep = instance%ice_tstep_multiply
+    end if
+
     ! Copy snow-depth to thickness if no thickness is present
 
     allocate(thk(get_ewn(instance%model),get_nsn(instance%model)))
@@ -156,9 +197,9 @@ contains
     call glide_set_thk(instance%model,thk)
     deallocate(thk)
 
-    call glint_mbal_io_writeall(instance%mbal_accum,instance%model)
     call glide_io_writeall(instance%model,instance%model)
     call glint_io_writeall(instance,instance%model)
+    call glint_mbal_io_writeall(instance%mbal_accum,instance%model)
 
     if (instance%whichprecip==2) need_winds=.true.
     if (instance%whichacab==3) then

@@ -130,50 +130,6 @@ contains
 
   end subroutine glint_downscaling
 
-  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-  subroutine fix_acab(ablt,acab,prcp,thck,usrf)
-
-    use glimmer_global, only : sp 
-
-    real(sp),dimension(:,:),intent(inout) :: ablt
-    real(sp),dimension(:,:),intent(inout) :: acab
-    real(sp),dimension(:,:),intent(in)    :: prcp
-    real(sp),dimension(:,:),intent(in)    :: thck
-    real(sp),dimension(:,:),intent(in)    :: usrf
-
-    integer  :: nx,ny
-
-    nx=size(prcp,1) ; ny=size(prcp,2)
-
-    ! Adjust ablation to be no greater than ice available for melting
-
-    where (acab<-thck) 
-       ablt=thck+prcp
-    endwhere
-
-    ! If the upper ice/land surface is at or below sea-level, set accumulation,
-    ! ablation and mass-balance to zero. This is to prevent accumulation of ice below
-    ! sea-level.
-
-    where (usrf<=0.0.and.acab>0.0)
-       ablt=prcp
-       acab=0.0
-    end where
-
-    ! Remove accumulation from domain edges
-
-    ablt(:,1)=prcp(:,1)
-    acab(:,1)=0.0
-    ablt(:,ny)=prcp(:,ny)
-    acab(:,ny)=0.0
-    ablt(1,:)=prcp(1,:)
-    acab(1,:)=0.0
-    ablt(nx,:)=prcp(nx,:)
-    acab(nx,:)=0.0
-
-  end subroutine fix_acab
-
   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   subroutine glint_lapserate_dp(temp,topo,lr)

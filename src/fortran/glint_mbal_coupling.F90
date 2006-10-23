@@ -72,6 +72,7 @@ module glint_mbal_coupling
      real(sp),dimension(:,:),pointer :: siced_save => null() !*FD Saves superimposed ice depth 
      integer :: av_count =0 !*FD Counter for averaging temperature input
      logical :: new_accum=.true.
+     integer :: start_time !*FD the time we started averaging (hours)
      type(glint_mbal_params) :: mbal
   end type glint_mbc
 
@@ -147,10 +148,11 @@ contains
 
   ! +++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine glint_accumulate(params,artm,arng,prcp,snowd,siced,xwind,ywind,local_orog, &
+  subroutine glint_accumulate(params,time,artm,arng,prcp,snowd,siced,xwind,ywind,local_orog, &
        thck,humidity,SWdown,LWdown,Psurf)
 
     type(glint_mbc)  :: params
+    integer :: time
     real(sp),dimension(:,:),intent(inout) :: artm      !*FD Mean air temperature (degC)
     real(sp),dimension(:,:),intent(in) :: arng         !*FD Air temperature half-range (degC)
     real(sp),dimension(:,:),intent(inout) :: prcp      !*FD Precipitation (m)
@@ -183,6 +185,8 @@ contains
        params%ablt_save=0.0
        params%acab_save=0.0
        params%artm_save=0.0
+
+       params%start_time = time
 
     end if
 
@@ -217,7 +221,9 @@ contains
 
   ! +++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine glint_get_mbal(params,artm,prcp,ablt,acab,snowd,siced)
+  subroutine glint_get_mbal(params,artm,prcp,ablt,acab,snowd,siced,dt)
+
+    use glint_constants, only: hours2years
 
     type(glint_mbc)  :: params
     real(sp),dimension(:,:),intent(out)   :: artm   !*FD Mean air temperature (degC)
@@ -226,6 +232,7 @@ contains
     real(sp),dimension(:,:),intent(out)   :: acab   !*FD Mass-balance
     real(sp),dimension(:,:),intent(inout) :: snowd  !*FD Snow depth (m)
     real(sp),dimension(:,:),intent(inout) :: siced  !*FD Superimposed ice depth (m)
+    integer,                intent(in)    :: dt     !*FD accumulation time in hours
 
     if (.not.params%new_accum) then
        params%artm_save=params%artm_save/real(params%av_count)
@@ -234,9 +241,9 @@ contains
     params%new_accum=.true.
 
     artm=params%artm_save
-    prcp=params%prcp_save
-    ablt=params%ablt_save
-    acab=params%acab_save
+    prcp=params%prcp_save/real(dt*hours2years,sp)
+    ablt=params%ablt_save/real(dt*hours2years,sp)
+    acab=params%acab_save/real(dt*hours2years,sp)
     snowd=params%snowd
     siced=params%siced
 

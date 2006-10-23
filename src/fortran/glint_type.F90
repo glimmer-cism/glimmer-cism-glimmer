@@ -68,6 +68,12 @@ module glint_type
      character(fname_length)          :: paramfile          !*FD The name of the configuration file.
      integer                          :: ice_tstep          !*FD Ice timestep in hours
      integer                          :: mbal_tstep         !*FD Mass-balance timestep in hours
+     integer                          :: mbal_accum_time    !*FD Accumulation time for mass-balance (hours)
+                                                            !*FD (defaults to ice time-step)
+     integer                          :: ice_tstep_multiply=1 !*FD Ice time multiplier (non-dimensional)
+     integer                          :: n_icetstep         !*FD Number of ice time-steps per mass-balance accumulation
+     real(rk)                         :: glide_time         !*FD Time as seen by glide (years)
+     integer                          :: next_time          !*FD The next time we expect to be called (hours)
 
      ! Climate inputs from global model --------------------------
 
@@ -107,8 +113,6 @@ module glint_type
 
      !*FD Array indicating whether a point should be considered or ignored 
      !*FD when upscaling data for output. 1 means use, 0 means ignore.
-
-     integer :: last_timestep=0
 
      ! Climate options -------------------------------------------
 
@@ -255,6 +259,8 @@ contains
     !*FD read glint configuration
 
     use glimmer_config
+    use glimmer_log
+    use glint_constants, only: years2hours
 
     implicit none
 
@@ -266,6 +272,9 @@ contains
     ! Internals
 
     type(ConfigSection), pointer :: section
+    real(rk) :: mbal_time_temp ! Accumulation time in years
+
+    mbal_time_temp = -1.0
 
     call GetSection(config,section,'GLINT climate')
     if (associated(section)) then
@@ -275,6 +284,14 @@ contains
        call GetValue(section,'lapse_rate',instance%lapse_rate)
        instance%data_lapse_rate=instance%lapse_rate
        call GetValue(section,'data_lapse_rate',instance%data_lapse_rate)
+       call GetValue(section,'mbal_accum_time',mbal_time_temp)
+       call GetValue(section,'ice_tstep_multiply',instance%ice_tstep_multiply)
+    end if
+
+    if (mbal_time_temp>0.0) then
+       instance%mbal_accum_time = mbal_time_temp * years2hours
+    else
+       instance%mbal_accum_time = -1
     end if
 
   end subroutine glint_i_readconfig
@@ -284,6 +301,7 @@ contains
   subroutine glint_i_printconfig(instance)
 
     use glimmer_log
+    use glint_constants, only: hours2years
 
     implicit none
 
@@ -306,6 +324,14 @@ contains
     write(message,*) 'lapse_rate  ',instance%lapse_rate
     call write_log(message)
     write(message,*) 'data_lapse_rate',instance%data_lapse_rate
+    call write_log(message)
+    if (instance%mbal_accum_time==-1) then
+       call write_log('Mass-balance accumulation time == ice time-step')
+    else
+       write(message,*) 'Mass-balance accumulation time:',instance%mbal_accum_time * hours2years,' years'
+       call write_log(message)
+    end if
+    write(message,*) 'ice_tstep_multiply',instance%ice_tstep_multiply
     call write_log(message)
     call write_log('')
 
@@ -422,5 +448,40 @@ contains
     glint_has_snow_model=mbal_has_snow_model(instance%mbal_accum%mbal)
 
   end function glint_has_snow_model
+
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  subroutine populate_output_flags(out_f,orog_out,albedo,ice_frac,veg_frac,snowice_frac, &
+       snowveg_frac,snow_depth,water_in,water_out,total_water_in,total_water_out,ice_volume)
+
+    type(output_flags),intent(inout) :: out_f
+    real(rk),dimension(:,:),optional,intent(inout) :: orog_out        !*FD The fed-back, output orography (m)
+    real(rk),dimension(:,:),optional,intent(inout) :: albedo          !*FD surface albedo
+    real(rk),dimension(:,:),optional,intent(inout) :: ice_frac        !*FD grid-box ice-fraction
+    real(rk),dimension(:,:),optional,intent(inout) :: veg_frac        !*FD grid-box veg-fraction
+    real(rk),dimension(:,:),optional,intent(inout) :: snowice_frac    !*FD grid-box snow-covered ice fraction
+    real(rk),dimension(:,:),optional,intent(inout) :: snowveg_frac    !*FD grid-box snow-covered veg fraction
+    real(rk),dimension(:,:),optional,intent(inout) :: snow_depth      !*FD grid-box mean snow depth (m water equivalent)
+    real(rk),dimension(:,:),optional,intent(inout) :: water_in        !*FD Input water flux          (mm)
+    real(rk),dimension(:,:),optional,intent(inout) :: water_out       !*FD Output water flux         (mm)
+    real(rk),               optional,intent(inout) :: total_water_in  !*FD Area-integrated water flux in (kg)
+    real(rk),               optional,intent(inout) :: total_water_out !*FD Area-integrated water flux out (kg)
+    real(rk),               optional,intent(inout) :: ice_volume      !*FD Total ice volume (m$^3$)
+
+
+    out_f%orog         = present(orog_out)
+    out_f%albedo       = present(albedo)
+    out_f%ice_frac     = present(ice_frac)
+    out_f%veg_frac     = present(veg_frac)
+    out_f%snowice_frac = present(snowice_frac)
+    out_f%snowveg_frac = present(snowveg_frac)
+    out_f%snow_depth   = present(snow_depth)
+    out_f%water_out    = present(water_out)
+    out_f%water_in     = present(water_in)
+    out_f%total_win    = present(total_water_in)
+    out_f%total_wout   = present(total_water_out)
+    out_f%ice_vol      = present(ice_volume)
+
+  end subroutine populate_output_flags
 
 end module glint_type

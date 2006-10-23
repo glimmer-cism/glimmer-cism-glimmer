@@ -58,7 +58,7 @@ contains
        g_precip,g_zonwind,g_merwind,g_humid,g_lwdown,g_swdown,g_airpress, &
        g_orog,g_orog_out,g_albedo,g_ice_frac,g_veg_frac,g_snowice_frac,g_snowveg_frac,&
        g_snow_depth,g_water_in,g_water_out,t_win,&
-       t_wout,ice_vol,out_f,orogflag,mbal_skip,ice_tstep)
+       t_wout,ice_vol,out_f,orogflag,ice_tstep)
 
     !*FD Performs time-step of an ice model instance. Note that this 
     !*FD code will need to be altered to take account of the 
@@ -108,7 +108,6 @@ contains
     real(rk),               intent(out)  :: ice_vol      !*FD Output ice volume (m$^3$)
     type(output_flags),     intent(in)   :: out_f        !*FD Flags to tell us whether to do output   
     logical,                intent(in)   :: orogflag     !*FD Set if we have new global orog
-    logical,                intent(in)   :: mbal_skip    !*FD set if we are to skip mass-balance accumulation
     logical,                intent(out)  :: ice_tstep    !*FD Set if we have done an ice time step
 
     ! ------------------------------------------------------------------------  
@@ -123,59 +122,59 @@ contains
     real(sp),dimension(:,:),pointer :: thck_temp    => null() ! temporary array for volume calcs
     real(sp),dimension(:,:),pointer :: calve_temp   => null() ! temporary array for calving flux
     real(rk) :: start_volume,end_volume,flux_fudge
+    integer :: i
+
+    ! Check whether we're doing anything this time.
+
+    if (time/=instance%next_time) then
+       return
+    else
+       instance%next_time = instance%next_time + instance%mbal_tstep
+    end if
 
     ! Assume we always need this, as it's too complicated to work out when we do and don't
 
     call coordsystem_allocate(instance%lgrid,thck_temp)
+    call coordsystem_allocate(instance%lgrid,calve_temp)
     ice_tstep=.false.
 
-    if (.not.mbal_skip) then
+    ! Downscale input fields -------------------------------------------------
 
-       ! Downscale input fields -------------------------------------------------
+    call glint_downscaling(instance,g_temp,g_temp_range,g_precip,g_orog,g_zonwind,g_merwind, &
+         g_humid,g_lwdown,g_swdown,g_airpress,orogflag)
 
-       call glint_downscaling(instance,g_temp,g_temp_range,g_precip,g_orog,g_zonwind,g_merwind, &
-            g_humid,g_lwdown,g_swdown,g_airpress,orogflag)
+    ! ------------------------------------------------------------------------  
+    ! Sort out some local orography and remove bathymetry. This relies on the 
+    ! point 1,1 being underwater. However, it's a better method than just 
+    ! setting all points < 0.0 to zero
+    ! ------------------------------------------------------------------------  
 
-       ! ------------------------------------------------------------------------  
-       ! Sort out some local orography and remove bathymetry. This relies on the 
-       ! point 1,1 being underwater. However, it's a better method than just 
-       ! setting all points < 0.0 to zero
-       ! ------------------------------------------------------------------------  
+    call glide_get_usurf(instance%model,instance%local_orog)
+    call glint_remove_bath(instance%local_orog,1,1)
 
-       call glide_get_usurf(instance%model,instance%local_orog)
-       call glint_remove_bath(instance%local_orog,1,1)
+    ! ------------------------------------------------------------------------  
+    ! Adjust the surface temperatures using the lapse-rate, by reducing to
+    ! sea-level and then back up to high-res orography
+    ! ------------------------------------------------------------------------  
 
-       ! ------------------------------------------------------------------------  
-       ! Adjust the surface temperatures using the lapse-rate, by reducing to
-       ! sea-level and then back up to high-res orography
-       ! ------------------------------------------------------------------------  
+    call glint_lapserate(instance%artm,real(instance%global_orog,rk),real(-instance%data_lapse_rate,rk))
+    call glint_lapserate(instance%artm,real(instance%local_orog,rk), real(instance%lapse_rate,rk))
 
-       call glint_lapserate(instance%artm,real(instance%global_orog,rk),real(-instance%data_lapse_rate,rk))
-       call glint_lapserate(instance%artm,real(instance%local_orog,rk), real(instance%lapse_rate,rk))
+    ! Process the precipitation field if necessary ---------------------------
+    ! and convert from mm to m
 
-       ! Process the precipitation field if necessary ---------------------------
-       ! and convert from mm to m
+    call glint_calc_precip(instance)
 
-       call glint_calc_precip(instance)
+    ! Get ice thickness ----------------------------------------
 
-       ! Get ice thickness, if necessary ----------------------------------------
+    call glide_get_thk(instance%model,thck_temp)
 
-       if (instance%whichacab==3) then
-          call glide_get_thk(instance%model,thck_temp)
-       endif
+    ! Do accumulation --------------------------------------------------------
 
-       ! Do accumulation --------------------------------------------------------
-
-       call glint_accumulate(instance%mbal_accum,instance%artm,instance%arng,instance%prcp, &
-            instance%snowd,instance%siced,instance%xwind,instance%ywind, &
-            instance%local_orog,real(thck_temp,rk),instance%humid,instance%swdown,instance%lwdown, &
-            instance%airpress)
-
-    end if
-
-    ! Write output if necessary ----------------------------------------------
-
-    call set_time(instance%model,real(time)*real(hours2years))
+    call glint_accumulate(instance%mbal_accum,time,instance%artm,instance%arng,instance%prcp, &
+         instance%snowd,instance%siced,instance%xwind,instance%ywind, &
+         instance%local_orog,real(thck_temp,rk),instance%humid,instance%swdown,instance%lwdown, &
+         instance%airpress)
 
     ! Initialise water budget quantities to zero. These will be over-ridden if
     ! there's an ice-model time-step
@@ -187,65 +186,88 @@ contains
     ! ICE TIMESTEP begins HERE ***********************************************
     ! ------------------------------------------------------------------------  
 
-    if (time-instance%last_timestep.ge.instance%ice_tstep) then
+    if (time-instance%mbal_accum%start_time+instance%mbal_tstep.eq.instance%mbal_accum_time) then
+
+       if (instance%mbal_accum_time<instance%ice_tstep) then 
+          instance%next_time = instance%next_time + instance%ice_tstep - instance%mbal_tstep
+       end if
 
        ice_tstep=.true.
-       instance%last_timestep=time
 
-       ! Get the mass-balance ------------------------------------------------
-
-       call glint_get_mbal(instance%mbal_accum,instance%artm,instance%prcp,instance%ablt, &
-            instance%acab,instance%snowd,instance%siced)
-
-       ! Calculate the initial ice volume (scaled and converted to water equi)
-
-       call glide_get_thk(instance%model,thck_temp)
-       thck_temp=thck_temp*real(rhoi/rhow)
-       start_volume=sum(thck_temp)
-
-       ! Constrain accumulation according to topography and domain edges -----
-
-       call fix_acab(instance%ablt,instance%acab,instance%prcp,thck_temp,instance%local_orog)
-
-       ! Put climate inputs in the appropriate places, with conversion ----------
-
-       call glide_set_acab(instance%model,instance%acab*real(rhow/rhoi)/real(instance%ice_tstep*hours2years,sp))
-       call glide_set_artm(instance%model,instance%artm)
-
-       ! Adjust acab and ablt for output. This is done here otherwise roundoff error leaves a 
-       ! residual thickness when it's taken away from the current ice
-
-       where (instance%acab<-thck_temp)
-          instance%acab=-thck_temp
-          instance%ablt=thck_temp
-       end where
-
-       ! Do water budget accounting ---------------------------------------------
+       ! Prepare arrays for water budgeting
 
        if (out_f%water_out.or.out_f%total_wout.or.out_f%water_in .or.out_f%total_win) then
           call coordsystem_allocate(instance%lgrid,accum_temp)
           call coordsystem_allocate(instance%lgrid,ablat_temp)
-          accum_temp=instance%prcp
-          ablat_temp=instance%ablt
-       endif
+          accum_temp=0.0
+          ablat_temp=0.0
+       end if
+
+       ! Calculate the initial ice volume (scaled and converted to water equi)
+       call glide_get_thk(instance%model,thck_temp)
+       thck_temp=thck_temp*real(rhoi/rhow)
+       start_volume=sum(thck_temp)
 
        ! ---------------------------------------------------------------------
        ! do the different parts of the glint timestep
        ! ---------------------------------------------------------------------
 
-       call glide_tstep_p1(instance%model,real(time,rk)*hours2years)
-       call glide_tstep_p2(instance%model)
-       call glide_tstep_p3(instance%model)
+       do i = 1,instance%n_icetstep
 
-       ! Add the calved ice to the ablation field ------------------------------
+          ! Calculate the initial ice volume (scaled and converted to water equi)
+          call glide_get_thk(instance%model,thck_temp)
+          thck_temp=thck_temp*real(rhoi/rhow)
 
-       call coordsystem_allocate(instance%lgrid,calve_temp)
-       call glide_get_calving(instance%model,calve_temp)
+          ! Get latest upper-surface elevation (needed for masking)
+          call glide_get_usurf(instance%model,instance%local_orog)
+          call glint_remove_bath(instance%local_orog,1,1)
 
-       calve_temp=calve_temp*real(rhoi/rhow)
-       ablat_temp=ablat_temp+calve_temp
-       instance%ablt=instance%ablt+calve_temp
-       instance%acab=instance%acab-calve_temp
+          ! Get the mass-balance, as m water/year 
+          call glint_get_mbal(instance%mbal_accum,instance%artm,instance%prcp,instance%ablt, &
+               instance%acab,instance%snowd,instance%siced,instance%mbal_accum_time)
+
+          ! Mask out non-accumulation in ice-free areas
+
+          where(thck_temp<=0.0.and.instance%acab<0.0)
+             instance%acab=0.0
+             instance%ablt=instance%prcp
+          end where
+
+          ! Put climate inputs in the appropriate places, with conversion ----------
+          call glide_set_acab(instance%model,instance%acab*real(rhow/rhoi))
+          call glide_set_artm(instance%model,instance%artm)
+
+          ! Adjust glint acab and ablt for output. 
+          where (instance%acab<-thck_temp.and.thck_temp>0.0)
+             instance%acab=-thck_temp
+             instance%ablt=thck_temp
+          end where
+
+          instance%glide_time=instance%glide_time+instance%model%numerics%tinc
+          call glide_tstep_p1(instance%model,instance%glide_time)
+          call glide_tstep_p2(instance%model)
+          call glide_tstep_p3(instance%model)
+
+          ! Add the calved ice to the ablation field
+
+          call glide_get_calving(instance%model,calve_temp)
+          calve_temp = calve_temp * real(rhoi/rhow)
+
+          instance%ablt=instance%ablt+calve_temp/instance%model%numerics%tinc
+          instance%acab=instance%acab-calve_temp/instance%model%numerics%tinc
+
+          ! Accumulate for water-budgeting
+          if (out_f%water_out.or.out_f%total_wout.or.out_f%water_in .or.out_f%total_win) then
+             accum_temp=accum_temp+instance%prcp*instance%model%numerics%tinc
+             ablat_temp=ablat_temp+instance%ablt*instance%model%numerics%tinc
+          endif
+
+          ! Finally, do some output
+
+          call glint_io_writeall(instance,instance%model)
+          call glint_mbal_io_writeall(instance%mbal_accum,instance%model)
+
+       end do
 
        ! Calculate flux fudge factor --------------------------------------------
 
@@ -336,8 +358,7 @@ contains
           t_wout = sum(ablat_temp)*instance%lgrid%delta%pt(1)* &
                instance%lgrid%delta%pt(2)
        endif
-    else
-       call glide_io_writeall(instance%model,instance%model)
+
     end if
 
     ! ------------------------------------------------------------------------ 
@@ -356,11 +377,6 @@ contains
        ice_vol=sum(thck_temp)*instance%lgrid%delta%pt(1)* &
             instance%lgrid%delta%pt(2)
     endif
-
-    ! Write glint data to file -----------------------------------------------
-
-    call glint_io_writeall(instance,instance%model)
-    call glint_mbal_io_writeall(instance%mbal_accum,instance%model)
 
     ! Tidy up ----------------------------------------------------------------
 

@@ -1,3 +1,8 @@
+2006-10-23 Ian Rutt
+ * Major enhancements to GLINT API, plu one or two bug
+ corrections. Time-step coordination and averaging is now handled in a
+ much-improved way.
+
 2006-10-13 Ian Rutt
  * Corrected bug with initialisation of precip enhancement in EISMINT3-GL
  * Made romberg integration functions recursive. This corrects a serious

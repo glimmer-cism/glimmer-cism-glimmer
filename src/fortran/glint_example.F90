@@ -68,8 +68,6 @@ program glint_example
 
   real(rk),dimension(:,:),allocatable :: temp      ! Temperature     (degC)
   real(rk),dimension(:,:),allocatable :: precip    ! Precipitation   (mm/s)
-  real(rk),dimension(:,:),allocatable :: zonwind   ! Zonal wind      (m/s)
-  real(rk),dimension(:,:),allocatable :: merwind   ! Meridional wind (m/s)
   real(rk),dimension(:,:),allocatable :: orog      ! Orography       (m)
 
   ! Arrays which hold information about the ice model instances -------------------------
@@ -150,8 +148,7 @@ program glint_example
 
   ! Allocate arrays appropriately
 
-  allocate(temp(nx,ny),precip(nx,ny),zonwind(nx,ny))
-  allocate(merwind(nx,ny),orog(nx,ny))
+  allocate(temp(nx,ny),precip(nx,ny),orog(nx,ny))
   allocate(coverage(nx,ny),orog_out(nxo,nyo),albedo(nx,ny),ice_frac(nx,ny),fw(nx,ny))
   allocate(lats_orog(nyo),lons_orog(nxo),cov_orog(nxo,nyo),fw_in(nx,ny))
 
@@ -159,8 +156,6 @@ program glint_example
 
   temp=0.0
   precip=0.0
-  zonwind=0.0
-  merwind=0.0
   albedo=0.0
   orog_out=0.0
   orog=real(climate%orog_clim)                    ! Put orography where it belongs
@@ -188,13 +183,14 @@ program glint_example
   call initialise_glint(ice_sheet, &
        climate%all_grid%lats, &
        climate%all_grid%lons, &
+       climate%climate_tstep, &
        (/paramfile/), &
        orog=orog_out, &
        ice_frac=ice_frac, &
        albedo=albedo, &
        orog_longs=lons_orog, &
        orog_lats=lats_orog, &
-       daysinyear=365)
+       daysinyear=climate%days_in_year)
 
   ! Get coverage maps for the ice model instances
 
@@ -203,48 +199,19 @@ program glint_example
      stop
   endif
 
-  ! Do initial timesteps ---------------------------------------------------------------------------
+  ! Do timesteps ---------------------------------------------------------------------------
 
-  time=0
+  time=climate%climate_tstep
 
   do
      call example_climate(climate,precip,temp,real(time,rk))
-     call glint(ice_sheet,time,temp,precip,zonwind,merwind,orog, &
+     call glint(ice_sheet,time,temp,precip,orog, &
           orog_out=orog_out,   albedo=albedo,         output_flag=out, &
           ice_frac=ice_frac,   water_out=fw,          water_in=fw_in, &
           total_water_in=twin, total_water_out=twout, ice_volume=ice_vol) 
      time=time+climate%climate_tstep
-     if (time>climate%initial_years*climate%hours_in_year) exit
+     if (time>climate%total_years*climate%hours_in_year) exit
   end do
-
-  ! Do main loop
-
-  do
-     do i=1,climate%hours_in_year,climate%climate_tstep
-        call example_climate(climate,precip,temp,real(time,rk))
-        call glint(ice_sheet,time,temp,precip,zonwind,merwind,orog, &
-             orog_out=orog_out,   albedo=albedo,         output_flag=out, &
-             ice_frac=ice_frac,   water_out=fw,          water_in=fw_in, &
-             total_water_in=twin, total_water_out=twout, ice_volume=ice_vol)
-        time=time+climate%climate_tstep
-        if (time>climate%total_years*climate%hours_in_year) exit
-     end do
-
-     if (time>climate%total_years*climate%hours_in_year) exit
-     time=time+climate%hours_in_year-climate%climate_tstep
-
-     do i=1,climate%years_ratio-1
-        call glint(ice_sheet,time,temp,precip,zonwind,merwind,orog, &
-             orog_out=orog_out,   albedo=albedo,         output_flag=out, &
-             ice_frac=ice_frac,   water_out=fw,          water_in=fw_in, &
-             total_water_in=twin, total_water_out=twout, ice_volume=ice_vol, &
-             skip_mbal=.true.)
-        time=time+climate%hours_in_year
-     end do
-
-     time=time-climate%hours_in_year+climate%climate_tstep
-     if (time>climate%total_years*climate%hours_in_year) exit
-  enddo
 
   ! Finalise/tidy up everything ------------------------------------------------------------
 

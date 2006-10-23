@@ -77,11 +77,13 @@ module glint_main
 
      ! Global model parameters ----------------------------------
 
-     real(rk) :: tstep_mbal = 1.0    !*FD Mass-balance timestep (hours)
+     integer  :: tstep_mbal = 1      !*FD Mass-balance timestep (hours)
+     integer  :: start_time          !*FD Time of first call to glint (hours)
+     integer  :: time_step           !*FD Calling timestep of global model (hours)
 
      ! Averaging parameters -------------------------------------
 
-     real(rk) :: av_start_time = 0.0 !*FD Holds the value of time from 
+     integer  :: av_start_time = 0   !*FD Holds the value of time from 
                                      !*FD the last occasion averaging was restarted (hours)
      integer  :: av_steps      = 0   !*FD Holds the number of times glimmer has 
                                      !*FD been called in current round of averaging.
@@ -134,9 +136,9 @@ module glint_main
 
 contains
 
-  subroutine initialise_glint(params,lats,longs,paramfile,latb,lonb,orog,albedo, &
+  subroutine initialise_glint(params,lats,longs,time_step,paramfile,latb,lonb,orog,albedo, &
        ice_frac,veg_frac,snowice_frac,snowveg_frac,snow_depth,orog_lats,orog_longs,orog_latb,orog_lonb,output_flag, &
-       daysinyear,snow_model,ice_dt,extraconfigs)
+       daysinyear,snow_model,ice_dt,extraconfigs,start_time)
 
     !*FD Initialises the model
 
@@ -150,6 +152,7 @@ contains
     type(glint_params),              intent(inout) :: params      !*FD parameters to be set
     real(rk),dimension(:),           intent(in)    :: lats,longs  !*FD location of gridpoints 
                                                                   !*FD in global data.
+    integer,                         intent(in)    :: time_step   !*FD Timestep of calling model (hours)
     character(*),dimension(:),       intent(in)    :: paramfile   !*FD array of configuration filenames.
     real(rk),dimension(:),  optional,intent(in)    :: latb        !*FD Locations of the latitudinal 
                                                                   !*FD boundaries of the grid-boxes.
@@ -177,6 +180,7 @@ contains
     integer,                optional,intent(out)   :: ice_dt      !*FD Ice dynamics time-step in hours
     type(ConfigData),dimension(:),optional ::  extraconfigs !*FD Additional configuration information - overwrites
                                                                   !*FD config data read from files
+    integer,                optional,intent(in)    :: start_time  !*FD Time of first call to glint (hours)
 
     ! Internal variables -----------------------------------------------------------------------
 
@@ -187,6 +191,16 @@ contains
     integer :: i
     real(rk),dimension(:,:),allocatable :: orog_temp,if_temp,vf_temp,sif_temp,svf_temp,sd_temp,alb_temp ! Temporary output arrays
     integer,dimension(:),allocatable :: mbts,idts ! Array of mass-balance and ice dynamics timesteps
+
+    ! Initialise start time and calling model time-step ----------------------------------------
+    ! We ignore t=0 by default 
+
+    params%time_step = time_step
+    if (present(start_time)) then
+       params%start_time = start_time
+    else
+       params%start_time = time_step
+    end if
 
     ! Initialise year-length -------------------------------------------------------------------
 
@@ -269,7 +283,7 @@ contains
           end if
        end if
        call glint_i_initialise(instance_config,params%instances(i),params%g_grid,params%g_grid_orog, &
-            mbts(i),idts(i),params%need_winds,params%enmabal)
+            mbts(i),idts(i),params%need_winds,params%enmabal,params%start_time,params%time_step)
 
        params%total_coverage = params%total_coverage + params%instances(i)%frac_coverage
        params%total_cov_orog = params%total_cov_orog + params%instances(i)%frac_cov_orog
@@ -284,6 +298,14 @@ contains
     params%tstep_mbal=check_mbts(mbts)
     if (present(ice_dt)) then
        ice_dt=check_mbts(idts)
+    end if
+
+    ! Check time-steps divide into one another appropriately.
+
+    if (.not.(mod(params%tstep_mbal,params%time_step)==0)) then
+       print*,params%tstep_mbal,params%time_step
+       call write_log('The mass-balance timestep must be an integer multiple of the forcing time-step', &
+            GM_FATAL,__FILE__,__LINE__)
     end if
 
     ! Check we don't have coverage greater than one at any point.
@@ -368,9 +390,9 @@ contains
 
   !================================================================================
 
-  subroutine glint(params,time,temp,precip,zonwind,merwind,orog,humid,lwdown,swdown,airpress, &
+  subroutine glint(params,time,temp,precip,orog,zonwind,merwind,humid,lwdown,swdown,airpress, &
        output_flag,orog_out,albedo,ice_frac,veg_frac,snowice_frac,snowveg_frac,snow_depth,water_in, &
-       water_out,total_water_in,total_water_out,ice_volume,skip_mbal,ice_tstep)
+       water_out,total_water_in,total_water_out,ice_volume,ice_tstep)
 
     !*FD Main Glimmer subroutine.
     !*FD
@@ -399,9 +421,9 @@ contains
     integer,                         intent(in)    :: time            !*FD Current model time        (hours)
     real(rk),dimension(:,:),         intent(in)    :: temp            !*FD Surface temperature field (celcius)
     real(rk),dimension(:,:),         intent(in)    :: precip          !*FD Precipitation rate        (mm/s)
-    real(rk),dimension(:,:),         intent(in)    :: zonwind,merwind !*FD Zonal and meridional components 
-                                                                      !*FD of the wind field         (m/s)
     real(rk),dimension(:,:),         intent(in)    :: orog            !*FD The large-scale orography (m)
+    real(rk),dimension(:,:),optional,intent(in)    :: zonwind,merwind !*FD Zonal and meridional components 
+                                                                      !*FD of the wind field         (m/s)
     real(rk),dimension(:,:),optional,intent(in)    :: humid           !*FD Surface humidity (%)
     real(rk),dimension(:,:),optional,intent(in)    :: lwdown          !*FD Downwelling longwave (W/m^2)
     real(rk),dimension(:,:),optional,intent(in)    :: swdown          !*FD Downwelling shortwave (W/m^2)
@@ -419,7 +441,6 @@ contains
     real(rk),               optional,intent(inout) :: total_water_in  !*FD Area-integrated water flux in (kg)
     real(rk),               optional,intent(inout) :: total_water_out !*FD Area-integrated water flux out (kg)
     real(rk),               optional,intent(inout) :: ice_volume      !*FD Total ice volume (m$^3$)
-    logical,                optional,intent(in)    :: skip_mbal       !*FD Set to skip mass-balance accumulation
     logical,                optional,intent(out)   :: ice_tstep       !*FD Set when an ice-timestep has been done, and
                                                                       !*FD water balance information is available
 
@@ -429,31 +450,22 @@ contains
     real(rk),dimension(:,:),allocatable :: albedo_temp,if_temp,vf_temp,sif_temp,svf_temp,sd_temp,wout_temp,orog_out_temp,win_temp
     real(rk) :: twin_temp,twout_temp,icevol_temp
     type(output_flags) :: out_f
-    logical :: skmb,icets
+    logical :: icets
+    character(250) :: message
 
-    if (present(skip_mbal)) then
-       skmb=skip_mbal
-    else
-       skmb=.false.
-    end if
+    if (time<params%start_time) return ! Do nothing if called before the specified start time
+    call check_input_fields(params,humid,lwdown,swdown,airpress,zonwind,merwind) ! Check we have correct input fields
 
-    ! Check we have necessary input fields ----------------------------------------------------------
-
-    if (params%enmabal) then
-       if (.not.(present(humid).and.present(lwdown).and. &
-            present(swdown).and.present(airpress))) &
-            call write_log('Necessary fields not supplied for Energy Balance Mass Balance model',GM_FATAL, &
-            __FILE__,__LINE__)
-    end if
-
-    ! Set averaging start if necessary and return if this is not a mass-balance timestep
-    ! Still not sure if this is the correct solution, but should prevent averaging of one-
-    ! too-many steps at first
+    ! Set averaging start if necessary, and check we're being called at a sensible time
 
     if (params%first) then
        params%av_start_time=time
        params%first=.false.
-       return
+    else
+       if (mod(time-params%av_start_time,params%time_step)/=0) then
+          write(message,*) 'Unexpected calling of GLINT at time ',time
+          call write_log(message,GM_FATAL,__FILE__,__LINE__)
+       end if
     endif
 
     ! Reset output flag
@@ -461,28 +473,9 @@ contains
     if (present(output_flag)) output_flag=.false.
     if (present(ice_tstep))   ice_tstep=.false.
 
-    ! ---------------------------------------------------------
     ! Do averaging and so on...
-    ! Averages
-    ! ---------------------------------------------------------
 
-    params%g_av_temp    = params%g_av_temp    + temp
-    params%g_av_precip  = params%g_av_precip  + precip
-
-    if (params%need_winds) params%g_av_zonwind = params%g_av_zonwind + zonwind
-    if (params%need_winds) params%g_av_merwind = params%g_av_merwind + merwind
-
-    if (params%enmabal) then
-       params%g_av_humid    = params%g_av_humid    + humid
-       params%g_av_lwdown   = params%g_av_lwdown   + lwdown
-       params%g_av_swdown   = params%g_av_swdown   + swdown
-       params%g_av_airpress = params%g_av_airpress + airpress
-    endif
-
-    ! Ranges of temperature
-
-    where (temp > params%g_max_temp) params%g_max_temp=temp
-    where (temp < params%g_min_temp) params%g_min_temp=temp
+    call accumulate_averages(params,temp,precip,zonwind,merwind,humid,lwdown,swdown,airpress)
 
     ! Increment step counter
 
@@ -493,7 +486,12 @@ contains
     ! for each model instance
     ! ---------------------------------------------------------
 
-    if (time-params%av_start_time.ge.params%tstep_mbal) then
+    if (time-params%av_start_time+params%time_step.gt.params%tstep_mbal) then
+
+       call write_log('Incomplete forcing of GLINT mass-balance time-step detected', &
+            GM_FATAL,__FILE__,__LINE__)
+
+    else if (time-params%av_start_time+params%time_step.eq.params%tstep_mbal) then
 
        ! Set output_flag
 
@@ -521,18 +519,8 @@ contains
 
        ! Populate output flag derived type
 
-       out_f%orog         = present(orog_out)
-       out_f%albedo       = present(albedo)
-       out_f%ice_frac     = present(ice_frac)
-       out_f%veg_frac     = present(veg_frac)
-       out_f%snowice_frac = present(snowice_frac)
-       out_f%snowveg_frac = present(snowveg_frac)
-       out_f%snow_depth   = present(snow_depth)
-       out_f%water_out    = present(water_out)
-       out_f%water_in     = present(water_in)
-       out_f%total_win    = present(total_water_in)
-       out_f%total_wout   = present(total_water_out)
-       out_f%ice_vol      = present(ice_volume)
+       call populate_output_flags(out_f,orog_out,albedo,ice_frac,veg_frac,snowice_frac, &
+            snowveg_frac,snow_depth,water_in,water_out,total_water_in,total_water_out,ice_volume)
 
        ! Zero outputs if present
 
@@ -552,21 +540,12 @@ contains
        ! Calculate averages by dividing by number of steps elapsed
        ! since last model timestep.
 
-       params%g_av_temp    = params%g_av_temp   /real(params%av_steps)
-       params%g_av_precip  = params%g_av_precip /real(params%av_steps)
-       if (params%need_winds) params%g_av_zonwind = params%g_av_zonwind/real(params%av_steps)
-       if (params%need_winds) params%g_av_merwind = params%g_av_merwind/real(params%av_steps)
-       if (params%enmabal) then
-          params%g_av_humid    = params%g_av_humid   /real(params%av_steps)
-          params%g_av_lwdown   = params%g_av_lwdown  /real(params%av_steps)
-          params%g_av_swdown   = params%g_av_swdown  /real(params%av_steps)
-          params%g_av_airpress = params%g_av_airpress/real(params%av_steps)
-       endif
+       call calculate_averages(params)
 
        ! Calculate total accumulated precipitation - multiply
        ! by time since last model timestep
 
-       params%g_av_precip = params%g_av_precip*(time-params%av_start_time)*hours2seconds
+       params%g_av_precip = params%g_av_precip*params%tstep_mbal*hours2seconds
 
        ! Calculate temperature half-range
 
@@ -601,7 +580,6 @@ contains
                icevol_temp,                  &
                out_f,                        &
                .true.,                       &
-               skmb,                         &
                icets)
 
           ! Add this contribution to the output orography
@@ -649,10 +627,10 @@ contains
        ! Scale output water fluxes to be in mm/s
 
        if (present(water_in)) water_in=water_in/ &
-            ((time-params%av_start_time)*hours2seconds)
+            (params%tstep_mbal*hours2seconds)
 
        if (present(water_out)) water_out=water_out/ &
-            ((time-params%av_start_time)*hours2seconds)
+            (params%tstep_mbal*hours2seconds)
 
        ! ---------------------------------------------------------
        ! Reset averaging fields, flags and counters
@@ -671,7 +649,7 @@ contains
        params%g_min_temp   = 1000.0
 
        params%av_steps     = 0
-       params%av_start_time = time
+       params%first = .true.
 
        deallocate(albedo_temp,if_temp,vf_temp,sif_temp,svf_temp,sd_temp,wout_temp,win_temp,orog_out_temp)
 
@@ -907,7 +885,7 @@ contains
 
   !========================================================
 
-  real(rk) function check_mbts(timesteps)
+  integer function check_mbts(timesteps)
 
     !*FD Checks to see that all mass-balance time-steps are
     !*FD the same. Flags a fatal error if not, else assigns that
@@ -968,6 +946,85 @@ contains
     end if
 
   end subroutine check_init_args
+
+  !========================================================
+
+  subroutine check_input_fields(params,humid,lwdown,swdown,airpress,zonwind,merwind)
+
+    use glimmer_log
+
+    type(glint_params),              intent(inout) :: params   !*FD parameters for this run
+    real(rk),dimension(:,:),optional,intent(in)    :: humid    !*FD Surface humidity (%)
+    real(rk),dimension(:,:),optional,intent(in)    :: lwdown   !*FD Downwelling longwave (W/m^2)
+    real(rk),dimension(:,:),optional,intent(in)    :: swdown   !*FD Downwelling shortwave (W/m^2)
+    real(rk),dimension(:,:),optional,intent(in)    :: airpress !*FD surface air pressure (Pa)
+    real(rk),dimension(:,:),optional,intent(in)    :: zonwind  !*FD Zonal component of the wind field (m/s)
+    real(rk),dimension(:,:),optional,intent(in)    :: merwind  !*FD Meridional component of the wind field (m/s)
+
+    if (params%enmabal) then
+       if (.not.(present(humid).and.present(lwdown).and. &
+            present(swdown).and.present(airpress).and. &
+            present(zonwind).and.present(merwind))) &
+            call write_log('Necessary fields not supplied for Energy Balance Mass Balance model',GM_FATAL, &
+            __FILE__,__LINE__)
+    end if
+
+    if (params%need_winds) then
+       if (.not.(present(zonwind).and.present(merwind))) &
+          call write_log('Need to supply zonal and meridional wind fields to GLINT',GM_FATAL, &
+            __FILE__,__LINE__)
+    end if
+
+  end subroutine check_input_fields
+
+  subroutine accumulate_averages(params,temp,precip,zonwind,merwind,humid,lwdown,swdown,airpress)
+
+    type(glint_params),              intent(inout) :: params   !*FD parameters for this run
+    real(rk),dimension(:,:),         intent(in)    :: temp     !*FD Surface temperature field (celcius)
+    real(rk),dimension(:,:),         intent(in)    :: precip   !*FD Precipitation rate        (mm/s)
+    real(rk),dimension(:,:),optional,intent(in)    :: zonwind  !*FD Zonal component of the wind field (m/s)
+    real(rk),dimension(:,:),optional,intent(in)    :: merwind  !*FD Meridional component of the wind field (m/s)
+    real(rk),dimension(:,:),optional,intent(in)    :: humid    !*FD Surface humidity (%)
+    real(rk),dimension(:,:),optional,intent(in)    :: lwdown   !*FD Downwelling longwave (W/m^2)
+    real(rk),dimension(:,:),optional,intent(in)    :: swdown   !*FD Downwelling shortwave (W/m^2)
+    real(rk),dimension(:,:),optional,intent(in)    :: airpress !*FD surface air pressure (Pa)
+
+    params%g_av_temp    = params%g_av_temp    + temp
+    params%g_av_precip  = params%g_av_precip  + precip
+
+    if (params%need_winds) params%g_av_zonwind = params%g_av_zonwind + zonwind
+    if (params%need_winds) params%g_av_merwind = params%g_av_merwind + merwind
+
+    if (params%enmabal) then
+       params%g_av_humid    = params%g_av_humid    + humid
+       params%g_av_lwdown   = params%g_av_lwdown   + lwdown
+       params%g_av_swdown   = params%g_av_swdown   + swdown
+       params%g_av_airpress = params%g_av_airpress + airpress
+    endif
+
+    ! Ranges of temperature
+
+    where (temp > params%g_max_temp) params%g_max_temp=temp
+    where (temp < params%g_min_temp) params%g_min_temp=temp
+
+  end subroutine accumulate_averages
+
+  subroutine calculate_averages(params)
+
+    type(glint_params),              intent(inout) :: params   !*FD parameters for this run
+
+    params%g_av_temp    = params%g_av_temp   /real(params%av_steps)
+    params%g_av_precip  = params%g_av_precip /real(params%av_steps)
+    if (params%need_winds) params%g_av_zonwind = params%g_av_zonwind/real(params%av_steps)
+    if (params%need_winds) params%g_av_merwind = params%g_av_merwind/real(params%av_steps)
+    if (params%enmabal) then
+       params%g_av_humid    = params%g_av_humid   /real(params%av_steps)
+       params%g_av_lwdown   = params%g_av_lwdown  /real(params%av_steps)
+       params%g_av_swdown   = params%g_av_swdown  /real(params%av_steps)
+       params%g_av_airpress = params%g_av_airpress/real(params%av_steps)
+    endif
+
+  end subroutine calculate_averages
 
 end module glint_main
 
