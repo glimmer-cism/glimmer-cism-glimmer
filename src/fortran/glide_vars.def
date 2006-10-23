@@ -361,3 +361,14 @@ long_name:     lithosphere temperature
 data:          data%lithot%temp
 hot:           1
 coordinates:   lon lat
+
+#lipscomb - added new variable, ice age
+[age]
+dimensions:    time, level, y1, x1
+units:         year
+long_name:     ice age
+data:          data%geometry%age(up,:,:)
+standard_name: land_ice_age
+factor:        tim0/scyr
+hot:           1
+coordinates:   lon lat

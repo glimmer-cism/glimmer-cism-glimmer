@@ -490,6 +490,8 @@ contains
     call GetValue(section,'ntem',model%numerics%ntem)
     call GetValue(section,'nvel',model%numerics%nvel)
     call GetValue(section,'profile',model%numerics%profile_period)
+!lipscomb - diagnostic frequency
+    call GetValue(section,'ndiag',model%numerics%ndiag)
   end subroutine handle_time
   
   subroutine print_time(model)
@@ -512,6 +514,9 @@ contains
     write(message,*) 'velo dt factor    : ',model%numerics%nvel
     call write_log(message)
     write(message,*) 'profile frequency : ',model%numerics%profile_period
+    call write_log(message)
+!lipscomb - diagnostic frequency
+    write(message,*) 'diag frequency    : ',model%numerics%ndiag
     call write_log(message)
     call write_log('')
   end subroutine print_time
@@ -568,10 +573,13 @@ contains
          'const if T>0', &
          '~basal water', &
          '~basal melt '/)
-    character(len=*), dimension(0:2), parameter :: evolution = (/ &
+!lipscomb - Remapping gives two additional evolution options (3 and 4)
+    character(len=*), dimension(0:4), parameter :: evolution = (/ &
          'pseudo-diffusion', &
          'ADI scheme      ', &
-         'diffusion       ' /)
+         'diffusion       ', &
+         'remap thickness ', &
+         'remap thickness and temperature' /)
     character(len=*), dimension(0:1), parameter :: vertical_integration = (/ &
          'standard     ', &
          'obey upper BC' /)

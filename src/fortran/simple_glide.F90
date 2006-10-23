@@ -60,6 +60,11 @@ program simple_glide
   character(len=fname_length) :: fname   ! name of paramter file
   real(kind=rk) time
 
+!lipscomb - local diagnostics points (move to config file?) 
+  integer, parameter ::   & 
+!       idiag = 36, jdiag = 31  ! cell location for local diagnostics
+       idiag = 34, jdiag = 14  ! cell location for local diagnostics
+
   write(*,*) 'Enter name of GLIDE configuration file to be read'
   read(*,*) fname
   
@@ -83,6 +88,8 @@ program simple_glide
   call spinup_lithot(model)
 
   do while(time.le.model%numerics%tend)
+!lipscomb - Print time so as to have something to watch while the code runs
+     print*, 'time, timecounter =', time, model%numerics%timecounter
      call glide_tstep_p1(model,time)
      call glide_tstep_p2(model)
      call glide_tstep_p3(model)
@@ -90,6 +97,9 @@ program simple_glide
      time = time + model%numerics%tinc
      call simple_massbalance(climate,model,time)
      call simple_surftemp(climate,model,time)     
+!lipscomb - call glide diagnostics routine 
+     if (mod(model%numerics%timecounter,model%numerics%ndiag)==0) &
+        call glide_print_diag(model,time,idiag,jdiag) 
   end do
 
   ! finalise GLIDE

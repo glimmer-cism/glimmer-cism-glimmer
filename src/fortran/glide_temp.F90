@@ -76,6 +76,15 @@ module glide_temp
 
   private :: find_dt_wat
 
+!lipscomb - Factor used to turn off advection when temperature is remapped
+    real(dp) :: f_adv   ! = 0. if temperature advection is turned off
+                        ! (i.e., temperature is handled by remapping scheme)
+                        ! = 1. if temperature is advected below
+ 
+!lipscomb - temperature smoothing option (useful for EISMINT2 experiments)
+    logical, parameter ::   & 
+         l_smooth_temp = .true.  ! if true, apply Laplacian smoothing  
+
 contains
 
   subroutine init_temp(model)
@@ -90,6 +99,16 @@ contains
     integer, parameter :: p1 = gn + 1  
     integer up
     real(dp) :: estimate
+
+!lipscomb - Turn off horizontal and vertical advection if temperature is
+!lipscomb - advected by the remapping scheme
+    if (model%options%whichevol==4) then   ! turn off temperature advection 
+       f_adv = 0._dp 
+       call write_log('Temperature advection is done by remapping scheme')
+       call write_log('Advection is switched off in glide_temp')
+    else 
+       f_adv = 1._dp 
+    endif
 
     if (VERT_DIFF.eq.0.) call write_log('Vertical diffusion is switched off')
     if (HORIZ_ADV.eq.0.) call write_log('Horizontal advection is switched off')
@@ -202,6 +221,10 @@ contains
     use glide_velo
     use glide_thck
     use glide_mask
+
+!lipscomb 
+    use physcon, only: rhoi, shci, coni   ! for temperature smoothing
+
     implicit none
 
     !------------------------------------------------------------------------------------
@@ -228,6 +251,16 @@ contains
 
     real(dp), dimension(size(model%numerics%sigma)) :: weff
 
+!lipscomb - added kdiff, workh, and workt for temperature smoothing
+    real(dp), parameter ::   & 
+         kdiff = coni/(rhoi*shci)* 1.0e5_dp  ! numerical diffusivity
+                           ! coni/(rhoi*shci) = physical diffusivity 
+
+    real(dp), dimension(model%general%ewn,model%general%nsn) ::   & 
+         workh,       &! work array for thickness
+         workt         ! work array for temperature 
+
+    integer :: k
 
     !------------------------------------------------------------------------------------
     ! ewbc/nsbc set the type of boundary condition aplied at the end of
@@ -490,6 +523,25 @@ contains
        end do
 
     end select
+
+!lipscomb - Smooth temperatures 
+ 
+    if (l_smooth_temp) then   ! smooth temperatures
+       do k = 1, model%general%upn-1 
+ 
+          ! layer thickness and temperature
+          workh(:,:) = model%geometry%thck(:,:) * model%velowk%dups(k)
+          workt(:,:) = model%temper%temp(k,1:model%general%ewn,1:model%general%nsn)
+ 
+          call temperature_smoothing (model%general%ewn,  model%general%nsn,  & 
+                                      model%numerics%dew, model%numerics%dns, & 
+                                      model%numerics%dt,  kdiff,              & 
+                                      workh(:,:),         workt(:,:)) 
+
+          model%temper%temp(k,1:model%general%ewn,1:model%general%nsn) = workt(:,:) 
+ 
+       enddo   ! k  
+    endif      ! l_smooth_temp 
 
     ! Calculate Glenn's A --------------------------------------------------------
 
@@ -1209,6 +1261,88 @@ contains
     end if
 
   end subroutine swapbndt
+
+!-------------------------------------------------------------------
+!lipscomb - new subroutine for smoothing temperatures
+ 
+  subroutine temperature_smoothing (ewn,      nsn,    &
+                                    dew,      dns,    &
+                                    dt,       kdiff,  &
+                                    hice,     tice)
+ 
+!-------------------------------------------------------------------
+! Smooth temperatures using Laplacian operator:
+!
+! dT/dt = K*del2(hT) where K = coni/rhoi*shci * enhancement factor
+!
+! More precisely, K should have a factor of [len0]^2 in the denominator, but
+! this is cancelled by a factor of [len0]^2 in the Laplacian operator.
+!
+! Note: This subroutine assumes that the outer layer of cells is a ghost layer.
+!       Temperatures are updated for i = 2 to ewn-1 and for j = 2 to nsn-1.
+!
+! Author: William Lipscomb, LANL
+!-------------------------------------------------------------------
+ 
+    ! Input-output variables
+ 
+    integer, intent(in) ::   &
+         ewn, nsn       ! no. of grid points in EW and NS directions
+ 
+    real(dp), intent(in) ::   &
+         dew, dns,     &! grid cell dimensions
+         dt,           &! time step
+         kdiff          ! diffusivity
+ 
+    real(dp), dimension(ewn,nsn), intent(in) ::   &
+         hice           ! ice layer thickness
+ 
+    real(dp), dimension(ewn,nsn), intent(inout) ::   &
+         tice           ! ice layer temperature
+ 
+    ! Local variables
+ 
+    integer ::  i, j
+ 
+    real(dp), parameter ::   &
+         c0 = 0.0_dp
+ 
+    real(dp), dimension(ewn,nsn) ::    &
+         fx, fy          ! fluxes across cell edges
+ 
+    real(dp) ::   &
+         flxcnv          ! flux convergence
+ 
+    ! Compute flux of h*T across each cell edge (apart from factor of dt * kdiff)
+ 
+    do j = 1, nsn-1
+       do i = 1, ewn-1
+          fx(i,j) = min(hice(i,j), hice(i+1,j)) * (tice(i,j) - tice(i+1,j)) / dew
+          fy(i,j) = min(hice(i,j), hice(i,j+1)) * (tice(i,j) - tice(i,j+1)) / dns
+       enddo
+    enddo
+ 
+    ! Compute new temperatures
+ 
+    do j = 2, nsn-1
+       do i = 2, ewn-1
+          if (hice(i,j) > c0) then
+             flxcnv = (fx(i-1,j) - fx(i,j) + fy(i,j-1) - fy(i,j)) * dt * kdiff
+             tice(i,j) = (hice(i,j)*tice(i,j) + flxcnv) / hice(i,j)
+          else
+             flxcnv = c0
+          endif
+    ! Bug check
+          if (abs(flxcnv) > abs(hice(i,j)*tice(i,j))) then
+             write(6,*) 'Excessive flux: i, j, hice, tice, flxcnv:',   &
+                         i, j, hice(i,j), tice(i,j), flxcnv
+             stop
+          endif
+       enddo
+    enddo
+ 
+    end subroutine temperature_smoothing
+ 
 
 end module glide_temp
 

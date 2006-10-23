@@ -216,6 +216,11 @@ module glide_types
     real(dp),dimension(:,:),pointer :: topg => null() 
     !*FD The elevation of the topography, divided by \texttt{thk0}.
 
+!lipscomb - added an ice age tracer
+!lipscomb - At some point, may want to have a separate type for tracers
+    real(dp),dimension(:,:,:),pointer :: age => null()
+    !*FD The age of a given ice layer, divided by \texttt{tim0}. 
+
     integer, dimension(:,:),pointer :: mask => null()
     !*FD Set to zero for all points where $\mathtt{thck}=0$, otherwise non-zero.
     !*FD the non-zero points are numbered in sequence from the bottom left to the 
@@ -388,6 +393,8 @@ module glide_types
                                                      !*FD vertical spacing of 
                                                      !*FD model levels
     integer :: profile_period = 100            !*FD profile frequency
+!lipscomb - frequency for writing to diagnostic file
+    integer :: ndiag = 1000                    !*FD diagnostic frequency
   end type glide_numerics
 
 
@@ -482,6 +489,22 @@ module glide_types
     integer  :: nwat        = 0
   end type glide_tempwk
 
+!lipscomb - Various grid quantities needed for remapping scheme 
+  type glide_gridwk 
+    real(dp),dimension(:,:),pointer :: hte    => null() 
+    real(dp),dimension(:,:),pointer :: htn    => null() 
+    real(dp),dimension(:,:),pointer :: dxt    => null() 
+    real(dp),dimension(:,:),pointer :: dyt    => null() 
+    real(dp),dimension(:,:),pointer :: tarea  => null() 
+    real(dp),dimension(:,:),pointer :: tarear => null() 
+    real(dp),dimension(:,:),pointer :: mask   => null() 
+    real(dp),dimension(:,:),pointer :: xav    => null() 
+    real(dp),dimension(:,:),pointer :: yav    => null() 
+    real(dp),dimension(:,:),pointer :: xxav   => null() 
+    real(dp),dimension(:,:),pointer :: xyav   => null() 
+    real(dp),dimension(:,:),pointer :: yyav   => null() 
+  end type glide_gridwk
+
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   type glide_paramets
@@ -523,6 +546,7 @@ module glide_types
     type(glide_pcgdwk)   :: pcgdwk
     type(glide_thckwk)   :: thckwk
     type(glide_tempwk)   :: tempwk
+    type(glide_gridwk)   :: gridwk    !lipscomb - new type
     type(glide_paramets) :: paramets
     type(glimmap_proj) :: projection
     type(profile_type)   :: profile
@@ -585,6 +609,8 @@ contains
     !*FD \item \texttt{usrf(ewn,nsn))}
     !*FD \item \texttt{lsrf(ewn,nsn))}
     !*FD \item \texttt{topg(ewn,nsn))}
+!lipscomb - new variable, ice age
+    !*FD \item \texttt{age(ewn,nsn))}
     !*FD \item \texttt{mask(ewn,nsn))}
     !*FD \end{itemize}
 
@@ -661,6 +687,9 @@ contains
     call coordsystem_allocate(model%general%ice_grid, model%geometry%usrf)
     call coordsystem_allocate(model%general%ice_grid, model%geometry%lsrf)
     call coordsystem_allocate(model%general%ice_grid, model%geometry%topg)
+!lipscomb - new variable, ice age
+    call coordsystem_allocate(model%general%ice_grid, upn, model%geometry%age)
+
     call coordsystem_allocate(model%general%ice_grid, model%geometry%mask)
     call coordsystem_allocate(model%general%ice_grid, model%geometry%thkmask)
 
@@ -680,6 +709,21 @@ contains
 
     ! allocate isostasy grids
     call isos_allocate(model%isos,ewn,nsn)
+
+!lipscomb - grid quantities for remapping scheme
+    ! allocate grid quantities
+    call coordsystem_allocate(model%general%ice_grid, model%gridwk%hte) 
+    call coordsystem_allocate(model%general%ice_grid, model%gridwk%htn) 
+    call coordsystem_allocate(model%general%ice_grid, model%gridwk%dxt) 
+    call coordsystem_allocate(model%general%ice_grid, model%gridwk%dyt) 
+    call coordsystem_allocate(model%general%ice_grid, model%gridwk%tarea) 
+    call coordsystem_allocate(model%general%ice_grid, model%gridwk%tarear) 
+    call coordsystem_allocate(model%general%ice_grid, model%gridwk%mask) 
+    call coordsystem_allocate(model%general%ice_grid, model%gridwk%xav) 
+    call coordsystem_allocate(model%general%ice_grid, model%gridwk%yav) 
+    call coordsystem_allocate(model%general%ice_grid, model%gridwk%xxav) 
+    call coordsystem_allocate(model%general%ice_grid, model%gridwk%xyav) 
+    call coordsystem_allocate(model%general%ice_grid, model%gridwk%yyav)
 
   end subroutine glide_allocarr
 
@@ -735,6 +779,8 @@ contains
     deallocate(model%geometry%thck)
     deallocate(model%geometry%usrf)
     deallocate(model%geometry%lsrf)
+!lipscomb - new variable, ice age
+    deallocate(model%geometry%age)
     deallocate(model%geometry%topg)
     deallocate(model%geometry%mask)
     deallocate(model%geometry%thkmask)
@@ -749,6 +795,20 @@ contains
 
     ! allocate isostasy grids
     call isos_deallocate(model%isos)
+
+!lipscomb - grid quantities for remapping scheme
+    deallocate(model%gridwk%hte) 
+    deallocate(model%gridwk%htn) 
+    deallocate(model%gridwk%dxt) 
+    deallocate(model%gridwk%dyt) 
+    deallocate(model%gridwk%tarea) 
+    deallocate(model%gridwk%tarear) 
+    deallocate(model%gridwk%mask) 
+    deallocate(model%gridwk%xav) 
+    deallocate(model%gridwk%yav) 
+    deallocate(model%gridwk%xxav) 
+    deallocate(model%gridwk%xyav) 
+    deallocate(model%gridwk%yyav) 
 
   end subroutine glide_deallocarr
 
