@@ -1,3 +1,13 @@
+2006-10-23 Bill Lipscomb
+Created a branch, 'lipscomb_remap', containing code needed to run glimmer
+using an incremental remapping transport scheme.  Also added an ice age
+tracer, a subroutine for writing diagnostic output, and an optional Laplacian
+temperature smoother.
+
+Remapping can be run in either of two modes.  Set evolution = 3 to remap
+the thickness field, treating temperature as in standard glimmer.  Set
+evolution = 4 to remap thickness as well as temperature and ice age.
+
 2006-10-23 Ian Rutt
  * Major enhancements to GLINT API, plu one or two bug
  corrections. Time-step coordination and averaging is now handled in a
