@@ -83,7 +83,7 @@ module glide_temp
  
 !lipscomb - temperature smoothing option (useful for EISMINT2 experiments)
     logical, parameter ::   & 
-         l_smooth_temp = .true.  ! if true, apply Laplacian smoothing  
+         l_smooth_temp = .false.  ! if true, apply Laplacian smoothing  
 
 contains
 
