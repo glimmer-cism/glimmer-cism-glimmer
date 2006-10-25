@@ -84,6 +84,8 @@ module glimmer_ncdf
      !*FD id of time variable 
      character(len=310) vars
      !*FD string containing variables to be processed
+     logical :: hotstart = .false.
+     !*FD Set to true if we're writing a hotstart file
   end type glimmer_nc_stat     
 
   type glimmer_nc_meta

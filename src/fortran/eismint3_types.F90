@@ -65,6 +65,7 @@ module eismint3_types
      type(glimmer_pdd_params) :: pdd_scheme
      integer :: loadthk=0 !*FD Load thickness from file or start from scratch
      real(sp) :: pfac=1.0533 !*FD Precip enhancement factor (default is supposed EISMINT value)
+     real(sp) :: temp_perturb = 0.0 !*FD Climate temperature perturbation
   end type eismint3_climate
 
 end module eismint3_types

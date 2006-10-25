@@ -139,7 +139,11 @@ contains
     ! expanding hotstart variables
     pos = index(NCO%vars,' hot ') 
     if (pos.ne.0) then
-       NCO%vars = NCO%vars(:pos)//hotvars//NCO%vars(pos+4:)
+       NCO%vars = NCO%vars(:pos)//NCO%vars(pos+4:)
+       NCO%hotstart = .true.
+    end if
+    if (NCO%hotstart) then
+       NCO%vars = trim(NCO%vars)//hotvars
     end if
     ! checking if we need to handle time averages
     pos = index(NCO%vars,AVG_SUFF)

@@ -1,5 +1,11 @@
+2006-10-25 Ian Rutt
+ * Fixed problem with hotstart variables - now works when hotstart
+ variables are specified in several var.def files.
+ * Better implementation of EISMINT-3-GL forcing - copes with temperature
+ perturbation and hotstarts better now.
+
 2006-10-23 Ian Rutt
- * Major enhancements to GLINT API, plu one or two bug
+ * Major enhancements to GLINT API, plus one or two bug
  corrections. Time-step coordination and averaging is now handled in a
  much-improved way.
 

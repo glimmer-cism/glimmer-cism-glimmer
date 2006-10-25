@@ -92,11 +92,6 @@ contains
     call eismint3_io_readall(climate,model)
     call glimmer_pdd_init(climate%pdd_scheme,config)
 
-    ! Calculate the present ice surface
-    call glide_calclsrf(model%geometry%thck, model%geometry%topg, model%climate%eus,model%geometry%lsrf)
-    climate%presusurf = (model%geometry%thck + model%geometry%lsrf)*thk0
-    model%geometry%usrf = model%geometry%thck + model%geometry%lsrf
-
     select case(climate%loadthk)
     case(0)
        ! Calculate initial thickness.
@@ -107,7 +102,7 @@ contains
           climate%landsea=.false.
        end where
 
-       call eismint3_temp(climate%artm,climate%arng,climate%presusurf,model%climate%lati)
+       call eismint3_temp(climate%artm,climate%arng,climate%presusurf,model%climate%lati,0.0_sp)
        call glimmer_pdd_mbal(climate%pdd_scheme,climate%artm,climate%arng,climate%presprcp,climate%ablt,climate%acab,climate%landsea)
 
        ! Convert to ice-equivalent depth
@@ -117,17 +112,20 @@ contains
        ! Put it into glide
 
        call glide_set_thk(model,max(0.0,climate%acab*model%numerics%tinc))
-       call glide_calclsrf(model%geometry%thck, model%geometry%topg, model%climate%eus,model%geometry%lsrf)
-       model%geometry%usrf = model%geometry%thck + model%geometry%lsrf
     case(1)
        ! do nothing
     case(2)
        call write_log('Unknown value for climate%loadthk',GM_FATAL)
     end select
 
+    ! Calculate the initial ice surface
+    ! The reference present-day surface (for precip enhancement calc) is already loaded from file
+    call glide_calclsrf(model%geometry%thck, model%geometry%topg, model%climate%eus,model%geometry%lsrf)
+    model%geometry%usrf = model%geometry%thck + model%geometry%lsrf
+
     ! Work out present-day temperature for precip enhancement calculation
 
-    call eismint3_temp(climate%presartm,climate%arng,climate%presusurf,model%climate%lati)
+    call eismint3_temp(climate%presartm,climate%arng,climate%presusurf,model%climate%lati,0.0_sp)
 
   end subroutine eismint3_initialise
 
@@ -145,6 +143,7 @@ contains
     if (associated(section)) then
        call GetValue(section,'load_thk',climate%loadthk)
        call GetValue(section,'precip_enhance',climate%pfac)
+       call GetValue(section,'temp_perturb',climate%temp_perturb)
     end if
 
   end subroutine eismint3_readconfig
@@ -162,6 +161,8 @@ contains
     write(message,*) 'load thickness            : ',climate%loadthk
     call write_log(message)
     write(message,*) 'precip enhancement factor : ',climate%pfac
+    call write_log(message)
+    write(message,*) 'temperature perturbation  : ',climate%temp_perturb,' degC'
     call write_log(message)
     call write_log('')
 
@@ -183,7 +184,7 @@ contains
        climate%landsea=.false.
     end where
 
-    call eismint3_temp(climate%artm,climate%arng,climate%usrf,model%climate%lati)
+    call eismint3_temp(climate%artm,climate%arng,climate%usrf,model%climate%lati,climate%temp_perturb)
     call eismint3_prcp(climate%prcp,climate%artm,climate%presartm,climate%presprcp,climate%pfac)
     call glimmer_pdd_mbal(climate%pdd_scheme,climate%artm,climate%arng,climate%prcp,climate%ablt,climate%acab,climate%landsea)
 
@@ -207,13 +208,14 @@ contains
 
   end subroutine eismint3_prcp
 
-  subroutine eismint3_temp(artm,arng,usrf,lati)
+  subroutine eismint3_temp(artm,arng,usrf,lati,perturb)
 
     real(sp),dimension(:,:),intent(out) :: artm,arng
     real(sp),dimension(:,:),intent(in)  :: usrf,lati
+    real(sp),               intent(in)  :: perturb
 
-    artm=49.13-0.007992*max(usrf,20*(lati-65.0))-0.7576*lati
-    arng=30.78-0.006277*usrf-0.3262*lati-artm
+    artm=49.13-0.007992*max(usrf,20*(lati-65.0))-0.7576*lati+perturb
+    arng=30.78-0.006277*usrf-0.3262*lati+perturb-artm
 
   end subroutine eismint3_temp
 
