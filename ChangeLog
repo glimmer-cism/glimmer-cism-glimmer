@@ -1,3 +1,6 @@
+2006-10-27 Ian Rutt
+ * Merged RESTART_ON_DEMAND branch into main trunk. Builds fine.
+
 2006-10-25 Ian Rutt
  * Fixed problem with hotstart variables - now works when hotstart
  variables are specified in several var.def files.
@@ -19,17 +22,40 @@
 2006-10-10 Ian Rutt
  * Added precip enhancement to eismint3-greenland code
 
+2006-10-02 (from RESTART_ON_DEMAND)
+ * Minor bug-fix (spotted by Magi)
+ * Fixed build bug (hopefully)
+
 2006-09-28 Ian Rutt
  * Added append capability to output files. 
 
 2006-09-27 Ian Rutt
  * Fixed minor bug in nc2config
 
+2006-09-27 Ian Rutt (from RESTART_ON_DEMAND)
+ * Tested restarts with glint, and tidied up a few loose ends
+
+2006-09-26 Ian Rutt (from RESTART_ON_DEMAND)
+ * Fixed various bugs - lower array bounds now handled
+ correctly.
+ * Implemented glint- and glide-specific interfaces
+ * Wrote basic code to handle file information in restart files
+
+2006-09-25 Ian Rutt (from RESTART_ON_DEMAND)
+ * Made restart compilation and generation optional (using configure
+ option --enable-restarts)
+ * Rewrote restart generation to produce only two include files (one for
+ the header info, one for the module body).
+ * Wrote top-level interface code for restarts
+	
 2006-09-20 Ian Rutt
  * Added feature so that config file data is automatically added to output
  netcdf files as attribute.
  * Added utility nc2config that extracts this attribute and outputs it as
  plain text.
+
+2006-09-19 Ian Rutt (from RESTART_ON_DEMAND)
+ * First rough go at restart on demand completed.
 
 2006-09-15 Ian Rutt
  * Reorganisation and extension of restart-on-demand code

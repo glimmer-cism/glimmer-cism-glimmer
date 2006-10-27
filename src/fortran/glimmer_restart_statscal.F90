@@ -1,3 +1,48 @@
+! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+! +                                                               +
+! +  glimmer_restart_statscal.f90 - part of the GLIMMER ice model + 
+! +                                                               +
+! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+! 
+! Copyright (C) 2004 GLIMMER contributors - see COPYRIGHT file 
+! for list of contributors.
+!
+! This program is free software; you can redistribute it and/or 
+! modify it under the terms of the GNU General Public License as 
+! published by the Free Software Foundation; either version 2 of 
+! the License, or (at your option) any later version.
+!
+! This program is distributed in the hope that it will be useful, 
+! but WITHOUT ANY WARRANTY; without even the implied warranty of 
+! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+! GNU General Public License for more details.
+!
+! You should have received a copy of the GNU General Public License 
+! along with this program; if not, write to the Free Software 
+! Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 
+! 02111-1307 USA
+!
+! GLIMMER is maintained by:
+!
+! Ian Rutt
+! School of Geographical Sciences
+! University of Bristol
+! University Road
+! Bristol
+! BS8 1SS
+! UK
+!
+! email: <i.c.rutt@bristol.ac.uk> or <ian.rutt@physics.org>
+!
+! GLIMMER is hosted on NeSCForge:
+!
+! http://forge.nesc.ac.uk/projects/glimmer/
+!
+! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+#ifdef HAVE_CONFIG_H
+#include <config.inc>
+#endif
 
 module glimmer_restart_statscal
 
@@ -37,7 +82,7 @@ contains
 
     call write_scalar_common(file,prefix,name,NF90_INT,varid)
     status=nf90_put_var(file%ncid,varid,values)
-    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name)
 
   end subroutine write_statscalvar_int
 
@@ -54,7 +99,7 @@ contains
 
     call write_scalar_common(file,prefix,name,NF90_FLOAT,varid)
     status=nf90_put_var(file%ncid,varid,values)
-    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name)
 
   end subroutine write_statscalvar_realsp
 
@@ -71,7 +116,7 @@ contains
 
     call write_scalar_common(file,prefix,name,NF90_DOUBLE,varid)
     status=nf90_put_var(file%ncid,varid,values)
-    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name)
 
   end subroutine write_statscalvar_realdp
 
@@ -89,7 +134,7 @@ contains
     call write_scalar_common(file,prefix,name,NF90_CHAR,varid)
     call set_define(file)
     status=nf90_put_att(file%ncid,varid,'value',trim(values))
-    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name)
     call end_define(file)
 
   end subroutine write_statscalvar_char
@@ -111,7 +156,7 @@ contains
     else
        status=nf90_put_var(file%ncid,varid,0)
     end if
-    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name)
 
   end subroutine write_statscalvar_logical
 
@@ -133,9 +178,9 @@ contains
     ! Create new variable, and label it
     call set_define(file)
     status=nf90_def_var(file%ncid,varname,typecode,varid=varid)
-    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name,varname)
     status=nf90_put_att(file%ncid,varid,name='varname',values=name)
-    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name,varname)
 
     call end_define(file)
     file%count=file%count+1
@@ -160,7 +205,7 @@ contains
     call read_scalar_common(file,prefix,name,varid)
 
     status=nf90_get_var(file%ncid,varid,values)
-    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name)
 
   end subroutine read_statscalvar_int
 
@@ -178,7 +223,7 @@ contains
     call read_scalar_common(file,prefix,name,varid)
 
     status=nf90_get_var(file%ncid,varid,values)
-    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name)
 
   end subroutine read_statscalvar_realsp
 
@@ -196,7 +241,7 @@ contains
     call read_scalar_common(file,prefix,name,varid)
 
     status=nf90_get_var(file%ncid,varid,values)
-    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name)
 
   end subroutine read_statscalvar_realdp
 
@@ -215,9 +260,9 @@ contains
     call read_scalar_common(file,prefix,name,varid)
 
     status=nf90_inquire_attribute(file%ncid,varid,'value',len=attlen)
-    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name)
     status=nf90_get_att(file%ncid,varid,'value',tmpchar)
-    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name)
 
     values=tmpchar(:attlen)
 
@@ -239,7 +284,7 @@ contains
     call read_scalar_common(file,prefix,name,varid)
 
     status=nf90_get_var(file%ncid,varid,tmp)
-    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name)
 
     if (tmp==0) then
        values=.false.
@@ -268,12 +313,12 @@ contains
     call new_varname(varname,prefix,file%count)
 
     status=nf90_inq_varid(file%ncid,varname,varid)
-    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name,varname)
 
     status=nf90_inquire_attribute(file%ncid,varid,'varname',len=namelen)
-    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name,varname)
     status=nf90_get_att(file%ncid,varid,'varname',nametest)
-    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__)
+    if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name,varname)
     if (namelen>varnamelen) then
        call write_log('Variable name too long',GM_FATAL,__FILE__,__LINE__)
     end if

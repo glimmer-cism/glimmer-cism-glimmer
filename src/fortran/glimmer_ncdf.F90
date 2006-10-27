@@ -86,6 +86,8 @@ module glimmer_ncdf
      !*FD string containing variables to be processed
      logical :: hotstart = .false.
      !*FD Set to true if we're writing a hotstart file
+     character(len=310) vars_copy
+     !*FD string containing variables to be processed (retained copy)
   end type glimmer_nc_stat     
 
   type glimmer_nc_meta
@@ -109,6 +111,7 @@ module glimmer_ncdf
 
   type glimmer_nc_output
      !*FD element of linked list describing netCDF output file
+     !NO_RESTART previous
 
      type(glimmer_nc_stat) :: nc
      !*FD structure containg file info
@@ -138,7 +141,7 @@ module glimmer_ncdf
 
   type glimmer_nc_input
      !*FD element of linked list describing netCDF input file
-     
+     !NO_RESTART previous
      type(glimmer_nc_stat) :: nc
      !*FD structure containg file info
      integer, pointer, dimension(:) :: times => NULL()     
@@ -162,7 +165,21 @@ module glimmer_ncdf
      module procedure add_output, add_input
   end interface
 
+  !MAKE_RESTART
+#ifdef RESTARTS
+#define RST_GLIMMER_NCDF
+#include "glimmer_rst_head.inc"
+#undef RST_GLIMMER_NCDF
+#endif
+
 contains
+
+#ifdef RESTARTS
+#define RST_GLIMMER_NCDF
+#include "glimmer_rst_body.inc"
+#undef RST_GLIMMER_NCDF
+#endif
+
   function delete_output(oc, cf)
     !*FD remove element from linked list
     use glimmer_log
@@ -309,6 +326,77 @@ contains
 
   end subroutine nc_print_stat
 
+  subroutine nc_repair_outpoint(output)
+
+    implicit none
+
+    !*FD Sets up previous points in the linked list correctly
+    !*FD This is needed after a restart, as trying to save both
+    !*FD next and previous pointers would cause problems
+    !*FD Also resets some other internal components
+
+    type(glimmer_nc_output),pointer :: output
+    type(glimmer_nc_output),pointer :: most_recent
+    type(glimmer_nc_output),pointer :: tmp
+
+    most_recent => null()
+    if (.not.associated(output)) return
+    tmp => output
+
+    do
+       if (associated(most_recent)) tmp%previous => most_recent
+       tmp%nc%vars=tmp%nc%vars_copy
+       if (.not.associated(tmp%next)) exit
+       most_recent => tmp
+       tmp => tmp%next
+    end do
+
+  end subroutine nc_repair_outpoint
+
+  subroutine nc_repair_inpoint(input)
+
+    implicit none
+
+    !*FD Sets up previous points in the linked list correctly
+    !*FD This is needed after a restart, as trying to save both
+    !*FD next and previous pointers would cause problems
+
+    type(glimmer_nc_input),pointer :: input
+    type(glimmer_nc_input),pointer :: most_recent
+    type(glimmer_nc_input),pointer :: tmp
+
+    most_recent => null()
+    if (.not.associated(input)) return
+    tmp => input
+
+    do
+       if (associated(most_recent)) tmp%previous => most_recent
+       if (.not.associated(tmp%next)) exit
+       most_recent => tmp
+       tmp => tmp%next
+    end do
+
+  end subroutine nc_repair_inpoint
+
+  subroutine nc_prefix_outfiles(output,prefix)
+
+    !*FD Adds a prefix to all the filenames stored in the linked list.
+    !*FD Used for restarts.
+
+    type(glimmer_nc_output),pointer :: output
+    character(*) :: prefix
+
+    type(glimmer_nc_output),pointer :: tmp
+
+    tmp => output
+    do
+       tmp%nc%filename=trim(prefix)//trim(tmp%nc%filename)
+       if (.not.associated(tmp%next)) exit
+       tmp => tmp%next
+    end do
+
+  end subroutine nc_prefix_outfiles
+
 end module glimmer_ncdf
 
 module glimmer_scales
@@ -319,7 +407,21 @@ module glimmer_scales
   real(dp) :: scale2d_f1, scale2d_f2, scale2d_f3, scale2d_f4, scale2d_f5, scale2d_f6, scale2d_f7, scale2d_f8, scale2d_f9
   real(dp) :: scale3d_f1, scale3d_f2, scale3d_f3, scale3d_f4, scale3d_f5, scale3d_f6, scale3d_f7, scale3d_f8
 
+  !MAKE_RESTART
+#ifdef RESTARTS
+#define RST_GLIMMER_SCALES
+#include "glimmer_rst_head.inc"
+#undef RST_GLIMMER_SCALES
+#endif
+
 contains
+
+#ifdef RESTARTS
+#define RST_GLIMMER_SCALES
+#include "glimmer_rst_body.inc"
+#undef RST_GLIMMER_SCALES
+#endif
+
   subroutine glimmer_init_scales
     !*FD calculate scale factors (can't have non-integer powers)
     use physcon, only : scyr, gn

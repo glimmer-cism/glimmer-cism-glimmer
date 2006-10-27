@@ -1,4 +1,8 @@
 SUBDIRS = SLAP_library
+RESTART_STEM=glimmer_rst
+RESTART_INCS=$(RESTART_STEM)_body.inc $(RESTART_STEM)_head.inc
+RESTART_COMMON=glimmer_restart_common.F90 glimmer_restart_pointarr.F90 \
+               glimmer_restart_statarr.F90 glimmer_restart_statscal.F90
 
 lib_LIBRARIES = libglimmer.a libglide.a libglint.a libclimate.a
 bin_PROGRAMS  =  simple_glide eis_glide glint_example glex_ebm eismint3_glide nc2config
@@ -12,9 +16,14 @@ dist_variable_DATA = $(variable_DATA)
 nodist_include_HEADERS := $(wildcard *.mod)
 EXTRA_DIST = f90_dep.mak
 BUILT_SOURCES = glide_io.F90 eis_io.F90 glint_io.F90 glint_mbal_io.F90 \
-                eismint3_io.F90
+                eismint3_io.F90 $(RESTART_INCS)
 CLEANFILES = $(BUILT_SOURCES) glimmer_version.F90 f90_dep.mak
-
+RESTART_CODE = glide_types.F90 glimmer_config.F90 glimmer_coordinates.F90 \
+                  glimmer_daily_pdd.F90 glimmer_map_types.F90 glimmer_ncdf.F90 \
+                  glimmer_pdd.F90 glimmer_searchcircle.F90 glimmer_sparse.F90 \
+                  glimmer_ts.F90 glint.F90 glint_global_grid.F90 glint_interp.F90 \
+                  glint_mbal_coupling.F90 glint_mbal.F90 glint_smb.F90 glint_type.F90 \
+                  isostasy_types.F90 profile.F90 simple_forcing.F90 glimmer_paramets.F90
 libglimmer_a_SOURCES = glimmer_version.F90 \
                        glimmer_config.F90 glimmer_global.F90 glimmer_utils.F90\
                        glimmer_log.F90 glimmer_ts.F90 glimmer_ncdf.F90 \
@@ -26,8 +35,10 @@ libglimmer_a_SOURCES = glimmer_version.F90 \
                        glimmer_integrate.F90 ncdf_utils.F90 \
                        glimmer_map_CFproj.F90 glimmer_map_proj4.F90 \
                        glimmer_map_types.F90 glimmer_map_init.F90 \
-                       glimmer_map_trans.F90 \
-                       glimmer_restart_common.F90 glimmer_restart_statscal.F90
+                       glimmer_map_trans.F90 glimmer_restart_common.F90 \
+                       glimmer_restart_statscal.F90 glimmer_restart_statarr.F90 \
+                       glimmer_restart_pointarr.F90 \
+                       $(RESTART_INCS) glimmer_restart.F90
 nodist_libglimmer_a_SOURCES = glimmer_version.F90
 libglide_a_SOURCES = glide.F90 glide_setup.F90 glide_types.F90 glide_temp.F90 \
                      glide_thck.F90 glide_velo.F90 glide_mask.F90 \
@@ -82,6 +93,16 @@ glint_io.F90:	glint_vars.def ncdf_template.F90.in
 		$(PYTHON) $(top_srcdir)/src/python/generate_ncvars.py $^
 glint_mbal_io.F90:	glint_mbal_vars.def ncdf_template.F90.in
 		$(PYTHON) $(top_srcdir)/src/python/generate_ncvars.py $^
+
+# Pattern rule for restart include files
+if BUILD_RESTARTS
+$(RESTART_STEM)_body.inc $(RESTART_STEM)_head.inc: $(RESTART_CODE) Makefile
+		$(PYTHON) $(top_srcdir)/src/python/make_restarts.py -o $(RESTART_STEM) $(RESTART_CODE)
+$(RESTART_CODE:.F90=.o): $(RESTART_COMMON:.F90=.o)
+else
+$(RESTART_STEM)_body.inc $(RESTART_STEM)_head.inc: Makefile
+		echo '! Dummy include file - restarts not enabled' > $@
+endif
 
 # handling CVS versioning
 if HAVE_CVS

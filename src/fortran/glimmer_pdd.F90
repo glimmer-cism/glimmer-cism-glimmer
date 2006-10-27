@@ -109,7 +109,20 @@ module glimmer_pdd
   private
   public :: glimmer_pdd_params, glimmer_pdd_init, glimmer_pdd_mbal
 
+  !MAKE_RESTART
+#ifdef RESTARTS
+#define RST_GLIMMER_PDD
+#include "glimmer_rst_head.inc"
+#undef RST_GLIMMER_PDD
+#endif
+
 contains
+
+#ifdef RESTARTS
+#define RST_GLIMMER_PDD
+#include "glimmer_rst_body.inc"
+#undef RST_GLIMMER_PDD
+#endif
 
 !-------------------------------------------------------------------------------
 ! PUBLIC subroutines

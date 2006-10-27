@@ -39,13 +39,6 @@
 ! http://forge.nesc.ac.uk/projects/glimmer/
 !
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-!
-! The Generic Mapping Tools are maintained by Paul Wessel and 
-! Walter H. F. Smith. The GMT homepage is:
-!
-! http://gmt.soest.hawaii.edu/
-!
-! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 #ifdef HAVE_CONFIG_H
 #include <config.inc>
@@ -96,7 +89,21 @@ module glimmer_config
      module procedure ConfigCombineData, ConfigCombineSec, ConfigCombineDataSec, ConfigCombineSecData
   end interface
 
+  !MAKE_RESTART
+#ifdef RESTARTS
+#define RST_GLIMMER_CONFIG
+#include "glimmer_rst_head.inc"
+#undef RST_GLIMMER_CONFIG
+#endif
+
 contains
+
+#ifdef RESTARTS
+#define RST_GLIMMER_CONFIG
+#include "glimmer_rst_body.inc"
+#undef RST_GLIMMER_CONFIG
+#endif
+
   subroutine ConfigRead(fname,config)
     !*FD read configuration file
     use glimmer_log

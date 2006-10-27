@@ -181,6 +181,9 @@ contains
     ! add config data
     handle_output%metadata%config=trim(configstring)
 
+    ! Make copy of variables for future reference
+    handle_output%nc%vars_copy=handle_output%nc%vars
+
     ! get metadata
     call handle_metadata(section, handle_output%metadata,.false.)
     if (handle_output%nc%filename(1:1).eq.' ') then

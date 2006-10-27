@@ -395,4 +395,111 @@ contains
 
   end subroutine glide_tstep_p3
 
+  !-------------------------------------------------------------------
+
+  subroutine glide_write_mod_rst(rfile)
+
+    use glimmer_log
+    use glimmer_restart_common
+
+#ifdef RESTARTS
+    use glide_types
+    use isostasy_types
+#endif
+
+    type(restart_file) :: rfile      !*FD Open restart file 
+
+#ifdef RESTARTS
+    call glide_types_modrsw(rfile)
+    call isostasy_types_modrsw(rfile)
+#else
+    call write_log('No restart code available - rebuild GLIMMER with --enable-restarts',GM_FATAL)
+#endif
+
+  end subroutine glide_write_mod_rst
+
+  !-------------------------------------------------------------------
+
+  subroutine glide_read_mod_rst(rfile)
+
+    use glimmer_log
+    use glimmer_restart_common
+
+#ifdef RESTARTS
+    use glide_types
+    use isostasy_types
+#endif
+
+    type(restart_file) :: rfile      !*FD Open restart file 
+
+#ifdef RESTARTS
+    call glide_types_modrsr(rfile)
+    call isostasy_types_modrsr(rfile)
+#else
+    call write_log('No restart code available - rebuild GLIMMER with --enable-restarts',GM_FATAL)
+#endif
+
+  end subroutine glide_read_mod_rst
+
+  !-------------------------------------------------------------------
+
+  subroutine glide_write_restart(model,rfile)
+
+    use glimmer_log
+    use glimmer_restart
+    use glimmer_restart_common
+    implicit none
+
+    type(glide_global_type) :: model !*FD model instance
+    type(restart_file) :: rfile      !*FD Open restart file     
+
+#ifdef RESTARTS
+    call glimmer_write_mod_rst(rfile)
+    call glide_write_mod_rst(rfile)
+    call rsw_glide_global_type(rfile,model)
+#else
+    call write_log('No restart code available - rebuild GLIMMER with --enable-restarts',GM_FATAL)
+#endif
+
+  end subroutine glide_write_restart
+
+  !-------------------------------------------------------------------
+
+  subroutine glide_read_restart(model,rfile,prefix)
+
+    use glimmer_log
+    use glimmer_restart
+    use glimmer_restart_common
+    use glimmer_ncdf
+    use glimmer_ncio
+    implicit none
+
+    type(glide_global_type) :: model !*FD model instance
+    type(restart_file) :: rfile      !*FD Open restart file 
+    character(*),optional,intent(in) :: prefix !*FD prefix for new output files
+
+    character(40) :: pf
+
+    if (present(prefix)) then
+       pf = prefix
+    else
+       pf = 'RESTART_'
+    end if
+
+#ifdef RESTARTS
+    call glimmer_read_mod_rst(rfile)
+    call glide_read_mod_rst(rfile)
+    call rsr_glide_global_type(rfile,model)
+    call nc_repair_outpoint(model%funits%out_first)
+    call nc_repair_inpoint(model%funits%in_first)
+    call nc_prefix_outfiles(model%funits%out_first,trim(pf))
+    call openall_out(model)
+    call glide_io_createall(model)
+    call glide_nc_fillall(model)
+#else
+    call write_log('No restart code available - rebuild GLIMMER with --enable-restarts',GM_FATAL)
+#endif
+
+  end subroutine glide_read_restart
+
 end module glide

@@ -65,7 +65,7 @@ module glide_types
   use isostasy_types
   use profile
   use glimmer_coordinates
-  use glimmer_map_types, only : glimmap_proj
+  use glimmer_map_types, pi_dummy=>pi
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -473,7 +473,7 @@ module glide_types
     real(dp),dimension(8)             :: c        = 0.0
     real(dp),dimension(2)             :: slide_f
     real(dp) :: noflow      = -1
-    real(dp) :: advconst(2) = 0.0
+    real(dp),dimension(2) :: advconst = 0.0
     real(dp) :: zbed        = 0.0
     real(dp) :: dupn        = 0.0
     real(dp) :: wmax        = 0.0
@@ -530,7 +530,20 @@ module glide_types
     type(isos_type)      :: isos
   end type glide_global_type
 
+  !MAKE_RESTART
+#ifdef RESTARTS
+#define RST_GLIDE_TYPES
+#include "glimmer_rst_head.inc"
+#undef RST_GLIDE_TYPES
+#endif
+
 contains
+
+#ifdef RESTARTS
+#define RST_GLIDE_TYPES
+#include "glimmer_rst_body.inc"
+#undef RST_GLIDE_TYPES
+#endif
   
   subroutine glide_allocarr(model)
     

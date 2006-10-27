@@ -168,6 +168,7 @@ contains
        write(message,*) '  Stop writing at ',outfile%end_write
        call write_log(trim(message))
     end if
+    NCO%define_mode=.TRUE.
 
     ! writing meta data
     status = nf90_put_att(NCO%id, NF90_GLOBAL, 'Conventions', "CF-1.0")
