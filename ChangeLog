@@ -1,3 +1,6 @@
+2006-10-31 Ian Rutt
+ * Fixed minor bug in EISMINT-3-GL output
+
 2006-10-27 Ian Rutt
  * Merged RESTART_ON_DEMAND branch into main trunk. Builds fine.
 

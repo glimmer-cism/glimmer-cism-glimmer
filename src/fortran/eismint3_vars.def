@@ -20,7 +20,7 @@ datamod:  eismint3_types
 dimensions:    time,y1,x1
 units:         meter/year
 long_name:     accumulation
-data:          data%presprcp
+data:          data%prcp
 
 [arng]
 dimensions:    time,y1,x1
