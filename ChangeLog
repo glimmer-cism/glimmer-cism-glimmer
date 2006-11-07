@@ -1,3 +1,6 @@
+2006-11-07 Ian Rutt
+ * Fixed IBM build problem reported by Oli.
+
 2006-10-31 Ian Rutt
  * Fixed minor bug in EISMINT-3-GL output
 
