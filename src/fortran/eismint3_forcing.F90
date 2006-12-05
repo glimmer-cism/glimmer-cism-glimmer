@@ -103,7 +103,8 @@ contains
        end where
 
        call eismint3_temp(climate%artm,climate%arng,climate%presusurf,model%climate%lati,0.0_sp)
-       call glimmer_pdd_mbal(climate%pdd_scheme,climate%artm,climate%arng,climate%presprcp,climate%ablt,climate%acab,climate%landsea)
+       call glimmer_pdd_mbal(climate%pdd_scheme,climate%artm,climate%arng, &
+            climate%presprcp,climate%ablt,climate%acab,climate%landsea)
 
        ! Convert to ice-equivalent depth
 

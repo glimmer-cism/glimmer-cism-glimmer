@@ -1,3 +1,5 @@
+2006-12-05 Magnus Hagdorn
+ * src/fortran/eismint3_forcing.F90: fixed minor bug where line was too long
 2006-11-07 Ian Rutt
  * Fixed IBM build problem reported by Oli.
 
