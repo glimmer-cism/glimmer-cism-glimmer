@@ -154,11 +154,12 @@
 
       ! grid cell geometric averages
       ! Note: On a rectangular grid, odd functions of x and y average to zero.
+
       grid%xav  (:,:) = c0
       grid%yav  (:,:) = c0
-      grid%xxav (:,:) = dew*dew/c3
+      grid%xxav (:,:) = dew*dew/12._dp
       grid%xyav (:,:) = c0
-      grid%yyav (:,:) = dns*dns/c3 
+      grid%yyav (:,:) = dns*dns/12._dp
         
       end subroutine init_remap
 
