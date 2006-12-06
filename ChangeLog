@@ -1,3 +1,7 @@
+2006-12-06 Bill Lipscomb
+Minor bug fix in subroutine init_remap: changed denominator in xxav and yyav.
+Answers change very little.
+
 2006-10-23 Bill Lipscomb
 Created a branch, 'lipscomb_remap', containing code needed to run glimmer
 using an incremental remapping transport scheme.  Also added an ice age
