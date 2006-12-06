@@ -473,6 +473,13 @@ contains
 
     if (params%first) then
        params%av_start_time=time
+
+       ! Check that av_start_time == start_time
+       if (params%av_start_time /= params%start_time) then
+          write(message,*)'start_time provided (',params%start_time,') does not match time of first call to glint (',params%av_start_time,')'
+          call write_log(message,GM_FATAL,__FILE__,__LINE__)
+       end if
+
        params%first=.false.
     else
        if (mod(time-params%av_start_time,params%time_step)/=0) then
