@@ -174,10 +174,6 @@ program glint_example
      lons_orog(i)=(360.0/nxo)*i-(180.0/nxo)
   enddo
 
-  ! Set the message level (6 is the default - all messages on)
-
-  call glimmer_set_msg_level(6)
-
   ! Initialise the ice model
 
   call initialise_glint(ice_sheet, &
@@ -191,6 +187,11 @@ program glint_example
        orog_longs=lons_orog, &
        orog_lats=lats_orog, &
        daysinyear=climate%days_in_year)
+
+  ! Set the message level (1 is the default - only fatal errors)
+  ! N.B. Must do this after initialisation
+
+  call glimmer_set_msg_level(6)
 
   ! Get coverage maps for the ice model instances
 

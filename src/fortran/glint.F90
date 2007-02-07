@@ -87,6 +87,8 @@ module glint_main
                                      !*FD the last occasion averaging was restarted (hours)
      integer  :: av_steps      = 0   !*FD Holds the number of times glimmer has 
                                      !*FD been called in current round of averaging.
+     integer  :: next_av_start = 0   !*FD Time when we expect next averaging to start
+     logical  :: new_av        = .true. !*FD Set to true if the next correct call starts a new averaging round
      ! Averaging arrays -----------------------------------------
 
      real(rk),pointer,dimension(:,:) :: g_av_precip  => null()  !*FD globally averaged precip
@@ -116,11 +118,6 @@ module glint_main
      ! File information -----------------------------------------
 
      character(fname_length) :: paramfile      !*FD Name of global parameter file
-
-     ! Start flag -----------------------------------------------
-
-     logical :: first = .true. !*FD Set if this is the first call to glimmer - make sure we set up
-                               !*FD start times correctly.
 
      ! Accumulation/averaging flags -----------------------------
 
@@ -214,6 +211,8 @@ contains
     else
        params%start_time = time_step
     end if
+
+    params%next_av_start = params%start_time
 
     ! Initialise year-length -------------------------------------------------------------------
 
@@ -466,27 +465,26 @@ contains
     logical :: icets
     character(250) :: message
 
-    if (time<params%start_time) return ! Do nothing if called before the specified start time
-    call check_input_fields(params,humid,lwdown,swdown,airpress,zonwind,merwind) ! Check we have correct input fields
+    ! Check we're expecting a call now --------------------------------------------------------------
 
-    ! Set averaging start if necessary, and check we're being called at a sensible time
-
-    if (params%first) then
-       params%av_start_time=time
-
-       ! Check that av_start_time == start_time
-       if (params%av_start_time /= params%start_time) then
-          write(message,*)'start_time provided (',params%start_time,') does not match time of first call to glint (',params%av_start_time,')'
+    if (params%new_av) then
+       if (time == params%next_av_start) then
+          params%av_start_time = time
+          params%new_av = .false.
+       else
+          write(message,*) 'Unexpected calling of GLINT at time ',time
           call write_log(message,GM_FATAL,__FILE__,__LINE__)
        end if
-
-       params%first=.false.
     else
        if (mod(time-params%av_start_time,params%time_step)/=0) then
           write(message,*) 'Unexpected calling of GLINT at time ',time
           call write_log(message,GM_FATAL,__FILE__,__LINE__)
        end if
-    endif
+    end if
+
+    ! Check input fields are correct ----------------------------------------------------------------
+
+    call check_input_fields(params,humid,lwdown,swdown,airpress,zonwind,merwind)
 
     ! Reset output flag
 
@@ -508,8 +506,9 @@ contains
 
     if (time-params%av_start_time+params%time_step.gt.params%tstep_mbal) then
 
-       call write_log('Incomplete forcing of GLINT mass-balance time-step detected', &
-            GM_FATAL,__FILE__,__LINE__)
+       write(message,*) &
+            'Incomplete forcing of GLINT mass-balance time-step detected at time ', time
+       call write_log(message,GM_FATAL,__FILE__,__LINE__)
 
     else if (time-params%av_start_time+params%time_step.eq.params%tstep_mbal) then
 
@@ -668,8 +667,9 @@ contains
        params%g_max_temp   = -1000.0
        params%g_min_temp   = 1000.0
 
-       params%av_steps     = 0
-       params%first = .true.
+       params%av_steps      = 0
+       params%new_av        = .true.
+       params%next_av_start = time+params%time_step
 
        deallocate(albedo_temp,if_temp,vf_temp,sif_temp,svf_temp,sd_temp,wout_temp,win_temp,orog_out_temp)
 
