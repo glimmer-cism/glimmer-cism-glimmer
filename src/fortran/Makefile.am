@@ -1,6 +1,7 @@
 SUBDIRS = SLAP_library
 RESTART_STEM=glimmer_rst
-RESTART_INCS=$(RESTART_STEM)_body.inc $(RESTART_STEM)_head.inc
+RESTART_INC_INS=$(RESTART_STEM)_body.inc.in $(RESTART_STEM)_head.inc.in
+RESTART_INCS=$(RESTART_INC_INS:.inc.in=.inc)
 RESTART_COMMON=glimmer_restart_common.F90 glimmer_restart_pointarr.F90 \
                glimmer_restart_statarr.F90 glimmer_restart_statscal.F90
 
@@ -14,7 +15,7 @@ variabledir = $(pkgdatadir)
 dist_variable_DATA = $(variable_DATA)
 
 nodist_include_HEADERS := $(wildcard *.mod)
-EXTRA_DIST = f90_dep.mak
+EXTRA_DIST = f90_dep.mak $(RESTART_INC_INS)
 BUILT_SOURCES = glide_io.F90 eis_io.F90 glint_io.F90 glint_mbal_io.F90 \
                 eismint3_io.F90 $(RESTART_INCS)
 CLEANFILES = $(BUILT_SOURCES) glimmer_version.F90 f90_dep.mak
@@ -96,8 +97,10 @@ glint_mbal_io.F90:	glint_mbal_vars.def ncdf_template.F90.in
 
 # Pattern rule for restart include files
 if BUILD_RESTARTS
-$(RESTART_STEM)_body.inc $(RESTART_STEM)_head.inc: $(RESTART_CODE) Makefile
-		$(PYTHON) $(top_srcdir)/src/python/make_restarts.py -o $(RESTART_STEM) $(RESTART_CODE)
+$(RESTART_STEM)_body.inc: $(RESTART_STEM)_body.inc.in Makefile
+		cp $< $@
+$(RESTART_STEM)_head.inc: $(RESTART_STEM)_head.inc.in Makefile
+		cp $< $@
 $(RESTART_CODE:.F90=.o): $(RESTART_COMMON:.F90=.o)
 else
 $(RESTART_STEM)_body.inc $(RESTART_STEM)_head.inc: Makefile
@@ -109,6 +112,8 @@ if HAVE_CVS
 glimmer_version.F90:	$(srcdir)/CVS/Entries glimmer_version.F90.in 
 		$(PYTHON) $(top_srcdir)/src/python/cvs_version.py \
                 $(srcdir)/CVS/Entries glimmer_version.F90.in $@
+$(RESTART_STEM)_body.inc.in $(RESTART_STEM)_head.inc.in: $(RESTART_CODE) Makefile
+		$(PYTHON) $(top_srcdir)/src/python/make_restarts.py -o $(RESTART_STEM) $(RESTART_CODE)
 else
 glimmer_version.F90:	glimmer_version.F90.in
 		cp $< $@

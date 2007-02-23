@@ -373,8 +373,8 @@ if __name__ == '__main__':
         usage()
         sys.exit(0)
 
-    headfile=open(outstem+'_head.inc','w')
-    bodyfile=open(outstem+'_body.inc','w')
+    headfile=open(outstem+'_head.inc.in','w')
+    bodyfile=open(outstem+'_body.inc.in','w')
     write_common_restart(headfile,bodyfile)
     
     for arg in args:
