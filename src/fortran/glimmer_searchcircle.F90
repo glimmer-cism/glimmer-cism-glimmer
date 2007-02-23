@@ -44,7 +44,7 @@
 #include <config.inc>
 #endif
 
-module searchcircle
+module glimmer_searchcircle
   
   !*FD improved algorithm for integrating a 2 dimensional array over large circles
   !*FD this used for calculating continentality
@@ -267,4 +267,4 @@ contains
     resultgrid = resultgrid * sdata%weight
   end subroutine sc_search
 
-end module searchcircle
+end module glimmer_searchcircle

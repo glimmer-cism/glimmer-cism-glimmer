@@ -86,7 +86,7 @@ contains
 
   subroutine simple_initialise(climate,config)
     !*FD initialise simple climate model
-    use paramets, only: thk0, acc0, scyr
+    use glimmer_paramets, only: thk0, acc0, scyr
     use glimmer_config
     implicit none
     type(simple_climate) :: climate         !*FD structure holding climate info
@@ -252,8 +252,8 @@ contains
     !*FD calculate simple mass balance
     use glimmer_global, only:rk
     use glide_types
-    use paramets, only : len0, acc0, scyr
-    use physcon, only : pi
+    use glimmer_paramets, only : len0, acc0, scyr
+    use glimmer_physcon, only : pi
     implicit none
     type(simple_climate) :: climate         !*FD structure holding climate info
     type(glide_global_type) :: model        !*FD model instance
@@ -308,8 +308,8 @@ contains
     !*FD calculate simple air surface temperature
     use glide_types
     use glimmer_global, only:rk
-    use paramets, only : len0
-    use physcon, only : pi
+    use glimmer_paramets, only : len0
+    use glimmer_physcon, only : pi
     implicit none
     type(simple_climate) :: climate         !*FD structure holding climate info
     type(glide_global_type) :: model        !*FD model instance

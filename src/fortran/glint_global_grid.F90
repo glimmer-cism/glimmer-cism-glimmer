@@ -47,7 +47,7 @@
 module glint_global_grid
 
   use glimmer_global
-  use physcon, only: pi
+  use glimmer_physcon, only: pi
 
   implicit none
 

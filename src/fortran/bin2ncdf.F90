@@ -563,7 +563,7 @@ program bin2ncdf
   use glimmer_log
   use glide_types
 
-  use paramets, only : len0
+  use glimmer_paramets, only : len0
   implicit none
 
   character(len=30) :: infile

@@ -53,7 +53,7 @@ module glint_mbal
 #ifdef USE_ENMABAL
   use smb_mecons
 #else
-  use smb_dummy
+  use glint_smb
 #endif
 
   implicit none

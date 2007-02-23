@@ -44,7 +44,7 @@
 #include <config.inc>
 #endif
 
-module smb_dummy
+module glint_smb
 
   ! This module provides a dummy, hopefully warning-free interface
   ! in place of the Energy-balance mass-balance scheme. If either
@@ -62,17 +62,17 @@ module smb_dummy
 
   !MAKE_RESTART
 #ifdef RESTARTS
-#define RST_SMB_DUMMY
+#define RST_GLINT_SMB
 #include "glimmer_rst_head.inc"
-#undef RST_SMB_DUMMY
+#undef RST_GLINT_SMB
 #endif
 
 contains
 
 #ifdef RESTARTS
-#define RST_SMB_DUMMY
+#define RST_GLINT_SMB
 #include "glimmer_rst_body.inc"
-#undef RST_SMB_DUMMY
+#undef RST_GLINT_SMB
 #endif
 
   subroutine SMBInitWrapper(params,nx,ny,dxr,tstep,path)
@@ -118,4 +118,4 @@ contains
 
   end subroutine SMBStepWrapper
 
-end module smb_dummy
+end module glint_smb

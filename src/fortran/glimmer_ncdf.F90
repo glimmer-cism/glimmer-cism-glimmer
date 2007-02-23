@@ -424,8 +424,8 @@ contains
 
   subroutine glimmer_init_scales
     !*FD calculate scale factors (can't have non-integer powers)
-    use physcon, only : scyr, gn
-    use paramets, only : thk0, tim0, vel0, vis0, len0, tau0, acc0
+    use glimmer_physcon, only : scyr, gn
+    use glimmer_paramets, only : thk0, tim0, vel0, vis0, len0, tau0, acc0
     implicit none
 
     scale2d_f1 = scyr * thk0 / tim0

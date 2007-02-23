@@ -69,7 +69,7 @@ contains
     use glimmer_ts
     use glimmer_scales
     use profile
-    use paramets
+    use glimmer_paramets
 #endif
 
     type(restart_file) :: rfile      !*FD Open restart file 
@@ -85,7 +85,7 @@ contains
     call glimmer_ts_modrsw(rfile)
     call glimmer_scales_modrsw(rfile)
     call profile_modrsw(rfile)
-    call paramets_modrsw(rfile)
+    call glimmer_paramets_modrsw(rfile)
 #else
     call write_log('No restart code available - rebuild GLIMMER with --enable-restarts',GM_FATAL)
 #endif
@@ -108,7 +108,7 @@ contains
     use glimmer_ts
     use glimmer_scales
     use profile
-    use paramets
+    use glimmer_paramets
 #endif
 
     type(restart_file) :: rfile      !*FD Open restart file 
@@ -124,7 +124,7 @@ contains
     call glimmer_ts_modrsr(rfile)
     call glimmer_scales_modrsr(rfile)
     call profile_modrsr(rfile)
-    call paramets_modrsr(rfile)
+    call glimmer_paramets_modrsr(rfile)
 #else
     call write_log('No restart code available - rebuild GLIMMER with --enable-restarts',GM_FATAL)
 #endif

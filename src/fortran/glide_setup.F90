@@ -113,8 +113,8 @@ contains
   subroutine glide_scale_params(model)
     !*FD scale parameters
     use glide_types
-    use physcon,  only: scyr, gn
-    use paramets, only: thk0,tim0,len0, tau0, vel0, vis0, acc0
+    use glimmer_physcon,  only: scyr, gn
+    use glimmer_paramets, only: thk0,tim0,len0, tau0, vel0, vis0, acc0
     implicit none
     type(glide_global_type)  :: model !*FD model instance
 
@@ -284,7 +284,7 @@ contains
     !*FD by considering whether it is floating or not.
 
     use glimmer_global, only : dp
-    use physcon, only : rhoi, rhoo
+    use glimmer_physcon, only : rhoi, rhoo
 
     implicit none
 
@@ -311,7 +311,7 @@ contains
     !*FD equal to the topographic height, or sea-level, whichever is higher.
 
     use glimmer_global, only : dp, sp
-    use physcon, only : rhoi, rhoo
+    use glimmer_physcon, only : rhoi, rhoo
     use glide_mask
     implicit none
 

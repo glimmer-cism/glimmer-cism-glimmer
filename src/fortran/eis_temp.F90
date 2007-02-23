@@ -115,7 +115,7 @@ contains
   subroutine eis_init_temp(temp)
     !*FD initialise temperature forcing
     use glide_types
-    use paramets, only: thk0
+    use glimmer_paramets, only: thk0
     implicit none
     type(eis_temp_type)     :: temp  !*FD ela data
 

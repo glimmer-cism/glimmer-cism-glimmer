@@ -45,10 +45,10 @@
 #include <config.inc>
 #endif
 
-module paramets
+module glimmer_paramets
 
   use glimmer_global, only : sp, dp
-  use physcon, only : scyr
+  use glimmer_physcon, only : scyr
 
   implicit none; save
 
@@ -68,17 +68,17 @@ module paramets
 
   !MAKE_RESTART
 #ifdef RESTARTS
-#define RST_PARAMETS
+#define RST_GLIMMER_PARAMETS
 #include "glimmer_rst_head.inc"
-#undef RST_PARAMETS
+#undef RST_GLIMMER_PARAMETS
 #endif
 
 #ifdef RESTARTS
 contains
 
-#define RST_PARAMETS
+#define RST_GLIMMER_PARAMETS
 #include "glimmer_rst_body.inc"
-#undef RST_PARAMETS
+#undef RST_GLIMMER_PARAMETS
 #endif
 
-end module paramets
+end module glimmer_paramets

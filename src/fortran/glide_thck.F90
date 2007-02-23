@@ -740,7 +740,7 @@ contains
   subroutine timeders(thckwk,ipvr,opvr,mask,time,which)
 
     use glimmer_global, only : dp, sp
-    use paramets, only : conv
+    use glimmer_paramets, only : conv
 
     implicit none 
 

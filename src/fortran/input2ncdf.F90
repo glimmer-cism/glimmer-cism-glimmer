@@ -54,7 +54,7 @@ program input2ncdf
   use glimmer_CFproj
   use glide_types
 
-  use paramets, only : len0
+  use glimmer_paramets, only : len0
   implicit none
 
   ! file names
