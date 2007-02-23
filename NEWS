@@ -1,3 +1,21 @@
+Changes in Version 1.0.0
+========================
+* ***The GLINT API has been changed*** See mailing list for information
+* Restart-on-demand was implemented (use --enable-restarts in configure)
+* CF compliance was improved
+* Snow densification was added to daily PDD scheme
+* Improved routines for manipulation config file data
+* Improved time-keeping and coupling management in GLINT
+* New driver for EISMINT Greenland scenario
+* Better support for Sun compiler
+* New calving scheme
+* Important bugfix to annual PDD scheme
+* Fortran 90 files moved to .F90 suffix
+* Consolidated projection code and added new [projection] config section
+* Input configuration appended to output NetCDF files
+* Added append capability to output files
+* Fixed hotstart variable bug
+
 Changes in Version 0.5.6
 ========================
 * The documentation was moved into a separate module, glimmer-doc.

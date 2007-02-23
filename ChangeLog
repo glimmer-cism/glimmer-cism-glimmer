@@ -1,4 +1,8 @@
 2007-02-23 Ian Rutt
+ * configure.in: bump version to 1.0.0
+ * NEWS: update
+	
+2007-02-23 Ian Rutt
  * Minor change to build (restarts) in preparation for version 1.0.0 release
 
 2007-02-07 Ian Rutt
