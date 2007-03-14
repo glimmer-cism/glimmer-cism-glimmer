@@ -1,3 +1,36 @@
+
+2007-03-16 Bill Lipscomb
+	A new branch, 'lipscomb_1_5_1', with the following changes and additions:
+	(1) Modified file and module names so that they are consistent with each other.
+	    E.g., the module in file glimmer_physcon.F90 is now called glimmer_physcon
+	    instead of physcon.  This change was necessary to compile code in the
+	    Community Climate System Model (CCSM) build system.  I made minor changes
+	    in use statements, etc. in a large number of files.
+	(2) Added an incremental remapping transport scheme.  This scheme can be run
+	    in either or two modes.  Set evolution = 3 to remap the thickness field,
+	    treating temperature as in standard glimmer.  Set evolution = 4 to remap
+	    thickness as well as temperature and ice age.
+	(3) Added three new modules with the prefix "glissade."  The remapping module
+	    is in glissade_remap.F90 and is called from glissade.F90.  Some constants
+	    used by these modules are in glissade_constants.F90.  The idea here is to
+	    identify my new modules with a distinct prefix (one that starts with "gl",
+	    naturally).  Glissade code will be checked into the main trunk as requested
+	    by the Glimmer community, but otherwise will probably be confined to a
+	    branch I use for code development.
+	(4) Added an ice age tracer.  For standard glimmer the tracer is initialized
+	    to zero and not computed.  For glimmer with remapping (evolution = 4), ice
+	    age is incremented at each time step and advected conservatively.
+	(5) Added a subroutine for writing diagnostic output.  For now this subroutine
+	    is in glide.F90, though perhaps it should live somewhere else.  I like to
+	    call this subroutine every once in a while as a sanity check and as
+	    an easy way to check bit-for-bit agreement between two runs.
+	(6) Added an optional temperature smoother in glide_temp.  Not surprisingly,
+	    if you turn up the smoothing high enough, the EISMINT2 spokes go away.  
+	    This smoothing is not intended to be physically realistic; it is just
+	    a tool for use with the EISMINT tests.
+        Note: Most of my changes are marked with '!lipscomb' comments which should be
+	      cleaned up later when the code is committed to the main trunk.
+	
 2007-02-23 Ian Rutt
  * configure.in: bump version to 1.5.1 (HEAD)
 
