@@ -1,5 +1,9 @@
-
 2007-03-16 Bill Lipscomb
+	Added a new module, glide_diagnostics.F90.  For now, this module
+	contains the single subroutine glide_write_diag, which I moved
+	from glide.F90. 
+	
+2007-03-14 Bill Lipscomb
 	A new branch, 'lipscomb_1_5_1', with the following changes and additions:
 	(1) Modified file and module names so that they are consistent with each other.
 	    E.g., the module in file glimmer_physcon.F90 is now called glimmer_physcon
