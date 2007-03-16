@@ -41,7 +41,7 @@ libglimmer_a_SOURCES = glimmer_vers.F90 \
                        glimmer_restart_pointarr.F90 \
                        $(RESTART_INCS) glimmer_restart.F90
 nodist_libglimmer_a_SOURCES = glimmer_vers.F90
-#lipscomb - added glissade.F90 to libglide sources
+#lipscomb - added glide_diagnostics.F90 and glissade.F90 to libglide sources
 #lipscomb - glissade_remap and glissade_constants are needed only if running with remapping
 #lipscomb - might want to create a separate glissade library
 libglide_a_SOURCES = glide.F90 glide_setup.F90 glide_types.F90 glide_temp.F90 \
@@ -49,8 +49,8 @@ libglide_a_SOURCES = glide.F90 glide_setup.F90 glide_types.F90 glide_temp.F90 \
                      glide_stop.F90 glide_io.F90 glide_nc_custom.F90 \
                      isostasy.F90 isostasy_el.F90 isostasy_setup.F90 \
                      isostasy_types.F90 glide_lithot.F90 glide_lithot3d.F90 \
-                     glissade_remap.F90 glissade_constants.F90 \
-                     glide_lithot1d.F90 glide_profile.F90 glissade.F90
+                     glide_lithot1d.F90 glide_profile.F90 glide_diagnostics.F90 \
+                     glissade.F90 glissade_remap.F90 glissade_constants.F90
 libglint_a_SOURCES = glint_climate.F90 glint_initialise.F90 glint_io.F90 \
                      glint_timestep.F90 glint_type.F90 glint_main.F90 \
                      glint_interp.F90 glint_global_grid.F90 \
