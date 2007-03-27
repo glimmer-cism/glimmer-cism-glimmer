@@ -30,7 +30,7 @@ libglimmer_a_SOURCES = glimmer_vers.F90 \
                        glimmer_log.F90 glimmer_ts.F90 glimmer_ncdf.F90 \
                        glimmer_ncio.F90 glimmer_ncparams.F90 \
                        glimmer_paramets.F90 glimmer_physcon.F90 kelvin.F90 \
-                       profile.F90 glimmer_pdd.F90 glint_routing.F90 \
+                       profile.F90 glimmer_pdd.F90 glimmer_routing.F90 \
                        glimmer_daily_pdd.F90 glint_global_interp.F90 \
                        glimmer_sparse.F90 glimmer_coordinates.F90 \
                        glimmer_integrate.F90 ncdf_utils.F90 \
@@ -56,7 +56,7 @@ libglint_a_SOURCES = glint_climate.F90 glint_initialise.F90 glint_io.F90 \
                      glint_interp.F90 glint_global_grid.F90 \
                      glint_precip_param.F90 glint_mbal.F90 glint_constants.F90\
                      glint_mbal_coupling.F90 glint_mbal_io.F90 \
-                     glint_example_clim.F90 glint_smb.F90 glint_ebm_ex_clim.F90
+                     glint_example_clim.F90 glint_smb.F90 glex_ebm_clim.F90
 libclimate_a_SOURCES = eismint3_forcing.F90 eismint3_types.F90 \
                        simple_forcing.F90 eis_forcing.F90 eis_ela.F90 \
                        eis_temp.F90 eis_slc.F90 eis_cony.F90 \

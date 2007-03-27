@@ -2,7 +2,8 @@
  * Build fixes:
 	1) Adjusted make_restarts.py to avoid over-running line length limit
 	2) Removed glimmer_vers.F90
-
+	3) Fixed module naming problems with glint_ebm_clim.F90 and glimmer_routing.F90
+	
 2007-03-16 Bill Lipscomb
 	Added a new module, glide_diagnostics.F90.  For now, this module
 	contains the single subroutine glide_write_diag, which I moved

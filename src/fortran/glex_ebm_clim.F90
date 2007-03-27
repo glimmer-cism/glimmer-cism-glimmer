@@ -45,7 +45,7 @@
 #include <config.inc>
 #endif
 
-module glint_ebm_ex_clim
+module glex_ebm_clim
 
   !*FD Module containing the glint example climate driver, for use with
   !*FD the energy balance mass-balance model. Unlike the main glint_example code,
@@ -667,4 +667,4 @@ contains
 
   end subroutine fixbounds
 
-end module glint_ebm_ex_clim
+end module glex_ebm_clim

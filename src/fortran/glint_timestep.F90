@@ -73,7 +73,7 @@ contains
     use glint_io
     use glint_mbal_io
     use glint_climate
-    use glint_routing
+    use glimmer_routing
     use glimmer_log
     use glimmer_physcon, only: rhow,rhoi
     implicit none
