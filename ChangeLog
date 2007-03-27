@@ -1,3 +1,7 @@
+2007-03-27 Ian Rutt
+ * Fixed bug with make_restarts.py so that output line-length is kept
+   reasonable - build with gfortran fails otherwise.
+
 2007-03-16 Ian Rutt
  * Fixed problem specifying sigma levels - all three methods work now
 

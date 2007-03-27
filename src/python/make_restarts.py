@@ -178,7 +178,7 @@ def write_type_restart(t,headfile,bodyfile):
     rparrn_3d=readsubname +'_pointarr_3d'
     no_restart=get_no_restart(t)
     # Make public
-    headfile.write('   public :: %s,%s,%s,%s,%s,%s\n' % (writesubname,readsubname,wpointn
+    headfile.write('   public :: %s, &\n %s, &\n %s, &\n %s, &\n %s, &\n %s\n' % (writesubname,readsubname,wpointn
                                                       ,rpointn,writesubname+'_pointarr',readsubname+'_pointarr'))
     headfile.write('\n')
     headfile.write('interface %s\n'%(writesubname+'_pointarr'))
