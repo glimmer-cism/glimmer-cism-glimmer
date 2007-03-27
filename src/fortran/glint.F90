@@ -73,7 +73,7 @@ module glint_main
      ! Ice model instances --------------------------------------
 
      integer                                   :: ninstances = 1       !*FD Number of ice model instances
-     type(glint_instance),pointer,dimension(:) :: instances  => null() !*FD Array of glimmer\_instances
+     type(glint_instance),pointer,dimension(:) :: instances  => null() !*FD Array of glimmer_instances
 
      ! Global model parameters ----------------------------------
 
@@ -99,8 +99,8 @@ module glint_main
      real(rk),pointer,dimension(:,:) :: g_av_zonwind => null()  !*FD globally averaged zonal wind 
      real(rk),pointer,dimension(:,:) :: g_av_merwind => null()  !*FD globally averaged meridional wind 
      real(rk),pointer,dimension(:,:) :: g_av_humid   => null()  !*FD globally averaged humidity (%)
-     real(rk),pointer,dimension(:,:) :: g_av_lwdown  => null()  !*FD globally averaged downwelling longwave (W/m^2)
-     real(rk),pointer,dimension(:,:) :: g_av_swdown  => null()  !*FD globally averaged downwelling shortwave (W/m^2)
+     real(rk),pointer,dimension(:,:) :: g_av_lwdown  => null()  !*FD globally averaged downwelling longwave (W/m$^2$)
+     real(rk),pointer,dimension(:,:) :: g_av_swdown  => null()  !*FD globally averaged downwelling shortwave (W/m$^2$)
      real(rk),pointer,dimension(:,:) :: g_av_airpress => null() !*FD globally averaged surface air pressure (Pa)
 
      ! Fractional coverage information --------------------------
@@ -437,8 +437,8 @@ contains
     real(rk),dimension(:,:),optional,intent(in)    :: zonwind,merwind !*FD Zonal and meridional components 
                                                                       !*FD of the wind field         (m/s)
     real(rk),dimension(:,:),optional,intent(in)    :: humid           !*FD Surface humidity (%)
-    real(rk),dimension(:,:),optional,intent(in)    :: lwdown          !*FD Downwelling longwave (W/m^2)
-    real(rk),dimension(:,:),optional,intent(in)    :: swdown          !*FD Downwelling shortwave (W/m^2)
+    real(rk),dimension(:,:),optional,intent(in)    :: lwdown          !*FD Downwelling longwave (W/m$^2$)
+    real(rk),dimension(:,:),optional,intent(in)    :: swdown          !*FD Downwelling shortwave (W/m$^2$)
     real(rk),dimension(:,:),optional,intent(in)    :: airpress        !*FD surface air pressure (Pa)
     logical,                optional,intent(out)   :: output_flag     !*FD Set true if outputs set
     real(rk),dimension(:,:),optional,intent(inout) :: orog_out        !*FD The fed-back, output orography (m)
@@ -1110,8 +1110,8 @@ contains
 
     type(glint_params),              intent(inout) :: params   !*FD parameters for this run
     real(rk),dimension(:,:),optional,intent(in)    :: humid    !*FD Surface humidity (%)
-    real(rk),dimension(:,:),optional,intent(in)    :: lwdown   !*FD Downwelling longwave (W/m^2)
-    real(rk),dimension(:,:),optional,intent(in)    :: swdown   !*FD Downwelling shortwave (W/m^2)
+    real(rk),dimension(:,:),optional,intent(in)    :: lwdown   !*FD Downwelling longwave (W/m$^2$)
+    real(rk),dimension(:,:),optional,intent(in)    :: swdown   !*FD Downwelling shortwave (W/m$^2$)
     real(rk),dimension(:,:),optional,intent(in)    :: airpress !*FD surface air pressure (Pa)
     real(rk),dimension(:,:),optional,intent(in)    :: zonwind  !*FD Zonal component of the wind field (m/s)
     real(rk),dimension(:,:),optional,intent(in)    :: merwind  !*FD Meridional component of the wind field (m/s)
@@ -1140,8 +1140,8 @@ contains
     real(rk),dimension(:,:),optional,intent(in)    :: zonwind  !*FD Zonal component of the wind field (m/s)
     real(rk),dimension(:,:),optional,intent(in)    :: merwind  !*FD Meridional component of the wind field (m/s)
     real(rk),dimension(:,:),optional,intent(in)    :: humid    !*FD Surface humidity (%)
-    real(rk),dimension(:,:),optional,intent(in)    :: lwdown   !*FD Downwelling longwave (W/m^2)
-    real(rk),dimension(:,:),optional,intent(in)    :: swdown   !*FD Downwelling shortwave (W/m^2)
+    real(rk),dimension(:,:),optional,intent(in)    :: lwdown   !*FD Downwelling longwave (W/m$^2$)
+    real(rk),dimension(:,:),optional,intent(in)    :: swdown   !*FD Downwelling shortwave (W/m$^2$)
     real(rk),dimension(:,:),optional,intent(in)    :: airpress !*FD surface air pressure (Pa)
 
     params%g_av_temp    = params%g_av_temp    + temp
