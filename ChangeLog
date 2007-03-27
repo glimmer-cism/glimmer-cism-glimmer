@@ -1,3 +1,8 @@
+2007-03-27 Ian Rutt
+ * Build fixes:
+	1) Adjusted make_restarts.py to avoid over-running line length limit
+	2) Removed glimmer_vers.F90
+
 2007-03-16 Bill Lipscomb
 	Added a new module, glide_diagnostics.F90.  For now, this module
 	contains the single subroutine glide_write_diag, which I moved
