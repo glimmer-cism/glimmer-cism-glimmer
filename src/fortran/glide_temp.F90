@@ -516,16 +516,14 @@ contains
  
           ! layer thickness and temperature 
           workh(:,:) = model%geometry%thck(:,:) * model%velowk%dups(k) 
-          workt(:,:) = model%temper%temp(k,1:model%general%ewn,1:model%general%n\
-sn) 
+          workt(:,:) = model%temper%temp(k,1:model%general%ewn,1:model%general%nsn) 
  
           call temperature_smoothing (model%general%ewn,  model%general%nsn,  &
                                       model%numerics%dew, model%numerics%dns, & 
                                       model%numerics%dt,  kdiff,              & 
                                       workh(:,:),         workt(:,:)) 
  
-          model%temper%temp(k,1:model%general%ewn,1:model%general%nsn) = workt(:\
-,:) 
+          model%temper%temp(k,1:model%general%ewn,1:model%general%nsn) = workt(:,:) 
  
        enddo   ! k 
     endif      ! l_smooth_temp 
