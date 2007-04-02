@@ -38,7 +38,7 @@ libglimmer_a_SOURCES = glimmer_version.F90 \
                        glimmer_map_types.F90 glimmer_map_init.F90 \
                        glimmer_map_trans.F90 glimmer_restart_common.F90 \
                        glimmer_restart_statscal.F90 glimmer_restart_statarr.F90 \
-                       glimmer_restart_pointarr.F90 \
+                       glimmer_restart_pointarr.F90 glimmer_anomcouple.F90 \
                        $(RESTART_INCS) glimmer_restart.F90
 nodist_libglimmer_a_SOURCES = glimmer_version.F90
 libglide_a_SOURCES = glide.F90 glide_setup.F90 glide_types.F90 glide_temp.F90 \

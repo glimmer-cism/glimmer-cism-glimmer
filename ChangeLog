@@ -1,3 +1,6 @@
+2007-04-02 Ian Rutt
+ * Further work on anomaly coupling. Added to build.
+
 2007-03-27 Ian Rutt
  * Fixed bug with make_restarts.py so that output line-length is kept
    reasonable - build with gfortran fails otherwise.
