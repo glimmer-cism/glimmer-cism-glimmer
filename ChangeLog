@@ -1,5 +1,6 @@
 2007-04-02 Ian Rutt
  * Further work on anomaly coupling. Added to build.
+ * Fixed bugs - tested and seems to work
 
 2007-03-27 Ian Rutt
  * Fixed bug with make_restarts.py so that output line-length is kept

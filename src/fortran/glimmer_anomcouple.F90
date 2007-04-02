@@ -98,7 +98,7 @@ contains
     call anomaly_readconfig(params,config)
     if (params%enabled) then
        call anomaly_readdata(params)
-       !call anomaly_printconfig(params)
+       call anomaly_printconfig(params)
     end if
 
   end subroutine anomaly_init
@@ -118,10 +118,10 @@ contains
 
     if (params%enabled) then
        call anomaly_index(params%time,time,first,frac)
-       tempm=frac*params%temp_mod(:,:,first)+(1.0-frac)*params%temp_mod(:,:,first+1)
-       prcpm=frac*params%prcp_mod(:,:,first)+(1.0-frac)*params%prcp_mod(:,:,first+1)
-       tempr=frac*params%temp_ref(:,:,first)+(1.0-frac)*params%temp_ref(:,:,first+1)
-       prcpr=frac*params%prcp_ref(:,:,first)+(1.0-frac)*params%prcp_ref(:,:,first+1)
+       tempm=(1.0-frac)*params%temp_mod(:,:,first)+frac*params%temp_mod(:,:,first+1)
+       prcpm=(1.0-frac)*params%prcp_mod(:,:,first)+frac*params%prcp_mod(:,:,first+1)
+       tempr=(1.0-frac)*params%temp_ref(:,:,first)+frac*params%temp_ref(:,:,first+1)
+       prcpr=(1.0-frac)*params%prcp_ref(:,:,first)+frac*params%prcp_ref(:,:,first+1)
        anomtemp=rawtemp-tempm+tempr
        anomprcp=rawprcp*prcpr/prcpm
     else
@@ -194,8 +194,8 @@ contains
 
     call anomaly_readnc(params%fname_reference,pvarname,params%prcp_ref,timeref,nx(1),ny(1),nt(1))
     call anomaly_readnc(params%fname_reference,tvarname,params%temp_ref,timeref,nx(2),ny(2),nt(2))
-    call anomaly_readnc(params%fname_modelclim,pvarname,params%prcp_ref,timemod,nx(3),ny(3),nt(3))
-    call anomaly_readnc(params%fname_modelclim,tvarname,params%temp_ref,timemod,nx(4),ny(4),nt(4))
+    call anomaly_readnc(params%fname_modelclim,pvarname,params%prcp_mod,timemod,nx(3),ny(3),nt(3))
+    call anomaly_readnc(params%fname_modelclim,tvarname,params%temp_mod,timemod,nx(4),ny(4),nt(4))
 
     if (any(nx(1)/=nx(2:4)).or.any(ny(1)/=ny(2:4)).or.any(nt(1)/=nt(2:4))) &
          call write_log("Anomaly coupling: sizes of arrays in climate files do not agree", &
@@ -210,7 +210,7 @@ contains
        deallocate(params%time)
        params%time => null()
     end if
-    allocate(params%time(params%nslices))
+    allocate(params%time(params%nslices+2))
 
     params%time=timemod
 
@@ -307,8 +307,7 @@ contains
        do i=1,nt
           timeaxis(i+1)=(i-1)*interval+interval/2.0
        end do
-       print*,'Created time-axis:'
-       print*,timeaxis
+       call write_log('Anomaly coupling: Created time-axis')
     case default
        ! Some other error - bail out
        call nc_errorhandle(__FILE__,__LINE__,status)
