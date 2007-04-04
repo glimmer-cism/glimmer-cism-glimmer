@@ -76,17 +76,31 @@ module glimmer_anomcouple
      character(fname_length) :: fname_reference !*FD File containing reference climate
      character(fname_length) :: fname_modelclim !*FD File containing mean model climate
      integer :: nslices                         !*FD Number of time-slices in climatologies
-     real(dp),dimension(:,:,:),pointer :: temp_ref => null() !*FD Reference climate (temperature)
-     real(dp),dimension(:,:,:),pointer :: temp_mod => null() !*FD Model climate (temperature)
-     real(dp),dimension(:,:,:),pointer :: prcp_ref => null() !*FD Reference climate (precip)
-     real(dp),dimension(:,:,:),pointer :: prcp_mod => null() !*FD Model climate (precip)
-     real(dp),dimension(:)    ,pointer :: time     => null() !*FD Time axis (fraction of year)
+     real(rk),dimension(:,:,:),pointer :: temp_ref => null() !*FD Reference climate (temperature)
+     real(rk),dimension(:,:,:),pointer :: temp_mod => null() !*FD Model climate (temperature)
+     real(rk),dimension(:,:,:),pointer :: prcp_ref => null() !*FD Reference climate (precip)
+     real(rk),dimension(:,:,:),pointer :: prcp_mod => null() !*FD Model climate (precip)
+     real(rk),dimension(:)    ,pointer :: time     => null() !*FD Time axis (fraction of year)
+     integer :: nx,ny !*FD Grid dimensions (for convenience)
   end type anomaly_coupling
 
   private
   public :: anomaly_coupling, anomaly_init, anomaly_calc
 
+  !MAKE_RESTART
+#ifdef RESTARTS
+#define RST_GLIMMER_ANOMCOUPLE
+#include "glimmer_rst_head.inc"
+#undef RST_GLIMMER_ANOMCOUPLE
+#endif
+
 contains
+
+#ifdef RESTARTS
+#define RST_GLIMMER_ANOMCOUPLE
+#include "glimmer_rst_body.inc"
+#undef RST_GLIMMER_ANOMCOUPLE
+#endif
 
   subroutine anomaly_init(params,config)
 
@@ -108,11 +122,11 @@ contains
   subroutine anomaly_calc(params,time,rawtemp,rawprcp,anomtemp,anomprcp)
 
     type(anomaly_coupling),intent(in) :: params !*FD Parameters to be initialised
-    real(dp) :: time
-    real(dp),dimension(:,:),intent(in)  :: rawtemp, rawprcp
-    real(dp),dimension(:,:),intent(out) :: anomtemp,anomprcp
+    real(rk) :: time
+    real(rk),dimension(:,:),intent(in)  :: rawtemp, rawprcp
+    real(rk),dimension(:,:),intent(out) :: anomtemp,anomprcp
 
-    real(dp),dimension(size(rawtemp,1),size(rawtemp,2)) :: tempm,prcpm,tempr,prcpr
+    real(rk),dimension(size(rawtemp,1),size(rawtemp,2)) :: tempm,prcpm,tempr,prcpr
     integer  :: first
     real(sp) :: frac
 
@@ -189,8 +203,8 @@ contains
     type(anomaly_coupling),intent(inout) :: params !*FD Parameters to be initialised
 
     integer,dimension(4) :: nx,ny,nt
-    real(dp),dimension(:),pointer :: timemod => null()
-    real(dp),dimension(:),pointer :: timeref => null()
+    real(rk),dimension(:),pointer :: timemod => null()
+    real(rk),dimension(:),pointer :: timeref => null()
 
     call anomaly_readnc(params%fname_reference,pvarname,params%prcp_ref,timeref,nx(1),ny(1),nt(1))
     call anomaly_readnc(params%fname_reference,tvarname,params%temp_ref,timeref,nx(2),ny(2),nt(2))
@@ -201,6 +215,8 @@ contains
          call write_log("Anomaly coupling: sizes of arrays in climate files do not agree", &
          GM_FATAL,__FILE__,__LINE__)
 
+    params%nx=nx(1)
+    params%ny=ny(1)
     params%nslices=nt(1)
 
     if (.not.all(timemod==timeref)) &
@@ -225,8 +241,8 @@ contains
 
     character(*),                     intent(in)  :: fname
     character(*),                     intent(in)  :: varname
-    real(dp),dimension(:,:,:),pointer             :: data
-    real(dp),dimension(:),    pointer             :: timeaxis
+    real(rk),dimension(:,:,:),pointer             :: data
+    real(rk),dimension(:),    pointer             :: timeaxis
     integer,                          intent(out) :: nx,ny,nt
 
     ! Local variables
@@ -327,8 +343,8 @@ contains
 
     use glimmer_log
 
-    real(dp),dimension(:),intent(in)  :: timeaxis
-    real(dp),             intent(in)  :: time
+    real(rk),dimension(:),intent(in)  :: timeaxis
+    real(rk),             intent(in)  :: time
     integer,              intent(out) :: first
     real(sp),             intent(out) :: frac 
 
