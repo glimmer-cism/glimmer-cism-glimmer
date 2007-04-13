@@ -1,3 +1,7 @@
+2007-04-13 Ian Rutt
+ * Added integer parameter to glimmer_version to enable run-time testing of
+   glimmer version number (1.2.5 -> 10205, for example)
+
 2007-04-04 Ian Rutt
  * Plumbed anomaly coupling into Glint
 
