@@ -367,7 +367,7 @@ contains
     !*FD \item \texttt{snow_depth} --- The mean snow-depth over those parts covered in snow (m w.e.)
     !*FD \end{itemize}
 
-    use paramets
+    use glimmer_paramets
 
     ! Arguments ----------------------------------------------------------------------------------------
 

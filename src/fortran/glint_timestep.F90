@@ -69,13 +69,13 @@ contains
     use glide
     use glide_setup
     use glide_io
-    use paramets
+    use glimmer_paramets
     use glint_io
     use glint_mbal_io
     use glint_climate
-    use glint_routing
+    use glimmer_routing
     use glimmer_log
-    use physcon, only: rhow,rhoi
+    use glimmer_physcon, only: rhow,rhoi
     implicit none
 
     ! ------------------------------------------------------------------------  

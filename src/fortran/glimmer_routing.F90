@@ -2,7 +2,7 @@
 #include <config.inc>
 #endif
 
-module glint_routing
+module glimmer_routing
 
   use glimmer_global,only: rk,sp
 
@@ -345,5 +345,5 @@ contains
 
   end subroutine q_sort_index
 
-end module glint_routing
+end module glimmer_routing
 

@@ -54,7 +54,7 @@ program glint_ebm_ex
   use glint_main
   use glimmer_log
   use glint_global_interp
-  use glint_ebm_ex_clim
+  use glex_ebm_clim
   implicit none
 
   ! Program variables -------------------------------------------------------------------

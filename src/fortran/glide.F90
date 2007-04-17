@@ -110,6 +110,8 @@ contains
     use glide_mask
     use isostasy
     use glimmer_map_init
+    use glissade, only: init_glissade
+
     implicit none
     type(glide_global_type) :: model        !*FD model instance
 
@@ -170,6 +172,18 @@ contains
        call init_lithot(model)
     end if
 
+    ! initialisations for remapping, ice age
+    ! This call may be removed later
+    ! initialise grid-related arrays for remap transport
+    if (model%options%whichevol==3 .or. model%options%whichevol==4) then
+       call init_glissade(model)
+    endif 
+
+    ! initialise ice age
+    ! Currently the ice age is only computed for remapping transport
+    ! (whichevol = 3 or 4)
+    model%geometry%age(:,:,:) = 0._dp
+ 
     if (model%options%hotstart.ne.1) then
        ! initialise Glen's flow parameter A using an isothermal temperature distribution
        call timeevoltemp(model,0)
@@ -284,6 +298,8 @@ contains
     use glide_temp
     use glide_mask
     use isostasy
+    use glissade, only: thck_remap_evolve
+
     implicit none
 
     type(glide_global_type) :: model        !*FD model instance
@@ -311,6 +327,16 @@ contains
     case(2) ! Use non-linear calculation that incorporates velocity calc -----
 
        call thck_nonlin_evolve(model,model%temper%newtemps, 6)
+
+    case(3) ! Use incremental remapping scheme for advecting ice thickness ---
+            ! (Temperature is advected by glide_temp)
+ 
+       call thck_remap_evolve(model, model%temper%newtemps, 6, .false.)
+ 
+    case(4) ! Use incremental remapping scheme for advecting thickness
+            ! and temperature, as well as tracers such as ice age. 
+ 
+       call thck_remap_evolve(model, model%temper%newtemps, 6, .true.)
 
     end select
 #ifdef PROFILING

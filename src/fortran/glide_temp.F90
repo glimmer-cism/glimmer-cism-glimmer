@@ -76,12 +76,14 @@ module glide_temp
 
   private :: find_dt_wat
 
+  logical, parameter :: l_smooth_temp = .false.  ! if true, apply Laplacian smoothing
+
 contains
 
   subroutine init_temp(model)
     !*FD initialise temperature module
-    use physcon, only : rhoi, shci, coni, scyr, grav, gn, lhci, rhow
-    use paramets, only : tim0, thk0, acc0, len0, vis0, vel0
+    use glimmer_physcon, only : rhoi, shci, coni, scyr, grav, gn, lhci, rhow
+    use glimmer_paramets, only : tim0, thk0, acc0, len0, vis0, vel0
     use glimmer_global, only : dp 
     use glimmer_log
     implicit none
@@ -198,10 +200,12 @@ contains
 
     use glimmer_utils, only: hsum4,tridag
     use glimmer_global, only : dp
-    use paramets,       only : thk0
+    use glimmer_paramets,       only : thk0
     use glide_velo
     use glide_thck
     use glide_mask
+    use glimmer_physcon, only: rhoi, shci, coni   ! for temperature smoothing
+
     implicit none
 
     !------------------------------------------------------------------------------------
@@ -228,6 +232,14 @@ contains
 
     real(dp), dimension(size(model%numerics%sigma)) :: weff
 
+    ! for temperature smoothing
+    real(dp), parameter :: kdiff = coni/(rhoi*shci)* 1.0e5_dp  ! numerical diffusivity
+                           ! coni/(rhoi*shci) = physical diffusivity
+
+    real(dp), dimension(model%general%ewn,model%general%nsn) :: workh   ! work array for thickness
+    real(dp), dimension(model%general%ewn,model%general%nsn) :: workt   ! work array for temperature 
+
+    integer :: k
 
     !------------------------------------------------------------------------------------
     ! ewbc/nsbc set the type of boundary condition aplied at the end of
@@ -491,6 +503,25 @@ contains
 
     end select
 
+    ! Optional temperature smoothing 
+ 
+    if (l_smooth_temp) then   ! smooth temperatures 
+       do k = 1, model%general%upn-1 
+ 
+          ! layer thickness and temperature 
+          workh(:,:) = model%geometry%thck(:,:) * model%velowk%dups(k) 
+          workt(:,:) = model%temper%temp(k,1:model%general%ewn,1:model%general%nsn) 
+ 
+          call temperature_smoothing (model%general%ewn,  model%general%nsn,  &
+                                      model%numerics%dew, model%numerics%dns, & 
+                                      model%numerics%dt,  kdiff,              & 
+                                      workh(:,:),         workt(:,:)) 
+ 
+          model%temper%temp(k,1:model%general%ewn,1:model%general%nsn) = workt(:,:) 
+ 
+       enddo   ! k 
+    endif      ! l_smooth_temp 
+
     ! Calculate Glenn's A --------------------------------------------------------
 
     call calcflwa(model%numerics,        &
@@ -753,7 +784,7 @@ contains
   subroutine finddisp(model,thck,stagthck,dusrfdew,dusrfdns,flwa)
 
     use glimmer_global, only : dp
-    use physcon, only : gn
+    use glimmer_physcon, only : gn
 
     implicit none
 
@@ -881,7 +912,7 @@ contains
   subroutine calcbwat(model,which,bmlt,bwat,thck,topg,btem,floater)
 
     use glimmer_global, only : dp 
-    use paramets, only : thk0
+    use glimmer_paramets, only : thk0
     use glide_thck
     implicit none
 
@@ -1136,8 +1167,8 @@ contains
   subroutine calcpmpt(pmptemp,thck,sigma)
 
     use glimmer_global, only : dp !, upn
-    use physcon, only : rhoi, grav, pmlt 
-    use paramets, only : thk0
+    use glimmer_physcon, only : rhoi, grav, pmlt 
+    use glimmer_paramets, only : thk0
 
     implicit none 
 
@@ -1156,8 +1187,8 @@ contains
   subroutine calcpmptb(pmptemp,thck)
 
     use glimmer_global, only : dp
-    use physcon, only : rhoi, grav, pmlt 
-    use paramets, only : thk0
+    use glimmer_physcon, only : rhoi, grav, pmlt 
+    use glimmer_paramets, only : thk0
 
     implicit none 
 
@@ -1210,5 +1241,91 @@ contains
 
   end subroutine swapbndt
 
+!-------------------------------------------------------------------
+!lipscomb - new subroutine for smoothing temperatures
+ 
+  subroutine temperature_smoothing (ewn,      nsn,    &
+                                    dew,      dns,    &
+                                    dt,       kdiff,  &
+                                    hice,     tice)
+ 
+!-------------------------------------------------------------------
+! Smooth temperatures using Laplacian operator:
+!
+! dT/dt = (1/h)*K*del2(hT) where K = numerical diffusivity
+!                                  = coni/rhoi*shci * enhancement factor
+! 
+! Actually, K should have a factor of [len0]^2 in the denominator, but
+! this is cancelled by a factor of [len0]^2 in the Laplacian operator.
+!
+! Setting the enhancement factor to 1.0 gives the physical diffusivity,
+! which in most cases is negligible.
+!
+! Note: This subroutine assumes that the outer layer of cells has no ice
+!        or is a ghost layer.
+!       Temperatures are updated for i = 2 to ewn-1 and for j = 2 to nsn-1.
+!
+! Author: William Lipscomb, LANL
+!-------------------------------------------------------------------
+ 
+    ! Input-output variables
+ 
+    integer, intent(in) ::   &
+         ewn, nsn       ! no. of grid points in EW and NS directions
+ 
+    real(dp), intent(in) ::   &
+         dew, dns,     &! grid cell dimensions
+         dt,           &! time step
+         kdiff          ! diffusivity
+ 
+    real(dp), dimension(ewn,nsn), intent(in) ::   &
+         hice           ! ice layer thickness
+ 
+    real(dp), dimension(ewn,nsn), intent(inout) ::   &
+         tice           ! ice layer temperature
+ 
+    ! Local variables
+ 
+    integer ::  i, j
+ 
+    real(dp), parameter ::   &
+         c0 = 0.0_dp
+ 
+    real(dp), dimension(ewn,nsn) ::    &
+         fx, fy          ! fluxes across cell edges
+ 
+    real(dp) ::   &
+         flxcnv          ! flux convergence
+ 
+    ! Compute flux of h*T across each cell edge (apart from factor of dt * kdiff)
+ 
+    do j = 1, nsn-1
+       do i = 1, ewn-1
+          fx(i,j) = min(hice(i,j), hice(i+1,j)) * (tice(i,j) - tice(i+1,j)) / dew
+          fy(i,j) = min(hice(i,j), hice(i,j+1)) * (tice(i,j) - tice(i,j+1)) / dns
+       enddo
+    enddo
+ 
+    ! Compute new temperatures
+ 
+    do j = 2, nsn-1
+       do i = 2, ewn-1
+          if (hice(i,j) > c0) then
+             flxcnv = (fx(i-1,j) - fx(i,j) + fy(i,j-1) - fy(i,j)) * dt * kdiff
+             tice(i,j) = (hice(i,j)*tice(i,j) + flxcnv) / hice(i,j)
+          else
+             flxcnv = c0
+          endif
+    ! Bug check
+          if (abs(flxcnv) > abs(hice(i,j)*tice(i,j))) then
+             write(6,*) 'Excessive flux: i, j, hice, tice, flxcnv:',   &
+                         i, j, hice(i,j), tice(i,j), flxcnv
+             stop
+          endif
+       enddo
+    enddo
+ 
+    end subroutine temperature_smoothing
+ 
 end module glide_temp
 

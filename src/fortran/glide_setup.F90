@@ -113,8 +113,8 @@ contains
   subroutine glide_scale_params(model)
     !*FD scale parameters
     use glide_types
-    use physcon,  only: scyr, gn
-    use paramets, only: thk0,tim0,len0, tau0, vel0, vis0, acc0
+    use glimmer_physcon,  only: scyr, gn
+    use glimmer_paramets, only: thk0,tim0,len0, tau0, vel0, vis0, acc0
     implicit none
     type(glide_global_type)  :: model !*FD model instance
 
@@ -284,7 +284,7 @@ contains
     !*FD by considering whether it is floating or not.
 
     use glimmer_global, only : dp
-    use physcon, only : rhoi, rhoo
+    use glimmer_physcon, only : rhoi, rhoo
 
     implicit none
 
@@ -311,7 +311,7 @@ contains
     !*FD equal to the topographic height, or sea-level, whichever is higher.
 
     use glimmer_global, only : dp, sp
-    use physcon, only : rhoi, rhoo
+    use glimmer_physcon, only : rhoi, rhoo
     use glide_mask
     implicit none
 
@@ -490,6 +490,7 @@ contains
     call GetValue(section,'ntem',model%numerics%ntem)
     call GetValue(section,'nvel',model%numerics%nvel)
     call GetValue(section,'profile',model%numerics%profile_period)
+    call GetValue(section,'ndiag',model%numerics%ndiag)
   end subroutine handle_time
   
   subroutine print_time(model)
@@ -513,6 +514,8 @@ contains
     call write_log(message)
     write(message,*) 'profile frequency : ',model%numerics%profile_period
     call write_log(message)
+    write(message,*) 'diag frequency    : ',model%numerics%ndiag
+    call write_log(message) 
     call write_log('')
   end subroutine print_time
 
@@ -568,10 +571,12 @@ contains
          'const if T>0', &
          '~basal water', &
          '~basal melt '/)
-    character(len=*), dimension(0:2), parameter :: evolution = (/ &
+    character(len=*), dimension(0:4), parameter :: evolution = (/ &
          'pseudo-diffusion', &
          'ADI scheme      ', &
-         'diffusion       ' /)
+         'diffusion       ', &
+         'remap thickness ', &
+         'remap thickness and temperature' /)
     character(len=*), dimension(0:1), parameter :: vertical_integration = (/ &
          'standard     ', &
          'obey upper BC' /)

@@ -51,7 +51,7 @@ module eis_cony
   !*FD This module reproduces the continentality forcing used to drive the 
   !*FD Edinburgh Ice Sheet model. 
 
-  use searchcircle
+  use glimmer_searchcircle
 
   type eis_cony_type
      real :: period = 0.                          !*FD how often cony field should be updated, set to 0 to switch off
@@ -107,7 +107,7 @@ contains
   subroutine eis_init_cony(cony,model)
     !*FD initialise cony forcing
     use glide_types
-    use paramets, only: len0
+    use glimmer_paramets, only: len0
     implicit none
     type(eis_cony_type)     :: cony  !*FD cony data
     type(glide_global_type) :: model !*FD model instance

@@ -299,7 +299,7 @@ contains
     use glimmer_map_cfproj
     use glimmer_map_types
     use glimmer_log
-    use paramets, only: len0
+    use glimmer_paramets, only: len0
     implicit none
     type(glimmer_nc_input), pointer :: infile
     !*FD structure containg input netCDF descriptor

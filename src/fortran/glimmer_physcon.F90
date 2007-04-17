@@ -45,7 +45,7 @@
 #include <config.inc>
 #endif
 
-module physcon
+module glimmer_physcon
 
   !*FD Contains physical constants required by the ice model.
 
@@ -89,4 +89,4 @@ module physcon
   real(dp),parameter :: pmlt = 9.7456d-8         !*FD Factor for dependence of melting point on pressure (K Pa$^{-1}$)
   real(dp),parameter :: trpt = 273.15d0          !*FD Triple point of water (K)
 
-end module physcon
+end module glimmer_physcon

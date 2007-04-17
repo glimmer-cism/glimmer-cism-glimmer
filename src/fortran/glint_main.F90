@@ -1,6 +1,6 @@
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! +                                                           +
-! +  glint.f90 - part of the GLIMMER ice model                + 
+! +  glint_main.f90 - part of the GLIMMER ice model           + 
 ! +                                                           +
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! 
@@ -748,7 +748,7 @@ contains
     use glint_interp
     use glint_mbal_coupling
     use glint_mbal
-    use smb_dummy
+    use glint_smb
     use glint_type
 #endif
 
@@ -760,7 +760,7 @@ contains
     call glint_interp_modrsw(rfile)
     call glint_mbal_coupling_modrsw(rfile)
     call glint_mbal_modrsw(rfile)
-    call smb_dummy_modrsw(rfile)
+    call glint_smb_modrsw(rfile)
     call glint_type_modrsw(rfile)
 #else
     call write_log('No restart code available - rebuild GLIMMER with --enable-restarts',GM_FATAL)
@@ -780,7 +780,7 @@ contains
     use glint_interp
     use glint_mbal_coupling
     use glint_mbal
-    use smb_dummy
+    use glint_smb
     use glint_type
 #endif
 
@@ -792,7 +792,7 @@ contains
     call glint_interp_modrsr(rfile)
     call glint_mbal_coupling_modrsr(rfile)
     call glint_mbal_modrsr(rfile)
-    call smb_dummy_modrsr(rfile)
+    call glint_smb_modrsr(rfile)
     call glint_type_modrsr(rfile)
 #else
     call write_log('No restart code available - rebuild GLIMMER with --enable-restarts',GM_FATAL)
