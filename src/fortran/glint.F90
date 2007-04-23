@@ -53,6 +53,7 @@ module glint_main
   use glint_type
   use glint_global_grid
   use glint_constants
+  use glimmer_anomcouple
 
   ! ------------------------------------------------------------
   ! GLIMMER_PARAMS derived type definition
@@ -99,8 +100,8 @@ module glint_main
      real(rk),pointer,dimension(:,:) :: g_av_zonwind => null()  !*FD globally averaged zonal wind 
      real(rk),pointer,dimension(:,:) :: g_av_merwind => null()  !*FD globally averaged meridional wind 
      real(rk),pointer,dimension(:,:) :: g_av_humid   => null()  !*FD globally averaged humidity (%)
-     real(rk),pointer,dimension(:,:) :: g_av_lwdown  => null()  !*FD globally averaged downwelling longwave (W/m^2)
-     real(rk),pointer,dimension(:,:) :: g_av_swdown  => null()  !*FD globally averaged downwelling shortwave (W/m^2)
+     real(rk),pointer,dimension(:,:) :: g_av_lwdown  => null()  !*FD globally averaged downwelling longwave (W/m$^2$)
+     real(rk),pointer,dimension(:,:) :: g_av_swdown  => null()  !*FD globally averaged downwelling shortwave (W/m$^2$)
      real(rk),pointer,dimension(:,:) :: g_av_airpress => null() !*FD globally averaged surface air pressure (Pa)
 
      ! Fractional coverage information --------------------------
@@ -123,6 +124,10 @@ module glint_main
 
      logical :: need_winds=.false. !*FD Set if we need the winds to be accumulated/downscaled
      logical :: enmabal=.false.    !*FD Set if we're using the energy balance mass balance model anywhere
+
+     ! Anomaly coupling for global climate ------------------------------------------
+
+     type(anomaly_coupling) :: anomaly_params !*FD Parameters for anomaly coupling
 
   end type glint_params
 
@@ -201,6 +206,7 @@ contains
     integer :: i
     real(rk),dimension(:,:),allocatable :: orog_temp,if_temp,vf_temp,sif_temp,svf_temp,sd_temp,alb_temp ! Temporary output arrays
     integer,dimension(:),allocatable :: mbts,idts ! Array of mass-balance and ice dynamics timesteps
+    logical :: anomaly_check ! Set if we've already initialised anomaly coupling
 
     ! Initialise start time and calling model time-step ----------------------------------------
     ! We ignore t=0 by default 
@@ -287,6 +293,8 @@ contains
     call write_log('Reading instance configurations')
     call write_log('-------------------------------')
 
+    anomaly_check=.false.
+
     do i=1,params%ninstances
        call ConfigRead(config_fnames(i),instance_config)
        if (present(extraconfigs)) then
@@ -302,6 +310,19 @@ contains
 
        where (params%total_coverage>0.0) params%cov_normalise=params%cov_normalise+1.0
        where (params%total_cov_orog>0.0) params%cov_norm_orog=params%cov_norm_orog+1.0
+
+       ! Initialise anomaly coupling
+       if (.not.anomaly_check) then 
+          call anomaly_init(params%anomaly_params,instance_config)
+          if (params%anomaly_params%enabled.and. &
+               (params%anomaly_params%nx/=params%g_grid%nx.or. &
+               params%anomaly_params%ny/=params%g_grid%ny)) then
+             call write_log("Anomaly coupling grids have different "// &
+                  "sizes to GLINT coupling grids",GM_FATAL,__FILE__,__LINE__)
+          end if
+          if (params%anomaly_params%enabled) anomaly_check=.true.
+       end if
+
     end do
 
     ! Check that all mass-balance time-steps are the same length and 
@@ -402,7 +423,7 @@ contains
 
   !================================================================================
 
-  subroutine glint(params,time,temp,precip,orog,zonwind,merwind,humid,lwdown,swdown,airpress, &
+  subroutine glint(params,time,rawtemp,rawprecip,orog,zonwind,merwind,humid,lwdown,swdown,airpress, &
        output_flag,orog_out,albedo,ice_frac,veg_frac,snowice_frac,snowveg_frac,snow_depth,water_in, &
        water_out,total_water_in,total_water_out,ice_volume,ice_tstep)
 
@@ -431,14 +452,14 @@ contains
 
     type(glint_params),              intent(inout) :: params          !*FD parameters for this run
     integer,                         intent(in)    :: time            !*FD Current model time        (hours)
-    real(rk),dimension(:,:),         intent(in)    :: temp            !*FD Surface temperature field (celcius)
-    real(rk),dimension(:,:),         intent(in)    :: precip          !*FD Precipitation rate        (mm/s)
+    real(rk),dimension(:,:),target,  intent(in)    :: rawtemp         !*FD Surface temperature field (celcius)
+    real(rk),dimension(:,:),target,  intent(in)    :: rawprecip       !*FD Precipitation rate        (mm/s)
     real(rk),dimension(:,:),         intent(in)    :: orog            !*FD The large-scale orography (m)
     real(rk),dimension(:,:),optional,intent(in)    :: zonwind,merwind !*FD Zonal and meridional components 
                                                                       !*FD of the wind field         (m/s)
     real(rk),dimension(:,:),optional,intent(in)    :: humid           !*FD Surface humidity (%)
-    real(rk),dimension(:,:),optional,intent(in)    :: lwdown          !*FD Downwelling longwave (W/m^2)
-    real(rk),dimension(:,:),optional,intent(in)    :: swdown          !*FD Downwelling shortwave (W/m^2)
+    real(rk),dimension(:,:),optional,intent(in)    :: lwdown          !*FD Downwelling longwave (W/m$^2$)
+    real(rk),dimension(:,:),optional,intent(in)    :: swdown          !*FD Downwelling shortwave (W/m$^2$)
     real(rk),dimension(:,:),optional,intent(in)    :: airpress        !*FD surface air pressure (Pa)
     logical,                optional,intent(out)   :: output_flag     !*FD Set true if outputs set
     real(rk),dimension(:,:),optional,intent(inout) :: orog_out        !*FD The fed-back, output orography (m)
@@ -464,6 +485,11 @@ contains
     type(output_flags) :: out_f
     logical :: icets
     character(250) :: message
+    real(rk),dimension(size(rawprecip,1),size(rawprecip,2)),target :: anomprecip
+    real(rk),dimension(size(rawtemp,1),  size(rawtemp,2)),  target :: anomtemp
+    real(rk),dimension(:,:),pointer :: precip
+    real(rk),dimension(:,:),pointer :: temp
+    real(rk) :: yearfrac
 
     ! Check we're expecting a call now --------------------------------------------------------------
 
@@ -490,6 +516,18 @@ contains
 
     if (present(output_flag)) output_flag=.false.
     if (present(ice_tstep))   ice_tstep=.false.
+
+    ! Sort out anomaly coupling
+
+    if (params%anomaly_params%enabled) then
+       yearfrac=real(mod(time,days_in_year),rk)/real(days_in_year,rk)
+       call anomaly_calc(params%anomaly_params,yearfrac,rawtemp,rawprecip,anomtemp,anomprecip)
+       precip => anomprecip
+       temp   => anomtemp
+    else
+       precip => rawprecip
+       temp   => rawtemp
+    end if
 
     ! Do averaging and so on...
 
@@ -1110,8 +1148,8 @@ contains
 
     type(glint_params),              intent(inout) :: params   !*FD parameters for this run
     real(rk),dimension(:,:),optional,intent(in)    :: humid    !*FD Surface humidity (%)
-    real(rk),dimension(:,:),optional,intent(in)    :: lwdown   !*FD Downwelling longwave (W/m^2)
-    real(rk),dimension(:,:),optional,intent(in)    :: swdown   !*FD Downwelling shortwave (W/m^2)
+    real(rk),dimension(:,:),optional,intent(in)    :: lwdown   !*FD Downwelling longwave (W/m$^2$)
+    real(rk),dimension(:,:),optional,intent(in)    :: swdown   !*FD Downwelling shortwave (W/m$^2$)
     real(rk),dimension(:,:),optional,intent(in)    :: airpress !*FD surface air pressure (Pa)
     real(rk),dimension(:,:),optional,intent(in)    :: zonwind  !*FD Zonal component of the wind field (m/s)
     real(rk),dimension(:,:),optional,intent(in)    :: merwind  !*FD Meridional component of the wind field (m/s)
@@ -1140,8 +1178,8 @@ contains
     real(rk),dimension(:,:),optional,intent(in)    :: zonwind  !*FD Zonal component of the wind field (m/s)
     real(rk),dimension(:,:),optional,intent(in)    :: merwind  !*FD Meridional component of the wind field (m/s)
     real(rk),dimension(:,:),optional,intent(in)    :: humid    !*FD Surface humidity (%)
-    real(rk),dimension(:,:),optional,intent(in)    :: lwdown   !*FD Downwelling longwave (W/m^2)
-    real(rk),dimension(:,:),optional,intent(in)    :: swdown   !*FD Downwelling shortwave (W/m^2)
+    real(rk),dimension(:,:),optional,intent(in)    :: lwdown   !*FD Downwelling longwave (W/m$^2$)
+    real(rk),dimension(:,:),optional,intent(in)    :: swdown   !*FD Downwelling shortwave (W/m$^2$)
     real(rk),dimension(:,:),optional,intent(in)    :: airpress !*FD surface air pressure (Pa)
 
     params%g_av_temp    = params%g_av_temp    + temp

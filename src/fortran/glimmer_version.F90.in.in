@@ -42,5 +42,6 @@
 
 module glimmer_vers
   character(len=*), parameter :: glimmer_version = 'GLIMMER v. @GLIMMER_MAJOR_VERSION@.@GLIMMER_MINOR_VERSION@.@GLIMMER_MICRO_VERSION@@GLIMMER_CVS_VERS@'
+  integer,parameter :: glimmer_v_number = 10000*@GLIMMER_MAJOR_VERSION@ + 100*@GLIMMER_MINOR_VERSION@ + @GLIMMER_MICRO_VERSION@
   !*FD Glimmer version string
 end module glimmer_vers

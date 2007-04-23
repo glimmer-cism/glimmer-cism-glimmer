@@ -1,7 +1,23 @@
+2007-04-23 Ian Rutt
+ * Merged changes from RELEASE_1_0_0_ANOMALY into RELEASE_1_0_0_BRANCH
+
+2007-04-13 Ian Rutt
+ * Added integer parameter to glimmer_version to enable run-time testing of
+   glimmer version number (1.2.5 -> 10205, for example)
+
+2007-04-04 Ian Rutt
+ * Plumbed anomaly coupling into Glint
+
+2007-04-02 Ian Rutt
+ * Further work on anomaly coupling. Added to build.
+ * Fixed bugs - tested and seems to work
+
 2007-03-27 Ian Rutt
  * Fixed bug with make_restarts.py so that output line-length is kept
    reasonable - build with gfortran fails otherwise.
-
+ * Branched to RELEASE_1_0_0_ANOMALY
+ * Began assembling code for anomaly coupling - added glimmer_anomcouple.F90
+	
 2007-03-16 Ian Rutt
  * Fixed problem specifying sigma levels - all three methods work now
 
