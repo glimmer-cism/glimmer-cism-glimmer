@@ -83,6 +83,7 @@ module glint_example_clim
      integer :: days_in_year=365
      integer :: hours_in_year=365*24
      real(rk) :: precip_scale=1.0 ! Factor to scale precip by
+     logical :: temp_in_kelvin=.true. ! Set if temperature field is in Kelvin
   end type glex_climate
 
   interface read_ncdf
@@ -167,7 +168,10 @@ contains
 
     ! Fix up a few things
 
-    params%surftemp_clim=params%surftemp_clim-273.15       ! Convert temps to degreesC
+    if (params%temp_in_kelvin) then
+       print*,'Converting temperatures to degC'
+       params%surftemp_clim=params%surftemp_clim-273.15 ! Convert temps to degreesC if necessary
+    end if
 
   end subroutine glex_clim_init
 
@@ -191,6 +195,7 @@ contains
     if (associated(section)) then
        call GetValue(section,'filename',params%stemp_file)
        call GetValue(section,'variable',params%stemp_varname)
+       call GetValue(section,'kelvin',  params%temp_in_kelvin)
     end if
     call GetSection(config,section,'GLEX orog')
     if (associated(section)) then

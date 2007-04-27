@@ -54,20 +54,18 @@ module glimmer_anomcouple
 
   implicit none
 
-  character(4),parameter :: pvarname='prcp'
-  character(4),parameter :: tvarname='artm'
-  character(8),dimension(5),parameter :: xvars=(/ &
-       'latitude', &
-       'lat     ', &
-       'x0      ', &
-       'x1      ', &
-       'x       '/)
-  character(9),dimension(5),parameter :: yvars=(/ &
+  character(9),dimension(5),parameter :: xvars=(/ &
        'longitude', &
        'lon      ', &
-       'y0       ', &
-       'y1       ', &
-       'y        '/)
+       'x0       ', &
+       'x1       ', &
+       'x        '/)
+  character(8),dimension(5),parameter :: yvars=(/ &
+       'latitude', &
+       'lat     ', &
+       'y0      ', &
+       'y1      ', &
+       'y       '/)
   character(4),dimension(1),parameter :: tvars=(/ &
        'time'/)
 
@@ -82,6 +80,10 @@ module glimmer_anomcouple
      real(rk),dimension(:,:,:),pointer :: prcp_mod => null() !*FD Model climate (precip)
      real(rk),dimension(:)    ,pointer :: time     => null() !*FD Time axis (fraction of year)
      integer :: nx,ny !*FD Grid dimensions (for convenience)
+     character(20) :: pvarname_ref='prcp                '
+     character(20) :: tvarname_ref='artm                '
+     character(20) :: pvarname_mod='prcp                '
+     character(20) :: tvarname_mod='artm                '
   end type anomaly_coupling
 
   private
@@ -164,6 +166,10 @@ contains
     if (associated(section)) then
        call GetValue(section,'reference',params%fname_reference)
        call GetValue(section,'model',    params%fname_modelclim)
+       call GetValue(section,'precipvar_ref',  params%pvarname_ref)
+       call GetValue(section,'precipvar_model',params%pvarname_mod)
+       call GetValue(section,'tempvar_ref',    params%tvarname_ref)
+       call GetValue(section,'tempvar_model',  params%tvarname_mod)
        params%enabled = .true.
     else
        params%enabled = .false.
@@ -184,11 +190,15 @@ contains
     
     call write_log('Anomaly coupling')
     call write_log("----------------")
-    write(message,*)"Reference climate:",trim(params%fname_reference)
+    write(message,*)" Reference climate:",trim(params%fname_reference)
     call write_log(message)
-    write(message,*)"Model climate:    ",trim(params%fname_modelclim)
+    write(message,*)" Variables: ",trim(params%tvarname_ref),', ',trim(params%pvarname_ref)
     call write_log(message)
-    write(message,*)"Number of slices: ",params%nslices
+    write(message,*)" Model climate:    ",trim(params%fname_modelclim)
+    call write_log(message)
+    write(message,*)" Variables: ",trim(params%tvarname_mod),', ',trim(params%pvarname_mod)
+    call write_log(message)
+    write(message,*)" Number of slices: ",params%nslices
     call write_log(message)
     call write_log("")
 
@@ -206,10 +216,10 @@ contains
     real(rk),dimension(:),pointer :: timemod => null()
     real(rk),dimension(:),pointer :: timeref => null()
 
-    call anomaly_readnc(params%fname_reference,pvarname,params%prcp_ref,timeref,nx(1),ny(1),nt(1))
-    call anomaly_readnc(params%fname_reference,tvarname,params%temp_ref,timeref,nx(2),ny(2),nt(2))
-    call anomaly_readnc(params%fname_modelclim,pvarname,params%prcp_mod,timemod,nx(3),ny(3),nt(3))
-    call anomaly_readnc(params%fname_modelclim,tvarname,params%temp_mod,timemod,nx(4),ny(4),nt(4))
+    call anomaly_readnc(params%fname_reference,params%pvarname_ref,params%prcp_ref,timeref,nx(1),ny(1),nt(1))
+    call anomaly_readnc(params%fname_reference,params%tvarname_ref,params%temp_ref,timeref,nx(2),ny(2),nt(2))
+    call anomaly_readnc(params%fname_modelclim,params%pvarname_mod,params%prcp_mod,timemod,nx(3),ny(3),nt(3))
+    call anomaly_readnc(params%fname_modelclim,params%tvarname_mod,params%temp_mod,timemod,nx(4),ny(4),nt(4))
 
     if (any(nx(1)/=nx(2:4)).or.any(ny(1)/=ny(2:4)).or.any(nt(1)/=nt(2:4))) &
          call write_log("Anomaly coupling: sizes of arrays in climate files do not agree", &
@@ -330,7 +340,7 @@ contains
     end select
 
     ! Fix up time boundaries
-    timeaxis(1)   =1.0-timeaxis(nt+1)
+    timeaxis(1)   =-1.0-timeaxis(nt+1)
     timeaxis(nt+2)=1.0+timeaxis(2)
 
     ! Close the file
@@ -349,7 +359,6 @@ contains
     real(sp),             intent(out) :: frac 
 
     first=1
-
     do
        if (time>=timeaxis(first).and.time<timeaxis(first+1)) then
           frac=(time-timeaxis(first))/(timeaxis(first+1)-timeaxis(first))
