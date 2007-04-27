@@ -1,4 +1,8 @@
 2007-04-27 Ian Rutt
+ * configure.in: bump version to 1.0.2
+ * NEWS: update
+
+2007-04-27 Ian Rutt
  * Fixed bugs in anomaly coupling, and tested
  * Added ability to specify whether temperatures in glint_example climate
    are in Kelvin or not.

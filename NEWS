@@ -1,3 +1,10 @@
+Changes in Version 1.0.2
+========================
+* Fixed bug in specification of sigma levels
+* New code for anomaly coupling in GLINT
+* Integer variable for version interrogation
+* Other minor bugfixes
+
 Changes in Version 1.0.0
 ========================
 * ***The GLINT API has been changed*** See mailing list for information
