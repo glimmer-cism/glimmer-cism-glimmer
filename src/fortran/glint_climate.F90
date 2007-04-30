@@ -77,8 +77,8 @@ contains
             instance%ywind, &
             instance%artm, &
             instance%local_orog, &
-            instance%lgrid%delta%pt(1), &
-            instance%lgrid%delta%pt(2), &
+            real(instance%lgrid%delta%pt(1),rk), &
+            real(instance%lgrid%delta%pt(2),rk), &
             fixed_a=.true.)
     case default
        call write_log('Invalid value of whichprecip',GM_FATAL,__FILE__,__LINE__)

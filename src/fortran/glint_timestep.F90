@@ -334,8 +334,8 @@ contains
                upscale_temp, &
                routing_temp, &
                instance%out_mask, &
-               instance%lgrid%delta%pt(1), &
-               instance%lgrid%delta%pt(2))
+               real(instance%lgrid%delta%pt(1),rk), &
+               real(instance%lgrid%delta%pt(2),rk))
 
           call mean_to_global(instance%ups,   &
                routing_temp,   &

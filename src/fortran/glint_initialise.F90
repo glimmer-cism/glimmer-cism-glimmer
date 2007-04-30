@@ -144,7 +144,7 @@ contains
          instance%snowd,instance%siced, &
          instance%lgrid%size%pt(1), &
          instance%lgrid%size%pt(2), &
-         instance%lgrid%delta%pt(1))
+         real(instance%lgrid%delta%pt(1),rk))
     instance%mbal_tstep=instance%mbal_accum%mbal%tstep
     mbts=instance%mbal_tstep
 
