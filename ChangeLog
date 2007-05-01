@@ -1,3 +1,9 @@
+2007-05-01 Ian Rutt
+ * Discovered that there was inadequate precision in the single-precision
+   version of glimmer for the calculation of fractional locations in the
+   interpolation code (glint_interp.F90, subroutine calc_fractional). Promoted all
+   internal variables in this subroutine to double-precision. 
+
 2007-04-30 Ian Rutt
  * Fixed bugs that prevented single-precision compilation
 
