@@ -56,7 +56,7 @@ contains
   !*****************************************************************************
   ! netCDF output
   !*****************************************************************************
-  subroutine NAME_io_createall(model,data)
+  subroutine NAME_io_createall(model,data,outfiles)
     !*FD open all netCDF files for output
     use DATAMOD
     use glide_types
@@ -65,11 +65,17 @@ contains
     implicit none
     type(glide_global_type) :: model
     type(DATATYPE), optional :: data
+    type(glimmer_nc_output),optional,pointer :: outfiles
     
     ! local variables
     type(glimmer_nc_output), pointer :: oc
 
-    oc=>model%funits%out_first
+    if (present(outfiles)) then
+       oc => outfiles
+    else
+       oc=>model%funits%out_first
+    end if
+
     do while(associated(oc))
        if (present(data)) then
           call NAME_io_create(oc,model,data)
@@ -80,7 +86,7 @@ contains
     end do
   end subroutine NAME_io_createall
 
-  subroutine NAME_io_writeall(data,model,atend)
+  subroutine NAME_io_writeall(data,model,atend,outfiles,time)
     !*FD if necessary write to netCDF files
     use DATAMOD
     use glide_types
@@ -90,23 +96,30 @@ contains
     type(DATATYPE) :: data
     type(glide_global_type) :: model
     logical, optional :: atend
+    type(glimmer_nc_output),optional,pointer :: outfiles
+    real(sp),optional :: time
 
     ! local variables
     type(glimmer_nc_output), pointer :: oc
     logical :: forcewrite=.false.
 
+    if (present(outfiles)) then
+       oc => outfiles
+    else
+       oc=>model%funits%out_first
+    end if
+
     if (present(atend)) then
        forcewrite = atend
     end if
 
-    oc=>model%funits%out_first
     do while(associated(oc))
 #ifdef HAVE_AVG
        if (oc%do_averages) then
           call NAME_avg_accumulate(oc,data,model)
        end if
 #endif
-       call glimmer_nc_checkwrite(oc,model,forcewrite)
+       call glimmer_nc_checkwrite(oc,model,forcewrite,time)
        if (oc%nc%just_processed) then
           ! write standard variables
           call NAME_io_write(oc,data)

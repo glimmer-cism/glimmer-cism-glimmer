@@ -63,6 +63,7 @@ contains
     use glint_global_grid
     use glint_io
     use glint_mbal_io
+    use glimmer_ncio
     use glide
     use glimmer_log
     use glint_constants
@@ -90,18 +91,22 @@ contains
     instance%ice_tstep=get_tinc(instance%model)*years2hours
     instance%glide_time=instance%model%numerics%tstart
     idts=instance%ice_tstep
-
-    ! create glint variables
-    call glint_io_createall(instance%model)
-    call glint_mbal_io_createall(instance%model)
-
-    ! fill dimension variables
-    call glide_nc_fillall(instance%model)
  
     ! read glint configuration
 
     call glint_i_readconfig(instance,config)    
     call glint_i_printconfig(instance)    
+ 
+    ! create glint variables for the glide output files
+    call glint_io_createall(instance%model,data=instance)
+
+    ! create instantaneous glint variables
+    call openall_out(instance%model,outfiles=instance%out_first)
+    call glint_mbal_io_createall(instance%model,data=instance,outfiles=instance%out_first)
+
+    ! fill dimension variables
+    call glide_nc_fillall(instance%model)
+    call glide_nc_fillall(instance%model,outfiles=instance%out_first)
 
     ! Check we've used all the config sections
 
@@ -199,7 +204,7 @@ contains
 
     call glide_io_writeall(instance%model,instance%model)
     call glint_io_writeall(instance,instance%model)
-    call glint_mbal_io_writeall(instance%mbal_accum,instance%model)
+    call glint_mbal_io_writeall(instance,instance%model,outfiles=instance%out_first)
 
     if (instance%whichprecip==2) need_winds=.true.
     if (instance%whichacab==3) then
@@ -216,10 +221,13 @@ contains
     !*FD Performs tidying-up for an ice model. 
 
     use glide
+    use glimmer_ncio
     implicit none
     type(glint_instance),  intent(inout) :: instance    !*FD The instance being initialised.
 
     call glide_finalise(instance%model)
+    call closeall_out(instance%model,outfiles=instance%out_first)
+    instance%out_first => null()
 
   end subroutine glint_i_end
 

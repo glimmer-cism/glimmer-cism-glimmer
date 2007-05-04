@@ -1,3 +1,11 @@
+2007-05-04 Ian Rutt
+ * Fixed bug in GLINT output: After rejigging GLINT timestepping, output was only 
+   possible at GLIDE time-steps, due to separation of time variables between the two. 
+   Overcame this by building extra code to handle instantaneous glint variables; this
+   can be accessed using [GLINT output] section in config file.
+ * Added functionality to turn off writing glide output using optional argument (this
+   facilitates GLINT output timing)
+
 2007-05-01 Ian Rutt
  * Discovered that there was inadequate precision in the single-precision
    version of glimmer for the calculation of fractional locations in the

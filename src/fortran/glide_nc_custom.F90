@@ -49,18 +49,24 @@
 module glide_nc_custom
   !*FD module for filling in dimension variables
 contains
-  subroutine glide_nc_fillall(model)
+  subroutine glide_nc_fillall(model,outfiles)
     !*FD fill dimension variables of all files
     use glide_types
     use glimmer_ncdf
     use glimmer_ncio
     implicit none
     type(glide_global_type) :: model
-    
+    type(glimmer_nc_output),pointer,optional :: outfiles
+
     ! local variables
     type(glimmer_nc_output), pointer :: oc
 
-    oc=>model%funits%out_first
+    if (present(outfiles)) then
+       oc => outfiles
+    else
+       oc=>model%funits%out_first
+    end if
+
     do while(associated(oc))
        if (.not.oc%append) call glide_nc_filldvars(oc,model)
        oc=>oc%next

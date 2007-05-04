@@ -53,9 +53,10 @@ module glimmer_ncparams
   use glimmer_ncdf, only: glimmer_nc_meta
     
   private
-  public :: glimmer_nc_readparams
+  public :: glimmer_nc_readparams, default_metadata, handle_output, handle_input, configstring
 
   type(glimmer_nc_meta),save :: default_metadata
+  character(10000) :: configstring
 
 contains
     subroutine glimmer_nc_readparams(model,config)
@@ -70,7 +71,6 @@ contains
     type(ConfigSection), pointer :: section
     type(glimmer_nc_output), pointer :: output => null()
     type(glimmer_nc_input), pointer :: input => null()
-    character(10000) :: configstring
 
     ! get config string
     call ConfigAsString(config,configstring)

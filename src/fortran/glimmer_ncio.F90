@@ -58,17 +58,23 @@ contains
   !*****************************************************************************
   ! netCDF output
   !*****************************************************************************  
-  subroutine openall_out(model)
+  subroutine openall_out(model,outfiles)
     !*FD open all netCDF files for output
     use glide_types
     use glimmer_ncdf
     implicit none
     type(glide_global_type) :: model
+    type(glimmer_nc_output),pointer,optional :: outfiles
     
     ! local variables
     type(glimmer_nc_output), pointer :: oc
 
-    oc=>model%funits%out_first
+    if (present(outfiles)) then
+       oc => outfiles
+    else
+       oc=>model%funits%out_first
+    end if
+
     do while(associated(oc))
        if (oc%append) then
           call glimmer_nc_openappend(oc,model)
@@ -79,21 +85,27 @@ contains
     end do
   end subroutine openall_out
 
-  subroutine closeall_out(model)
+  subroutine closeall_out(model,outfiles)
     !*FD close all netCDF files for output
     use glide_types
     use glimmer_ncdf
     implicit none
     type(glide_global_type) :: model
-    
+    type(glimmer_nc_output),pointer,optional :: outfiles
+
     ! local variables
     type(glimmer_nc_output), pointer :: oc
 
-    oc=>model%funits%out_first
+    if (present(outfiles)) then
+       oc => outfiles
+    else
+       oc=>model%funits%out_first
+    end if
+
     do while(associated(oc))
        oc=>delete(oc)
     end do
-    model%funits%out_first=>NULL()
+    if (.not.present(outfiles)) model%funits%out_first=>NULL()
   end subroutine closeall_out
 
   subroutine glimmer_nc_openappend(outfile,model)
@@ -211,7 +223,7 @@ contains
     NCO%nlevel = model%general%upn
   end subroutine glimmer_nc_createfile
 
-  subroutine glimmer_nc_checkwrite(outfile,model,forcewrite)
+  subroutine glimmer_nc_checkwrite(outfile,model,forcewrite,time)
     !*FD check if we should write to file
     use glimmer_log
     use glide_types
@@ -219,9 +231,18 @@ contains
     type(glimmer_nc_output), pointer :: outfile    
     type(glide_global_type) :: model
     logical forcewrite
+    real(sp),optional :: time
 
     character(len=msglen) :: message
     integer status
+    real(sp) :: sub_time
+
+    ! Check for optional time argument
+    if (present(time)) then
+       sub_time=time
+    else
+       sub_time=model%numerics%time
+    end if
 
     ! check if we are still in define mode and if so leave it
     if (NCO%define_mode) then
@@ -230,7 +251,7 @@ contains
        NCO%define_mode = .FALSE.
     end if
 
-    if (model%numerics%time.gt.NCO%processsed_time) then
+    if (sub_time.gt.NCO%processsed_time) then
        if (NCO%just_processed) then
           ! finished writing during last time step, need to increase counter...
           
@@ -240,16 +261,16 @@ contains
           NCO%just_processed = .FALSE.
        end if
     end if
-    if (model%numerics%time.ge.outfile%next_write .or. (forcewrite.and.model%numerics%time.gt.outfile%next_write-outfile%freq)) then
-       if (model%numerics%time.le.outfile%end_write .and. .not.NCO%just_processed) then
+    if (sub_time.ge.outfile%next_write .or. (forcewrite.and.sub_time.gt.outfile%next_write-outfile%freq)) then
+       if (sub_time.le.outfile%end_write .and. .not.NCO%just_processed) then
           call write_log_div
-          write(message,*) 'Writing to file ', trim(NCO%filename), ' at time ', model%numerics%time
+          write(message,*) 'Writing to file ', trim(NCO%filename), ' at time ', sub_time
           call write_log(trim(message))
           ! increase next_write
           outfile%next_write=outfile%next_write+outfile%freq
-          NCO%processsed_time = model%numerics%time
+          NCO%processsed_time = sub_time
           ! write time
-          status = nf90_put_var(NCO%id,NCO%timevar,model%numerics%time,(/outfile%timecounter/))
+          status = nf90_put_var(NCO%id,NCO%timevar,sub_time,(/outfile%timecounter/))
           call nc_errorhandle(__FILE__,__LINE__,status)
           NCO%just_processed = .TRUE.         
        end if
@@ -425,7 +446,7 @@ contains
     end if
   end subroutine glimmer_nc_openfile
 
-  subroutine glimmer_nc_checkread(infile,model)
+  subroutine glimmer_nc_checkread(infile,model,time)
     !*FD check if we should read from file
     use glimmer_log
     use glide_types
@@ -434,20 +455,29 @@ contains
     !*FD structure containg output netCDF descriptor
     type(glide_global_type) :: model
     !*FD the model instance
+    real(sp),optional :: time
+    !*FD Optional alternative time
 
     character(len=msglen) :: message
+    real(sp) :: sub_time
+
+    if (present(time)) then
+       sub_time=time
+    else
+       sub_time=model%numerics%time
+    end if
 
     if (infile%current_time.le.infile%nt) then
        if (.not.NCI%just_processed) then
           call write_log_div
           write(message,*) 'Reading time slice ',infile%current_time,'(',infile%times(infile%current_time),') from file ', &
-               trim(NCI%filename), ' at time ', model%numerics%time
+               trim(NCI%filename), ' at time ', sub_time
           call write_log(message)
           NCI%just_processed = .TRUE.
-          NCI%processsed_time = model%numerics%time
+          NCI%processsed_time = sub_time
        end if
     end if
-    if (model%numerics%time.gt.NCI%processsed_time) then
+    if (sub_time.gt.NCI%processsed_time) then
        if (NCI%just_processed) then
           ! finished reading during last time step, need to increase counter...
           infile%current_time = infile%current_time + 1

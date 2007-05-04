@@ -275,7 +275,7 @@ contains
   end subroutine glide_tstep_p1
 
 
-  subroutine glide_tstep_p2(model)
+  subroutine glide_tstep_p2(model,no_write)
     !*FD Performs second part of time-step of an ice model instance.
     !*FD write data and move ice
     use glide_thck
@@ -287,11 +287,21 @@ contains
     implicit none
 
     type(glide_global_type) :: model        !*FD model instance
+    logical,optional :: no_write
+
+    logical nw
 
     ! ------------------------------------------------------------------------ 
     ! write to netCDF file
     ! ------------------------------------------------------------------------ 
-    call glide_io_writeall(model,model)
+
+    if (present(no_write)) then
+       nw=no_write
+    else
+       nw=.false.
+    end if
+
+    if (.not. nw) call glide_io_writeall(model,model)
 
     ! ------------------------------------------------------------------------ 
     ! Calculate flow evolution by various different methods
