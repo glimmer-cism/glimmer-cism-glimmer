@@ -403,7 +403,7 @@ contains
     case(1)  ! North pole
        x =  2.0 * params%k0 * tan(M_PI_4 - dlat/2.0)*slon
        y = -2.0 * params%k0 * tan(M_PI_4 - dlat/2.0)*clon
-    case(2)  ! South pole
+    case(-1)  ! South pole
        x = 2.0 * params%k0 * tan(M_PI_4 + dlat/2.0)*slon
        y = 2.0 * params%k0 * tan(M_PI_4 + dlat/2.0)*clon
     case(0)  ! Oblique

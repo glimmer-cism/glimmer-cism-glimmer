@@ -1,3 +1,9 @@
+2007-05-28 Ian Rutt
+ * Added use glimmer_config to glide so that configs can be dealt with 
+   with only one use statement
+ * Fixed problem with ^ in generating LaTeX from .def files
+ * Fixed bugs with south pole usage of stereographic projection
+	
 2007-05-04 Ian Rutt
  * Fixed bug in GLINT output: After rejigging GLINT timestepping, output was only 
    possible at GLIDE time-steps, due to separation of time variables between the two. 

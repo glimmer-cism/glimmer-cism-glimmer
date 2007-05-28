@@ -121,14 +121,14 @@ coordinates:   lon lat
 
 [instant_swdown]
 dimensions:    time, y1, x1
-units:         W/m^2
+units:         W/m2
 long_name:     instantaneous sw down 
 data:          data%mbal_accum%swdown
 coordinates:   lon lat
 
 [instant_lwdown]
 dimensions:    time, y1, x1
-units:         W/m^2
+units:         W/m2
 long_name:     instantaneous lw down
 data:          data%mbal_accum%lwdown
 coordinates:   lon lat

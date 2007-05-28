@@ -53,6 +53,7 @@ module glide
   use glide_io
   use glide_lithot
   use glide_profile
+  use glimmer_config
   integer, private, parameter :: dummyunit=99
 
 contains
