@@ -441,7 +441,8 @@ contains
 
     if (params%pole==1.or.params%pole==-1) then
        if (params%standard_parallel/=0.0) then
-          params%k0 = EQ_RAD * (1 + sin(D2R*params%standard_parallel))/2.0
+          if (params%pole==1)  params%k0 = EQ_RAD * (1 + sin(D2R*params%standard_parallel))/2.0
+          if (params%pole==-1) params%k0 = EQ_RAD * (1 - sin(D2R*params%standard_parallel))/2.0
        else if (params%scale_factor_at_proj_origin/=0.0) then
           params%k0 = EQ_RAD * params%scale_factor_at_proj_origin
        else

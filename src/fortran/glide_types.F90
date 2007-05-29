@@ -633,6 +633,8 @@ contains
     !*FD \item \texttt{sigma(upn))}
     !*FD \end{itemize}
 
+    use glimmer_log
+
     implicit none
 
     type(glide_global_type),intent(inout) :: model
@@ -705,8 +707,16 @@ contains
     call coordsystem_allocate(model%general%ice_grid, model%thckwk%oldthck)
     call coordsystem_allocate(model%general%ice_grid, model%thckwk%oldthck2)
     call coordsystem_allocate(model%general%ice_grid, model%thckwk%float)
-    allocate(model%numerics%sigma(upn))
-    
+
+    ! If we already have sigma, don't reallocate
+    if (associated(model%numerics%sigma)) then
+       if (size(model%numerics%sigma)/=upn) then
+          call write_log('Wrong number of sigma levels given',GM_FATAL)
+       end if
+    else
+       allocate(model%numerics%sigma(upn))
+    endif
+
     ! allocate memory for sparse matrix
     allocate (model%pcgdwk%pcgrow(ewn*nsn*5))
     allocate (model%pcgdwk%pcgcol(ewn*nsn*5+2))

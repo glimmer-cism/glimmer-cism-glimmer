@@ -58,17 +58,23 @@ contains
   !*****************************************************************************
   ! netCDF output
   !*****************************************************************************  
-  subroutine openall_out(model)
+  subroutine openall_out(model,outfiles)
     !*FD open all netCDF files for output
     use glide_types
     use glimmer_ncdf
     implicit none
     type(glide_global_type) :: model
+    type(glimmer_nc_output),pointer,optional :: outfiles
     
     ! local variables
     type(glimmer_nc_output), pointer :: oc
 
-    oc=>model%funits%out_first
+    if (present(outfiles)) then
+       oc => outfiles
+    else
+       oc=>model%funits%out_first
+    end if
+
     do while(associated(oc))
        if (oc%append) then
           call glimmer_nc_openappend(oc,model)
@@ -79,21 +85,27 @@ contains
     end do
   end subroutine openall_out
 
-  subroutine closeall_out(model)
+  subroutine closeall_out(model,outfiles)
     !*FD close all netCDF files for output
     use glide_types
     use glimmer_ncdf
     implicit none
     type(glide_global_type) :: model
-    
+    type(glimmer_nc_output),pointer,optional :: outfiles
+
     ! local variables
     type(glimmer_nc_output), pointer :: oc
 
-    oc=>model%funits%out_first
+    if (present(outfiles)) then
+       oc => outfiles
+    else
+       oc=>model%funits%out_first
+    end if
+
     do while(associated(oc))
        oc=>delete(oc)
     end do
-    model%funits%out_first=>NULL()
+    if (.not.present(outfiles)) model%funits%out_first=>NULL()
   end subroutine closeall_out
 
   subroutine glimmer_nc_openappend(outfile,model)
@@ -102,6 +114,7 @@ contains
     use glide_types
     use glimmer_map_CFproj
     use glimmer_map_types
+    use glimmer_filenames
     implicit none
     type(glimmer_nc_output), pointer :: outfile
     !*FD structure containg output netCDF descriptor
@@ -114,10 +127,10 @@ contains
     character(len=msglen) :: message
 
     ! open existing netCDF file
-    status = nf90_open(NCO%filename,NF90_WRITE,NCO%id)
+    status = nf90_open(process_path(NCO%filename),NF90_WRITE,NCO%id)
     call nc_errorhandle(__FILE__,__LINE__,status)
     call write_log_div
-    write(message,*) 'Reopening file ',trim(NCO%filename),' for output; '
+    write(message,*) 'Reopening file ',trim(process_path(NCO%filename)),' for output; '
     call write_log(trim(message))
     ! Find out when last time-slice was
     status = nf90_inq_dimid(NCO%id,'time',timedimid)
@@ -145,6 +158,7 @@ contains
     use glide_types
     use glimmer_map_CFproj
     use glimmer_map_types
+    use glimmer_filenames
     implicit none
     type(glimmer_nc_output), pointer :: outfile
     !*FD structure containg output netCDF descriptor
@@ -157,10 +171,10 @@ contains
     character(len=msglen) message
 
     ! create new netCDF file
-    status = nf90_create(NCO%filename,NF90_CLOBBER,NCO%id)
+    status = nf90_create(process_path(NCO%filename),NF90_CLOBBER,NCO%id)
     call nc_errorhandle(__FILE__,__LINE__,status)
     call write_log_div
-    write(message,*) 'Opening file ',trim(NCO%filename),' for output; '
+    write(message,*) 'Opening file ',trim(process_path(NCO%filename)),' for output; '
     call write_log(trim(message))
     write(message,*) '  Starting output at ',outfile%next_write,' and write every ',outfile%freq,' years'
     call write_log(trim(message))
@@ -211,17 +225,27 @@ contains
     NCO%nlevel = model%general%upn
   end subroutine glimmer_nc_createfile
 
-  subroutine glimmer_nc_checkwrite(outfile,model,forcewrite)
+  subroutine glimmer_nc_checkwrite(outfile,model,forcewrite,time)
     !*FD check if we should write to file
     use glimmer_log
     use glide_types
+    use glimmer_filenames
     implicit none
     type(glimmer_nc_output), pointer :: outfile    
     type(glide_global_type) :: model
     logical forcewrite
+    real(sp),optional :: time
 
     character(len=msglen) :: message
     integer status
+    real(sp) :: sub_time
+
+    ! Check for optional time argument
+    if (present(time)) then
+       sub_time=time
+    else
+       sub_time=model%numerics%time
+    end if
 
     ! check if we are still in define mode and if so leave it
     if (NCO%define_mode) then
@@ -230,7 +254,7 @@ contains
        NCO%define_mode = .FALSE.
     end if
 
-    if (model%numerics%time.gt.NCO%processsed_time) then
+    if (sub_time.gt.NCO%processsed_time) then
        if (NCO%just_processed) then
           ! finished writing during last time step, need to increase counter...
           
@@ -240,16 +264,16 @@ contains
           NCO%just_processed = .FALSE.
        end if
     end if
-    if (model%numerics%time.ge.outfile%next_write .or. (forcewrite.and.model%numerics%time.gt.outfile%next_write-outfile%freq)) then
-       if (model%numerics%time.le.outfile%end_write .and. .not.NCO%just_processed) then
+    if (sub_time.ge.outfile%next_write .or. (forcewrite.and.sub_time.gt.outfile%next_write-outfile%freq)) then
+       if (sub_time.le.outfile%end_write .and. .not.NCO%just_processed) then
           call write_log_div
-          write(message,*) 'Writing to file ', trim(NCO%filename), ' at time ', model%numerics%time
+          write(message,*) 'Writing to file ', trim(process_path(NCO%filename)), ' at time ', sub_time
           call write_log(trim(message))
           ! increase next_write
           outfile%next_write=outfile%next_write+outfile%freq
-          NCO%processsed_time = model%numerics%time
+          NCO%processsed_time = sub_time
           ! write time
-          status = nf90_put_var(NCO%id,NCO%timevar,model%numerics%time,(/outfile%timecounter/))
+          status = nf90_put_var(NCO%id,NCO%timevar,sub_time,(/outfile%timecounter/))
           call nc_errorhandle(__FILE__,__LINE__,status)
           NCO%just_processed = .TRUE.         
        end if
@@ -299,7 +323,8 @@ contains
     use glimmer_map_cfproj
     use glimmer_map_types
     use glimmer_log
-    use glimmer_paramets, only: len0
+    use paramets, only: len0
+    use glimmer_filenames
     implicit none
     type(glimmer_nc_input), pointer :: infile
     !*FD structure containg input netCDF descriptor
@@ -315,13 +340,13 @@ contains
     real,parameter :: small = 1.e-6
 
     ! open netCDF file
-    status = nf90_open(NCI%filename,NF90_NOWRITE,NCI%id)
+    status = nf90_open(process_path(NCI%filename),NF90_NOWRITE,NCI%id)
     if (status.ne.NF90_NOERR) then
-       call write_log('Error opening file '//trim(NCI%filename)//': '//nf90_strerror(status),&
+       call write_log('Error opening file '//trim(process_path(NCI%filename))//': '//nf90_strerror(status),&
             type=GM_FATAL,file=__FILE__,line=__LINE__)
     end if
     call write_log_div
-    call write_log('opening file '//trim(NCI%filename)//' for input')
+    call write_log('opening file '//trim(process_path(NCI%filename))//' for input')
 
     ! getting projection, if none defined already
     if (.not.glimmap_allocated(model%projection)) model%projection = glimmap_CFGetProj(NCI%id)
@@ -350,7 +375,7 @@ contains
     status = nf90_inquire_dimension(NCI%id,dimid,len=dimsize)
     call nc_errorhandle(__FILE__,__LINE__,status)
     if (dimsize.ne.model%general%ewn) then
-       write(message,*) 'Dimension x1 of file '//trim(NCI%filename)//' does not match with config dimension: ',&
+       write(message,*) 'Dimension x1 of file '//trim(process_path(NCI%filename))//' does not match with config dimension: ',&
             dimsize, model%general%ewn
        call write_log(message,type=GM_FATAL)
     end if
@@ -359,7 +384,7 @@ contains
     status = nf90_get_var(NCI%id,varid,delta)
     call nc_errorhandle(__FILE__,__LINE__,status)
     if (abs(delta(2)-delta(1) - model%numerics%dew*len0).gt.small) then
-       write(message,*) 'deltax1 of file '//trim(NCI%filename)//' does not match with config deltax: ',&
+       write(message,*) 'deltax1 of file '//trim(process_path(NCI%filename))//' does not match with config deltax: ',&
             delta(2)-delta(1),model%numerics%dew*len0
        call write_log(message,type=GM_FATAL)
     end if
@@ -370,7 +395,7 @@ contains
     status = nf90_inquire_dimension(NCI%id,dimid,len=dimsize)
     call nc_errorhandle(__FILE__,__LINE__,status)
     if (dimsize.ne.model%general%ewn-1) then
-       write(message,*) 'Dimension x0 of file ',trim(NCI%filename),' does not match with config dimension: ', &
+       write(message,*) 'Dimension x0 of file ',trim(process_path(NCI%filename)),' does not match with config dimension: ', &
             dimsize, model%general%ewn-1
        call write_log(message,type=GM_FATAL)
     end if
@@ -379,7 +404,7 @@ contains
     status = nf90_get_var(NCI%id,varid,delta)
     call nc_errorhandle(__FILE__,__LINE__,status)
     if (abs(delta(2)-delta(1) - model%numerics%dew*len0).gt.small) then
-       write(message,*) 'deltax0 of file '//trim(NCI%filename)//' does not match with config deltax: ', &
+       write(message,*) 'deltax0 of file '//trim(process_path(NCI%filename))//' does not match with config deltax: ', &
             delta(2)-delta(1),model%numerics%dew*len0
        call write_log(message,type=GM_FATAL)
     end if
@@ -390,7 +415,7 @@ contains
     status = nf90_inquire_dimension(NCI%id,dimid,len=dimsize)
     call nc_errorhandle(__FILE__,__LINE__,status)
     if (dimsize.ne.model%general%nsn) then
-       write(message,*) 'Dimension y1 of file '//trim(NCI%filename)//' does not match with config dimension: ',&
+       write(message,*) 'Dimension y1 of file '//trim(process_path(NCI%filename))//' does not match with config dimension: ',&
             dimsize, model%general%nsn
        call write_log(message,type=GM_FATAL)
     end if
@@ -399,7 +424,7 @@ contains
     status = nf90_get_var(NCI%id,varid,delta)
     call nc_errorhandle(__FILE__,__LINE__,status)
     if (abs(delta(2)-delta(1) - model%numerics%dns*len0).gt.small) then
-       write(message,*) 'deltay1 of file '//trim(NCI%filename)//' does not match with config deltay: ',&
+       write(message,*) 'deltay1 of file '//trim(process_path(NCI%filename))//' does not match with config deltay: ',&
             delta(2)-delta(1),model%numerics%dns*len0
        call write_log(message,type=GM_FATAL)
     end if
@@ -410,7 +435,7 @@ contains
     status = nf90_inquire_dimension(NCI%id,dimid,len=dimsize)
     call nc_errorhandle(__FILE__,__LINE__,status)
     if (dimsize.ne.model%general%nsn-1) then
-       write(message,*) 'Dimension y0 of file '//trim(NCI%filename)//' does not match with config dimension: ',&
+       write(message,*) 'Dimension y0 of file '//trim(process_path(NCI%filename))//' does not match with config dimension: ',&
             dimsize, model%general%nsn-1
        call write_log(message,type=GM_FATAL)
     end if
@@ -419,35 +444,45 @@ contains
     status = nf90_get_var(NCI%id,varid,delta)
     call nc_errorhandle(__FILE__,__LINE__,status)
     if (abs(delta(2)-delta(1) - model%numerics%dns*len0).gt.small) then
-       write(message,*) 'deltay0 of file '//trim(NCI%filename)//' does not match with config deltay: ',&
+       write(message,*) 'deltay0 of file '//trim(process_path(NCI%filename))//' does not match with config deltay: ',&
             delta(2)-delta(1),model%numerics%dns*len0
        call write_log(message,type=GM_FATAL)
     end if
   end subroutine glimmer_nc_openfile
 
-  subroutine glimmer_nc_checkread(infile,model)
+  subroutine glimmer_nc_checkread(infile,model,time)
     !*FD check if we should read from file
     use glimmer_log
     use glide_types
+    use glimmer_filenames
     implicit none
     type(glimmer_nc_input), pointer :: infile
     !*FD structure containg output netCDF descriptor
     type(glide_global_type) :: model
     !*FD the model instance
+    real(sp),optional :: time
+    !*FD Optional alternative time
 
     character(len=msglen) :: message
+    real(sp) :: sub_time
+
+    if (present(time)) then
+       sub_time=time
+    else
+       sub_time=model%numerics%time
+    end if
 
     if (infile%current_time.le.infile%nt) then
        if (.not.NCI%just_processed) then
           call write_log_div
           write(message,*) 'Reading time slice ',infile%current_time,'(',infile%times(infile%current_time),') from file ', &
-               trim(NCI%filename), ' at time ', model%numerics%time
+               trim(process_path(NCI%filename)), ' at time ', sub_time
           call write_log(message)
           NCI%just_processed = .TRUE.
-          NCI%processsed_time = model%numerics%time
+          NCI%processsed_time = sub_time
        end if
     end if
-    if (model%numerics%time.gt.NCI%processsed_time) then
+    if (sub_time.gt.NCI%processsed_time) then
        if (NCI%just_processed) then
           ! finished reading during last time step, need to increase counter...
           infile%current_time = infile%current_time + 1

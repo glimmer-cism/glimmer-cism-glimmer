@@ -1,3 +1,18 @@
+Changes in Version 1.0.4
+========================
+* Fixed problems with single-precision version
+* Sorted out GLINT output - new [GLINT output] section added to
+  config file
+* Fixed problem with south-polar stereographic projection 
+* Added functionality to change default file path for glimmer
+
+Changes in Version 1.0.2
+========================
+* Fixed bug in specification of sigma levels
+* New code for anomaly coupling in GLINT
+* Integer variable for version interrogation
+* Other minor bugfixes
+
 Changes in Version 1.0.0
 ========================
 * ***The GLINT API has been changed*** See mailing list for information

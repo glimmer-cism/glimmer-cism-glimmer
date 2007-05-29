@@ -24,7 +24,8 @@ RESTART_CODE = glide_types.F90 glimmer_config.F90 glimmer_coordinates.F90 \
                   glimmer_pdd.F90 glimmer_searchcircle.F90 glimmer_sparse.F90 \
                   glimmer_ts.F90 glint_main.F90 glint_global_grid.F90 glint_interp.F90 \
                   glint_mbal_coupling.F90 glint_mbal.F90 glint_smb.F90 glint_type.F90 \
-                  isostasy_types.F90 profile.F90 simple_forcing.F90 glimmer_paramets.F90
+                  isostasy_types.F90 profile.F90 simple_forcing.F90 glimmer_paramets.F90 \
+                  glimmer_anomcouple.F90
 libglimmer_a_SOURCES = glimmer_vers.F90 \
                        glimmer_config.F90 glimmer_global.F90 glimmer_utils.F90\
                        glimmer_log.F90 glimmer_ts.F90 glimmer_ncdf.F90 \
@@ -38,8 +39,8 @@ libglimmer_a_SOURCES = glimmer_vers.F90 \
                        glimmer_map_types.F90 glimmer_map_init.F90 \
                        glimmer_map_trans.F90 glimmer_restart_common.F90 \
                        glimmer_restart_statscal.F90 glimmer_restart_statarr.F90 \
-                       glimmer_restart_pointarr.F90 \
-                       $(RESTART_INCS) glimmer_restart.F90
+                       glimmer_restart_pointarr.F90 glimmer_anomcouple.F90 \
+                       $(RESTART_INCS) glimmer_restart.F90 glimmer_filenames.F90
 nodist_libglimmer_a_SOURCES = glimmer_vers.F90
 libglide_a_SOURCES = glide.F90 glide_setup.F90 glide_types.F90 glide_temp.F90 \
                      glide_thck.F90 glide_velo.F90 glide_mask.F90 \

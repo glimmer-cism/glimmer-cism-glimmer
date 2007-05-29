@@ -918,8 +918,8 @@ contains
     real(rk),intent(out) :: y !*FD The fractional $y$ location.
     real(rk),intent(in)  :: xp,yp,xa,ya,xb,yb,xc,yc,xd,yd
 
-    real(rk) :: a,b,c
-    real(rk),parameter :: small=1d-8
+    real(dp) :: a,b,c
+    real(dp),parameter :: small=1d-8
 
     a=(yb-ya)*(xc-xd)-(yc-yd)*(xb-xa)
 

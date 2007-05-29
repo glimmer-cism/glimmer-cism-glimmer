@@ -44,6 +44,9 @@
 #include <config.inc>
 #endif
 
+#define NCO outfile%nc
+#define NCI infile%nc
+
 module glint_type
 
   !*FD contains type definitions for GLINT
@@ -145,6 +148,11 @@ module glint_type
      ! Counter for averaging temperature input --------------------------------------
 
      integer  :: av_count = 0 !*FD Counter for averaging temperature input
+
+     ! Pointers to file input and output
+
+     type(glimmer_nc_output),pointer :: out_first => null() !*FD first element of linked list defining netCDF outputs
+     type(glimmer_nc_input), pointer :: in_first => null()  !*FD first element of linked list defining netCDF inputs
 
   end type glint_instance
 
@@ -307,7 +315,54 @@ contains
        instance%mbal_accum_time = -1
     end if
 
+    call glint_nc_readparams(instance,config)
+
   end subroutine glint_i_readconfig
+
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  
+  subroutine glint_nc_readparams(instance,config)
+    !*FD read netCDF I/O related configuration file
+    !*FD based on glimmer_ncparams
+    use glimmer_config
+    use glimmer_ncparams, only: handle_output, handle_input, configstring
+    implicit none
+    type(glint_instance)         :: instance  !*FD GLINT instance
+    type(ConfigSection), pointer :: config !*FD structure holding sections of configuration file
+    
+    ! local variables
+    type(ConfigSection), pointer :: section
+    type(glimmer_nc_output), pointer :: output
+    type(glimmer_nc_input), pointer :: input
+
+    ! Initialise local pointers 
+    output => null()
+    input => null()
+
+    ! setup outputs
+    call GetSection(config,section,'GLINT output')
+    do while(associated(section))
+       output => handle_output(section,output,0.0,configstring)
+       if (.not.associated(instance%out_first)) then
+          instance%out_first => output
+       end if
+       call GetSection(section%next,section,'GLINT output')
+    end do
+
+    ! setup inputs
+    call GetSection(config,section,'GLINT input')
+    do while(associated(section))
+       input => handle_input(section,input)
+       if (.not.associated(instance%in_first)) then
+          instance%in_first => input
+       end if
+       call GetSection(section%next,section,'GLINT input')
+    end do
+    
+    output => null()
+    input => null()
+
+  end subroutine glint_nc_readparams
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

@@ -1,6 +1,57 @@
+2007-05-29 Ian Rutt
+ * Merged in changes from RELEASE_1_0_0_BRANCH, until the 
+   RELEASE_1_0_4 tag, as below:
+
+2007-05-29 Ian Rutt
+ * Added code to enable the setting of a default path for glint and glide. This
+   code is in glimmer_filenames.F90, and can be accessed with the glimmer_set_path
+   subroutine.
+	
+2007-05-28 Ian Rutt
+ * Added use glimmer_config to glide so that configs can be dealt with 
+   with only one use statement
+ * Fixed problem with ^ in generating LaTeX from .def files
+ * Fixed bugs with south pole usage of stereographic projection
+	
+2007-05-04 Ian Rutt
+ * Fixed bug in GLINT output: After rejigging GLINT timestepping, output was only 
+   possible at GLIDE time-steps, due to separation of time variables between the two. 
+   Overcame this by building extra code to handle instantaneous glint variables; this
+   can be accessed using [GLINT output] section in config file.
+ * Added functionality to turn off writing glide output using optional argument (this
+   facilitates GLINT output timing)
+
+2007-05-01 Ian Rutt
+ * Discovered that there was inadequate precision in the single-precision
+   version of glimmer for the calculation of fractional locations in the
+   interpolation code (glint_interp.F90, subroutine calc_fractional). Promoted all
+   internal variables in this subroutine to double-precision. 
+
+2007-04-30 Ian Rutt
+ * Fixed bugs that prevented single-precision compilation
+
+2007-04-27 Ian Rutt
+ * Fixed bugs in anomaly coupling, and tested
+ * Added ability to specify whether temperatures in glint_example climate
+   are in Kelvin or not.
+
 2007-04-17 Ian Rutt
  * Merged Bill's incremental remapping changes at tag lipscomb_1_5_1_merge1
  * Removed his labelled comments
+
+2007-04-13 Ian Rutt
+ * Added integer parameter to glimmer_version to enable run-time testing of
+   glimmer version number (1.2.5 -> 10205, for example)
+
+2007-04-04 Ian Rutt
+ * Plumbed anomaly coupling into Glint
+
+2007-04-02 Ian Rutt
+ * Further work on anomaly coupling. Added to build.
+ * Fixed bugs - tested and seems to work
+
+2007-03-16 Ian Rutt
+ * Fixed problem specifying sigma levels - all three methods work now
 
 2007-03-27 Ian Rutt
  * Build fixes:

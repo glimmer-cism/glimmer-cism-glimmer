@@ -154,7 +154,6 @@ contains
     call GetSection(config,section,'sigma')
     if (associated(section)) then
        call handle_sigma(section, model)
-       call print_sigma(model)
     end if
 
   end subroutine glide_read_sigma
@@ -387,6 +386,7 @@ contains
     !*FD sigma vertical coordinates.
     use glide_types
     use glimmer_log
+    use glimmer_filenames
     implicit none
 
     ! Arguments
@@ -404,22 +404,28 @@ contains
 
     upn=model%general%upn
 
-    inquire (exist=there,file=model%funits%sigfile)
-  
-    if (there) then
-       call write_log('Reading sigma file: '//model%funits%sigfile)
-       open(unit,file=model%funits%sigfile)
-       read(unit,'(f5.2)',err=10,end=10) (model%numerics%sigma(up), up=1,upn)
-       close(unit)
-       return
-    else
-       call write_log('Calculating sigma')
+    select case(model%options%which_sigma)
+    case(0)
+       call write_log('Calculating sigma levels')
        do up=1,upn
           model%numerics%sigma(up) = glide_calc_sigma(real(up-1)/real(upn-1),2.)
        end do
-       return
-    end if
-    
+    case(1)
+       inquire (exist=there,file=process_path(model%funits%sigfile))
+       if (.not.there) then
+          call write_log('Sigma levels file: '//trim(process_path(model%funits%sigfile))// &
+               ' does not exist',GM_FATAL)
+       end if
+       call write_log('Reading sigma file: '//process_path(model%funits%sigfile))
+       open(unit,file=process_path(model%funits%sigfile))
+       read(unit,'(f5.2)',err=10,end=10) (model%numerics%sigma(up), up=1,upn)
+       close(unit)
+    case(2)
+       call write_log('Using sigma levels from main configuration file')
+    end select
+    call print_sigma(model)
+    return
+
 10  call write_log('something wrong with sigma coord file',GM_FATAL)
     
   end subroutine glide_load_sigma
@@ -449,6 +455,11 @@ contains
     call GetValue(section,'dew',model%numerics%dew)
     call GetValue(section,'dns',model%numerics%dns)
     call GetValue(section,'sigma_file',model%funits%sigfile)
+
+    ! We set this flag to one to indicate we've got a sigfile name.
+    ! A warning/error is generated if sigma levels are specified in some other way
+    if (trim(model%funits%sigfile)/='') model%options%which_sigma=1
+
   end subroutine handle_grid
 
   subroutine print_grid(model)
@@ -716,12 +727,18 @@ contains
   subroutine handle_sigma(section, model)
     use glimmer_config
     use glide_types
+    use glimmer_log
     implicit none
     type(ConfigSection), pointer :: section
     type(glide_global_type)  :: model
 
-    model%options%which_sigma = 2
-    call GetValue(section,'sigma_levels',model%numerics%sigma,model%general%upn)
+    if (model%options%which_sigma==1) then
+       call write_log('Sigma levels specified twice - use only'// &
+            ' config file or separate file, not both',GM_FATAL)
+    else
+       model%options%which_sigma = 2
+       call GetValue(section,'sigma_levels',model%numerics%sigma,model%general%upn)
+    end if
 
   end subroutine handle_sigma
 

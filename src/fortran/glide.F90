@@ -53,6 +53,7 @@ module glide
   use glide_io
   use glide_lithot
   use glide_profile
+  use glimmer_config
   integer, private, parameter :: dummyunit=99
 
 contains
@@ -64,6 +65,7 @@ contains
     use glimmer_ncparams
     use glimmer_config
     use glimmer_map_init
+    use glimmer_filenames
     implicit none
     type(glide_global_type) :: model        !*FD model instance
     type(ConfigSection), pointer :: config  !*FD structure holding sections of configuration file
@@ -92,7 +94,7 @@ contains
     if (trim(model%funits%ncfile).eq.'') then
        ncconfig => config
     else
-       call ConfigRead(model%funits%ncfile,ncconfig)
+       call ConfigRead(process_path(model%funits%ncfile),ncconfig)
     end if
     call glimmer_nc_readparams(model,ncconfig)
   end subroutine glide_config
@@ -289,7 +291,7 @@ contains
   end subroutine glide_tstep_p1
 
 
-  subroutine glide_tstep_p2(model)
+  subroutine glide_tstep_p2(model,no_write)
     !*FD Performs second part of time-step of an ice model instance.
     !*FD write data and move ice
     use glide_thck
@@ -303,11 +305,20 @@ contains
     implicit none
 
     type(glide_global_type) :: model        !*FD model instance
+    logical,optional :: no_write
+
+    logical nw
 
     ! ------------------------------------------------------------------------ 
     ! write to netCDF file
     ! ------------------------------------------------------------------------ 
-    call glide_io_writeall(model,model)
+    if (present(no_write)) then
+       nw=no_write
+    else
+       nw=.false.
+    end if
+
+    if (.not. nw) call glide_io_writeall(model,model)
 
     ! ------------------------------------------------------------------------ 
     ! Calculate flow evolution by various different methods

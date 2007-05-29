@@ -219,7 +219,13 @@ contains
     call nc_errorhandle(__FILE__,__LINE__,status)
     status = nf90_get_att(ncid,mapid,'straight_vertical_longitude_from_pole',CFproj_get_stere_polar%longitude_of_central_meridian)
     call nc_errorhandle(__FILE__,__LINE__,status)
-    CFproj_get_stere_polar%latitude_of_projection_origin = 90.
+    CFproj_get_stere_polar%latitude_of_projection_origin=90.0
+    status = nf90_get_att(ncid,mapid,'latitude_of_projection_origin',CFproj_get_stere_polar%latitude_of_projection_origin)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    if (abs(abs(CFproj_get_stere_polar%latitude_of_projection_origin)-90.0)>0.001) then
+       call write_log('Error (polar stereographic projection) latitude of origin must be +-90.0',&
+            GM_FATAL,__FILE__,__LINE__)
+    end if
     status = nf90_get_att(ncid,mapid,'scale_factor_at_projection_origin',dummy)
     if (status.eq.NF90_NOERR) then
        CFproj_get_stere_polar%scale_factor_at_proj_origin = dummy

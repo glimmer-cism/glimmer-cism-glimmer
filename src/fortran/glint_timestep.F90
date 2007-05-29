@@ -245,7 +245,7 @@ contains
 
           instance%glide_time=instance%glide_time+instance%model%numerics%tinc
           call glide_tstep_p1(instance%model,instance%glide_time)
-          call glide_tstep_p2(instance%model)
+          call glide_tstep_p2(instance%model,no_write=.true.)
           call glide_tstep_p3(instance%model)
 
           ! Add the calved ice to the ablation field
@@ -262,10 +262,9 @@ contains
              ablat_temp=ablat_temp+instance%ablt*instance%model%numerics%tinc
           endif
 
-          ! Finally, do some output
-
+          ! Save GLIDE output until now
+          call glide_io_writeall(instance%model,instance%model)
           call glint_io_writeall(instance,instance%model)
-          call glint_mbal_io_writeall(instance%mbal_accum,instance%model)
 
        end do
 
@@ -334,8 +333,8 @@ contains
                upscale_temp, &
                routing_temp, &
                instance%out_mask, &
-               instance%lgrid%delta%pt(1), &
-               instance%lgrid%delta%pt(2))
+               real(instance%lgrid%delta%pt(1),rk), &
+               real(instance%lgrid%delta%pt(2),rk))
 
           call mean_to_global(instance%ups,   &
                routing_temp,   &
@@ -360,6 +359,10 @@ contains
        endif
 
     end if
+
+    ! Output instantaneous values
+
+    call glint_mbal_io_writeall(instance,instance%model,outfiles=instance%out_first,time=real(time*hours2years,sp))
 
     ! ------------------------------------------------------------------------ 
     ! Upscaling of output
