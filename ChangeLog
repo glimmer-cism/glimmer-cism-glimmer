@@ -1,4 +1,7 @@
 2007-05-29 Ian Rutt
+ * configure.in: bump version to 1.0.5
+
+2007-05-29 Ian Rutt
  * configure.in: bump version to 1.0.4
  * NEWS: update
 
