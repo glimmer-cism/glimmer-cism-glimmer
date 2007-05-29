@@ -160,6 +160,7 @@ contains
     use glimmer_config
     use glint_initialise
     use glimmer_log
+    use glimmer_filenames
     implicit none
 
     ! Subroutine argument declarations --------------------------------------------------------
@@ -275,7 +276,7 @@ contains
     ! ---------------------------------------------------------------
 
     if (size(paramfile)==1) then
-       call ConfigRead(paramfile(1),global_config)    ! Load the configuration file into the linked list
+       call ConfigRead(process_path(paramfile(1)),global_config)    ! Load the configuration file into the linked list
        call glint_readconfig(global_config,params%ninstances,config_fnames,paramfile) ! Parse the list
     else
        params%ninstances=size(paramfile)
@@ -296,7 +297,7 @@ contains
     anomaly_check=.false.
 
     do i=1,params%ninstances
-       call ConfigRead(config_fnames(i),instance_config)
+       call ConfigRead(process_path(config_fnames(i)),instance_config)
        if (present(extraconfigs)) then
           if (size(extraconfigs)>=i) then
              call ConfigCombine(instance_config,extraconfigs(i))

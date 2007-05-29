@@ -101,6 +101,7 @@ contains
   function open_restart_file(fname,mode)
 
     use glimmer_log
+    use glimmer_filenames
 
     type(restart_file) :: open_restart_file
     character(*),intent(in) :: fname
@@ -116,15 +117,15 @@ contains
 
     select case(md)
     case(RESTART_READ)
-       open_restart_file%fname=fname
-       status = nf90_open(fname,NF90_NOWRITE,open_restart_file%ncid)
+       open_restart_file%fname=process_path(fname)
+       status = nf90_open(open_restart_file%fname,NF90_NOWRITE,open_restart_file%ncid)
        if (status/=0) call ncdf_err(status,__LINE__,fname)
        open_restart_file%def = .false.
        open_restart_file%count = 0
        open_restart_file%write = .false.
     case(RESTART_CREATE)
-       open_restart_file%fname=fname
-       status = nf90_create(fname,NF90_CLOBBER,open_restart_file%ncid)
+       open_restart_file%fname=process_path(fname)
+       status = nf90_create(open_restart_file%fname,NF90_CLOBBER,open_restart_file%ncid)
        if (status/=0) call ncdf_err(status,__LINE__,fname)
        open_restart_file%def = .true.
        open_restart_file%count = 0

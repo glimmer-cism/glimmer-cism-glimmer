@@ -386,6 +386,7 @@ contains
     !*FD sigma vertical coordinates.
     use glide_types
     use glimmer_log
+    use glimmer_filenames
     implicit none
 
     ! Arguments
@@ -410,13 +411,13 @@ contains
           model%numerics%sigma(up) = glide_calc_sigma(real(up-1)/real(upn-1),2.)
        end do
     case(1)
-       inquire (exist=there,file=model%funits%sigfile)
+       inquire (exist=there,file=process_path(model%funits%sigfile))
        if (.not.there) then
-          call write_log('Sigma levels file: '//trim(model%funits%sigfile)// &
+          call write_log('Sigma levels file: '//trim(process_path(model%funits%sigfile))// &
                ' does not exist',GM_FATAL)
        end if
-       call write_log('Reading sigma file: '//model%funits%sigfile)
-       open(unit,file=model%funits%sigfile)
+       call write_log('Reading sigma file: '//process_path(model%funits%sigfile))
+       open(unit,file=process_path(model%funits%sigfile))
        read(unit,'(f5.2)',err=10,end=10) (model%numerics%sigma(up), up=1,upn)
        close(unit)
     case(2)

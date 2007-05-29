@@ -65,6 +65,7 @@ contains
     use glimmer_ncparams
     use glimmer_config
     use glimmer_map_init
+    use glimmer_filenames
     implicit none
     type(glide_global_type) :: model        !*FD model instance
     type(ConfigSection), pointer :: config  !*FD structure holding sections of configuration file
@@ -93,7 +94,7 @@ contains
     if (trim(model%funits%ncfile).eq.'') then
        ncconfig => config
     else
-       call ConfigRead(model%funits%ncfile,ncconfig)
+       call ConfigRead(process_path(model%funits%ncfile),ncconfig)
     end if
     call glimmer_nc_readparams(model,ncconfig)
   end subroutine glide_config

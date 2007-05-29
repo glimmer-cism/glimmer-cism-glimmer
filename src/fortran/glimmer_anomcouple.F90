@@ -248,6 +248,7 @@ contains
 
     use netcdf
     use glimmer_log
+    use glimmer_filenames
 
     character(*),                     intent(in)  :: fname
     character(*),                     intent(in)  :: varname
@@ -263,7 +264,7 @@ contains
     real(sp) :: interval
     
     ! Open file
-    status=nf90_open(fname,NF90_NOWRITE,ncid)
+    status=nf90_open(process_path(fname),NF90_NOWRITE,ncid)
     call nc_errorhandle(__FILE__,__LINE__,status)
 
     ! Look for required variable
@@ -273,7 +274,7 @@ contains
     ! Check we have three dimensions
     status=nf90_inquire_variable(ncid,varid,ndims=ndims)
     call nc_errorhandle(__FILE__,__LINE__,status)
-    if (ndims/=3) call write_log("Anomaly coupling: file "//trim(fname)//", variable "// &
+    if (ndims/=3) call write_log("Anomaly coupling: file "//trim(process_path(fname))//", variable "// &
          trim(varname)//" should have three dimensions",GM_FATAL,__FILE__,__LINE__)
     status=nf90_inquire_variable(ncid,varid,dimids=dimids)
     call nc_errorhandle(__FILE__,__LINE__,status)
@@ -284,19 +285,19 @@ contains
     status=nf90_inquire_dimension(ncid,dimids(1),dntemp,nx)
     call nc_errorhandle(__FILE__,__LINE__,status)
     if (.not.any(dntemp==xvars)) &
-         call write_log("Anomaly coupling: first dimension in climate file "//trim(fname)// &
+         call write_log("Anomaly coupling: first dimension in climate file "//trim(process_path(fname))// &
          " is not x or longitude",GM_FATAL,__FILE__,__LINE__)
 
     status=nf90_inquire_dimension(ncid,dimids(2),dntemp,ny)
     call nc_errorhandle(__FILE__,__LINE__,status)
     if (.not.any(dntemp==yvars)) &
-         call write_log("Anomaly coupling: second dimension in climate file "//trim(fname)// &
+         call write_log("Anomaly coupling: second dimension in climate file "//trim(process_path(fname))// &
          " is not y or latitude",GM_FATAL,__FILE__,__LINE__)
 
     status=nf90_inquire_dimension(ncid,dimids(3),dntemp,nt)
     call nc_errorhandle(__FILE__,__LINE__,status)
     if (.not.any(dntemp==tvars)) &
-         call write_log("Anomaly coupling: third dimension in climate file "//trim(fname)// &
+         call write_log("Anomaly coupling: third dimension in climate file "//trim(process_path(fname))// &
          " is not time",GM_FATAL,__FILE__,__LINE__)
     timevar=dntemp
 
