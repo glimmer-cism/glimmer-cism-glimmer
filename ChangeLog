@@ -1,4 +1,8 @@
 2007-05-29 Ian Rutt
+ * configure.in: bump version to 1.0.4
+ * NEWS: update
+
+2007-05-29 Ian Rutt
  * Added code to enable the setting of a default path for glint and glide. This
    code is in glimmer_filenames.F90, and can be accessed with the glimmer_set_path
    subroutine.
