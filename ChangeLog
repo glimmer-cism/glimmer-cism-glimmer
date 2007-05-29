@@ -1,7 +1,8 @@
 2007-05-29 Ian Rutt
  * Merged in changes from RELEASE_1_0_0_BRANCH, until the 
    RELEASE_1_0_4 tag, as below:
-
+ * Fixed minor bug caused by these changes
+	
 2007-05-29 Ian Rutt
  * Added code to enable the setting of a default path for glint and glide. This
    code is in glimmer_filenames.F90, and can be accessed with the glimmer_set_path
