@@ -500,12 +500,12 @@ contains
           params%new_av = .false.
        else
           write(message,*) 'Unexpected calling of GLINT at time ',time
-          call write_log(message,GM_FATAL,__FILE__,__LINE__)
+          call write_log(trim(message),GM_FATAL,__FILE__,__LINE__)
        end if
     else
        if (mod(time-params%av_start_time,params%time_step)/=0) then
           write(message,*) 'Unexpected calling of GLINT at time ',time
-          call write_log(message,GM_FATAL,__FILE__,__LINE__)
+          call write_log(trim(message),GM_FATAL,__FILE__,__LINE__)
        end if
     end if
 
@@ -547,7 +547,7 @@ contains
 
        write(message,*) &
             'Incomplete forcing of GLINT mass-balance time-step detected at time ', time
-       call write_log(message,GM_FATAL,__FILE__,__LINE__)
+       call write_log(trim(message),GM_FATAL,__FILE__,__LINE__)
 
     else if (time-params%av_start_time+params%time_step.eq.params%tstep_mbal) then
 

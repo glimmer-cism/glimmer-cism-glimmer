@@ -1,3 +1,6 @@
+2007-06-28 Ian Rutt
+ * Minor bugfix to glint.F90 - problem with message lengths. Spotted by Rupert
+
 2007-05-29 Ian Rutt
  * configure.in: bump version to 1.0.5
 
