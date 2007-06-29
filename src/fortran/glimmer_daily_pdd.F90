@@ -268,18 +268,31 @@ contains
     real(sp),intent(in) :: localprcp !*FD Precipitation (arbitrary units)
     real(sp),intent(in) :: threshold !*FD Snow/rain threshold (degC)
 
+    real(sp) :: acosarg
+
     select case(which)
 
     case(1)
 
-       ! Assume temperature evolution is sinusoidal
-
-       if (localartm - localarng > threshold) then
-          rainorsnw = localprcp
-       else if (localartm + localarng < threshold) then  
-          rainorsnw = 0.0_sp
+       if (localarng==0.0_sp) then
+          ! There is no sinusoidal variation
+          if (localartm > threshold) then
+             rainorsnw = localprcp
+          else
+             rainorsnw = 0.0_sp
+          end if
        else
-          rainorsnw = localprcp * (1.0_sp-one_over_pi * acos((localartm - threshold) / localarng))
+          ! Assume sinusoidal variation
+          acosarg = (localartm - threshold) / localarng
+
+          if (acosarg <= -1.0) then
+             rainorsnw = 0.0_sp
+          else if (acosarg >= 1.0) then
+             rainorsnw = localprcp
+          else
+             rainorsnw = localprcp * (1.0_sp-one_over_pi * acos(acosarg))
+          end if
+
        end if
 
     case default

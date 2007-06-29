@@ -1,3 +1,7 @@
+2007-06-29 Ian Rutt
+ * Fixed bug in rain/snow partition in daily PDD scheme that occasionally generated
+   NaN values.
+
 2007-06-28 Ian Rutt
  * Minor bugfix to glint.F90 - problem with message lengths. Spotted by Rupert
 
