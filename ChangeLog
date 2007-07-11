@@ -1,3 +1,6 @@
+2007-07-11 Ian Rutt
+ * Improved code formatting in glide_thck.F90
+	
 2007-06-29 Ian Rutt
  * Fixed bug in rain/snow partition in daily PDD scheme that occasionally generated
    NaN values.

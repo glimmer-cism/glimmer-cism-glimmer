@@ -397,16 +397,22 @@ contains
 
       ! calculate RHS
       if (calc_rhs) then
-         model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = old_thck(ew,ns) * &
-              (1.0d0 - model%pcgdwk%fc2(3) * sumd(5)) - model%pcgdwk%fc2(3) * &
-              (old_thck(ewm,ns) * sumd(1) + old_thck(ewp,ns) * sumd(2) + &
-              old_thck(ew,nsm) * sumd(3) + old_thck(ew,nsp) * sumd(4)) - &
-              model%pcgdwk%fc2(4) * (model%geometry%lsrf(ew,ns) * sumd(5) + &
-              model%geometry%lsrf(ewm,ns) * sumd(1) + model%geometry%lsrf(ewp,ns) * sumd(2) + &
-              model%geometry%lsrf(ew,nsm) * sumd(3) + model%geometry%lsrf(ew,nsp) * sumd(4)) +  &
-              model%climate%acab(ew,ns) * model%pcgdwk%fc2(2)
+         model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) =                    &
+              old_thck(ew,ns) * (1.0d0 - model%pcgdwk%fc2(3) * sumd(5))     &
+            - model%pcgdwk%fc2(3) * (old_thck(ewm,ns) * sumd(1)             &
+                                   + old_thck(ewp,ns) * sumd(2)             &
+                                   + old_thck(ew,nsm) * sumd(3)             &
+                                   + old_thck(ew,nsp) * sumd(4))            &
+            - model%pcgdwk%fc2(4) * (model%geometry%lsrf(ew,ns)  * sumd(5)  &
+                                   + model%geometry%lsrf(ewm,ns) * sumd(1)  &
+                                   + model%geometry%lsrf(ewp,ns) * sumd(2)  &
+                                   + model%geometry%lsrf(ew,nsm) * sumd(3)  &
+                                   + model%geometry%lsrf(ew,nsp) * sumd(4)) &
+            + model%climate%acab(ew,ns) * model%pcgdwk%fc2(2)
       end if
+
       model%pcgdwk%answ(model%geometry%mask(ew,ns)) = new_thck(ew,ns)      
+
     end subroutine generate_row
 
     subroutine findsums(ewm,ew,nsm,ns)
@@ -459,9 +465,12 @@ contains
     integer :: ierr, mxnelt
 
     if (first) then
-      call ds2y(model%pcgdwk%pcgsize(1),model%pcgdwk%pcgsize(2), &
-                model%pcgdwk%pcgrow,model%pcgdwk%pcgcol, &
-                model%pcgdwk%pcgval,isym)
+      call ds2y(model%pcgdwk%pcgsize(1), &
+                model%pcgdwk%pcgsize(2), &
+                model%pcgdwk%pcgrow,     &
+                model%pcgdwk%pcgcol,     &
+                model%pcgdwk%pcgval,     &
+                isym)
     end if
 
     mxnelt = 20 * model%pcgdwk%pcgsize(1)
@@ -488,9 +497,25 @@ contains
 !**     mxnelt ... maximum array and vector sizes (in)
 !**     iwork ... workspace for SLAP routines (in)
 
-    call dslucs(model%pcgdwk%pcgsize(1),model%pcgdwk%rhsd,model%pcgdwk%answ,model%pcgdwk%pcgsize(2), &
-                model%pcgdwk%pcgrow,model%pcgdwk%pcgcol,model%pcgdwk%pcgval, &
-                isym,itol,tol,itmax,iter,err,ierr,0,rwork,mxnelt,iwork,mxnelt)
+    call dslucs(model%pcgdwk%pcgsize(1), &  ! n
+                model%pcgdwk%rhsd,       &  ! b
+                model%pcgdwk%answ,       &  ! x
+                model%pcgdwk%pcgsize(2), &  ! nelt
+                model%pcgdwk%pcgrow,     &  ! ia
+                model%pcgdwk%pcgcol,     &  ! ja
+                model%pcgdwk%pcgval,     &  ! a
+                isym,                    &  ! isym
+                itol,                    &  ! itol
+                tol,                     &  ! tol
+                itmax,                   &  ! itmax
+                iter,                    &  ! iter
+                err,                     &  ! err
+                ierr,                    &  ! ierr
+                0,                       &  ! iunit
+                rwork,                   &  ! rwork
+                mxnelt,                  &  ! lenw
+                iwork,                   &  ! iwork
+                mxnelt)                     ! leniw
 
     if (ierr /= 0) then
       print *, 'pcg error ', ierr, itmax, iter
