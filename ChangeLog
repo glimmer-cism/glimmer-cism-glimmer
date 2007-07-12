@@ -2,6 +2,9 @@
  * More reformatting in glide_thck.F90
  * Removed redundant call to ds2y from slapsolv - this is called
    automatically within dslucs.
+ * Fixed intermittent bug with non-linear solver - non-reinitialisation of
+   matrix storage
+ * Reformated slapsolv and improved error handling
 
 2007-07-11 Ian Rutt
  * Improved code formatting in glide_thck.F90

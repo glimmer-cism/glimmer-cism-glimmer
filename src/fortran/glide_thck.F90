@@ -285,6 +285,9 @@ contains
     !* matrix elements (including bounary points)
     model%pcgdwk%pcgsize = (/ model%geometry%totpts, model%geometry%totpts * 5 /)
 
+    model%pcgdwk%pcgval = 0.0
+    model%pcgdwk%pcgcol = 0 
+    model%pcgdwk%pcgrow = 0
      model%pcgdwk%ct = 1
 
     ! Boundary Conditions
@@ -356,7 +359,7 @@ contains
 
     model%pcgdwk%pcgsize(2) = model%pcgdwk%ct - 1 
 
-    call slapsolv(model,linit,err,logunit)   
+    call slapsolv(model,linit,err)   
 
     do ns = 1,model%general%nsn
        do ew = 1,model%general%ewn 
@@ -447,82 +450,78 @@ contains
 
 !---------------------------------------------------------------------------------
 
-  subroutine slapsolv(model,iter,err,lunit)
+  subroutine slapsolv(model,iter,err)
 
     use glimmer_global, only : dp 
     use glide_stop
     use glimmer_log
-  !use pcgdwk 
-  !use funits, only : ulog
+    use glimmer_filenames
 
     implicit none
 
-    type(glide_global_type) :: model
-    integer, intent(out) :: iter
-    real(dp), intent(out) :: err
-    integer,intent(in) :: lunit
+    type(glide_global_type) :: model  !*FD Model data type
+    integer,  intent(out)   :: iter   !*FD Number of iterations
+    real(dp), intent(out)   :: err    !*FD Error estimate of result
 
-    real(dp), dimension(:), allocatable :: rwork
-    integer, dimension(:), allocatable :: iwork
-
-    real(dp), parameter :: tol = 1.0d-12
-
-    integer, parameter :: isym = 0, itol = 2, itmax = 101
+    ! For call to dslucs
+    real(dp), parameter :: tol   = 1.0d-12
+    integer,  parameter :: isym  = 0
+    integer,  parameter :: itol  = 2
+    integer,  parameter :: itmax = 101
+    real(dp), dimension(:),allocatable :: rwork ! Real work array
+    integer,  dimension(:),allocatable :: iwork ! Integer work array
     integer :: ierr, mxnelt
 
-    mxnelt = 20 * model%pcgdwk%pcgsize(1)
+    ! Variables for error handling
+    character(200) :: message
+    character(100) :: errfname
+    integer :: lunit
 
+    mxnelt = 20 * model%pcgdwk%pcgsize(1)
     allocate(rwork(mxnelt),iwork(mxnelt))
 
-!**     solve the problem using the SLAP package routines     
-!**     -------------------------------------------------
-!**     n ... order of matrix a (in)
-!**     b ... right hand side vector (in)                        
-!**     x ... initial quess/final solution vector (in/out)                        
-!**     nelt ... number of non-zeroes in A (in)
-!**     ia, ja ... sparse matrix format of A (in)
-!**     a ... matrix helt in SLAT column format (in)
-!**     isym ... storage method (0 is complete) (in)
-!**     itol ... convergence criteria (2 recommended) (in)                     
-!**     tol ... criteria for convergence (in)
-!**     itmax ... maximum number of iterations (in)
-!**     iter ... returned number of iterations (out)
-!**     err ... error estimate of solution (out)
-!**     ierr ... returned error message (0 is ok) (out)
-!**     iunit ... unit for error writes during iteration (0 no write) (in)
-!**     rwork ... workspace for SLAP routines (in)
-!**     mxnelt ... maximum array and vector sizes (in)
-!**     iwork ... workspace for SLAP routines (in)
+    ! solve the problem using the SLAP package routines     
 
-    call dslucs(model%pcgdwk%pcgsize(1), &  ! n
-                model%pcgdwk%rhsd,       &  ! b
-                model%pcgdwk%answ,       &  ! x
-                model%pcgdwk%pcgsize(2), &  ! nelt
-                model%pcgdwk%pcgrow,     &  ! ia
-                model%pcgdwk%pcgcol,     &  ! ja
-                model%pcgdwk%pcgval,     &  ! a
-                isym,                    &  ! isym
-                itol,                    &  ! itol
-                tol,                     &  ! tol
-                itmax,                   &  ! itmax
-                iter,                    &  ! iter
-                err,                     &  ! err
-                ierr,                    &  ! ierr
-                0,                       &  ! iunit
-                rwork,                   &  ! rwork
+    call dslucs(model%pcgdwk%pcgsize(1), &  ! n  ... order of matrix a (in)
+                model%pcgdwk%rhsd,       &  ! b  ... right hand side vector (in)
+                model%pcgdwk%answ,       &  ! x  ... initial quess/final solution vector (in/out)
+                model%pcgdwk%pcgsize(2), &  ! nelt ... number of non-zeroes in A (in)
+                model%pcgdwk%pcgrow,     &  ! ia  ... sparse matrix format of A (in)
+                model%pcgdwk%pcgcol,     &  ! ja  ... sparse matrix format of A (in)
+                model%pcgdwk%pcgval,     &  ! a   ... matrix (in)
+                isym,                    &  ! isym ... storage method (0 is complete) (in)
+                itol,                    &  ! itol ... convergence criteria (2 recommended) (in)
+                tol,                     &  ! tol  ... criteria for convergence (in)
+                itmax,                   &  ! itmax ... maximum number of iterations (in)
+                iter,                    &  ! iter  ... returned number of iterations (out)
+                err,                     &  ! err   ... error estimate of solution (out)
+                ierr,                    &  ! ierr  ... returned error message (0 is ok) (out)
+                0,                       &  ! iunit ... unit for error writes during iteration (0 no write) (in)
+                rwork,                   &  ! rwork ... workspace for SLAP routines (in)
                 mxnelt,                  &  ! lenw
-                iwork,                   &  ! iwork
+                iwork,                   &  ! iwork ... workspace for SLAP routines (in)
                 mxnelt)                     ! leniw
 
+    ! Handle errors gracefully
     if (ierr /= 0) then
-      print *, 'pcg error ', ierr, itmax, iter
-      call dcpplt(model%pcgdwk%pcgsize(1),model%pcgdwk%pcgsize(2),model%pcgdwk%pcgrow, &
-                model%pcgdwk%pcgcol,model%pcgdwk%pcgval,isym,lunit)
-      print *, model%pcgdwk%pcgval
-      write(*,*) model%numerics%time
-      call glide_finalise(model,.true.)
-      call close_log
-      stop
+
+       ! Acquire a file unit, and open the file
+       lunit = get_free_unit()
+       errfname = trim(process_path('slap_dump.txt'))
+       open(lunit,file=errfname)
+
+       ! Output data to file
+       call dcpplt(model%pcgdwk%pcgsize(1),model%pcgdwk%pcgsize(2),model%pcgdwk%pcgrow, &
+            model%pcgdwk%pcgcol,model%pcgdwk%pcgval,isym,lunit)
+       write(lunit,*) '***SLAP data ends. PCGVAL follows'
+       write(lunit,*) model%pcgdwk%pcgval
+
+       ! Close unit and finish off
+       close(lunit)
+       call glide_finalise(model,.true.)
+       write(message,*)'SLAP solution error at time: ',model%numerics%time, &
+            '. Data dumped to ',trim(errfname)
+       call write_log(trim(message),GM_FATAL,__FILE__,__LINE__)
     end if
 
     deallocate(rwork,iwork)
