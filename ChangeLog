@@ -5,6 +5,7 @@
  * Fixed intermittent bug with non-linear solver - non-reinitialisation of
    matrix storage
  * Reformated slapsolv and improved error handling
+ * Various other bits of tidying up and rationalisation
 
 2007-07-11 Ian Rutt
  * Improved code formatting in glide_thck.F90

@@ -87,7 +87,9 @@ contains
     end if
   end subroutine init_thck
 
-  subroutine thck_lin_evolve(model,newtemps,logunit)
+!---------------------------------------------------------------------------------
+
+  subroutine thck_lin_evolve(model,newtemps)
 
     !*FD this subroutine solves the linearised ice thickness equation by computing the
     !*FD diffusivity from quantities of the previous time step
@@ -97,7 +99,6 @@ contains
     ! subroutine arguments
     type(glide_global_type) :: model
     logical, intent(in) :: newtemps                     !*FD true when we should recalculate Glen's A
-    integer,intent(in) :: logunit                       !*FD unit for logging
 
     if (model%geometry%empty) then
 
@@ -128,7 +129,7 @@ contains
             model%geomderv%dusrfdns,model%velocity%diffu)
 
        ! get new thicknesses
-       call thck_evolve(model,logunit,.true.,model%geometry%thck,model%geometry%thck)
+       call thck_evolve(model,.true.,model%geometry%thck,model%geometry%thck)
 
        ! calculate horizontal velocity field
        call slipvelo(model,                &
@@ -142,7 +143,9 @@ contains
     end if
   end subroutine thck_lin_evolve
 
-  subroutine thck_nonlin_evolve(model,newtemps,logunit)
+!---------------------------------------------------------------------------------
+
+  subroutine thck_nonlin_evolve(model,newtemps)
 
     !*FD this subroutine solves the ice thickness equation by doing an outer, 
     !*FD non-linear iteration to update the diffusivities and in inner, linear
@@ -155,7 +158,6 @@ contains
     ! subroutine arguments
     type(glide_global_type) :: model
     logical, intent(in) :: newtemps                     !*FD true when we should recalculate Glen's A
-    integer,intent(in) :: logunit                       !*FD unit for logging
 
     ! local variables
     integer, parameter :: pmax=50                       !*FD maximum Picard iterations
@@ -218,7 +220,7 @@ contains
                model%geomderv%dusrfdns,model%velocity%diffu)
 
           ! get new thicknesses
-          call thck_evolve(model,logunit,first_p,model%thckwk%oldthck,model%geometry%thck)
+          call thck_evolve(model,first_p,model%thckwk%oldthck,model%geometry%thck)
 
           first_p = .false.
           residual = maxval(abs(model%geometry%thck-model%thckwk%oldthck2))
@@ -247,7 +249,9 @@ contains
     end if
   end subroutine thck_nonlin_evolve
 
-  subroutine thck_evolve(model,logunit,calc_rhs,old_thck,new_thck)
+!---------------------------------------------------------------------------------
+
+  subroutine thck_evolve(model,calc_rhs,old_thck,new_thck)
 
     !*FD set up sparse matrix and solve matrix equation to find new ice thickness distribution
     !*FD this routine does not override the old thickness distribution
@@ -260,7 +264,6 @@ contains
     ! subroutine arguments -------------------------------------------------------------
 
     type(glide_global_type) :: model
-    integer,intent(in) :: logunit                       !*FD unit for logging
     logical,intent(in) :: calc_rhs                      !*FD set to true when rhs should be calculated 
                                                         !*FD i.e. when doing lin solution or first picard iteration
     real(dp), intent(in), dimension(:,:) :: old_thck    !*FD contains ice thicknesses from previous time step
@@ -271,33 +274,26 @@ contains
 
     real(dp), dimension(5) :: sumd 
     real(dp) :: err
-    real(dp), parameter :: tolbnd = 1.0d-6
-
     integer :: linit
-    integer, parameter :: mxtbnd = 10, ewbc = 1, nsbc = 1
-
-    ! ewbc/nsbc set the type of boundary condition aplied at the end of
-    ! the domain. a value of 0 implies zero gradient.
-
     integer :: ew,ns
 
-    !* the number of grid points and the number of nonzero 
-    !* matrix elements (including bounary points)
-    model%pcgdwk%pcgsize = (/ model%geometry%totpts, model%geometry%totpts * 5 /)
+    ! the number of grid points
+    model%pcgdwk%pcgsize(1) = model%geometry%totpts
 
+    ! Zero the arrays holding the sparse matrix
     model%pcgdwk%pcgval = 0.0
     model%pcgdwk%pcgcol = 0 
     model%pcgdwk%pcgrow = 0
-     model%pcgdwk%ct = 1
+    model%pcgdwk%ct = 1
 
-    ! Boundary Conditions
+    ! Boundary Conditions ---------------------------------------------------------------
     ! lower and upper BC
     do ew = 1,model%general%ewn
        ns=1
-          if (model%geometry%mask(ew,ns) /= 0) then
-             call putpcgc(model%pcgdwk,1.0d0, model%geometry%mask(ew,ns), model%geometry%mask(ew,ns))
-             if (calc_rhs) then
-                model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = old_thck(ew,ns) 
+       if (model%geometry%mask(ew,ns) /= 0) then
+          call putpcgc(model%pcgdwk,1.0d0, model%geometry%mask(ew,ns), model%geometry%mask(ew,ns))
+          if (calc_rhs) then
+             model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = old_thck(ew,ns) 
           end if
           model%pcgdwk%answ(model%geometry%mask(ew,ns)) = new_thck(ew,ns)
        end if
@@ -310,6 +306,7 @@ contains
           model%pcgdwk%answ(model%geometry%mask(ew,ns)) = new_thck(ew,ns)
        end if
     end do
+
     !left and right BC
     if (model%options%periodic_ew.eq.1) then
        do ns=2,model%general%nsn-1
@@ -344,7 +341,9 @@ contains
           end if
        end do
     end if
-    ! ice body
+
+    ! ice body -------------------------------------------------------------------------
+
     do ns = 2,model%general%nsn-1
        do ew = 2,model%general%ewn-1
 
@@ -357,10 +356,13 @@ contains
        end do
     end do
 
+    ! Calculate the total number of points
     model%pcgdwk%pcgsize(2) = model%pcgdwk%ct - 1 
 
+    ! Solve the system using SLAP
     call slapsolv(model,linit,err)   
 
+    ! Rejig the solution onto a 2D array
     do ns = 1,model%general%nsn
        do ew = 1,model%general%ewn 
 
@@ -371,22 +373,15 @@ contains
        end do
     end do
 
-    ! *tp+* implement bcs
-
-    model%pcgdwk%tlinit = model%pcgdwk%tlinit + linit
-    model%pcgdwk%mlinit = max(linit,model%pcgdwk%mlinit)
-
     new_thck = max(0.0d0, new_thck)
+
 #ifdef DEBUG
-    print *, "* thck ", model%numerics%time, linit, model%pcgdwk%mlinit, model%pcgdwk%tlinit, model%geometry%totpts, &
+    print *, "* thck ", model%numerics%time, linit, model%geometry%totpts, &
          real(thk0*new_thck(model%general%ewn/2+1,model%general%nsn/2+1)), &
          real(vel0*maxval(abs(model%velocity%ubas))), real(vel0*maxval(abs(model%velocity%vbas))) 
 #endif
 
-    !------------------------------------------------------------
     ! calculate upper and lower surface
-    !------------------------------------------------------------
-
     call glide_calclsrf(model%geometry%thck, model%geometry%topg, model%climate%eus, model%geometry%lsrf)
     model%geometry%usrf = max(0.d0,model%geometry%thck + model%geometry%lsrf)
 
@@ -511,8 +506,13 @@ contains
        open(lunit,file=errfname)
 
        ! Output data to file
-       call dcpplt(model%pcgdwk%pcgsize(1),model%pcgdwk%pcgsize(2),model%pcgdwk%pcgrow, &
-            model%pcgdwk%pcgcol,model%pcgdwk%pcgval,isym,lunit)
+       call dcpplt(model%pcgdwk%pcgsize(1), &
+                   model%pcgdwk%pcgsize(2), &
+                   model%pcgdwk%pcgrow,     &
+                   model%pcgdwk%pcgcol,     &
+                   model%pcgdwk%pcgval,     &
+                   isym,                    &
+                   lunit)
        write(lunit,*) '***SLAP data ends. PCGVAL follows'
        write(lunit,*) model%pcgdwk%pcgval
 
@@ -533,7 +533,6 @@ contains
   subroutine putpcgc(pcgdwk,value,col,row)
 
     use glimmer_global, only : dp
- ! use pcgdwk, only : pcgval, pcgcol, pcgrow, ct
 
     implicit none
 
@@ -583,9 +582,6 @@ contains
           end if
        end do
     end do
-
-    !opvrew = (cshift(cshift(ipvr,1,2),1,1) + cshift(ipvr,1,1) - ipvr - cshift(ipvr,1,2)) * dew2
-    !opvrns = (cshift(cshift(ipvr,1,2),1,1) + cshift(ipvr,1,2) - ipvr - cshift(ipvr,1,1)) * dns2
     
   end subroutine geomders
 
@@ -794,6 +790,8 @@ contains
 
   end subroutine timeders
 
+!---------------------------------------------------------------------------------
+
   subroutine filterthck(thck,ewn,nsn)
 
     use glimmer_global, only : dp ! ew, ewn, ns, nsn
@@ -858,7 +856,7 @@ contains
   ! ADI routines
   !-----------------------------------------------------------------------------
 
-  subroutine stagleapthck(model,newtemps,logunit)
+  subroutine stagleapthck(model,newtemps)
     
     !*FD this subroutine solves the ice sheet thickness equation using the ADI scheme
     !*FD diffusivities are updated for each half time step
@@ -870,7 +868,6 @@ contains
     ! subroutine arguments
     type(glide_global_type) :: model
     logical, intent(in) :: newtemps                     !*FD true when we should recalculate Glen's A
-    integer,intent(in) :: logunit                       !*FD unit for logging
 
     ! local variables
     integer ew,ns, n
@@ -954,6 +951,7 @@ contains
 
   end subroutine stagleapthck
 
+!---------------------------------------------------------------------------------
 
   subroutine adi_tri(a,b,c,d,thk,tpg,mb,flx_p,flx_m,dif_p,dif_m,dt,ds1, ds2)
     !*FD construct tri-diagonal matrix system for a column/row
