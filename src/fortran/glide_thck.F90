@@ -251,10 +251,14 @@ contains
 
     !*FD set up sparse matrix and solve matrix equation to find new ice thickness distribution
     !*FD this routine does not override the old thickness distribution
+
     use glide_setup, only: glide_calclsrf
     use glimmer_global, only : dp
+
     implicit none
-    ! subroutine arguments
+
+    ! subroutine arguments -------------------------------------------------------------
+
     type(glide_global_type) :: model
     integer,intent(in) :: logunit                       !*FD unit for logging
     logical,intent(in) :: calc_rhs                      !*FD set to true when rhs should be calculated 
@@ -263,7 +267,8 @@ contains
     real(dp), intent(inout), dimension(:,:) :: new_thck !*FD on entry contains first guess for new ice thicknesses
                                                         !*FD on exit contains ice thicknesses of new time step
 
-    ! local variables
+    ! local variables ------------------------------------------------------------------
+
     real(dp), dimension(5) :: sumd 
     real(dp) :: err
     real(dp), parameter :: tolbnd = 1.0d-6
@@ -276,112 +281,114 @@ contains
 
     integer :: ew,ns
 
-       !* the number of grid points and the number of nonzero 
-       !* matrix elements (including bounary points)
-       model%pcgdwk%pcgsize = (/ model%geometry%totpts, model%geometry%totpts * 5 /)
+    !* the number of grid points and the number of nonzero 
+    !* matrix elements (including bounary points)
+    model%pcgdwk%pcgsize = (/ model%geometry%totpts, model%geometry%totpts * 5 /)
 
-       model%pcgdwk%ct = 1
+     model%pcgdwk%ct = 1
 
-       ! Boundary Conditions
-       ! lower and upper BC
-       do ew = 1,model%general%ewn
-          ns=1
+    ! Boundary Conditions
+    ! lower and upper BC
+    do ew = 1,model%general%ewn
+       ns=1
           if (model%geometry%mask(ew,ns) /= 0) then
              call putpcgc(model%pcgdwk,1.0d0, model%geometry%mask(ew,ns), model%geometry%mask(ew,ns))
              if (calc_rhs) then
                 model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = old_thck(ew,ns) 
-             end if
-             model%pcgdwk%answ(model%geometry%mask(ew,ns)) = new_thck(ew,ns)
           end if
-          ns=model%general%nsn
-          if (model%geometry%mask(ew,ns) /= 0) then
-             call putpcgc(model%pcgdwk,1.0d0, model%geometry%mask(ew,ns), model%geometry%mask(ew,ns))
-             if (calc_rhs) then
-                model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = old_thck(ew,ns) 
-             end if
-             model%pcgdwk%answ(model%geometry%mask(ew,ns)) = new_thck(ew,ns)
-          end if
-       end do          
-       !left and right BC
-       if (model%options%periodic_ew.eq.1) then
-          do ns=2,model%general%nsn-1
-             ew = 1
-             if (model%geometry%mask(ew,ns) /= 0) then
-                call findsums(model%general%ewn-2,model%general%ewn-1,ns-1,ns)
-                call generate_row(model%general%ewn-2,ew,ew+1,ns-1,ns,ns+1)
-             end if
-             ew=model%general%ewn
-             if (model%geometry%mask(ew,ns) /= 0) then
-                call findsums(1,2,ns-1,ns)
-                call generate_row(ew-1,ew,3,ns-1,ns,ns+1)
-             end if
-          end do
-       else
-          do ns=2,model%general%nsn-1
-             ew=1
-             if (model%geometry%mask(ew,ns) /= 0) then
-                call putpcgc(model%pcgdwk,1.0d0, model%geometry%mask(ew,ns), model%geometry%mask(ew,ns))
-                if (calc_rhs) then
-                   model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = old_thck(ew,ns) 
-                end if
-                model%pcgdwk%answ(model%geometry%mask(ew,ns)) = new_thck(ew,ns)
-             end if
-             ew=model%general%ewn
-             if (model%geometry%mask(ew,ns) /= 0) then
-                call putpcgc(model%pcgdwk,1.0d0, model%geometry%mask(ew,ns), model%geometry%mask(ew,ns))
-                if (calc_rhs) then
-                   model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = old_thck(ew,ns) 
-                end if
-                model%pcgdwk%answ(model%geometry%mask(ew,ns)) = new_thck(ew,ns)
-             end if
-          end do
+          model%pcgdwk%answ(model%geometry%mask(ew,ns)) = new_thck(ew,ns)
        end if
-       ! ice body
-       do ns = 2,model%general%nsn-1
-          do ew = 2,model%general%ewn-1
+       ns=model%general%nsn
+       if (model%geometry%mask(ew,ns) /= 0) then
+          call putpcgc(model%pcgdwk,1.0d0, model%geometry%mask(ew,ns), model%geometry%mask(ew,ns))
+          if (calc_rhs) then
+             model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = old_thck(ew,ns) 
+          end if
+          model%pcgdwk%answ(model%geometry%mask(ew,ns)) = new_thck(ew,ns)
+       end if
+    end do
+    !left and right BC
+    if (model%options%periodic_ew.eq.1) then
+       do ns=2,model%general%nsn-1
+          ew = 1
+          if (model%geometry%mask(ew,ns) /= 0) then
+             call findsums(model%general%ewn-2,model%general%ewn-1,ns-1,ns)
+             call generate_row(model%general%ewn-2,ew,ew+1,ns-1,ns,ns+1)
+          end if
+          ew=model%general%ewn
+          if (model%geometry%mask(ew,ns) /= 0) then
+             call findsums(1,2,ns-1,ns)
+             call generate_row(ew-1,ew,3,ns-1,ns,ns+1)
+          end if
+       end do
+    else
+       do ns=2,model%general%nsn-1
+          ew=1
+          if (model%geometry%mask(ew,ns) /= 0) then
+             call putpcgc(model%pcgdwk,1.0d0, model%geometry%mask(ew,ns), model%geometry%mask(ew,ns))
+             if (calc_rhs) then
+                model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = old_thck(ew,ns) 
+             end if
+             model%pcgdwk%answ(model%geometry%mask(ew,ns)) = new_thck(ew,ns)
+          end if
+          ew=model%general%ewn
+          if (model%geometry%mask(ew,ns) /= 0) then
+             call putpcgc(model%pcgdwk,1.0d0, model%geometry%mask(ew,ns), model%geometry%mask(ew,ns))
+             if (calc_rhs) then
+                model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = old_thck(ew,ns) 
+             end if
+             model%pcgdwk%answ(model%geometry%mask(ew,ns)) = new_thck(ew,ns)
+          end if
+       end do
+    end if
+    ! ice body
+    do ns = 2,model%general%nsn-1
+       do ew = 2,model%general%ewn-1
 
-             if (model%geometry%mask(ew,ns) /= 0) then
+          if (model%geometry%mask(ew,ns) /= 0) then
                 
-                call findsums(ew-1,ew,ns-1,ns)
-                call generate_row(ew-1,ew,ew+1,ns-1,ns,ns+1)
+             call findsums(ew-1,ew,ns-1,ns)
+             call generate_row(ew-1,ew,ew+1,ns-1,ns,ns+1)
 
-             end if
-          end do
+          end if
        end do
+    end do
 
-       model%pcgdwk%pcgsize(2) = model%pcgdwk%ct - 1 
+    model%pcgdwk%pcgsize(2) = model%pcgdwk%ct - 1 
 
-       call slapsolv(model,.true.,linit,err,logunit)   
+    call slapsolv(model,.true.,linit,err,logunit)   
 
-       do ns = 1,model%general%nsn
-          do ew = 1,model%general%ewn 
+    do ns = 1,model%general%nsn
+       do ew = 1,model%general%ewn 
 
-             if (model%geometry%mask(ew,ns) /= 0) then
-                new_thck(ew,ns) = model%pcgdwk%answ(model%geometry%mask(ew,ns))
-             end if
+          if (model%geometry%mask(ew,ns) /= 0) then
+             new_thck(ew,ns) = model%pcgdwk%answ(model%geometry%mask(ew,ns))
+          end if
 
-          end do
        end do
+    end do
 
-       ! *tp+* implement bcs
+    ! *tp+* implement bcs
 
-       model%pcgdwk%tlinit = model%pcgdwk%tlinit + linit
-       model%pcgdwk%mlinit = max(linit,model%pcgdwk%mlinit)
+    model%pcgdwk%tlinit = model%pcgdwk%tlinit + linit
+    model%pcgdwk%mlinit = max(linit,model%pcgdwk%mlinit)
 
-       new_thck = max(0.0d0, new_thck)
+    new_thck = max(0.0d0, new_thck)
 #ifdef DEBUG
-       print *, "* thck ", model%numerics%time, linit, model%pcgdwk%mlinit, model%pcgdwk%tlinit, model%geometry%totpts, &
-            real(thk0*new_thck(model%general%ewn/2+1,model%general%nsn/2+1)), &
-            real(vel0*maxval(abs(model%velocity%ubas))), real(vel0*maxval(abs(model%velocity%vbas))) 
+    print *, "* thck ", model%numerics%time, linit, model%pcgdwk%mlinit, model%pcgdwk%tlinit, model%geometry%totpts, &
+         real(thk0*new_thck(model%general%ewn/2+1,model%general%nsn/2+1)), &
+         real(vel0*maxval(abs(model%velocity%ubas))), real(vel0*maxval(abs(model%velocity%vbas))) 
 #endif
-       
-       !------------------------------------------------------------
-       ! calculate upper and lower surface
-       !------------------------------------------------------------
-       call glide_calclsrf(model%geometry%thck, model%geometry%topg, model%climate%eus, model%geometry%lsrf)
-       model%geometry%usrf = max(0.d0,model%geometry%thck + model%geometry%lsrf)
+
+    !------------------------------------------------------------
+    ! calculate upper and lower surface
+    !------------------------------------------------------------
+
+    call glide_calclsrf(model%geometry%thck, model%geometry%topg, model%climate%eus, model%geometry%lsrf)
+    model%geometry%usrf = max(0.d0,model%geometry%thck + model%geometry%lsrf)
 
   contains
+
     subroutine generate_row(ewm,ew,ewp,nsm,ns,nsp)
       ! calculate row of sparse matrix equation
       implicit none

@@ -1,3 +1,6 @@
+2007-07-12 Ian Rutt
+ * More reformatting in glide_thck.F90
+
 2007-07-11 Ian Rutt
  * Improved code formatting in glide_thck.F90
 	
