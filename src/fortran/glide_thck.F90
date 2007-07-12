@@ -356,7 +356,7 @@ contains
 
     model%pcgdwk%pcgsize(2) = model%pcgdwk%ct - 1 
 
-    call slapsolv(model,.true.,linit,err,logunit)   
+    call slapsolv(model,linit,err,logunit)   
 
     do ns = 1,model%general%nsn
        do ew = 1,model%general%ewn 
@@ -447,7 +447,7 @@ contains
 
 !---------------------------------------------------------------------------------
 
-  subroutine slapsolv(model,first,iter,err,lunit)
+  subroutine slapsolv(model,iter,err,lunit)
 
     use glimmer_global, only : dp 
     use glide_stop
@@ -458,7 +458,6 @@ contains
     implicit none
 
     type(glide_global_type) :: model
-    logical, intent(in) :: first
     integer, intent(out) :: iter
     real(dp), intent(out) :: err
     integer,intent(in) :: lunit
@@ -470,15 +469,6 @@ contains
 
     integer, parameter :: isym = 0, itol = 2, itmax = 101
     integer :: ierr, mxnelt
-
-    if (first) then
-      call ds2y(model%pcgdwk%pcgsize(1), &
-                model%pcgdwk%pcgsize(2), &
-                model%pcgdwk%pcgrow,     &
-                model%pcgdwk%pcgcol,     &
-                model%pcgdwk%pcgval,     &
-                isym)
-    end if
 
     mxnelt = 20 * model%pcgdwk%pcgsize(1)
 
