@@ -113,11 +113,11 @@ contains
              model%lithot%rhs(model%lithot%nlayer) = model%lithot%temp(i,j,model%lithot%nlayer)
 
              ! solve tri-diagonal matrix eqn
-             call tridag(model%lithot%subd(2:), &
+             call tridiag(model%lithot%subd(1:), &
                   model%lithot%diag(:), &
-                  model%lithot%supd(:model%lithot%nlayer-1), &
-                  model%lithot%rhs(:), &
-                  model%lithot%temp(i,j,:) )
+                  model%lithot%supd(:model%lithot%nlayer), &
+                  model%lithot%temp(i,j,:) ,                 &
+                  model%lithot%rhs(:))
           end if
        end do
     end do

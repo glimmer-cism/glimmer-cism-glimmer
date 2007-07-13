@@ -905,14 +905,26 @@ contains
        ! first ADI step, solve thickness equation along rows j
        n = model%general%ewn
        do ns=2,model%general%nsn-1
-          call adi_tri ( model%thckwk%alpha, model%thckwk%beta, model%thckwk%gamma, model%thckwk%delta, &
-               model%geometry%thck(:,ns), model%geometry%lsrf(:,ns), model%climate%acab(:,ns), &
-               model%velocity%vflx(:,ns), model%velocity%vflx(:,ns-1), &
-               model%velocity%total_diffu(:,ns),  model%velocity%total_diffu(:,ns-1), &
-               model%numerics%dt, model%numerics%dew, model%numerics%dns )
+          call adi_tri ( model%thckwk%alpha,                 &
+                         model%thckwk%beta,                  &
+                         model%thckwk%gamma,                 &
+                         model%thckwk%delta,                 &
+                         model%geometry%thck(:,ns),          &
+                         model%geometry%lsrf(:,ns),          &
+                         model%climate%acab(:,ns),           &
+                         model%velocity%vflx(:,ns),          &
+                         model%velocity%vflx(:,ns-1),        &
+                         model%velocity%total_diffu(:,ns),   &
+                         model%velocity%total_diffu(:,ns-1), &
+                         model%numerics%dt,                  &
+                         model%numerics%dew,                 &
+                         model%numerics%dns )
 
-          call tridag( model%thckwk%alpha(2:n), model%thckwk%beta(1:n), model%thckwk%gamma(1:n-1), model%thckwk%delta(1:n), &
-               model%thckwk%oldthck(:,ns), n )
+          call tridiag(model%thckwk%alpha(1:n),    &
+                       model%thckwk%beta(1:n),     &
+                       model%thckwk%gamma(1:n),    &
+                       model%thckwk%oldthck(:,ns), &
+                       model%thckwk%delta(1:n))
        end do
 
        model%thckwk%oldthck(:,:) = max(model%thckwk%oldthck(:,:), 0.d0)
@@ -920,14 +932,26 @@ contains
        ! second ADI step, solve thickness equation along columns i
        n = model%general%nsn
        do ew=2,model%general%ewn-1
-          call adi_tri ( model%thckwk%alpha, model%thckwk%beta, model%thckwk%gamma, model%thckwk%delta, &
-               model%thckwk%oldthck(ew,:), model%geometry%lsrf(ew, :), model%climate%acab(ew, :), &
-               model%velocity%uflx(ew,:), model%velocity%uflx(ew-1,:), &
-               model%velocity%total_diffu(ew,:), model%velocity%total_diffu(ew-1,:), &
-               model%numerics%dt, model%numerics%dns, model%numerics%dew )
+          call adi_tri ( model%thckwk%alpha,                 &
+                         model%thckwk%beta,                  &
+                         model%thckwk%gamma,                 &
+                         model%thckwk%delta,                 &
+                         model%thckwk%oldthck(ew,:),         &
+                         model%geometry%lsrf(ew, :),         &
+                         model%climate%acab(ew, :),          &
+                         model%velocity%uflx(ew,:),          &
+                         model%velocity%uflx(ew-1,:),        &
+                         model%velocity%total_diffu(ew,:),   &
+                         model%velocity%total_diffu(ew-1,:), &
+                         model%numerics%dt,                  &
+                         model%numerics%dns,                 &
+                         model%numerics%dew )
 
-          call tridag( model%thckwk%alpha(2:n), model%thckwk%beta(1:n), model%thckwk%gamma(1:n-1), model%thckwk%delta(1:n), &
-               model%geometry%thck(ew, :), n)
+          call tridiag(model%thckwk%alpha(1:n),    &
+                       model%thckwk%beta(1:n),     &
+                       model%thckwk%gamma(1:n),    &
+                       model%geometry%thck(ew, :), &
+                       model%thckwk%delta(1:n))
        end do
 
        model%geometry%thck(:,:) = max(model%geometry%thck(:,:), 0.d0)

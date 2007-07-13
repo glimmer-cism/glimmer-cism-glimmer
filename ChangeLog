@@ -1,3 +1,6 @@
+2007-07-13 Ian Rutt
+ * Replaced tridiagonal solver (glimmer_utils.F90) to avoid using NR code.
+
 2007-07-12 Ian Rutt
  * More reformatting in glide_thck.F90
  * Removed redundant call to ds2y from slapsolv - this is called
