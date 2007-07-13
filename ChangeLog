@@ -1,5 +1,9 @@
 2007-07-13 Ian Rutt
  * Replaced tridiagonal solver (glimmer_utils.F90) to avoid using NR code.
+ * Fixed up boundary conditions in ADI scheme - explicitly set to zero
+   thickness each timestep.
+ * Added check to halt if ADI and periodic BCs are selected, since the
+   combination is not implemented.
 
 2007-07-12 Ian Rutt
  * More reformatting in glide_thck.F90

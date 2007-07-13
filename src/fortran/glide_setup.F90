@@ -630,6 +630,9 @@ contains
        call write_log('First topo time slice is relaxed')
     end if
     if (model%options%periodic_ew.eq.1) then
+       if (model%options%whichevol.eq.1) then
+          call write_log('Periodic boundary conditions not implemented in ADI scheme',GM_FATAL)
+       end if
        call write_log('Periodic EW lateral boundary condition')
        call write_log('  Slightly cheated with how temperature is implemented.',GM_WARNING)
     end if

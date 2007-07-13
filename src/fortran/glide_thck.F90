@@ -956,6 +956,12 @@ contains
 
        model%geometry%thck(:,:) = max(model%geometry%thck(:,:), 0.d0)
 
+       ! Apply boundary conditions
+       model%geometry%thck(1,:) = 0.0
+       model%geometry%thck(model%general%ewn,:) = 0.0
+       model%geometry%thck(:,1) = 0.0
+       model%geometry%thck(:,model%general%nsn) = 0.0
+
        ! calculate horizontal velocity field
        call slipvelo(model,                &
             3,                             &
