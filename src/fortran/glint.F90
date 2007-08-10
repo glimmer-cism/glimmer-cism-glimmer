@@ -90,19 +90,28 @@ module glint_main
                                      !*FD been called in current round of averaging.
      integer  :: next_av_start = 0   !*FD Time when we expect next averaging to start
      logical  :: new_av        = .true. !*FD Set to true if the next correct call starts a new averaging round
+
      ! Averaging arrays -----------------------------------------
 
      real(rk),pointer,dimension(:,:) :: g_av_precip  => null()  !*FD globally averaged precip
      real(rk),pointer,dimension(:,:) :: g_av_temp    => null()  !*FD globally averaged temperature 
      real(rk),pointer,dimension(:,:) :: g_max_temp   => null()  !*FD global maximum temperature
      real(rk),pointer,dimension(:,:) :: g_min_temp   => null()  !*FD global minimum temperature
-     real(rk),pointer,dimension(:,:) :: g_temp_range => null()  !*FD global temperature range
+     real(rk),pointer,dimension(:,:) :: g_temp_range => null()  !*FD global temperature half-range
      real(rk),pointer,dimension(:,:) :: g_av_zonwind => null()  !*FD globally averaged zonal wind 
      real(rk),pointer,dimension(:,:) :: g_av_merwind => null()  !*FD globally averaged meridional wind 
      real(rk),pointer,dimension(:,:) :: g_av_humid   => null()  !*FD globally averaged humidity (%)
      real(rk),pointer,dimension(:,:) :: g_av_lwdown  => null()  !*FD globally averaged downwelling longwave (W/m$^2$)
      real(rk),pointer,dimension(:,:) :: g_av_swdown  => null()  !*FD globally averaged downwelling shortwave (W/m$^2$)
      real(rk),pointer,dimension(:,:) :: g_av_airpress => null() !*FD globally averaged surface air pressure (Pa)
+
+     ! Information for sine-wave fitting of temperature ---------
+
+     complex(rk),pointer,dimension(:,:) :: g_sfit_temp => null() !*FD accumulation array for DFT
+     complex(rk),pointer,dimension(:)   :: sfit_exp    => null() !*FD lookup table of exponentials for DFT
+     integer :: k_dft  !*FD Number of the next expected data point
+     integer :: nn_dft !*FD Total number of points per dft
+     logical :: sfit_arng = .false. !*FD Set to true if we are to use sine-wave fitting
 
      ! Fractional coverage information --------------------------
 
@@ -161,6 +170,7 @@ contains
     use glint_initialise
     use glimmer_log
     use glimmer_filenames
+    use physcon, only: pi
     implicit none
 
     ! Subroutine argument declarations --------------------------------------------------------
@@ -277,7 +287,7 @@ contains
 
     if (size(paramfile)==1) then
        call ConfigRead(process_path(paramfile(1)),global_config)    ! Load the configuration file into the linked list
-       call glint_readconfig(global_config,params%ninstances,config_fnames,paramfile) ! Parse the list
+       call glint_readconfig(global_config,params%ninstances,config_fnames,paramfile,params%sfit_arng) ! Parse the list
     else
        params%ninstances=size(paramfile)
        allocate(config_fnames(params%ninstances))
@@ -340,6 +350,21 @@ contains
        print*,params%tstep_mbal,params%time_step
        call write_log('The mass-balance timestep must be an integer multiple of the forcing time-step', &
             GM_FATAL,__FILE__,__LINE__)
+    end if
+
+    ! Initialise number of samples for DFT
+
+    if (params%sfit_arng) then
+       params%nn_dft = params%tstep_mbal/params%time_step
+       params%k_dft  = 0
+       if (mod(params%nn_dft,2)/=0) then
+          call write_log('The number of forcing time-steps per mass-balance timestep must be even', &
+               GM_FATAL,__FILE__,__LINE__)
+       end if
+       allocate(params%sfit_exp(0:params%nn_dft-1))
+       do i=0,params%nn_dft-1
+          params%sfit_exp(i) = exp(cmplx(0.0,1.0)*2.0*pi*real(i)/params%nn_dft)
+       end do
     end if
 
     ! Check we don't have coverage greater than one at any point.
@@ -604,10 +629,6 @@ contains
        ! by time since last model timestep
 
        params%g_av_precip = params%g_av_precip*params%tstep_mbal*hours2seconds
-
-       ! Calculate temperature half-range
-
-       params%g_temp_range=(params%g_max_temp-params%g_min_temp)/2.0
 
        ! Do a timestep for each instance
 
@@ -934,6 +955,8 @@ contains
     allocate(params%g_av_swdown (params%g_grid%nx,params%g_grid%ny))
     allocate(params%g_av_airpress(params%g_grid%nx,params%g_grid%ny))
 
+    allocate(params%g_sfit_temp(params%g_grid%nx,params%g_grid%ny))
+
     allocate(params%total_coverage(params%g_grid%nx,params%g_grid%ny))
     allocate(params%cov_normalise (params%g_grid%nx,params%g_grid%ny))
 
@@ -965,7 +988,7 @@ contains
 
   !========================================================
 
-  subroutine glint_readconfig(config,ninstances,fnames,infnames)
+  subroutine glint_readconfig(config,ninstances,fnames,infnames,sfit_arng)
 
     !*FD Determine whether a given config file is a
     !*FD top-level glint config file, and return parameters
@@ -981,6 +1004,7 @@ contains
     integer,              intent(out) :: ninstances !*FD Number of instances to create
     character(fname_length),dimension(:),pointer :: fnames !*FD list of filenames (output)
     character(fname_length),dimension(:) :: infnames !*FD list of filenames (input)
+    logical,intent(inout) :: sfit_arng !*FD Set if we're using sine-wave fitting for arng
 
     ! Internal variables ----------------------------------
 
@@ -1006,6 +1030,11 @@ contains
        ninstances=1
        allocate(fnames(1))
        fnames=infnames
+    end if
+
+    call GetSection(config,section,'GLINT sfit-arng')
+    if (associated(section)) then
+       sfit_arng = .true.
     end if
 
     ! Print some configuration information
@@ -1119,6 +1148,8 @@ contains
 
     use glimmer_log
 
+    implicit none
+
     real(rk),dimension(:),optional,intent(in) :: orog_lats 
     real(rk),dimension(:),optional,intent(in) :: orog_longs 
     real(rk),dimension(:),optional,intent(in) :: orog_latb
@@ -1147,6 +1178,8 @@ contains
 
     use glimmer_log
 
+    implicit none
+
     type(glint_params),              intent(inout) :: params   !*FD parameters for this run
     real(rk),dimension(:,:),optional,intent(in)    :: humid    !*FD Surface humidity (%)
     real(rk),dimension(:,:),optional,intent(in)    :: lwdown   !*FD Downwelling longwave (W/m$^2$)
@@ -1171,7 +1204,13 @@ contains
 
   end subroutine check_input_fields
 
+  !========================================================
+
   subroutine accumulate_averages(params,temp,precip,zonwind,merwind,humid,lwdown,swdown,airpress)
+
+    use glimmer_log
+
+    implicit none
 
     type(glint_params),              intent(inout) :: params   !*FD parameters for this run
     real(rk),dimension(:,:),         intent(in)    :: temp     !*FD Surface temperature field (celcius)
@@ -1196,14 +1235,29 @@ contains
        params%g_av_airpress = params%g_av_airpress + airpress
     endif
 
-    ! Ranges of temperature
-
-    where (temp > params%g_max_temp) params%g_max_temp=temp
-    where (temp < params%g_min_temp) params%g_min_temp=temp
+    if (params%sfit_arng) then
+       ! DFT fit to temperature
+       if (params%k_dft>=params%nn_dft) then
+          call write_log('Bad DFT sequence in subroutine accumulate_averages',GM_FATAL, &
+               __FILE__,__LINE__)
+       end if
+       params%g_sfit_temp = params%g_sfit_temp + temp*params%sfit_exp(params%k_dft)
+       params%k_dft = params%k_dft + 1
+    else
+       ! Ranges of temperature
+       where (temp > params%g_max_temp) params%g_max_temp=temp
+       where (temp < params%g_min_temp) params%g_min_temp=temp
+    end if
 
   end subroutine accumulate_averages
 
+  !========================================================
+
   subroutine calculate_averages(params)
+
+    use glimmer_log
+
+    implicit none
 
     type(glint_params),              intent(inout) :: params   !*FD parameters for this run
 
@@ -1217,6 +1271,20 @@ contains
        params%g_av_swdown   = params%g_av_swdown  /real(params%av_steps)
        params%g_av_airpress = params%g_av_airpress/real(params%av_steps)
     endif
+
+    ! Calculate temperature half-range
+
+    if (params%sfit_arng) then
+       if (params%k_dft/=params%nn_dft) then
+          call write_log('Bad DFT call in subroutine calculate_averages', &
+               GM_FATAL,__FILE__,__LINE__)
+       end if
+       params%g_temp_range = abs(params%g_sfit_temp)*2.0/real(params%nn_dft)
+       params%k_dft = 0
+       params%g_sfit_temp = cmplx(0.0,0.0)
+    else
+       params%g_temp_range=(params%g_max_temp-params%g_min_temp)/2.0
+    end if
 
   end subroutine calculate_averages
 

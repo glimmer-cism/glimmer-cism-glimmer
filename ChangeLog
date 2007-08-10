@@ -1,3 +1,13 @@
+2007-08-10 Ian Rutt
+ * Added alternative temperature range calculation - fit a sine-wave
+   through the data and use the amplitude. This is better because it fits
+   with the assumptions made by the mass-balance schemes, and works more
+   flexibly with different amounts of data. It is _not_ the default at the
+   moment, but may be switched on my adding an empty section [GLINT
+   sfit-arng] to the config file (either top-level glint, or
+   single-instance file.
+ * Added some missing implicit nones to glint.F90
+
 2007-07-13 Ian Rutt
  * Replaced tridiagonal solver (glimmer_utils.F90) to avoid using NR code.
  * Fixed up boundary conditions in ADI scheme - explicitly set to zero
