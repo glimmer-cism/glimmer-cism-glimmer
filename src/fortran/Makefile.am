@@ -53,7 +53,8 @@ libglint_a_SOURCES = glint_climate.F90 glint_initialise.F90 glint_io.F90 \
                      glint_interp.F90 glint_global_grid.F90 \
                      glint_precip_param.F90 glint_mbal.F90 glint_constants.F90\
                      glint_mbal_coupling.F90 glint_mbal_io.F90 \
-                     glint_example_clim.F90 glint_smb.F90 glex_ebm_clim.F90
+                     glint_example_clim.F90 glint_smb.F90 glex_ebm_clim.F90 \
+                     glint_mpinterp.F90
 libclimate_a_SOURCES = eismint3_forcing.F90 eismint3_types.F90 \
                        simple_forcing.F90 eis_forcing.F90 eis_ela.F90 \
                        eis_temp.F90 eis_slc.F90 eis_cony.F90 \

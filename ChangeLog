@@ -1,3 +1,8 @@
+2007-08-17 Ian Rutt
+ * Added code to allow grid-box-mean-preserving interpolation on the
+   sphere. This will make glint up- and downscaling self-consistent. Not
+   plumbed in yet, though.
+
 2007-08-10 Ian Rutt
  * Added alternative temperature range calculation - fit a sine-wave
    through the data and use the amplitude. This is better because it fits
