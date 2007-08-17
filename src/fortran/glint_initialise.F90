@@ -120,7 +120,8 @@ contains
          get_ewn(instance%model), &
          get_nsn(instance%model))
 
-    call new_downscale(instance%downs,instance%model%projection,grid,instance%lgrid)    ! Initialise the downscaling
+    call new_downscale(instance%downs,instance%model%projection,grid, &
+         instance%lgrid,mpint=(instance%use_mpint==1))    ! Initialise the downscaling
 
     call glint_i_allocate(instance,grid%nx,grid%ny,grid_orog%nx,grid_orog%ny)           ! Allocate arrays appropriately
     call glint_i_readdata(instance)
