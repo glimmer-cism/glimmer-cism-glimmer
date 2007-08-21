@@ -115,8 +115,8 @@ contains
     latb(0:params%ny) = grid%lat_bound(1:params%ny+1)*pi/180.0_dp
 
     ! Calculate longitudinal grid-spacings
-    dx1(1) = lonb(0)-lons(params%nx)+2.0*pi
-    dx2(1) = lons(1)-lonb(0)
+    dx1(1) = lonb(0)-lons(params%nx)
+    dx2(1) = lons(1)-lonb(0)+2.0*pi
     dx3(1) = lonb(1)-lons(1)
     dx4(1) = lons(2)-lonb(1)
     do i=2,params%nx-1
@@ -337,12 +337,12 @@ contains
     jj=j
 
     do
-       if (jj>=1.and.jj<=nx) exit
+       if (jj>=1.and.jj<=ny) exit
        if (jj==0) then
           jj=1
           ii=ii+nx/2
        end if
-       if (jj==nx+1) then
+       if (jj==ny+1) then
           jj=ny
           ii=ii+nx/2
        end if
