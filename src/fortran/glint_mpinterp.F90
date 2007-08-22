@@ -275,8 +275,8 @@ contains
   subroutine mean_preserve_interp(params,in,out,zeros)
 
     type(mpinterp),         intent(in)  :: params
-    real(dp),dimension(:,:),intent(in)  :: in
-    real(dp),dimension(:,:),intent(out) :: out
+    real(rk),dimension(:,:),intent(in)  :: in
+    real(rk),dimension(:,:),intent(out) :: out
     logical, dimension(:,:),intent(out) :: zeros
     
     integer :: i,j,ii
