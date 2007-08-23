@@ -1,3 +1,6 @@
+2007-08-23 Ian Rutt
+ * Fixed a couple of problems with anomaly coupling
+
 2007-08-22 Ian Rutt
  * MP-interpolation broke single-precision compilation. Fixed that...
 

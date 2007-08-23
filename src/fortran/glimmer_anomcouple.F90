@@ -131,6 +131,7 @@ contains
     real(rk),dimension(size(rawtemp,1),size(rawtemp,2)) :: tempm,prcpm,tempr,prcpr
     integer  :: first
     real(sp) :: frac
+    integer  :: i,j
 
     if (params%enabled) then
        call anomaly_index(params%time,time,first,frac)
@@ -139,7 +140,19 @@ contains
        tempr=(1.0-frac)*params%temp_ref(:,:,first)+frac*params%temp_ref(:,:,first+1)
        prcpr=(1.0-frac)*params%prcp_ref(:,:,first)+frac*params%prcp_ref(:,:,first+1)
        anomtemp=rawtemp-tempm+tempr
-       anomprcp=rawprcp*prcpr/prcpm
+       do i=1,size(anomprcp,1)
+          do j=1,size(anomprcp,2)
+             if (prcpm(i,j)/=0.0) then
+                anomprcp(i,j)=rawprcp(i,j)*prcpr(i,j)/prcpm(i,j)
+             else if (rawprcp(i,j)==0.0) then
+                anomprcp(i,j)=prcpr(i,j)
+             else if (prcpr(i,j)==0.0) then
+                anomprcp(i,j)=rawprcp(i,j)
+             else
+                anomprcp(i,j)=0.0
+             end if
+          end do
+       end do
     else
        anomprcp=rawprcp
        anomtemp=rawtemp
@@ -229,7 +242,7 @@ contains
     params%ny=ny(1)
     params%nslices=nt(1)
 
-    if (.not.all(timemod==timeref)) &
+    if (.not.all(abs(timemod-timeref)<1e-8)) &
          call write_log("Anomaly coupling: time axes in climate files do not agree",GM_FATAL,__FILE__,__LINE__)
 
     if (associated(params%time)) then
