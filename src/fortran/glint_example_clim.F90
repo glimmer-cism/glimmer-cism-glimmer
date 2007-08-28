@@ -79,6 +79,9 @@ module glint_example_clim
      type(global_grid),pointer :: precip_grid => null()
      type(global_grid),pointer :: temp_grid   => null()
      type(global_grid),pointer :: all_grid    => null()
+     ! Time variables ---------------------------------------------------
+     real(rk),dimension(:),pointer :: pr_time => null() !*FD Time in precip climatology
+     real(rk),dimension(:),pointer :: st_time => null() !*FD Time in surftemp climatology
      ! Other parameters -------------------------------------------------
      integer :: days_in_year=365
      integer :: hours_in_year=365*24
@@ -87,7 +90,7 @@ module glint_example_clim
   end type glex_climate
 
   interface read_ncdf
-     module procedure read_ncdf_2d,read_ncdf_3d
+     module procedure read_ncdf_2d,read_ncdf_3d,read_ncdf_1d
   end interface
 
 contains
@@ -96,6 +99,7 @@ contains
 
     use glimmer_config
     use glint_global_interp
+    use glimmer_log
 
     type(glex_climate) :: params   !*FD Climate parameters
     character(*)       :: filename !*FD config filename
@@ -112,6 +116,8 @@ contains
     call read_ncdf(params%precip_file,params%precip_varname,params%pclim_load, params%precip_grid)
     call read_ncdf(params%stemp_file, params%stemp_varname, params%stclim_load,params%temp_grid)
     call read_ncdf(params%orog_file,  params%orog_varname,  params%orog_load,  params%orog_grid)
+    call read_ncdf(params%precip_file,'time',params%pr_time)
+    call read_ncdf(params%stemp_file, 'time',params%st_time)
 
     ! Find a suitable grid
 
@@ -212,6 +218,53 @@ contains
     end if
 
   end subroutine glex_clim_readconfig
+
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  subroutine read_ncdf_1d(filename,varname,array)
+
+    use netcdf
+
+    character(*)                  :: filename,varname
+    real(rk),dimension(:),pointer :: array
+
+    real(rk),dimension(:),allocatable :: dim1
+
+    integer  :: ncerr     ! NetCDF error 
+    integer  :: ncid      ! NetCDF file id
+    integer  :: varid     ! NetCDF variable id
+    integer  :: ndims     ! Number of dimensions
+    real(rk) :: offset=0.0,scale=1.0
+    integer,      dimension(2) :: dimids,dimlens
+    character(20),dimension(2) :: dimnames
+
+    if (associated(array)) deallocate(array)
+
+    call read_ncdf_common1(filename,ncid,varid,ndims,varname)
+
+    ! If not a 1d variable, flag and error and exit ----
+
+    if (ndims/=1) then
+       print*,'NetCDF: Requested variable has ',ndims,' dimensions, 1 required'
+       stop
+    end if
+
+    call read_ncdf_common2(ncid,varid,ndims,dimids,dimlens,dimnames)
+
+    ! Allocate output and dimension arrays -------------
+
+    allocate(array(dimlens(1)))
+
+    ! Retrieve variable contents -----------------------
+
+    ncerr=nf90_get_var(ncid, varid, array)
+    call handle_err(ncerr,__LINE__)
+
+    call read_ncdf_common3(ncid,varid,offset,scale)
+
+    array=offset+(array*scale)
+
+  end subroutine read_ncdf_1d
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -556,35 +609,25 @@ contains
 
     type(glex_climate) :: params
     real(rk),dimension(:,:),intent(out)  :: precip,temp
-    real(rk),intent(in) :: time
+    real(rk),intent(in) :: time ! Time (hours)
 
     integer :: ntemp,nprecip
     real(rk) :: tsp,tst
     real(rk) :: pos
     integer :: lower,upper
 
-    ntemp   = size(params%surftemp_clim,3)
-    nprecip = size(params%precip_clim,3)
+    real(rk) :: fyear
 
-    tst=params%hours_in_year/ntemp
-    tsp=params%hours_in_year/nprecip
 
-    ! Temperature first
-
-    lower=int(time/tst)
-    upper=lower+1
-    pos=mod(time,tst)/tst
-    call fixbounds(lower,1,ntemp)
-    call fixbounds(upper,1,ntemp)
+    ! Calculate fraction of year
+    fyear = real(mod(time,real(params%hours_in_year)))/real(params%hours_in_year)
+    
+    ! Do temperature interpolation
+    call bracket_point(fyear,params%st_time,lower,upper,pos)
     temp=linear_interp(params%surftemp_clim(:,:,lower),params%surftemp_clim(:,:,upper),pos)
 
     ! precip
-
-    lower=int(time/tsp)
-    upper=lower+1
-    pos=mod(time,tsp)/tsp
-    call fixbounds(lower,1,nprecip)
-    call fixbounds(upper,1,nprecip)
+    call bracket_point(fyear,params%pr_time,lower,upper,pos)
     precip=linear_interp(params%precip_clim(:,:,lower),params%precip_clim(:,:,upper),pos)
 
     ! Add diurnal cycle to temperature. We assume that
@@ -607,6 +650,41 @@ contains
     linear_interp=a*(1.0-pos)+b*pos
 
   end function linear_interp
+
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  subroutine bracket_point(n,a,lower,upper,frac)
+
+    real(rk),             intent(in)  :: n
+    real(rk),dimension(:),intent(in)  :: a
+    integer,              intent(out) :: lower
+    integer,              intent(out) :: upper
+    real(rk),             intent(out) :: frac
+
+    real(rk),dimension(0:size(a)+1) :: aa
+    integer :: na
+
+    ! Array bounds
+    na=size(a)
+    aa(1:na) = a
+    aa(0) = -1+a(na)
+    aa(na+1) = 1+aa(1)
+
+    lower=0
+    upper=1
+    do
+       if (n>=aa(lower).and.n<aa(upper)) then
+          exit
+       end if
+       lower=lower+1
+       upper=upper+1
+    end do
+    frac = (n-aa(lower))/(aa(upper)-aa(lower))
+
+    call fixbounds(lower,1,na)
+    call fixbounds(upper,1,na)
+
+  end subroutine bracket_point
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

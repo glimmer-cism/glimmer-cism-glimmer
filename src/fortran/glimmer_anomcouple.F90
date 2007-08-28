@@ -354,7 +354,7 @@ contains
     end select
 
     ! Fix up time boundaries
-    timeaxis(1)   =-1.0-timeaxis(nt+1)
+    timeaxis(1)   =-1.0+timeaxis(nt+1)
     timeaxis(nt+2)=1.0+timeaxis(2)
 
     ! Close the file

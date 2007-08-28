@@ -546,7 +546,7 @@ contains
     ! Sort out anomaly coupling
 
     if (params%anomaly_params%enabled) then
-       yearfrac=real(mod(time,days_in_year),rk)/real(days_in_year,rk)
+       yearfrac=real(mod(time,days_in_year*24),rk)/real(days_in_year*24,rk)
        call anomaly_calc(params%anomaly_params,yearfrac,rawtemp,rawprecip,anomtemp,anomprecip)
        precip => anomprecip
        temp   => anomtemp
