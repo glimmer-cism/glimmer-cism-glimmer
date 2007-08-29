@@ -84,6 +84,7 @@ module glimmer_anomcouple
      character(20) :: tvarname_ref='artm                '
      character(20) :: pvarname_mod='prcp                '
      character(20) :: tvarname_mod='artm                '
+     logical :: mult_precip = .false. !*FD set true if we're multiplying precip
   end type anomaly_coupling
 
   private
@@ -140,19 +141,23 @@ contains
        tempr=(1.0-frac)*params%temp_ref(:,:,first)+frac*params%temp_ref(:,:,first+1)
        prcpr=(1.0-frac)*params%prcp_ref(:,:,first)+frac*params%prcp_ref(:,:,first+1)
        anomtemp=rawtemp-tempm+tempr
-       do i=1,size(anomprcp,1)
-          do j=1,size(anomprcp,2)
-             if (prcpm(i,j)/=0.0) then
-                anomprcp(i,j)=rawprcp(i,j)*prcpr(i,j)/prcpm(i,j)
-             else if (rawprcp(i,j)==0.0) then
-                anomprcp(i,j)=prcpr(i,j)
-             else if (prcpr(i,j)==0.0) then
-                anomprcp(i,j)=rawprcp(i,j)
-             else
-                anomprcp(i,j)=0.0
-             end if
+       if (params%mult_precip) then
+          do i=1,size(anomprcp,1)
+             do j=1,size(anomprcp,2)
+                if (prcpm(i,j)/=0.0) then
+                   anomprcp(i,j)=rawprcp(i,j)*prcpr(i,j)/prcpm(i,j)
+                else if (rawprcp(i,j)==0.0) then
+                   anomprcp(i,j)=prcpr(i,j)
+                else if (prcpr(i,j)==0.0) then
+                   anomprcp(i,j)=rawprcp(i,j)
+                else
+                   anomprcp(i,j)=0.0
+                end if
+             end do
           end do
-       end do
+       else
+          anomprcp=max(rawprcp-prcpm+prcpr,0.0)
+       end if
     else
        anomprcp=rawprcp
        anomtemp=rawtemp
@@ -173,16 +178,20 @@ contains
 
     ! local variables
     type(ConfigSection), pointer :: section
+    integer :: mprcp
     
     call GetSection(config,section,'anomaly coupling')
 
     if (associated(section)) then
+       mprcp = 0
        call GetValue(section,'reference',params%fname_reference)
        call GetValue(section,'model',    params%fname_modelclim)
        call GetValue(section,'precipvar_ref',  params%pvarname_ref)
        call GetValue(section,'precipvar_model',params%pvarname_mod)
        call GetValue(section,'tempvar_ref',    params%tvarname_ref)
        call GetValue(section,'tempvar_model',  params%tvarname_mod)
+       call GetValue(section,'multiply_precip',mprcp)
+       if (mprcp==1) params%mult_precip=.true.
        params%enabled = .true.
     else
        params%enabled = .false.

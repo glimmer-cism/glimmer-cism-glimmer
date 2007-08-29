@@ -1,3 +1,7 @@
+2007-08-29 Ian Rutt
+ * Changed precip anomaly coupling to be additive, but with option to use
+ multiplicative version instead.
+
 2007-08-28 Ian Rutt
  * Fixed bugs with anomaly coupling - should all be working now.
 
