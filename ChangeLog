@@ -1,3 +1,7 @@
+2007-08-31 Ian Rutt
+ * Thorough revamp of glint example. Simplified so that all data must be
+ on the same grid now, and streamlined code.
+
 2007-08-29 Ian Rutt
  * Changed precip anomaly coupling to be additive, but with option to use
  multiplicative version instead.

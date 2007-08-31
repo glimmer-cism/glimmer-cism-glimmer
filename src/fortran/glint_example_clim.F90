@@ -55,42 +55,34 @@ module glint_example_clim
 
   type glex_climate
      ! Mass-balance coupling timing parameters --------------------------
-     integer                 :: total_years=10    ! Length of run in years
-     integer                 :: climate_tstep=6   ! Climate time-step in hours
-     real(rk)                :: diurnal_cycle=0.0 ! Imposed Diurnal cycle (degC)
+     integer                 :: total_years=10   ! Length of run in years
+     integer                 :: climate_tstep=6  ! Climate time-step in hours
      ! Filenames --------------------------------------------------------
-     character(fname_length) :: precip_file = 'monthly_precip_mean_1974-2003.nc' !*FD Name of precip file
-     character(fname_length) :: stemp_file  = 'surf_temp_6h_1974-2003.nc'        !*FD Name of surface temp file
-     character(fname_length) :: orog_file   = 'global_orog.nc'                   !*FD Name of orography file
+     character(fname_length) :: precip_file = '' !*FD Name of precip file
+     character(fname_length) :: stemp_file  = '' !*FD Name of surface temp file
+     character(fname_length) :: orog_file   = '' !*FD Name of orography file
      ! Variable names ---------------------------------------------------
-     character(fname_length) :: precip_varname = 'prate'
-     character(fname_length) :: stemp_varname  = 'air_temperature'
-     character(fname_length) :: orog_varname   = 'hgt'
-     ! Arrays for loading climatology -----------------------------------
-     real(rk),dimension(:,:,:),pointer :: pclim_load    => null()  !*FD Precip
-     real(rk),dimension(:,:,:),pointer :: stclim_load   => null()  !*FD Surf temps
-     real(rk),dimension(:,:),  pointer :: orog_load     => null()  !*FD Orog
+     character(fname_length) :: precip_varname = '' !*FD precip variable name
+     character(fname_length) :: stemp_varname  = '' !*FD temperature variable name
+     character(fname_length) :: orog_varname   = '' !*FD orography variable name
      ! Arrays for holding climatology -----------------------------------
      real(rk),dimension(:,:),  pointer :: orog_clim     => null()  !*FD Orography
      real(rk),dimension(:,:,:),pointer :: precip_clim   => null()  !*FD Precip
      real(rk),dimension(:,:,:),pointer :: surftemp_clim => null()  !*FD Surface temperature
      ! Grid variables ---------------------------------------------------
-     type(global_grid),pointer :: orog_grid   => null()
-     type(global_grid),pointer :: precip_grid => null()
-     type(global_grid),pointer :: temp_grid   => null()
-     type(global_grid),pointer :: all_grid    => null()
+     type(global_grid) :: clim_grid
      ! Time variables ---------------------------------------------------
      real(rk),dimension(:),pointer :: pr_time => null() !*FD Time in precip climatology
      real(rk),dimension(:),pointer :: st_time => null() !*FD Time in surftemp climatology
      ! Other parameters -------------------------------------------------
-     integer :: days_in_year=365
-     integer :: hours_in_year=365*24
+     integer  :: days_in_year=365
+     integer  :: hours_in_year=365*24
      real(rk) :: precip_scale=1.0 ! Factor to scale precip by
-     logical :: temp_in_kelvin=.true. ! Set if temperature field is in Kelvin
+     logical  :: temp_in_kelvin=.true. ! Set if temperature field is in Kelvin
   end type glex_climate
 
   interface read_ncdf
-     module procedure read_ncdf_2d,read_ncdf_3d,read_ncdf_1d
+     module procedure read_ncdf_1d,read_ncdf_2d,read_ncdf_3d
   end interface
 
 contains
@@ -98,85 +90,54 @@ contains
   subroutine glex_clim_init(params,filename)
 
     use glimmer_config
-    use glint_global_interp
     use glimmer_log
 
     type(glex_climate) :: params   !*FD Climate parameters
     character(*)       :: filename !*FD config filename
 
     type(ConfigSection),pointer :: config !*FD structure holding sections of configuration file   
+    type(global_grid) :: pgrid,sgrid,ogrid 
+    character(20) :: sttu,prtu ! Units
     integer :: ierr,i
 
     call ConfigRead(filename,config)
     call glex_clim_readconfig(params,config)
+    call glex_clim_printconfig(params)
     call CheckSections(config)
 
-    ! Read in climate data
+    ! Read in global grids
 
-    call read_ncdf(params%precip_file,params%precip_varname,params%pclim_load, params%precip_grid)
-    call read_ncdf(params%stemp_file, params%stemp_varname, params%stclim_load,params%temp_grid)
-    call read_ncdf(params%orog_file,  params%orog_varname,  params%orog_load,  params%orog_grid)
-    call read_ncdf(params%precip_file,'time',params%pr_time)
-    call read_ncdf(params%stemp_file, 'time',params%st_time)
+    call read_ncdf_ggrid(params%precip_file,pgrid)
+    call read_ncdf_ggrid(params%stemp_file, sgrid)
+    call read_ncdf_ggrid(params%orog_file,  ogrid)
 
-    ! Find a suitable grid
+    ! Check all grids are the same, and copy
+    
+    call check_ggrids(pgrid,sgrid,ogrid)
+    params%clim_grid=pgrid
 
-    if (associated(params%all_grid)) deallocate(params%all_grid)
-    allocate(params%all_grid)
-    params%all_grid=min(params%orog_grid,min(params%precip_grid,params%temp_grid))
+    ! Read in time axes
 
-    ! Allocate climate arrays
+    call read_ncdf(params%precip_file,'time',params%pr_time,units=prtu)
+    call read_ncdf(params%stemp_file, 'time',params%st_time,units=sttu)
 
-    call grid_alloc(params%orog_clim,    params%all_grid)
-    call grid_alloc(params%precip_clim,  params%all_grid,size(params%pclim_load,3))
-    call grid_alloc(params%surftemp_clim,params%all_grid,size(params%stclim_load,3))       
+    ! Scale as fractions of a year if necessary
+    
+    call scale_time(params,params%pr_time,prtu)
+    call scale_time(params,params%st_time,sttu)
 
-    ! Interpolate or not as the case may be
-    ! Orography
+    ! Read in data
 
-    if (params%orog_grid==params%all_grid) then
-       params%orog_clim=params%orog_load
-    else
-       print*,'Interpolating orography'
-       call global_interp(params%orog_grid,params%orog_load,params%all_grid,params%orog_clim,error=ierr)
-       if (ierr>0) call interp_error(ierr,__LINE__)
-    end if
+    call read_ncdf(params%precip_file,params%precip_varname,params%precip_clim)
+    call read_ncdf(params%stemp_file, params%stemp_varname, params%surftemp_clim)
+    call read_ncdf(params%orog_file,  params%orog_varname,  params%orog_clim)
 
-    ! Precip - first scale it
+    ! Scale precip 
+    params%precip_clim = params%precip_clim * params%precip_scale
 
-    params%pclim_load=params%pclim_load*params%precip_scale
-
-    if (params%precip_grid==params%all_grid) then
-       params%precip_clim=params%pclim_load
-    else
-       Print*,'Interpolating precip'
-       do i=1,size(params%pclim_load,3)
-          call global_interp(params%precip_grid,params%pclim_load(:,:,i),params%all_grid,params%precip_clim(:,:,i),error=ierr)
-          if (ierr>0) call interp_error(ierr,__LINE__)
-       end do
-    end if
-
-    ! Temperature
-
-    if (params%temp_grid==params%all_grid) then
-       params%surftemp_clim=params%stclim_load
-    else
-       Print*,'Interpolating temperature'
-       do i=1,size(params%stclim_load,3)
-          call global_interp(params%temp_grid,params%stclim_load(:,:,i),params%all_grid,params%surftemp_clim(:,:,i),error=ierr)
-          if (ierr>0) call interp_error(ierr,__LINE__)
-       end do
-    end if
-
-    ! Deallocate unneeded input data
-
-    deallocate(params%orog_load,params%pclim_load,params%stclim_load)
-
-    ! Fix up a few things
-
+    ! Convert temps to degrees C if necessary
     if (params%temp_in_kelvin) then
-       print*,'Converting temperatures to degC'
-       params%surftemp_clim=params%surftemp_clim-273.15 ! Convert temps to degreesC if necessary
+       params%surftemp_clim=params%surftemp_clim-273.15
     end if
 
   end subroutine glex_clim_init
@@ -186,6 +147,7 @@ contains
   subroutine glex_clim_readconfig(params,config)
 
     use glimmer_config
+    use glimmer_log
 
     type(glex_climate)           :: params !*FD Climate parameters
     type(ConfigSection), pointer :: config !*FD structure holding sections of configuration file   
@@ -213,20 +175,233 @@ contains
        call GetValue(section,'days_in_year',params%days_in_year)
        call GetValue(section,'total_years',params%total_years)
        call GetValue(section,'climate_tstep',params%climate_tstep)
-       call GetValue(section,'diurnal_cycle',params%diurnal_cycle)
        params%hours_in_year=params%days_in_year*24
     end if
+
+    if (params%precip_file=='') &
+       call write_log('GLINT Example: precip filename must be supplied',GM_FATAL)
+    if (params%stemp_file=='') &
+       call write_log('GLINT Example: temperature filename must be supplied',GM_FATAL)
+    if (params%orog_file=='') &
+       call write_log('GLINT Example: orography filename must be supplied',GM_FATAL)
+    if (params%precip_varname=='') &
+       call write_log('GLINT Example: precip variable must be specified',GM_FATAL)
+    if (params%stemp_varname=='') &
+       call write_log('GLINT Example: temperature variable must be specified',GM_FATAL)
+    if (params%orog_varname=='') &
+       call write_log('GLINT Example: orography variable must be specified',GM_FATAL)
 
   end subroutine glex_clim_readconfig
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine read_ncdf_1d(filename,varname,array)
+  subroutine glex_clim_printconfig(params)
+
+    use glimmer_log
+
+    type(glex_climate) :: params
+    character(100) :: message
+    
+    call write_log('GLINT Example configuration')
+    call write_log('---------------------------')
+
+    call write_log('Precip: '//trim(params%precip_varname)//' in file '// &
+         trim(params%precip_file))
+    call write_log('Surface temperature: '//trim(params%stemp_varname)//' in file '// &
+         trim(params%stemp_file))
+    call write_log('Orography: '//trim(params%orog_varname)//' in file '// &
+         trim(params%orog_file))
+
+    if (params%temp_in_kelvin) then
+       call write_log('Temperatures in Kelvin')
+    else
+       call write_log('Temperatures in degC')
+    end if
+    
+    if (params%precip_scale/=1.0) then
+       write(message,*)'Precipitation scaled by ',params%precip_scale
+       call write_log(message)
+    end if
+
+    call write_log('')
+
+  end subroutine glex_clim_printconfig
+
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  subroutine read_ncdf_ggrid(fname,ggrid)
 
     use netcdf
+    use glimmer_log
+
+    !*FD Constructs a global grid data type from file
+
+    character(*),intent(in)       :: fname
+    type(global_grid),intent(out) :: ggrid
+
+    integer :: ncerr     ! NetCDF error 
+    integer :: ncid      ! NetCDF file id
+    integer :: varid     ! NetCDF variable id
+    integer :: ndims     ! Number of dimensions
+
+    integer :: lon_id,lon_nd,lat_id,lat_nd
+    character(30) :: lon_varn,lat_varn
+
+    integer :: nx,ny
+    integer,dimension(1) :: lldimids
+    real(dp),dimension(:),allocatable :: lons,lats
+
+    ! Open file
+    ncerr = nf90_open(fname,0,ncid)
+    call handle_err(ncerr,__LINE__)
+
+    ! Look for desired dimenion names - the standard name attribute is the
+    ! place to look.
+    call ncdf_find_var(ncid,(/'longitude'/),lon_varn,lon_id,lon_nd)
+    call ncdf_find_var(ncid,(/'latitude' /),lat_varn,lat_id,lat_nd)
+
+    ! Check they're only 1D arrays
+    if (lon_nd/=1.or.lat_nd/=1) &
+         call write_log('Latitude and Longitude variables must be 1D',GM_FATAL)
+
+    ! Find out the sizes
+    ncerr = nf90_inquire_variable(ncid,lon_id,dimids=lldimids)
+    call handle_err(ncerr,__LINE__)
+    ncerr = nf90_inquire_dimension(ncid,lldimids(1),len=nx)
+    call handle_err(ncerr,__LINE__)
+    ncerr = nf90_inquire_variable(ncid,lat_id,dimids=lldimids)
+    call handle_err(ncerr,__LINE__)
+    ncerr = nf90_inquire_dimension(ncid,lldimids(1),len=ny)
+    call handle_err(ncerr,__LINE__)
+
+    ! Allocate temporary arrays
+    allocate(lons(nx),lats(ny))
+
+    ! Read in lats and lons
+    ncerr = nf90_get_var(ncid,lon_id,lons)
+    call handle_err(ncerr,__LINE__)
+    ncerr = nf90_get_var(ncid,lat_id,lats)
+    call handle_err(ncerr,__LINE__)
+
+    ! NB we are ignoring cell boundaries here.
+    ! So, now construct global grid type
+    call new_global_grid(ggrid,lons,lats,correct=.false.)
+
+    ! Close file
+    ncerr = nf90_close(ncid)
+    call handle_err(ncerr,__LINE__)
+
+  end subroutine read_ncdf_ggrid
+
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 
+  subroutine check_ggrids(g1,g2,g3)
+
+    use glimmer_log
+
+    !*FD Compares three grids to make sure they are all the same
+
+    type(global_grid),intent(in) :: g1,g2,g3
+    logical :: fail
+
+    fail=.false.
+
+    if (g1%nx/=g2%nx.or.g1%nx/=g3%nx) fail = .true.
+    if (g1%ny/=g2%ny.or.g1%ny/=g3%ny) fail = .true.
+
+    if (any(g1%lons/=g2%lons).or.any(g1%lons/=g3%lons)) fail = .true.
+    if (any(g1%lats/=g2%lats).or.any(g1%lats/=g3%lats)) fail = .true.
+
+    if (fail) &
+         call write_log('GLINT Example: All three grids must be the same',GM_FATAL)
+
+  end subroutine check_ggrids
+
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  
+  subroutine ncdf_find_var(ncid,stdnames,varname,varid,ndims,fatal)
+
+    use netcdf
+    use glimmer_log
+
+    !*FD Returns the name and id of the first found variable which has
+    !*FD the requested standard name attribute
+
+    integer,intent(in) :: ncid !*FD ID of an open netcdf file
+    character(*),dimension(:),intent(in)  :: stdnames !*FD standard names sought
+    character(*),intent(out) :: varname !*FD variable name
+    integer,intent(out) :: varid !*FD variable ID
+    integer,intent(out) :: ndims !*FD Number of dimensions of variable
+    logical,intent(in),optional :: fatal !*FD set true to halt if name not found
+
+    integer :: nvars,iv,natts,ia,nd,nsn,in
+    integer :: ncerr
+    character(50) :: an,sn
+    character(100) :: message
+    logical :: ft
+
+    if (present(fatal)) then
+       ft=fatal
+    else
+       ft=.true.
+    end if
+
+    nsn=size(stdnames)
+
+    ncerr = nf90_inquire(ncid,nVariables=nvars)
+    call handle_err(ncerr,__LINE__)
+
+    ! Loop over variables
+    do iv = 1,nvars
+       ncerr = nf90_inquire_variable(ncid,iv,varname,ndims=nd,nAtts=natts)
+       call handle_err(ncerr,__LINE__)
+
+       ! Loop over attributes
+       do ia = 1,natts
+          ncerr = nf90_inq_attname(ncid, iv, ia, an)
+          call handle_err(ncerr,__LINE__)
+
+          ! If standard name, get value and check 
+          ! against targets in turn
+          if (trim(an)=='standard_name') then
+             ncerr = nf90_get_att(ncid, iv, an, sn)
+             call handle_err(ncerr,__LINE__)
+             do in = 1,nsn
+                if (trim(sn)==trim(stdnames(in))) then
+                   varid = iv
+                   ndims = nd
+                   return
+                end if
+             end do
+          end if
+
+       end do
+    end do
+
+    ! If we get to here, we've failed to find the right std name anywhere.
+    if (ft) then
+       message = 'Failed to find standard names: '
+       do in = 1,nsn
+          message = trim(message)//' '//trim(stdnames(in))
+          if (in/=nsn) message = trim(message)//','
+       end do
+       call write_log(message,GM_FATAL)
+    end if
+
+  end subroutine ncdf_find_var
+
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  ! READ_NCDF routines
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  subroutine read_ncdf_1d(filename,varname,array,units)
+
+    use netcdf
+    use glimmer_log
 
     character(*)                  :: filename,varname
     real(rk),dimension(:),pointer :: array
+    character(*),optional,intent(out) :: units
 
     real(rk),dimension(:),allocatable :: dim1
 
@@ -234,22 +409,26 @@ contains
     integer  :: ncid      ! NetCDF file id
     integer  :: varid     ! NetCDF variable id
     integer  :: ndims     ! Number of dimensions
-    real(rk) :: offset=0.0,scale=1.0
-    integer,      dimension(2) :: dimids,dimlens
-    character(20),dimension(2) :: dimnames
+    real(rk) :: offset,scale
+    integer,      dimension(1) :: dimids,dimlens
+    character(20),dimension(1) :: dimnames
+    character(100) :: message
+    integer :: u_attlen
 
     if (associated(array)) deallocate(array)
+    offset = 0.0
+    scale = 1.0
 
-    call read_ncdf_common1(filename,ncid,varid,ndims,varname)
+    call read_ncdf_findvar(filename,ncid,varid,ndims,varname)
 
     ! If not a 1d variable, flag and error and exit ----
 
     if (ndims/=1) then
-       print*,'NetCDF: Requested variable has ',ndims,' dimensions, 1 required'
-       stop
+       write(message,*)'NetCDF: Requested variable has ',ndims,' dimensions, 1 required'
+       call write_log(message,GM_FATAL)
     end if
 
-    call read_ncdf_common2(ncid,varid,ndims,dimids,dimlens,dimnames)
+    call read_ncdf_dimnames(ncid,varid,ndims,dimids,dimlens,dimnames)
 
     ! Allocate output and dimension arrays -------------
 
@@ -260,113 +439,90 @@ contains
     ncerr=nf90_get_var(ncid, varid, array)
     call handle_err(ncerr,__LINE__)
 
-    call read_ncdf_common3(ncid,varid,offset,scale)
+    call read_ncdf_scaling(ncid,varid,offset,scale)
 
     array=offset+(array*scale)
+
+    ! Find units if necessary
+    if (present(units)) then
+       ncerr=nf90_inquire_attribute(ncid, varid, 'units', len=u_attlen)
+       call handle_err(ncerr,__LINE__)
+       ncerr=nf90_get_att(ncid, varid, 'units', units)
+       call handle_err(ncerr,__LINE__)
+       units=units(1:u_attlen)
+    end if
 
   end subroutine read_ncdf_1d
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine read_ncdf_2d(filename,varname,array,grid)
+  subroutine read_ncdf_2d(filename,varname,array)
 
     use netcdf
 
     character(*)                    :: filename,varname
     real(rk),dimension(:,:),pointer :: array
-    type(global_grid),      pointer :: grid
-
-    real(rk),dimension(:),allocatable :: dim1,dim2
-    real(rk),dimension(:),pointer :: lonbound => NULL()
-    real(rk),dimension(:),pointer :: latbound => NULL()
 
     integer  :: ncerr     ! NetCDF error 
     integer  :: ncid      ! NetCDF file id
     integer  :: varid     ! NetCDF variable id
     integer  :: ndims     ! Number of dimensions
-    real(rk) :: offset=0.0,scale=1.0
+    real(rk) :: offset,scale
     integer,      dimension(2) :: dimids,dimlens
     character(20),dimension(2) :: dimnames
-    logical :: lonb_present,latb_present
 
     if (associated(array)) deallocate(array)
-    if (associated(grid))  deallocate(grid)
+    offset = 0.0
+    scale = 1.0
 
-    call read_ncdf_common1(filename,ncid,varid,ndims,varname)
+    call read_ncdf_findvar(filename,ncid,varid,ndims,varname)
 
-    ! If not a 3d variable, flag and error and exit ----
+    ! If not a 2d variable, flag and error and exit ----
 
     if (ndims/=2) then
        print*,'NetCDF: Requested variable only has ',ndims,' dimensions'
        stop
     end if
 
-    call read_ncdf_common2(ncid,varid,ndims,dimids,dimlens,dimnames)
+    call read_ncdf_dimnames(ncid,varid,ndims,dimids,dimlens,dimnames)
 
-    ! Allocate output and dimension arrays -------------
+    ! Allocate output -------------
 
     allocate(array(dimlens(1),dimlens(2)))
-    allocate(dim1(dimlens(1)))
-    allocate(dim2(dimlens(2)))
 
     ! Retrieve variable contents -----------------------
 
     ncerr=nf90_get_var(ncid, varid, array)
     call handle_err(ncerr,__LINE__)
 
-    call read_ncdf_common3(ncid,varid,offset,scale)
+    call read_ncdf_scaling(ncid,varid,offset,scale)
 
     array=offset+(array*scale)
-
-    ! Get dimension variables --------------------------
-
-    call read_ncdf_getdim(ncid,varid,dimnames(1),dim1)
-    call read_ncdf_getdim(ncid,varid,dimnames(2),dim2)
-
-    ! Get boundary arrays, if present ------------------
-
-    call read_ncdf_getbound(ncid,varid,'bounds_lon',lonb_present,lonbound)
-    call read_ncdf_getbound(ncid,varid,'bounds_lat',latb_present,latbound)
-
-    ! Construct global grid ----------------------------
-
-    call read_ncdf_common4(grid,lonb_present,latb_present,dim1,dim2,lonbound,latbound)
-
-    ! Tidy up ------------------------------------------
-
-    deallocate(dim1,dim2)
-    if (associated(latbound)) deallocate(latbound)
-    if (associated(lonbound)) deallocate(lonbound)
 
   end subroutine read_ncdf_2d
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine read_ncdf_3d(filename,varname,array,grid)
+  subroutine read_ncdf_3d(filename,varname,array)
 
     use netcdf
 
     character(*)                      :: filename,varname
     real(rk),dimension(:,:,:),pointer :: array
-    type(global_grid),        pointer :: grid
-
-    real(rk),dimension(:),allocatable :: dim1,dim2,dim3
-    real(rk),dimension(:),pointer :: lonbound => NULL()
-    real(rk),dimension(:),pointer :: latbound => NULL()
 
     integer  :: ncerr     ! NetCDF error 
     integer  :: ncid      ! NetCDF file id
     integer  :: varid     ! NetCDF variable id
     integer  :: ndims     ! Number of dimensions
-    real(rk) :: offset=0.0,scale=1.0
+    real(rk) :: offset,scale
     integer,      dimension(3) :: dimids,dimlens
     character(20),dimension(3) :: dimnames
-    logical :: lonb_present,latb_present
 
     if (associated(array)) deallocate(array)
-    if (associated(grid))  deallocate(grid)
+    offset = 0.0
+    scale = 1.0
 
-    call read_ncdf_common1(filename,ncid,varid,ndims,varname)
+    call read_ncdf_findvar(filename,ncid,varid,ndims,varname)
 
     ! If not a 3d variable, flag and error and exit ----
 
@@ -375,50 +531,26 @@ contains
        stop
     end if
 
-    call read_ncdf_common2(ncid,varid,ndims,dimids,dimlens,dimnames)
+    call read_ncdf_dimnames(ncid,varid,ndims,dimids,dimlens,dimnames)
 
-    ! Allocate output and dimension arrays -------------
+    ! Allocate output -------------
 
     allocate(array(dimlens(1),dimlens(2),dimlens(3)))
-    allocate(dim1(dimlens(1)))
-    allocate(dim2(dimlens(2)))
-    allocate(dim3(dimlens(3)))
 
     ! Retrieve variable contents -----------------------
 
     ncerr=nf90_get_var(ncid, varid, array)
     call handle_err(ncerr,__LINE__)
 
-    call read_ncdf_common3(ncid,varid,offset,scale)
+    call read_ncdf_scaling(ncid,varid,offset,scale)
 
     array=offset+(array*scale)
-
-    ! Get dimension variables --------------------------
-
-    call read_ncdf_getdim(ncid,varid,dimnames(1),dim1)
-    call read_ncdf_getdim(ncid,varid,dimnames(2),dim2)
-    call read_ncdf_getdim(ncid,varid,dimnames(3),dim3)
-
-    ! Get boundary arrays, if present ------------------
-
-    call read_ncdf_getbound(ncid,varid,'bounds_lon',lonb_present,lonbound)
-    call read_ncdf_getbound(ncid,varid,'bounds_lat',latb_present,latbound)
-
-    ! Construct global grid ----------------------------
-
-    call read_ncdf_common4(grid,lonb_present,latb_present,dim1,dim2,lonbound,latbound)
-
-    ! Tidy up ------------------------------------------
-
-    deallocate(dim1,dim2,dim3)
-    if (associated(latbound)) deallocate(latbound)
-    if (associated(lonbound)) deallocate(lonbound)
 
   end subroutine read_ncdf_3d
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine read_ncdf_common1(filename,ncid,varid,ndims,varname)
+  subroutine read_ncdf_findvar(filename,ncid,varid,ndims,varname)
 
     use netcdf
 
@@ -439,11 +571,11 @@ contains
     ncerr=nf90_inquire_variable(ncid, varid, ndims=ndims)
     call handle_err(ncerr,__LINE__)
 
-  end subroutine read_ncdf_common1
+  end subroutine read_ncdf_findvar
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine read_ncdf_common2(ncid,varid,ndims,dimids,dimlens,dimnames)
+  subroutine read_ncdf_dimnames(ncid,varid,ndims,dimids,dimlens,dimnames)
 
     use netcdf
 
@@ -465,11 +597,11 @@ contains
        call handle_err(ncerr,__LINE__)
     end do
 
-  end subroutine read_ncdf_common2
+  end subroutine read_ncdf_dimnames
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine read_ncdf_common3(ncid,varid,offset,scale)
+  subroutine read_ncdf_scaling(ncid,varid,offset,scale)
 
     use netcdf
 
@@ -491,99 +623,28 @@ contains
        ncerr=NF90_NOERR
     end if
 
-  end subroutine read_ncdf_common3
+  end subroutine read_ncdf_scaling
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine read_ncdf_getdim(ncid,varid,dimname,dim)
+  subroutine scale_time(params,time,units)
+    
+    use glimmer_log
+    
+    type(glex_climate),   intent(in)    :: params
+    real(rk),dimension(:),intent(inout) :: time
+    character(*),         intent(in)    :: units
 
-    use netcdf
-
-    integer :: ncid,varid
-    character(*) :: dimname
-    real(rk),dimension(:) :: dim
-    integer :: ncerr
-
-    ! Get dimension variables 
-
-    ncerr=nf90_inq_varid(ncid,dimname,varid)
-    call handle_err(ncerr,__LINE__)
-    ncerr=nf90_get_var(ncid, varid, dim)
-    call handle_err(ncerr,__LINE__)
-
-  end subroutine read_ncdf_getdim
-
-  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-  subroutine read_ncdf_getbound(ncid,varid,boundname,present,bound)
-
-    use netcdf
-
-    integer :: ncid,varid
-    character(*) :: boundname
-    logical :: present
-    real(rk),dimension(:),pointer :: bound
-
-    integer :: ncerr
-    integer,dimension(2) :: dimids,dimlens
-    character(20),dimension(2) :: dimnames
-    real(rk),dimension(:,:),allocatable :: b
-    integer :: i
-
-    ncerr=nf90_inq_varid(ncid,boundname,varid)
-    if (ncerr/=NF90_NOERR) then
-       present=.false.
-       ncerr=NF90_NOERR
-    else
-       ncerr=nf90_inquire_variable(ncid, varid, dimids=dimids)
-       call handle_err(ncerr,__LINE__)
-       do i=1,2
-          ncerr=nf90_inquire_dimension(ncid, dimids(i), name=dimnames(i),len=dimlens(i))
-          call handle_err(ncerr,__LINE__)
-       end do
-       if (associated(bound)) deallocate(bound)
-       allocate(b(dimlens(1),dimlens(2)),bound(dimlens(2)+1))
-       ncerr=nf90_get_var(ncid, varid,b)
-       call handle_err(ncerr,__LINE__)
-       do i=1,dimlens(2)
-          bound(i)=b(1,i)
-          bound(i+1)=b(2,i)
-       end do
-       deallocate(b)
-       present=.true.
-    end if
-
-  end subroutine read_ncdf_getbound
-
-  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-  subroutine read_ncdf_common4(grid,lonb_present,latb_present,dim1,dim2,lonbound,latbound)
-
-    type(global_grid),        pointer :: grid
-    logical :: lonb_present,latb_present
-    real(rk),dimension(:) :: dim1,dim2
-    real(rk), dimension(:), pointer :: lonbound,latbound
-    integer :: args
-
-    ! Construct grid type
-
-    allocate(grid)
-    args=0
-    if (lonb_present) args=args+1
-    if (latb_present) args=args+2
-
-    select case(args)
-    case(0)
-       call new_global_grid(grid,dim1,dim2,correct=.false.)
-    case(1)
-       call new_global_grid(grid,dim1,dim2,lonb=lonbound)
-    case(2)
-       call new_global_grid(grid,dim1,dim2,latb=latbound,correct=.false.)
-    case(3)
-       call new_global_grid(grid,dim1,dim2,lonb=lonbound,latb=latbound)
+    select case(trim(units))
+    case('years')
+       ! Do nothing
+    case('hours')
+       time=time/real(params%hours_in_year,rk)
+    case default
+       call write_log('Time units '//trim(units)//' unrecognised',GM_FATAL)
     end select
 
-  end subroutine read_ncdf_common4
+  end subroutine scale_time
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -629,13 +690,6 @@ contains
     ! precip
     call bracket_point(fyear,params%pr_time,lower,upper,pos)
     precip=linear_interp(params%precip_clim(:,:,lower),params%precip_clim(:,:,upper),pos)
-
-    ! Add diurnal cycle to temperature. We assume that
-    ! the lowest temperature is at midnight, and the highest at midday.
-    ! Obviously, this probably isn't true...
-
-    if (mod(int(time),24)==0)  temp=temp-params%diurnal_cycle
-    if (mod(int(time),24)==12) temp=temp+params%diurnal_cycle
 
   end subroutine example_climate
 

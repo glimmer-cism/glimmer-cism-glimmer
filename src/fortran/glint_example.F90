@@ -140,7 +140,7 @@ program glint_example
 
   ! Set dimensions of global grids
 
-  call get_grid_dims(climate%all_grid,nx,ny) ! Normal global grid
+  call get_grid_dims(climate%clim_grid,nx,ny) ! Normal global grid
   nxo=200 ; nyo=100                          ! Example grid used for orographic output
 
   ! start logging
@@ -177,8 +177,8 @@ program glint_example
   ! Initialise the ice model
 
   call initialise_glint(ice_sheet, &
-       climate%all_grid%lats, &
-       climate%all_grid%lons, &
+       climate%clim_grid%lats, &
+       climate%clim_grid%lons, &
        climate%climate_tstep, &
        (/paramfile/), &
        orog=orog_out, &
