@@ -1,7 +1,8 @@
 2007-10-23 Ian Rutt
  * glint.F90: added basic capability to extract raw forcing climate for
    diagnostic purposes
-
+ * Fixed bug in glint_example_clim.F90 that prevented single-precision builds
+	
 2007-08-31 Ian Rutt
  * Thorough revamp of glint example. Simplified so that all data must be
  on the same grid now, and streamlined code.

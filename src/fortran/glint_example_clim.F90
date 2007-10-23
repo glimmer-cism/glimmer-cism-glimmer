@@ -285,7 +285,7 @@ contains
 
     ! NB we are ignoring cell boundaries here.
     ! So, now construct global grid type
-    call new_global_grid(ggrid,lons,lats,correct=.false.)
+    call new_global_grid(ggrid,real(lons,rk),real(lats,rk),correct=.false.)
 
     ! Close file
     ncerr = nf90_close(ncid)
