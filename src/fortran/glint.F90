@@ -55,10 +55,21 @@ module glint_main
   use glint_constants
   use glimmer_anomcouple
 
+  implicit none
+
   ! ------------------------------------------------------------
   ! GLIMMER_PARAMS derived type definition
   ! This is where default values are set.
   ! ------------------------------------------------------------
+
+  type dummy_type
+     !*FD Stores basic netcdf information for dummy operation of glint
+     integer :: ncid !*FD ID of netcdf output file
+     integer :: dimid_lon, dimid_lat, dimid_time
+     integer :: varid_lon, varid_lat, varid_time
+     integer :: varid_artm, varid_prcp
+     integer :: count
+  end type dummy_type
 
   type glint_params 
 
@@ -134,9 +145,14 @@ module glint_main
      logical :: need_winds=.false. !*FD Set if we need the winds to be accumulated/downscaled
      logical :: enmabal=.false.    !*FD Set if we're using the energy balance mass balance model anywhere
 
-     ! Anomaly coupling for global climate ------------------------------------------
+     ! Anomaly coupling for global climate ----------------------
 
      type(anomaly_coupling) :: anomaly_params !*FD Parameters for anomaly coupling
+
+     ! Flag for dummy operation ---------------------------------
+
+     logical :: dummy_ops = .false. !*FD Set true if we're running in dummy mode
+     type(dummy_type) :: dummy_params    !*FD Parameters for dummy operation
 
   end type glint_params
 
@@ -162,7 +178,7 @@ contains
 
   subroutine initialise_glint(params,lats,longs,time_step,paramfile,latb,lonb,orog,albedo, &
        ice_frac,veg_frac,snowice_frac,snowveg_frac,snow_depth,orog_lats,orog_longs,orog_latb,orog_lonb,output_flag, &
-       daysinyear,snow_model,ice_dt,extraconfigs,start_time)
+       daysinyear,snow_model,ice_dt,extraconfigs,start_time,dummy_ops)
 
     !*FD Initialises the model
 
@@ -207,6 +223,7 @@ contains
     type(ConfigData),dimension(:),optional ::  extraconfigs !*FD Additional configuration information - overwrites
                                                                   !*FD config data read from files
     integer,                optional,intent(in)    :: start_time  !*FD Time of first call to glint (hours)
+    logical,                optional,intent(in)    :: dummy_ops   !*FD Set true to enable dummy mode
 
     ! Internal variables -----------------------------------------------------------------------
 
@@ -218,6 +235,14 @@ contains
     real(rk),dimension(:,:),allocatable :: orog_temp,if_temp,vf_temp,sif_temp,svf_temp,sd_temp,alb_temp ! Temporary output arrays
     integer,dimension(:),allocatable :: mbts,idts ! Array of mass-balance and ice dynamics timesteps
     logical :: anomaly_check ! Set if we've already initialised anomaly coupling
+
+    ! Deal with optional arguments -------------------------------------------------------------
+
+    if (present(dummy_ops)) then
+       params%dummy_ops = dummy_ops
+    else
+       params%dummy_ops = .false.
+    end if
 
     ! Initialise start time and calling model time-step ----------------------------------------
     ! We ignore t=0 by default 
@@ -279,6 +304,16 @@ contains
 
     params%cov_normalise=0.0
     params%cov_norm_orog=0.0
+
+    ! ---------------------------------------------------------------
+    ! If we're in dummy mode, call the initialisation
+    ! ---------------------------------------------------------------
+
+    if (params%dummy_ops) then
+       call glint_dummy_init(params,'glint_climate.nc')
+       if (present(output_flag)) output_flag=.false.
+       return
+    end if
 
     ! ---------------------------------------------------------------
     ! Determine how many instances there are, according to what
@@ -534,6 +569,13 @@ contains
        end if
     end if
 
+    ! Deal with dummy mode here ---------------------------------------------------------------------
+
+    if (params%dummy_ops) then
+       call glint_dummy_tstep(params,rawtemp,rawprecip,time)
+       return
+    end if
+
     ! Check input fields are correct ----------------------------------------------------------------
 
     call check_input_fields(params,humid,lwdown,swdown,airpress,zonwind,merwind)
@@ -749,8 +791,13 @@ contains
     type(glint_params),intent(inout) :: params          !*FD parameters for this run
 
     integer i
-    ! end individual instances
 
+    if (params%dummy_ops) then
+       call glint_dummy_stop(params)
+       return
+    end if
+
+    ! end individual instances
     do i=1,params%ninstances
        call glint_i_end(params%instances(i))
     enddo
@@ -1287,6 +1334,124 @@ contains
     end if
 
   end subroutine calculate_averages
+
+  !========================================================
+  ! Dummy operations subroutines
+  !========================================================
+
+  subroutine glint_dummy_init(params,outfile)
+
+    ! This subroutine creates the netcdf file for dummy 
+    ! climate output
+
+    use netcdf
+
+    type(glint_params),intent(inout) :: params
+    character(*) :: outfile
+
+    integer :: status
+    
+    ! Create file
+    status = nf90_create(outfile,NF90_CLOBBER,params%dummy_params%ncid)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+
+    ! Create dimensions
+    status = nf90_def_dim(params%dummy_params%ncid, 'longitude',  &
+         params%g_grid%nx, params%dummy_params%dimid_lon)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    status = nf90_def_dim(params%dummy_params%ncid, 'latitude',  &
+         params%g_grid%ny, params%dummy_params%dimid_lat)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    status = nf90_def_dim(params%dummy_params%ncid, 'time',  &
+         NF90_UNLIMITED, params%dummy_params%dimid_time)
+
+    ! Create dimension variables
+    status = nf90_def_var(params%dummy_params%ncid, &
+         'longitude', NF90_FLOAT, &
+         (/ params%dummy_params%dimid_lon /), &
+         params%dummy_params%varid_lon)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    status = nf90_def_var(params%dummy_params%ncid, &
+         'latitude', NF90_FLOAT, &
+         (/ params%dummy_params%dimid_lat /), &
+         params%dummy_params%varid_lat)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    status = nf90_def_var(params%dummy_params%ncid, &
+         'time', NF90_FLOAT, &
+         (/ params%dummy_params%dimid_time /), &
+         params%dummy_params%varid_time)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+
+    ! Create climate variables
+    status = nf90_def_var(params%dummy_params%ncid, &
+         'artm', NF90_FLOAT, &
+         (/ params%dummy_params%dimid_lon,  &
+         params%dummy_params%dimid_lat,     &
+         params%dummy_params%varid_time /), &
+         params%dummy_params%varid_artm)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    status = nf90_def_var(params%dummy_params%ncid, &
+         'prcp', NF90_FLOAT, &
+         (/ params%dummy_params%dimid_lon,  &
+         params%dummy_params%dimid_lat,     &
+         params%dummy_params%varid_time /), &
+         params%dummy_params%varid_prcp)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+
+    ! Add some attributes
+
+    ! Exit define mode
+    status = nf90_enddef(params%dummy_params%ncid)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+
+    params%dummy_params%count = 1
+
+  end subroutine glint_dummy_init
+
+  subroutine glint_dummy_tstep(params,artm,prcp,time)
+
+    use netcdf
+
+    type(glint_params),     intent(inout) :: params
+    real(rk),dimension(:,:),intent(in)    :: artm
+    real(rk),dimension(:,:),intent(in)    :: prcp
+    integer,                intent(in)    :: time
+
+    integer :: status
+
+    status = nf90_put_var(params%dummy_params%ncid, &
+         params%dummy_params%varid_artm, artm, &
+         start = (/1,1,params%dummy_params%count/))
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    status = nf90_put_var(params%dummy_params%ncid, &
+         params%dummy_params%varid_prcp, prcp, &
+         start = (/1,1,params%dummy_params%count/))
+    call nc_errorhandle(__FILE__,__LINE__,status)
+    status = nf90_put_var(params%dummy_params%ncid, &
+         params%dummy_params%varid_time, real(time), &
+         start = (/params%dummy_params%count/))
+    call nc_errorhandle(__FILE__,__LINE__,status)
+
+    params%dummy_params%count = params%dummy_params%count + 1
+
+    ! Sync up
+    status = nf90_sync(params%dummy_params%ncid)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+
+  end subroutine glint_dummy_tstep
+
+  subroutine glint_dummy_stop(params)
+
+    use netcdf
+
+    type(glint_params),     intent(inout) :: params
+
+    integer :: status
+
+    status = nf90_close(params%dummy_params%ncid)
+    call nc_errorhandle(__FILE__,__LINE__,status)
+
+  end subroutine glint_dummy_stop
 
 end module glint_main
 
