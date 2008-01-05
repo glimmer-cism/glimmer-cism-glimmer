@@ -1,3 +1,7 @@
+2008-01-05 Magnus Hagdorn
+ * bootstrap: improve script by copying relevant bits from gimp
+ * configure.in: fix issue with automake-1.10
+
 2007-05-29 Ian Rutt
  * Merged in changes from RELEASE_1_0_0_BRANCH, until the 
    RELEASE_1_0_4 tag, as below:

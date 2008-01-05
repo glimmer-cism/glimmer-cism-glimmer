@@ -27,6 +27,7 @@ AC_PROG_RANLIB
 # save compiler flags, autoconf will change them later
 glimmer_FCFLAGS=$FCFLAGS
 AC_PROG_FC
+AC_PROG_F77
 AC_PROG_EGREP
 FCFLAGS=$glimmer_FCFLAGS
 AC_LANG_PUSH(Fortran)
