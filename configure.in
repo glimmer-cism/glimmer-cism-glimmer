@@ -26,9 +26,12 @@ AC_PROG_RANLIB
 
 # save compiler flags, autoconf will change them later
 glimmer_FCFLAGS=$FCFLAGS
+glimmer_FFLAGS=$FFLAGS
 AC_PROG_FC
+AC_PROG_F77
 AC_PROG_EGREP
 FCFLAGS=$glimmer_FCFLAGS
+FFLAGS=$glimmer_FFLAGS
 AC_LANG_PUSH(Fortran)
 AC_FC_SRCEXT(f90)
 # which Fortran compiler are we running?
@@ -71,6 +74,7 @@ fi
 AC_MSG_RESULT([$f95v])
 
 FCFLAGS="$FCFLAGS"
+FFLAGS="$FFLAGS"
 
 dnl Checking for python
 AM_PATH_PYTHON([2.3],,[AC_MSG_RESULT(need at least python 2.3)])
