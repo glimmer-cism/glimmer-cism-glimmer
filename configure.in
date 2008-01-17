@@ -149,6 +149,15 @@ AC_ARG_ENABLE(restarts, AS_HELP_STRING([--enable-restarts],[Build extended resta
 esac],[AC_MSG_RESULT([no])])
 AM_CONDITIONAL([BUILD_RESTARTS],[test "$enable_restarts" == "yes"])
 
+AC_MSG_CHECKING([whether the build is single precision])
+AC_ARG_ENABLE(sp, AS_HELP_STRING([--enable-sp],[Build code as single precision]),
+[case "${enableval}" in
+ yes)  AC_DEFINE(GLIMMER_SP,1,[Define to 1 if you want to enable extended restarts])
+       AC_MSG_RESULT([yes]);;	
+ no)   AC_MSG_RESULT([no]);;
+ *) AC_MSG_ERROR(bad value ${enableval} for --enable-sp) ;;
+esac],[AC_MSG_RESULT([no])])
+
 # should we run the tests
 AC_MSG_CHECKING([whether we should run the tests])
 AC_ARG_ENABLE(tests, AS_HELP_STRING([--enable-tests],[Run short tests]),
