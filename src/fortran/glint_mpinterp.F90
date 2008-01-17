@@ -1,4 +1,8 @@
 
+#ifdef HAVE_CONFIG_H
+#include <config.inc>
+#endif
+
 module glint_mpinterp
 
   !*FD Uses SLAP to calculate the field needed to perform
@@ -28,8 +32,21 @@ module glint_mpinterp
 
   private
   public mpinterp,new_mpinterp,mean_preserve_interp
+  !MAKE_RESTART
+
+#ifdef RESTARTS
+#define RST_GLINT_MPINTERP
+#include "glimmer_rst_head.inc"
+#undef RST_GLINT_MPINTERP
+#endif
 
 contains
+
+#ifdef RESTARTS
+#define RST_GLINT_MPINTERP
+#include "glimmer_rst_body.inc"
+#undef RST_GLINT_MPINTERP
+#endif
 
   subroutine new_mpinterp(params,grid)
 
