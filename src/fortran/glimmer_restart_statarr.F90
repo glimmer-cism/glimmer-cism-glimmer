@@ -153,7 +153,6 @@ contains
     character(1000) :: tmpel
  
     nx=size(values)
-    print*,'WRITING CHARACTER ARRAY:',name,':',values
 
     call write_stat_common(file,prefix,name,NF90_INT,(/1/),varid)
 
@@ -446,8 +445,6 @@ contains
        if (i>arraydims(1)) exit
        if (n>vallen) exit
     end do
-
-    print*,'READING CHARACTER ARRAY:',name,':',values
 
   end subroutine read_statarr_char_1d
 

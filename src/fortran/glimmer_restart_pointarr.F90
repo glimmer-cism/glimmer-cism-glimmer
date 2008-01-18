@@ -218,7 +218,7 @@ contains
     call write_array_common(file,prefix,name,NF90_FLOAT,associated(values),shp,lbounds,varid)
 
     if (associated(values)) then
-       status=nf90_put_var(file%ncid,varid,real(values),start=(/1,1/))
+       status=nf90_put_var(file%ncid,varid,real(values,sp),start=(/1,1/))
        if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name,varname)
        status=nf90_put_var(file%ncid,varid,aimag(values),start=(/1,2/))
        if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name,varname)
@@ -253,7 +253,7 @@ contains
     call write_array_common(file,prefix,name,NF90_DOUBLE,associated(values),shp,lbounds,varid)
 
     if (associated(values)) then
-       status=nf90_put_var(file%ncid,varid,real(values),start=(/1,1/))
+       status=nf90_put_var(file%ncid,varid,real(values,dp),start=(/1,1/))
        if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name,varname)
        status=nf90_put_var(file%ncid,varid,aimag(values),start=(/1,2/))
        if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name,varname)
@@ -411,7 +411,7 @@ contains
     call write_array_common(file,prefix,name,NF90_FLOAT,associated(values),shp,lbounds,varid)
 
     if (associated(values)) then
-       status=nf90_put_var(file%ncid,varid,real(values),start=(/1,1,1/))
+       status=nf90_put_var(file%ncid,varid,real(values,sp),start=(/1,1,1/))
        if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name,varname)
        status=nf90_put_var(file%ncid,varid,aimag(values),start=(/1,1,2/))
        if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name,varname)
@@ -446,7 +446,7 @@ contains
     call write_array_common(file,prefix,name,NF90_DOUBLE,associated(values),shp,lbounds,varid)
 
     if (associated(values)) then
-       status=nf90_put_var(file%ncid,varid,real(values),start=(/1,1,1/))
+       status=nf90_put_var(file%ncid,varid,real(values,dp),start=(/1,1,1/))
        if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name,varname)
        status=nf90_put_var(file%ncid,varid,aimag(values),start=(/1,1,2/))
        if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name,varname)
@@ -604,7 +604,7 @@ contains
     call write_array_common(file,prefix,name,NF90_FLOAT,associated(values),shp,lbounds,varid)
 
     if (associated(values)) then
-       status=nf90_put_var(file%ncid,varid,real(values),start=(/1,1,1,1/))
+       status=nf90_put_var(file%ncid,varid,real(values,sp),start=(/1,1,1,1/))
        if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name,varname)
        status=nf90_put_var(file%ncid,varid,aimag(values),start=(/1,1,1,2/))
        if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name,varname)
@@ -639,7 +639,7 @@ contains
     call write_array_common(file,prefix,name,NF90_DOUBLE,associated(values),shp,lbounds,varid)
 
     if (associated(values)) then
-       status=nf90_put_var(file%ncid,varid,real(values),start=(/1,1,1,1/))
+       status=nf90_put_var(file%ncid,varid,real(values,dp),start=(/1,1,1,1/))
        if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name,varname)
        status=nf90_put_var(file%ncid,varid,aimag(values),start=(/1,1,1,2/))
        if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name,varname)
@@ -868,7 +868,7 @@ contains
        status=nf90_get_var(file%ncid,varid,realvals)
        if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name)
        allocate(values(lbounds(1):ubounds(1)))
-       values = cmplx(realvals(:,1),realvals(:,2))
+       values = cmplx(realvals(:,1),realvals(:,2),sp)
        deallocate(realvals)
     end if
 
@@ -906,7 +906,7 @@ contains
        status=nf90_get_var(file%ncid,varid,realvals)
        if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name)
        allocate(values(lbounds(1):ubounds(1)))
-       values = cmplx(realvals(:,1),realvals(:,2))
+       values = cmplx(realvals(:,1),realvals(:,2),dp)
        deallocate(realvals)
     end if
 
@@ -1087,7 +1087,7 @@ contains
        status=nf90_get_var(file%ncid,varid,realvals)
        if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name)
        allocate(values(lbounds(1):ubounds(1),lbounds(2):ubounds(2)))
-       values = cmplx(realvals(:,:,1),realvals(:,:,2))
+       values = cmplx(realvals(:,:,1),realvals(:,:,2),sp)
        deallocate(realvals)
     end if
 
@@ -1125,7 +1125,7 @@ contains
        status=nf90_get_var(file%ncid,varid,realvals)
        if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name)
        allocate(values(lbounds(1):ubounds(1),lbounds(2):ubounds(2)))
-       values = cmplx(realvals(:,:,1),realvals(:,:,2))
+       values = cmplx(realvals(:,:,1),realvals(:,:,2),dp)
        deallocate(realvals)
     end if
 
