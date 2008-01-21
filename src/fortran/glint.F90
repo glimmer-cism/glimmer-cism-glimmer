@@ -958,19 +958,35 @@ contains
     end if
 
 #ifdef RESTARTS
-    call glimmer_read_mod_rst(rfile)
-    call glide_read_mod_rst(rfile)
-    call glint_read_mod_rst(rfile)
-    call rsr_glint_params(rfile,model)
+    call glimmer_read_mod_rst(rfile)     ! Read module variables for glimmer
+    call glide_read_mod_rst(rfile)       ! Read module variables for glide
+    call glint_read_mod_rst(rfile)       ! Read module variables for glint
+    call rsr_glint_params(rfile,model)   ! Read contents of 'model' variable
+
+    ! This section repairs the pointers in the linked lists used
+    ! to handle file IO
+
     do i=1,model%ninstances
+
+       ! Main glimmer IO (CF input/output sections)
+
        call nc_repair_outpoint(model%instances(i)%model%funits%out_first)
        call nc_repair_inpoint(model%instances(i)%model%funits%in_first)
        call nc_prefix_outfiles(model%instances(i)%model%funits%out_first,trim(pf))
        call openall_out(model%instances(i)%model)
        call glide_io_createall(model%instances(i)%model)
        call glint_io_createall(model%instances(i)%model)
-       call glint_mbal_io_createall(model%instances(i)%model)
        call glide_nc_fillall(model%instances(i)%model)
+
+       ! glint IO (GLINT input/output sections)
+
+       call nc_print_output(model%instances(i)%out_first)
+       call nc_repair_outpoint(model%instances(i)%out_first)
+       call nc_repair_inpoint(model%instances(i)%in_first)
+       call nc_prefix_outfiles(model%instances(i)%out_first,trim(pf))
+       call openall_out(model%instances(i)%model,outfiles=model%instances(i)%out_first)
+       call glint_mbal_io_createall(model%instances(i)%model,data=model%instances(i),outfiles=model%instances(i)%out_first)
+       call glide_nc_fillall(model%instances(i)%model,outfiles=model%instances(i)%out_first)
     end do
 #else
     call write_log('No restart code available - rebuild GLIMMER with --enable-restarts',GM_FATAL)

@@ -1,3 +1,6 @@
+2008-01-21 Ian Rutt
+ * Fixed problem with GLINT output files in restart code
+
 2008-01-18 Ian Rutt
  * Fixed precision bug in complex restart code.
 
