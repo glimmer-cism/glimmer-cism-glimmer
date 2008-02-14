@@ -1,3 +1,11 @@
+Changes in Version 1.0.6
+========================
+* Fixed various intermittent bugs
+* Changed termperature range calculation in GLINT to fit 
+  sine-wave through data (more consistent)
+* Added mean-preserving interpolation
+* Simplified glint_example
+
 Changes in Version 1.0.4
 ========================
 * Fixed problems with single-precision version
