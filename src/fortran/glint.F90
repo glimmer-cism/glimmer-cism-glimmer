@@ -122,7 +122,7 @@ module glint_main
      complex(rk),pointer,dimension(:)   :: sfit_exp    => null() !*FD lookup table of exponentials for DFT
      integer :: k_dft  !*FD Number of the next expected data point
      integer :: nn_dft !*FD Total number of points per dft
-     logical :: sfit_arng = .false. !*FD Set to true if we are to use sine-wave fitting
+     logical :: sfit_arng = .true. !*FD Set to true if we are to use sine-wave fitting
 
      ! Fractional coverage information --------------------------
 
@@ -1095,9 +1095,9 @@ contains
        fnames=infnames
     end if
 
-    call GetSection(config,section,'GLINT sfit-arng')
+    call GetSection(config,section,'GLINT maxmin-arng')
     if (associated(section)) then
-       sfit_arng = .true.
+       sfit_arng = .false.
     end if
 
     ! Print some configuration information

@@ -171,6 +171,8 @@ contains
     end do
   end subroutine velo_integrate_flwa
 
+  !*****************************************************************************
+
   subroutine velo_calc_diffu(velowk,stagthck,dusrfdew,dusrfdns,diffu)
 
     !*FD calculate diffusivities
@@ -193,6 +195,8 @@ contains
        diffu = 0.0d0
     end where
   end subroutine velo_calc_diffu
+
+  !*****************************************************************************
 
   subroutine velo_calc_velo(velowk,stagthck,dusrfdew,dusrfdns,flwa,diffu,ubas,vbas,uvel,vvel,uflx,vflx)
 
