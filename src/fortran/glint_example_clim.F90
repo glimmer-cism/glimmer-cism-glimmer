@@ -681,7 +681,7 @@ contains
 
 
     ! Calculate fraction of year
-    fyear = real(mod(time,real(params%hours_in_year)))/real(params%hours_in_year)
+    fyear = real(mod(time,real(params%hours_in_year,rk)))/real(params%hours_in_year)
     
     ! Do temperature interpolation
     call bracket_point(fyear,params%st_time,lower,upper,pos)

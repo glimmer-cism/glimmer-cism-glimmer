@@ -1,3 +1,6 @@
+2008-03-01 Ian Rutt
+ * Fixed precision mismatch build bug in glint_example_clim.F90
+
 2008-02-19 Ian Rutt
  * Bump version to 1.0.7 (new development series)
 
