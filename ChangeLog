@@ -1,3 +1,7 @@
+2008-03-13 Ian Rutt
+ * Fixed bug in temperature basal boundary condition. Sliding heat
+ generation terms were wrong. EISMINT 2 tests G and H now look better.
+
 2008-03-01 Ian Rutt
  * Fixed precision mismatch build bug in glint_example_clim.F90
 
