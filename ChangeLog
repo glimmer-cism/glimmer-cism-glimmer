@@ -1,3 +1,7 @@
+2008-03-14 Ian Rutt
+ * configure.in: bump version to 1.0.8
+ * NEWS: update
+	
 2008-03-13 Ian Rutt
  * Fixed bug in temperature basal boundary condition. Sliding heat
  generation terms were wrong. EISMINT 2 tests G and H now look better.
