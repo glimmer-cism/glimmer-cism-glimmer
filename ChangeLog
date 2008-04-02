@@ -1,3 +1,7 @@
+2008-04-02 Ian Rutt
+ * Fixed build issue with INTENT in gfortran. Thanks to Maria Kotjakova
+   for pointing this out.
+
 2008-03-14 Ian Rutt
  * Bump version to 1.0.9 (new development series)
 

@@ -201,11 +201,11 @@ contains
 
     ! Argument declarations
 
-    type(coordsystem_type), intent(in)  :: lgrid            !*FD Target grid
-    real(rk),dimension(:,:),intent(in)  :: zonwind          !*FD Zonal component (input)
-    real(rk),dimension(:,:),intent(in)  :: merwind          !*FD Meridional components (input)
-    type(downscale),        intent(in)  :: downs            !*FD Downscaling parameters
-    real(rk),dimension(:,:),intent(out) :: xwind,ywind      !*FD x and y components on the projected grid (output)
+    type(coordsystem_type), intent(in)     :: lgrid            !*FD Target grid
+    real(rk),dimension(:,:),intent(in)     :: zonwind          !*FD Zonal component (input)
+    real(rk),dimension(:,:),intent(in)     :: merwind          !*FD Meridional components (input)
+    type(downscale),        intent(inout)  :: downs            !*FD Downscaling parameters
+    real(rk),dimension(:,:),intent(out)    :: xwind,ywind      !*FD x and y components on the projected grid (output)
 
     ! Declare two temporary arrays to hold the interpolated zonal and meridional winds
 
@@ -250,7 +250,7 @@ contains
 
     type(coordsystem_type),  intent(in)           :: lgrid     !*FD Local grid
     real(rk), dimension(:,:),intent(in)           :: global    !*FD Global field (input)
-    type(downscale),         intent(in)           :: downs     !*FD Downscaling parameters
+    type(downscale),         intent(inout)        :: downs     !*FD Downscaling parameters
     real(sp),dimension(:,:), intent(out),optional :: localsp   !*FD Local field on projected grid (output) sp
     real(dp),dimension(:,:), intent(out),optional :: localdp   !*FD Local field on projected grid (output) dp
     real(rk),dimension(:,:), intent(out),optional :: localrk   !*FD Local field on projected grid (output) rk
