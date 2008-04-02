@@ -583,10 +583,10 @@ contains
          '~basal water', &
          '~basal melt '/)
     character(len=*), dimension(0:4), parameter :: evolution = (/ &
-         'pseudo-diffusion', &
-         'ADI scheme      ', &
-         'diffusion       ', &
-         'remap thickness ', &
+         'pseudo-diffusion               ', &
+         'ADI scheme                     ', &
+         'diffusion                      ', &
+         'remap thickness                ', &
          'remap thickness and temperature' /)
     character(len=*), dimension(0:1), parameter :: vertical_integration = (/ &
          'standard     ', &

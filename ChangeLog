@@ -1,3 +1,7 @@
+2008-04-02 Ian Rutt
+ * Fixed build bug in glide_setup.F90 - unequal string lengths (thanks to
+ Mehmet for pointing that out)
+
 2008-01-05 Magnus Hagdorn
  * bootstrap: improve script by copying relevant bits from gimp
  * configure.in: fix issue with automake-1.10
