@@ -530,8 +530,8 @@ contains
     real(rk),dimension(:,:),optional,intent(inout) :: snowice_frac    !*FD grid-box snow-covered ice fraction
     real(rk),dimension(:,:),optional,intent(inout) :: snowveg_frac    !*FD grid-box snow-covered veg fraction
     real(rk),dimension(:,:),optional,intent(inout) :: snow_depth      !*FD grid-box mean snow depth (m water equivalent)
-    real(rk),dimension(:,:),optional,intent(inout) :: water_in        !*FD Input water flux          (mm)
-    real(rk),dimension(:,:),optional,intent(inout) :: water_out       !*FD Output water flux         (mm)
+    real(rk),dimension(:,:),optional,intent(inout) :: water_in        !*FD Input water flux          (m/s)
+    real(rk),dimension(:,:),optional,intent(inout) :: water_out       !*FD Output water flux         (m/s)
     real(rk),               optional,intent(inout) :: total_water_in  !*FD Area-integrated water flux in (kg)
     real(rk),               optional,intent(inout) :: total_water_out !*FD Area-integrated water flux out (kg)
     real(rk),               optional,intent(inout) :: ice_volume      !*FD Total ice volume (m$^3$)

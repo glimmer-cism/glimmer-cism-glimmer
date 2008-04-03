@@ -101,8 +101,8 @@ contains
     real(rk),dimension(:,:),intent(out)  :: g_snowice_frac !*FD Output snow-ice fraction
     real(rk),dimension(:,:),intent(out)  :: g_snowveg_frac !*FD Output snow-veg fraction
     real(rk),dimension(:,:),intent(out)  :: g_snow_depth !*FD Output snow depth (m)
-    real(rk),dimension(:,:),intent(out)  :: g_water_in   !*FD Input water flux (mm)
-    real(rk),dimension(:,:),intent(out)  :: g_water_out  !*FD Output water flux (mm)
+    real(rk),dimension(:,:),intent(out)  :: g_water_in   !*FD Input water flux (m)
+    real(rk),dimension(:,:),intent(out)  :: g_water_out  !*FD Output water flux (m)
     real(rk),               intent(out)  :: t_win        !*FD Total water input (kg)
     real(rk),               intent(out)  :: t_wout       !*FD Total water output (kg)
     real(rk),               intent(out)  :: ice_vol      !*FD Output ice volume (m$^3$)

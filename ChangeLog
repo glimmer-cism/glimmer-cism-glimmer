@@ -1,3 +1,7 @@
+2008-04-03 Ian Rutt
+ * Corrected comments in GLINT API - wrong units for water_in and
+ water_out. Spotted by Jeremy Fyke.
+
 2008-04-02 Ian Rutt
  * Fixed build issue with INTENT in gfortran. Thanks to Maria Kotjakova
    for pointing this out.
