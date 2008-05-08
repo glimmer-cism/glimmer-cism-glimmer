@@ -6,10 +6,10 @@
 # this script originates from the GIMP project.
 # most of this is lifted from autogen.sh from gimp
 
-ACLOCAL=${ACLOCAL-aclocal-1.9}
+ACLOCAL=${ACLOCAL-aclocal}
 AUTOCONF=${AUTOCONF-autoconf}
 AUTOHEADER=${AUTOHEADER-autoheader}
-AUTOMAKE=${AUTOMAKE-automake-1.9}
+AUTOMAKE=${AUTOMAKE-automake}
 LIBTOOLIZE=${LIBTOOLIZE-libtoolize}
 
 AUTOCONF_REQUIRED_VERSION=2.54

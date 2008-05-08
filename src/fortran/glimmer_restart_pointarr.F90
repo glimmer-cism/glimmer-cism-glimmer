@@ -54,12 +54,15 @@ module glimmer_restart_pointarr
      module procedure write_pointarr_int_1d, write_pointarr_realsp_1d, write_pointarr_realdp_1d, write_pointarr_logical_1d
      module procedure write_pointarr_int_2d, write_pointarr_realsp_2d, write_pointarr_realdp_2d, write_pointarr_logical_2d
      module procedure write_pointarr_int_3d, write_pointarr_realsp_3d, write_pointarr_realdp_3d, write_pointarr_logical_3d
+     module procedure write_pointarr_cmplxsp_1d, write_pointarr_cmplxdp_1d, write_pointarr_cmplxsp_2d, write_pointarr_cmplxdp_2d
+     module procedure write_pointarr_cmplxsp_3d, write_pointarr_cmplxdp_3d
   end interface
 
   interface read_pointarr
      module procedure read_pointarr_int_1d, read_pointarr_realsp_1d, read_pointarr_realdp_1d, read_pointarr_logical_1d
      module procedure read_pointarr_int_2d, read_pointarr_realsp_2d, read_pointarr_realdp_2d, read_pointarr_logical_2d
      module procedure read_pointarr_int_3d, read_pointarr_realsp_3d, read_pointarr_realdp_3d, read_pointarr_logical_3d
+     module procedure read_pointarr_cmplxsp_1d, read_pointarr_cmplxdp_1d, read_pointarr_cmplxsp_2d, read_pointarr_cmplxdp_2d
   end interface
 
 contains
@@ -189,6 +192,76 @@ contains
   end subroutine write_pointarr_logical_1d
 
   !------------------------------------------------------------------
+    
+  subroutine write_pointarr_cmplxsp_1d(file,prefix,name,values)
+
+    ! For the complex case, we store as real arrays, and
+    ! append an extra dimension to be (real,imaginary)
+
+    type(restart_file),intent(inout) :: file
+    character(*),      intent(in)    :: prefix
+    character(*),      intent(in)    :: name
+    complex(sp),dimension(:),pointer :: values
+
+    integer :: status,varid
+    character(varnamelen) :: varname
+    integer,dimension(2) :: shp
+    integer,dimension(2) :: lbounds
+
+    if (associated(values)) then
+       shp(1:1)=shape(values)
+       lbounds(1:1)=lbound(values)
+       shp(2)=2
+       lbounds(2)=1
+    end if
+
+    call write_array_common(file,prefix,name,NF90_FLOAT,associated(values),shp,lbounds,varid)
+
+    if (associated(values)) then
+       status=nf90_put_var(file%ncid,varid,real(values,sp),start=(/1,1/))
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name,varname)
+       status=nf90_put_var(file%ncid,varid,aimag(values),start=(/1,2/))
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name,varname)
+    end if
+
+  end subroutine write_pointarr_cmplxsp_1d
+
+  !------------------------------------------------------------------
+    
+  subroutine write_pointarr_cmplxdp_1d(file,prefix,name,values)
+
+    ! For the complex case, we store as real arrays, and
+    ! append an extra dimension to be (real,imaginary)
+
+    type(restart_file),intent(inout) :: file
+    character(*),      intent(in)    :: prefix
+    character(*),      intent(in)    :: name
+    complex(dp),dimension(:),pointer :: values
+
+    integer :: status,varid
+    character(varnamelen) :: varname
+    integer,dimension(2) :: shp
+    integer,dimension(2) :: lbounds
+
+    if (associated(values)) then
+       shp(1:1)=shape(values)
+       lbounds(1:1)=lbound(values)
+       shp(2)=2
+       lbounds(2)=1
+    end if
+
+    call write_array_common(file,prefix,name,NF90_DOUBLE,associated(values),shp,lbounds,varid)
+
+    if (associated(values)) then
+       status=nf90_put_var(file%ncid,varid,real(values,dp),start=(/1,1/))
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name,varname)
+       status=nf90_put_var(file%ncid,varid,aimag(values),start=(/1,2/))
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name,varname)
+    end if
+
+  end subroutine write_pointarr_cmplxdp_1d
+
+  !------------------------------------------------------------------
   ! POINTER ARRAYS
   !------------------------------------------------------------------
   ! WRITE code - 2D
@@ -312,6 +385,76 @@ contains
   end subroutine write_pointarr_logical_2d
     
   !------------------------------------------------------------------
+    
+  subroutine write_pointarr_cmplxsp_2d(file,prefix,name,values)
+
+    ! For the complex case, we store as real arrays, and
+    ! append an extra dimension to be (real,imaginary)
+
+    type(restart_file),intent(inout) :: file
+    character(*),      intent(in)    :: prefix
+    character(*),      intent(in)    :: name
+    complex(sp),dimension(:,:),pointer :: values
+
+    integer :: status,varid
+    character(varnamelen) :: varname
+    integer,dimension(3) :: shp
+    integer,dimension(3) :: lbounds
+
+    if (associated(values)) then
+       shp(1:2)=shape(values)
+       lbounds(1:2)=lbound(values)
+       shp(3)=2
+       lbounds(3)=1
+    end if
+
+    call write_array_common(file,prefix,name,NF90_FLOAT,associated(values),shp,lbounds,varid)
+
+    if (associated(values)) then
+       status=nf90_put_var(file%ncid,varid,real(values,sp),start=(/1,1,1/))
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name,varname)
+       status=nf90_put_var(file%ncid,varid,aimag(values),start=(/1,1,2/))
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name,varname)
+    end if
+
+  end subroutine write_pointarr_cmplxsp_2d
+    
+  !------------------------------------------------------------------
+    
+  subroutine write_pointarr_cmplxdp_2d(file,prefix,name,values)
+
+    ! For the complex case, we store as real arrays, and
+    ! append an extra dimension to be (real,imaginary)
+
+    type(restart_file),intent(inout) :: file
+    character(*),      intent(in)    :: prefix
+    character(*),      intent(in)    :: name
+    complex(dp),dimension(:,:),pointer :: values
+
+    integer :: status,varid
+    character(varnamelen) :: varname
+    integer,dimension(3) :: shp
+    integer,dimension(3) :: lbounds
+
+    if (associated(values)) then
+       shp(1:2)=shape(values)
+       lbounds(1:2)=lbound(values)
+       shp(3)=2
+       lbounds(3)=1
+    end if
+
+    call write_array_common(file,prefix,name,NF90_DOUBLE,associated(values),shp,lbounds,varid)
+
+    if (associated(values)) then
+       status=nf90_put_var(file%ncid,varid,real(values,dp),start=(/1,1,1/))
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name,varname)
+       status=nf90_put_var(file%ncid,varid,aimag(values),start=(/1,1,2/))
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name,varname)
+    end if
+
+  end subroutine write_pointarr_cmplxdp_2d
+
+  !------------------------------------------------------------------
   ! POINTER ARRAYS
   !------------------------------------------------------------------
   ! WRITE code - 3D
@@ -433,6 +576,76 @@ contains
     end if
 
   end subroutine write_pointarr_logical_3d
+    
+  !------------------------------------------------------------------
+    
+  subroutine write_pointarr_cmplxsp_3d(file,prefix,name,values)
+
+    ! For the complex case, we store as real arrays, and
+    ! append an extra dimension to be (real,imaginary)
+
+    type(restart_file),intent(inout) :: file
+    character(*),      intent(in)    :: prefix
+    character(*),      intent(in)    :: name
+    complex(sp),dimension(:,:,:),pointer :: values
+
+    integer :: status,varid
+    character(varnamelen) :: varname
+    integer,dimension(4) :: shp
+    integer,dimension(4) :: lbounds
+
+    if (associated(values)) then
+       shp(1:3)=shape(values)
+       lbounds(1:3)=lbound(values)
+       shp(4)=2
+       lbounds(4)=1
+    end if
+
+    call write_array_common(file,prefix,name,NF90_FLOAT,associated(values),shp,lbounds,varid)
+
+    if (associated(values)) then
+       status=nf90_put_var(file%ncid,varid,real(values,sp),start=(/1,1,1,1/))
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name,varname)
+       status=nf90_put_var(file%ncid,varid,aimag(values),start=(/1,1,1,2/))
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name,varname)
+    end if
+
+  end subroutine write_pointarr_cmplxsp_3d
+    
+  !------------------------------------------------------------------
+    
+  subroutine write_pointarr_cmplxdp_3d(file,prefix,name,values)
+
+    ! For the complex case, we store as real arrays, and
+    ! append an extra dimension to be (real,imaginary)
+
+    type(restart_file),intent(inout) :: file
+    character(*),      intent(in)    :: prefix
+    character(*),      intent(in)    :: name
+    complex(dp),dimension(:,:,:),pointer :: values
+
+    integer :: status,varid
+    character(varnamelen) :: varname
+    integer,dimension(4) :: shp
+    integer,dimension(4) :: lbounds
+
+    if (associated(values)) then
+       shp(1:3)=shape(values)
+       lbounds(1:3)=lbound(values)
+       shp(4)=2
+       lbounds(4)=1
+    end if
+
+    call write_array_common(file,prefix,name,NF90_DOUBLE,associated(values),shp,lbounds,varid)
+
+    if (associated(values)) then
+       status=nf90_put_var(file%ncid,varid,real(values,dp),start=(/1,1,1,1/))
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name,varname)
+       status=nf90_put_var(file%ncid,varid,aimag(values),start=(/1,1,1,2/))
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name,varname)
+    end if
+
+  end subroutine write_pointarr_cmplxdp_3d
 
   !------------------------------------------------------------------
 
@@ -624,6 +837,82 @@ contains
   end subroutine read_pointarr_logical_1d
  
   !------------------------------------------------------------------
+
+  subroutine read_pointarr_cmplxsp_1d(file,prefix,name,values)
+
+    use glimmer_log
+
+    type(restart_file),intent(inout) :: file
+    character(*),      intent(in)    :: prefix
+    character(*),      intent(in)    :: name
+    complex(sp),dimension(:),pointer :: values
+
+    real(sp),dimension(:,:),allocatable :: realvals
+
+    integer :: varid,status
+    integer,dimension(2) :: dimlens
+    integer,dimension(2) :: lbounds
+    integer,dimension(2) :: ubounds
+    logical :: nullt
+
+    if(associated(values)) then
+       deallocate(values)
+       values => null()
+    end if
+
+    call read_array_common(file,prefix,name,varid,nullt,dimlens,lbounds)
+
+    if (.not.nullt) then
+       ubounds=lbounds+dimlens-1
+       allocate(realvals(lbounds(1):ubounds(1),2))
+       status=nf90_get_var(file%ncid,varid,realvals)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name)
+       allocate(values(lbounds(1):ubounds(1)))
+       values = cmplx(realvals(:,1),realvals(:,2),sp)
+       deallocate(realvals)
+    end if
+
+  end subroutine read_pointarr_cmplxsp_1d
+ 
+  !------------------------------------------------------------------
+
+  subroutine read_pointarr_cmplxdp_1d(file,prefix,name,values)
+
+    use glimmer_log
+
+    type(restart_file),intent(inout) :: file
+    character(*),      intent(in)    :: prefix
+    character(*),      intent(in)    :: name
+    complex(dp),dimension(:),pointer :: values
+
+    real(dp),dimension(:,:),allocatable :: realvals
+
+    integer :: varid,status
+    integer,dimension(2) :: dimlens
+    integer,dimension(2) :: lbounds
+    integer,dimension(2) :: ubounds
+    logical :: nullt
+
+    if(associated(values)) then
+       deallocate(values)
+       values => null()
+    end if
+
+    call read_array_common(file,prefix,name,varid,nullt,dimlens,lbounds)
+
+    if (.not.nullt) then
+       ubounds=lbounds+dimlens-1
+       allocate(realvals(lbounds(1):ubounds(1),2))
+       status=nf90_get_var(file%ncid,varid,realvals)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name)
+       allocate(values(lbounds(1):ubounds(1)))
+       values = cmplx(realvals(:,1),realvals(:,2),dp)
+       deallocate(realvals)
+    end if
+
+  end subroutine read_pointarr_cmplxdp_1d
+
+  !------------------------------------------------------------------
   ! POINTER ARRAYS
   !------------------------------------------------------------------
   ! READ code - 2D
@@ -765,7 +1054,83 @@ contains
     end if
 
   end subroutine read_pointarr_logical_2d
-    
+     
+  !------------------------------------------------------------------
+
+  subroutine read_pointarr_cmplxsp_2d(file,prefix,name,values)
+
+    use glimmer_log
+
+    type(restart_file),intent(inout) :: file
+    character(*),      intent(in)    :: prefix
+    character(*),      intent(in)    :: name
+    complex(sp),dimension(:,:),pointer :: values
+
+    real(sp),dimension(:,:,:),allocatable :: realvals
+
+    integer :: varid,status
+    integer,dimension(3) :: dimlens
+    integer,dimension(3) :: lbounds
+    integer,dimension(3) :: ubounds
+    logical :: nullt
+
+    if(associated(values)) then
+       deallocate(values)
+       values => null()
+    end if
+
+    call read_array_common(file,prefix,name,varid,nullt,dimlens,lbounds)
+
+    if (.not.nullt) then
+       ubounds=lbounds+dimlens-1
+       allocate(realvals(lbounds(1):ubounds(1),lbounds(2):ubounds(2),2))
+       status=nf90_get_var(file%ncid,varid,realvals)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name)
+       allocate(values(lbounds(1):ubounds(1),lbounds(2):ubounds(2)))
+       values = cmplx(realvals(:,:,1),realvals(:,:,2),sp)
+       deallocate(realvals)
+    end if
+
+  end subroutine read_pointarr_cmplxsp_2d
+
+  !------------------------------------------------------------------
+
+  subroutine read_pointarr_cmplxdp_2d(file,prefix,name,values)
+
+    use glimmer_log
+
+    type(restart_file),intent(inout) :: file
+    character(*),      intent(in)    :: prefix
+    character(*),      intent(in)    :: name
+    complex(dp),dimension(:,:),pointer :: values
+
+    real(dp),dimension(:,:,:),allocatable :: realvals
+
+    integer :: varid,status
+    integer,dimension(3) :: dimlens
+    integer,dimension(3) :: lbounds
+    integer,dimension(3) :: ubounds
+    logical :: nullt
+
+    if(associated(values)) then
+       deallocate(values)
+       values => null()
+    end if
+
+    call read_array_common(file,prefix,name,varid,nullt,dimlens,lbounds)
+
+    if (.not.nullt) then
+       ubounds=lbounds+dimlens-1
+       allocate(realvals(lbounds(1):ubounds(1),lbounds(2):ubounds(2),2))
+       status=nf90_get_var(file%ncid,varid,realvals)
+       if (status/=NF90_NOERR) call ncdf_err(status,__LINE__,prefix,name)
+       allocate(values(lbounds(1):ubounds(1),lbounds(2):ubounds(2)))
+       values = cmplx(realvals(:,:,1),realvals(:,:,2),dp)
+       deallocate(realvals)
+    end if
+
+  end subroutine read_pointarr_cmplxdp_2d
+ 
   !------------------------------------------------------------------
   ! POINTER ARRAYS
   !------------------------------------------------------------------

@@ -87,7 +87,9 @@ contains
     end if
   end subroutine init_thck
 
-  subroutine thck_lin_evolve(model,newtemps,logunit)
+!---------------------------------------------------------------------------------
+
+  subroutine thck_lin_evolve(model,newtemps)
 
     !*FD this subroutine solves the linearised ice thickness equation by computing the
     !*FD diffusivity from quantities of the previous time step
@@ -97,7 +99,6 @@ contains
     ! subroutine arguments
     type(glide_global_type) :: model
     logical, intent(in) :: newtemps                     !*FD true when we should recalculate Glen's A
-    integer,intent(in) :: logunit                       !*FD unit for logging
 
     if (model%geometry%empty) then
 
@@ -128,7 +129,7 @@ contains
             model%geomderv%dusrfdns,model%velocity%diffu)
 
        ! get new thicknesses
-       call thck_evolve(model,logunit,.true.,model%geometry%thck,model%geometry%thck)
+       call thck_evolve(model,.true.,model%geometry%thck,model%geometry%thck)
 
        ! calculate horizontal velocity field
        call slipvelo(model,                &
@@ -142,7 +143,9 @@ contains
     end if
   end subroutine thck_lin_evolve
 
-  subroutine thck_nonlin_evolve(model,newtemps,logunit)
+!---------------------------------------------------------------------------------
+
+  subroutine thck_nonlin_evolve(model,newtemps)
 
     !*FD this subroutine solves the ice thickness equation by doing an outer, 
     !*FD non-linear iteration to update the diffusivities and in inner, linear
@@ -155,7 +158,6 @@ contains
     ! subroutine arguments
     type(glide_global_type) :: model
     logical, intent(in) :: newtemps                     !*FD true when we should recalculate Glen's A
-    integer,intent(in) :: logunit                       !*FD unit for logging
 
     ! local variables
     integer, parameter :: pmax=50                       !*FD maximum Picard iterations
@@ -218,7 +220,7 @@ contains
                model%geomderv%dusrfdns,model%velocity%diffu)
 
           ! get new thicknesses
-          call thck_evolve(model,logunit,first_p,model%thckwk%oldthck,model%geometry%thck)
+          call thck_evolve(model,first_p,model%thckwk%oldthck,model%geometry%thck)
 
           first_p = .false.
           residual = maxval(abs(model%geometry%thck-model%thckwk%oldthck2))
@@ -247,141 +249,144 @@ contains
     end if
   end subroutine thck_nonlin_evolve
 
-  subroutine thck_evolve(model,logunit,calc_rhs,old_thck,new_thck)
+!---------------------------------------------------------------------------------
+
+  subroutine thck_evolve(model,calc_rhs,old_thck,new_thck)
 
     !*FD set up sparse matrix and solve matrix equation to find new ice thickness distribution
     !*FD this routine does not override the old thickness distribution
+
     use glide_setup, only: glide_calclsrf
     use glimmer_global, only : dp
+
     implicit none
-    ! subroutine arguments
+
+    ! subroutine arguments -------------------------------------------------------------
+
     type(glide_global_type) :: model
-    integer,intent(in) :: logunit                       !*FD unit for logging
     logical,intent(in) :: calc_rhs                      !*FD set to true when rhs should be calculated 
                                                         !*FD i.e. when doing lin solution or first picard iteration
     real(dp), intent(in), dimension(:,:) :: old_thck    !*FD contains ice thicknesses from previous time step
     real(dp), intent(inout), dimension(:,:) :: new_thck !*FD on entry contains first guess for new ice thicknesses
                                                         !*FD on exit contains ice thicknesses of new time step
 
-    ! local variables
+    ! local variables ------------------------------------------------------------------
+
     real(dp), dimension(5) :: sumd 
     real(dp) :: err
-    real(dp), parameter :: tolbnd = 1.0d-6
-
     integer :: linit
-    integer, parameter :: mxtbnd = 10, ewbc = 1, nsbc = 1
-
-    ! ewbc/nsbc set the type of boundary condition aplied at the end of
-    ! the domain. a value of 0 implies zero gradient.
-
     integer :: ew,ns
 
-       !* the number of grid points and the number of nonzero 
-       !* matrix elements (including bounary points)
-       model%pcgdwk%pcgsize = (/ model%geometry%totpts, model%geometry%totpts * 5 /)
+    ! the number of grid points
+    model%pcgdwk%pcgsize(1) = model%geometry%totpts
 
-       model%pcgdwk%ct = 1
+    ! Zero the arrays holding the sparse matrix
+    model%pcgdwk%pcgval = 0.0
+    model%pcgdwk%pcgcol = 0 
+    model%pcgdwk%pcgrow = 0
+    model%pcgdwk%ct = 1
 
-       ! Boundary Conditions
-       ! lower and upper BC
-       do ew = 1,model%general%ewn
-          ns=1
-          if (model%geometry%mask(ew,ns) /= 0) then
-             call putpcgc(model%pcgdwk,1.0d0, model%geometry%mask(ew,ns), model%geometry%mask(ew,ns))
-             if (calc_rhs) then
-                model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = old_thck(ew,ns) 
-             end if
-             model%pcgdwk%answ(model%geometry%mask(ew,ns)) = new_thck(ew,ns)
+    ! Boundary Conditions ---------------------------------------------------------------
+    ! lower and upper BC
+    do ew = 1,model%general%ewn
+       ns=1
+       if (model%geometry%mask(ew,ns) /= 0) then
+          call putpcgc(model%pcgdwk,1.0d0, model%geometry%mask(ew,ns), model%geometry%mask(ew,ns))
+          if (calc_rhs) then
+             model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = old_thck(ew,ns) 
           end if
-          ns=model%general%nsn
-          if (model%geometry%mask(ew,ns) /= 0) then
-             call putpcgc(model%pcgdwk,1.0d0, model%geometry%mask(ew,ns), model%geometry%mask(ew,ns))
-             if (calc_rhs) then
-                model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = old_thck(ew,ns) 
-             end if
-             model%pcgdwk%answ(model%geometry%mask(ew,ns)) = new_thck(ew,ns)
-          end if
-       end do          
-       !left and right BC
-       if (model%options%periodic_ew.eq.1) then
-          do ns=2,model%general%nsn-1
-             ew = 1
-             if (model%geometry%mask(ew,ns) /= 0) then
-                call findsums(model%general%ewn-2,model%general%ewn-1,ns-1,ns)
-                call generate_row(model%general%ewn-2,ew,ew+1,ns-1,ns,ns+1)
-             end if
-             ew=model%general%ewn
-             if (model%geometry%mask(ew,ns) /= 0) then
-                call findsums(1,2,ns-1,ns)
-                call generate_row(ew-1,ew,3,ns-1,ns,ns+1)
-             end if
-          end do
-       else
-          do ns=2,model%general%nsn-1
-             ew=1
-             if (model%geometry%mask(ew,ns) /= 0) then
-                call putpcgc(model%pcgdwk,1.0d0, model%geometry%mask(ew,ns), model%geometry%mask(ew,ns))
-                if (calc_rhs) then
-                   model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = old_thck(ew,ns) 
-                end if
-                model%pcgdwk%answ(model%geometry%mask(ew,ns)) = new_thck(ew,ns)
-             end if
-             ew=model%general%ewn
-             if (model%geometry%mask(ew,ns) /= 0) then
-                call putpcgc(model%pcgdwk,1.0d0, model%geometry%mask(ew,ns), model%geometry%mask(ew,ns))
-                if (calc_rhs) then
-                   model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = old_thck(ew,ns) 
-                end if
-                model%pcgdwk%answ(model%geometry%mask(ew,ns)) = new_thck(ew,ns)
-             end if
-          end do
+          model%pcgdwk%answ(model%geometry%mask(ew,ns)) = new_thck(ew,ns)
        end if
-       ! ice body
-       do ns = 2,model%general%nsn-1
-          do ew = 2,model%general%ewn-1
+       ns=model%general%nsn
+       if (model%geometry%mask(ew,ns) /= 0) then
+          call putpcgc(model%pcgdwk,1.0d0, model%geometry%mask(ew,ns), model%geometry%mask(ew,ns))
+          if (calc_rhs) then
+             model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = old_thck(ew,ns) 
+          end if
+          model%pcgdwk%answ(model%geometry%mask(ew,ns)) = new_thck(ew,ns)
+       end if
+    end do
 
-             if (model%geometry%mask(ew,ns) /= 0) then
+    !left and right BC
+    if (model%options%periodic_ew.eq.1) then
+       do ns=2,model%general%nsn-1
+          ew = 1
+          if (model%geometry%mask(ew,ns) /= 0) then
+             call findsums(model%general%ewn-2,model%general%ewn-1,ns-1,ns)
+             call generate_row(model%general%ewn-2,ew,ew+1,ns-1,ns,ns+1)
+          end if
+          ew=model%general%ewn
+          if (model%geometry%mask(ew,ns) /= 0) then
+             call findsums(1,2,ns-1,ns)
+             call generate_row(ew-1,ew,3,ns-1,ns,ns+1)
+          end if
+       end do
+    else
+       do ns=2,model%general%nsn-1
+          ew=1
+          if (model%geometry%mask(ew,ns) /= 0) then
+             call putpcgc(model%pcgdwk,1.0d0, model%geometry%mask(ew,ns), model%geometry%mask(ew,ns))
+             if (calc_rhs) then
+                model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = old_thck(ew,ns) 
+             end if
+             model%pcgdwk%answ(model%geometry%mask(ew,ns)) = new_thck(ew,ns)
+          end if
+          ew=model%general%ewn
+          if (model%geometry%mask(ew,ns) /= 0) then
+             call putpcgc(model%pcgdwk,1.0d0, model%geometry%mask(ew,ns), model%geometry%mask(ew,ns))
+             if (calc_rhs) then
+                model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = old_thck(ew,ns) 
+             end if
+             model%pcgdwk%answ(model%geometry%mask(ew,ns)) = new_thck(ew,ns)
+          end if
+       end do
+    end if
+
+    ! ice body -------------------------------------------------------------------------
+
+    do ns = 2,model%general%nsn-1
+       do ew = 2,model%general%ewn-1
+
+          if (model%geometry%mask(ew,ns) /= 0) then
                 
-                call findsums(ew-1,ew,ns-1,ns)
-                call generate_row(ew-1,ew,ew+1,ns-1,ns,ns+1)
+             call findsums(ew-1,ew,ns-1,ns)
+             call generate_row(ew-1,ew,ew+1,ns-1,ns,ns+1)
 
-             end if
-          end do
+          end if
        end do
+    end do
 
-       model%pcgdwk%pcgsize(2) = model%pcgdwk%ct - 1 
+    ! Calculate the total number of points
+    model%pcgdwk%pcgsize(2) = model%pcgdwk%ct - 1 
 
-       call slapsolv(model,.true.,linit,err,logunit)   
+    ! Solve the system using SLAP
+    call slapsolv(model,linit,err)   
 
-       do ns = 1,model%general%nsn
-          do ew = 1,model%general%ewn 
+    ! Rejig the solution onto a 2D array
+    do ns = 1,model%general%nsn
+       do ew = 1,model%general%ewn 
 
-             if (model%geometry%mask(ew,ns) /= 0) then
-                new_thck(ew,ns) = model%pcgdwk%answ(model%geometry%mask(ew,ns))
-             end if
+          if (model%geometry%mask(ew,ns) /= 0) then
+             new_thck(ew,ns) = model%pcgdwk%answ(model%geometry%mask(ew,ns))
+          end if
 
-          end do
        end do
+    end do
 
-       ! *tp+* implement bcs
+    new_thck = max(0.0d0, new_thck)
 
-       model%pcgdwk%tlinit = model%pcgdwk%tlinit + linit
-       model%pcgdwk%mlinit = max(linit,model%pcgdwk%mlinit)
-
-       new_thck = max(0.0d0, new_thck)
 #ifdef DEBUG
-       print *, "* thck ", model%numerics%time, linit, model%pcgdwk%mlinit, model%pcgdwk%tlinit, model%geometry%totpts, &
-            real(thk0*new_thck(model%general%ewn/2+1,model%general%nsn/2+1)), &
-            real(vel0*maxval(abs(model%velocity%ubas))), real(vel0*maxval(abs(model%velocity%vbas))) 
+    print *, "* thck ", model%numerics%time, linit, model%geometry%totpts, &
+         real(thk0*new_thck(model%general%ewn/2+1,model%general%nsn/2+1)), &
+         real(vel0*maxval(abs(model%velocity%ubas))), real(vel0*maxval(abs(model%velocity%vbas))) 
 #endif
-       
-       !------------------------------------------------------------
-       ! calculate upper and lower surface
-       !------------------------------------------------------------
-       call glide_calclsrf(model%geometry%thck, model%geometry%topg, model%climate%eus, model%geometry%lsrf)
-       model%geometry%usrf = max(0.d0,model%geometry%thck + model%geometry%lsrf)
+
+    ! calculate upper and lower surface
+    call glide_calclsrf(model%geometry%thck, model%geometry%topg, model%climate%eus, model%geometry%lsrf)
+    model%geometry%usrf = max(0.d0,model%geometry%thck + model%geometry%lsrf)
 
   contains
+
     subroutine generate_row(ewm,ew,ewp,nsm,ns,nsp)
       ! calculate row of sparse matrix equation
       implicit none
@@ -397,16 +402,22 @@ contains
 
       ! calculate RHS
       if (calc_rhs) then
-         model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = old_thck(ew,ns) * &
-              (1.0d0 - model%pcgdwk%fc2(3) * sumd(5)) - model%pcgdwk%fc2(3) * &
-              (old_thck(ewm,ns) * sumd(1) + old_thck(ewp,ns) * sumd(2) + &
-              old_thck(ew,nsm) * sumd(3) + old_thck(ew,nsp) * sumd(4)) - &
-              model%pcgdwk%fc2(4) * (model%geometry%lsrf(ew,ns) * sumd(5) + &
-              model%geometry%lsrf(ewm,ns) * sumd(1) + model%geometry%lsrf(ewp,ns) * sumd(2) + &
-              model%geometry%lsrf(ew,nsm) * sumd(3) + model%geometry%lsrf(ew,nsp) * sumd(4)) +  &
-              model%climate%acab(ew,ns) * model%pcgdwk%fc2(2)
+         model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) =                    &
+              old_thck(ew,ns) * (1.0d0 - model%pcgdwk%fc2(3) * sumd(5))     &
+            - model%pcgdwk%fc2(3) * (old_thck(ewm,ns) * sumd(1)             &
+                                   + old_thck(ewp,ns) * sumd(2)             &
+                                   + old_thck(ew,nsm) * sumd(3)             &
+                                   + old_thck(ew,nsp) * sumd(4))            &
+            - model%pcgdwk%fc2(4) * (model%geometry%lsrf(ew,ns)  * sumd(5)  &
+                                   + model%geometry%lsrf(ewm,ns) * sumd(1)  &
+                                   + model%geometry%lsrf(ewp,ns) * sumd(2)  &
+                                   + model%geometry%lsrf(ew,nsm) * sumd(3)  &
+                                   + model%geometry%lsrf(ew,nsp) * sumd(4)) &
+            + model%climate%acab(ew,ns) * model%pcgdwk%fc2(2)
       end if
+
       model%pcgdwk%answ(model%geometry%mask(ew,ns)) = new_thck(ew,ns)      
+
     end subroutine generate_row
 
     subroutine findsums(ewm,ew,nsm,ns)
@@ -434,73 +445,83 @@ contains
 
 !---------------------------------------------------------------------------------
 
-  subroutine slapsolv(model,first,iter,err,lunit)
+  subroutine slapsolv(model,iter,err)
 
     use glimmer_global, only : dp 
     use glide_stop
     use glimmer_log
-  !use pcgdwk 
-  !use funits, only : ulog
+    use glimmer_filenames
 
     implicit none
 
-    type(glide_global_type) :: model
-    logical, intent(in) :: first
-    integer, intent(out) :: iter
-    real(dp), intent(out) :: err
-    integer,intent(in) :: lunit
+    type(glide_global_type) :: model  !*FD Model data type
+    integer,  intent(out)   :: iter   !*FD Number of iterations
+    real(dp), intent(out)   :: err    !*FD Error estimate of result
 
-    real(dp), dimension(:), allocatable :: rwork
-    integer, dimension(:), allocatable :: iwork
-
-    real(dp), parameter :: tol = 1.0d-12
-
-    integer, parameter :: isym = 0, itol = 2, itmax = 101
+    ! For call to dslucs
+    real(dp), parameter :: tol   = 1.0d-12
+    integer,  parameter :: isym  = 0
+    integer,  parameter :: itol  = 2
+    integer,  parameter :: itmax = 101
+    real(dp), dimension(:),allocatable :: rwork ! Real work array
+    integer,  dimension(:),allocatable :: iwork ! Integer work array
     integer :: ierr, mxnelt
 
-    if (first) then
-      call ds2y(model%pcgdwk%pcgsize(1),model%pcgdwk%pcgsize(2), &
-                model%pcgdwk%pcgrow,model%pcgdwk%pcgcol, &
-                model%pcgdwk%pcgval,isym)
-    end if
+    ! Variables for error handling
+    character(200) :: message
+    character(100) :: errfname
+    integer :: lunit
 
     mxnelt = 20 * model%pcgdwk%pcgsize(1)
-
     allocate(rwork(mxnelt),iwork(mxnelt))
 
-!**     solve the problem using the SLAP package routines     
-!**     -------------------------------------------------
-!**     n ... order of matrix a (in)
-!**     b ... right hand side vector (in)                        
-!**     x ... initial quess/final solution vector (in/out)                        
-!**     nelt ... number of non-zeroes in A (in)
-!**     ia, ja ... sparse matrix format of A (in)
-!**     a ... matrix helt in SLAT column format (in)
-!**     isym ... storage method (0 is complete) (in)
-!**     itol ... convergence criteria (2 recommended) (in)                     
-!**     tol ... criteria for convergence (in)
-!**     itmax ... maximum number of iterations (in)
-!**     iter ... returned number of iterations (out)
-!**     err ... error estimate of solution (out)
-!**     ierr ... returned error message (0 is ok) (out)
-!**     iunit ... unit for error writes during iteration (0 no write) (in)
-!**     rwork ... workspace for SLAP routines (in)
-!**     mxnelt ... maximum array and vector sizes (in)
-!**     iwork ... workspace for SLAP routines (in)
+    ! solve the problem using the SLAP package routines     
 
-    call dslucs(model%pcgdwk%pcgsize(1),model%pcgdwk%rhsd,model%pcgdwk%answ,model%pcgdwk%pcgsize(2), &
-                model%pcgdwk%pcgrow,model%pcgdwk%pcgcol,model%pcgdwk%pcgval, &
-                isym,itol,tol,itmax,iter,err,ierr,0,rwork,mxnelt,iwork,mxnelt)
+    call dslucs(model%pcgdwk%pcgsize(1), &  ! n  ... order of matrix a (in)
+                model%pcgdwk%rhsd,       &  ! b  ... right hand side vector (in)
+                model%pcgdwk%answ,       &  ! x  ... initial quess/final solution vector (in/out)
+                model%pcgdwk%pcgsize(2), &  ! nelt ... number of non-zeroes in A (in)
+                model%pcgdwk%pcgrow,     &  ! ia  ... sparse matrix format of A (in)
+                model%pcgdwk%pcgcol,     &  ! ja  ... sparse matrix format of A (in)
+                model%pcgdwk%pcgval,     &  ! a   ... matrix (in)
+                isym,                    &  ! isym ... storage method (0 is complete) (in)
+                itol,                    &  ! itol ... convergence criteria (2 recommended) (in)
+                tol,                     &  ! tol  ... criteria for convergence (in)
+                itmax,                   &  ! itmax ... maximum number of iterations (in)
+                iter,                    &  ! iter  ... returned number of iterations (out)
+                err,                     &  ! err   ... error estimate of solution (out)
+                ierr,                    &  ! ierr  ... returned error message (0 is ok) (out)
+                0,                       &  ! iunit ... unit for error writes during iteration (0 no write) (in)
+                rwork,                   &  ! rwork ... workspace for SLAP routines (in)
+                mxnelt,                  &  ! lenw
+                iwork,                   &  ! iwork ... workspace for SLAP routines (in)
+                mxnelt)                     ! leniw
 
+    ! Handle errors gracefully
     if (ierr /= 0) then
-      print *, 'pcg error ', ierr, itmax, iter
-      call dcpplt(model%pcgdwk%pcgsize(1),model%pcgdwk%pcgsize(2),model%pcgdwk%pcgrow, &
-                model%pcgdwk%pcgcol,model%pcgdwk%pcgval,isym,lunit)
-      print *, model%pcgdwk%pcgval
-      write(*,*) model%numerics%time
-      call glide_finalise(model,.true.)
-      call close_log
-      stop
+
+       ! Acquire a file unit, and open the file
+       lunit = get_free_unit()
+       errfname = trim(process_path('slap_dump.txt'))
+       open(lunit,file=errfname)
+
+       ! Output data to file
+       call dcpplt(model%pcgdwk%pcgsize(1), &
+                   model%pcgdwk%pcgsize(2), &
+                   model%pcgdwk%pcgrow,     &
+                   model%pcgdwk%pcgcol,     &
+                   model%pcgdwk%pcgval,     &
+                   isym,                    &
+                   lunit)
+       write(lunit,*) '***SLAP data ends. PCGVAL follows'
+       write(lunit,*) model%pcgdwk%pcgval
+
+       ! Close unit and finish off
+       close(lunit)
+       call glide_finalise(model,.true.)
+       write(message,*)'SLAP solution error at time: ',model%numerics%time, &
+            '. Data dumped to ',trim(errfname)
+       call write_log(trim(message),GM_FATAL,__FILE__,__LINE__)
     end if
 
     deallocate(rwork,iwork)
@@ -512,7 +533,6 @@ contains
   subroutine putpcgc(pcgdwk,value,col,row)
 
     use glimmer_global, only : dp
- ! use pcgdwk, only : pcgval, pcgcol, pcgrow, ct
 
     implicit none
 
@@ -562,9 +582,6 @@ contains
           end if
        end do
     end do
-
-    !opvrew = (cshift(cshift(ipvr,1,2),1,1) + cshift(ipvr,1,1) - ipvr - cshift(ipvr,1,2)) * dew2
-    !opvrns = (cshift(cshift(ipvr,1,2),1,1) + cshift(ipvr,1,2) - ipvr - cshift(ipvr,1,1)) * dns2
     
   end subroutine geomders
 
@@ -773,6 +790,8 @@ contains
 
   end subroutine timeders
 
+!---------------------------------------------------------------------------------
+
   subroutine filterthck(thck,ewn,nsn)
 
     use glimmer_global, only : dp ! ew, ewn, ns, nsn
@@ -837,7 +856,7 @@ contains
   ! ADI routines
   !-----------------------------------------------------------------------------
 
-  subroutine stagleapthck(model,newtemps,logunit)
+  subroutine stagleapthck(model,newtemps)
     
     !*FD this subroutine solves the ice sheet thickness equation using the ADI scheme
     !*FD diffusivities are updated for each half time step
@@ -849,7 +868,6 @@ contains
     ! subroutine arguments
     type(glide_global_type) :: model
     logical, intent(in) :: newtemps                     !*FD true when we should recalculate Glen's A
-    integer,intent(in) :: logunit                       !*FD unit for logging
 
     ! local variables
     integer ew,ns, n
@@ -887,14 +905,26 @@ contains
        ! first ADI step, solve thickness equation along rows j
        n = model%general%ewn
        do ns=2,model%general%nsn-1
-          call adi_tri ( model%thckwk%alpha, model%thckwk%beta, model%thckwk%gamma, model%thckwk%delta, &
-               model%geometry%thck(:,ns), model%geometry%lsrf(:,ns), model%climate%acab(:,ns), &
-               model%velocity%vflx(:,ns), model%velocity%vflx(:,ns-1), &
-               model%velocity%total_diffu(:,ns),  model%velocity%total_diffu(:,ns-1), &
-               model%numerics%dt, model%numerics%dew, model%numerics%dns )
+          call adi_tri ( model%thckwk%alpha,                 &
+                         model%thckwk%beta,                  &
+                         model%thckwk%gamma,                 &
+                         model%thckwk%delta,                 &
+                         model%geometry%thck(:,ns),          &
+                         model%geometry%lsrf(:,ns),          &
+                         model%climate%acab(:,ns),           &
+                         model%velocity%vflx(:,ns),          &
+                         model%velocity%vflx(:,ns-1),        &
+                         model%velocity%total_diffu(:,ns),   &
+                         model%velocity%total_diffu(:,ns-1), &
+                         model%numerics%dt,                  &
+                         model%numerics%dew,                 &
+                         model%numerics%dns )
 
-          call tridag( model%thckwk%alpha(2:n), model%thckwk%beta(1:n), model%thckwk%gamma(1:n-1), model%thckwk%delta(1:n), &
-               model%thckwk%oldthck(:,ns), n )
+          call tridiag(model%thckwk%alpha(1:n),    &
+                       model%thckwk%beta(1:n),     &
+                       model%thckwk%gamma(1:n),    &
+                       model%thckwk%oldthck(:,ns), &
+                       model%thckwk%delta(1:n))
        end do
 
        model%thckwk%oldthck(:,:) = max(model%thckwk%oldthck(:,:), 0.d0)
@@ -902,17 +932,35 @@ contains
        ! second ADI step, solve thickness equation along columns i
        n = model%general%nsn
        do ew=2,model%general%ewn-1
-          call adi_tri ( model%thckwk%alpha, model%thckwk%beta, model%thckwk%gamma, model%thckwk%delta, &
-               model%thckwk%oldthck(ew,:), model%geometry%lsrf(ew, :), model%climate%acab(ew, :), &
-               model%velocity%uflx(ew,:), model%velocity%uflx(ew-1,:), &
-               model%velocity%total_diffu(ew,:), model%velocity%total_diffu(ew-1,:), &
-               model%numerics%dt, model%numerics%dns, model%numerics%dew )
+          call adi_tri ( model%thckwk%alpha,                 &
+                         model%thckwk%beta,                  &
+                         model%thckwk%gamma,                 &
+                         model%thckwk%delta,                 &
+                         model%thckwk%oldthck(ew,:),         &
+                         model%geometry%lsrf(ew, :),         &
+                         model%climate%acab(ew, :),          &
+                         model%velocity%uflx(ew,:),          &
+                         model%velocity%uflx(ew-1,:),        &
+                         model%velocity%total_diffu(ew,:),   &
+                         model%velocity%total_diffu(ew-1,:), &
+                         model%numerics%dt,                  &
+                         model%numerics%dns,                 &
+                         model%numerics%dew )
 
-          call tridag( model%thckwk%alpha(2:n), model%thckwk%beta(1:n), model%thckwk%gamma(1:n-1), model%thckwk%delta(1:n), &
-               model%geometry%thck(ew, :), n)
+          call tridiag(model%thckwk%alpha(1:n),    &
+                       model%thckwk%beta(1:n),     &
+                       model%thckwk%gamma(1:n),    &
+                       model%geometry%thck(ew, :), &
+                       model%thckwk%delta(1:n))
        end do
 
        model%geometry%thck(:,:) = max(model%geometry%thck(:,:), 0.d0)
+
+       ! Apply boundary conditions
+       model%geometry%thck(1,:) = 0.0
+       model%geometry%thck(model%general%ewn,:) = 0.0
+       model%geometry%thck(:,1) = 0.0
+       model%geometry%thck(:,model%general%nsn) = 0.0
 
        ! calculate horizontal velocity field
        call slipvelo(model,                &
@@ -933,6 +981,7 @@ contains
 
   end subroutine stagleapthck
 
+!---------------------------------------------------------------------------------
 
   subroutine adi_tri(a,b,c,d,thk,tpg,mb,flx_p,flx_m,dif_p,dif_m,dt,ds1, ds2)
     !*FD construct tri-diagonal matrix system for a column/row

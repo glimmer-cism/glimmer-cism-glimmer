@@ -1,3 +1,107 @@
+2008-05-08 Ian Rutt
+ * Merged changes from RELEASE_1_0_0_BRANCH into trunk, as below:
+
+2008-04-03 Ian Rutt
+ * Corrected comments in GLINT API - wrong units for water_in and
+ water_out. Spotted by Jeremy Fyke.
+
+2008-04-02 Ian Rutt
+ * Fixed build issue with INTENT in gfortran. Thanks to Maria Kotjakova
+   for pointing this out.
+	
+2008-03-13 Ian Rutt
+ * Fixed bug in temperature basal boundary condition. Sliding heat
+ generation terms were wrong. EISMINT 2 tests G and H now look better.
+
+2008-03-01 Ian Rutt
+ * Fixed precision mismatch build bug in glint_example_clim.F90
+
+2008-01-23 Ian Rutt
+ * Changed sine-wave fitting to temperature to be true by default.
+
+2008-01-21 Ian Rutt
+ * Fixed problem with GLINT output files in restart code
+
+2008-01-18 Ian Rutt
+ * Fixed precision bug in complex restart code.
+
+2008-01-17 Ian Rutt
+ * Fixed build problem with restarts (added handling of complex arrays)
+ * This is currently untested.
+ * Made single-precision compiling a configure option (use --enable-sp)
+
+2008-01-16 Ian Rutt
+ * Modified configure.in and bootstrap to reflect Magi's changes to main
+   trunk. These allow configuration with later versions of automake
+ * Fixed limitations of this code (failed if particular combinations of
+   versions of automake installed)
+
+2007-10-23 Ian Rutt
+ * glint.F90: added basic capability to extract raw forcing climate for
+   diagnostic purposes
+ * Fixed bug in glint_example_clim.F90 that prevented single-precision builds
+	
+2007-08-31 Ian Rutt
+ * Thorough revamp of glint example. Simplified so that all data must be
+ on the same grid now, and streamlined code.
+
+2007-08-29 Ian Rutt
+ * Changed precip anomaly coupling to be additive, but with option to use
+ multiplicative version instead.
+
+2007-08-28 Ian Rutt
+ * Fixed bugs with anomaly coupling - should all be working now.
+
+2007-08-23 Ian Rutt
+ * Fixed a couple of problems with anomaly coupling
+
+2007-08-22 Ian Rutt
+ * MP-interpolation broke single-precision compilation. Fixed that...
+
+2007-08-20 Ian Rutt
+ * Fixed bug in mean-preserving interpolation.
+
+2007-08-17 Ian Rutt
+ * Added code to allow grid-box-mean-preserving interpolation on the
+   sphere. This will make glint up- and downscaling
+   self-consistent. Plumbed in, but not working yet.
+
+2007-08-10 Ian Rutt
+ * Added alternative temperature range calculation - fit a sine-wave
+   through the data and use the amplitude. This is better because it fits
+   with the assumptions made by the mass-balance schemes, and works more
+   flexibly with different amounts of data. It is _not_ the default at the
+   moment, but may be switched on my adding an empty section [GLINT
+   sfit-arng] to the config file (either top-level glint, or
+   single-instance file.
+ * Added some missing implicit nones to glint.F90
+
+2007-07-13 Ian Rutt
+ * Replaced tridiagonal solver (glimmer_utils.F90) to avoid using NR code.
+ * Fixed up boundary conditions in ADI scheme - explicitly set to zero
+   thickness each timestep.
+ * Added check to halt if ADI and periodic BCs are selected, since the
+   combination is not implemented.
+
+2007-07-12 Ian Rutt
+ * More reformatting in glide_thck.F90
+ * Removed redundant call to ds2y from slapsolv - this is called
+   automatically within dslucs.
+ * Fixed intermittent bug with non-linear solver - non-reinitialisation of
+   matrix storage
+ * Reformated slapsolv and improved error handling
+ * Various other bits of tidying up and rationalisation
+
+2007-07-11 Ian Rutt
+ * Improved code formatting in glide_thck.F90
+	
+2007-06-29 Ian Rutt
+ * Fixed bug in rain/snow partition in daily PDD scheme that occasionally generated
+   NaN values.
+
+2007-06-28 Ian Rutt
+ * Minor bugfix to glint.F90 - problem with message lengths. Spotted by Rupert
+
 2008-04-02 Ian Rutt
  * Fixed build bug in glide_setup.F90 - unequal string lengths (thanks to
  Mehmet for pointing that out)

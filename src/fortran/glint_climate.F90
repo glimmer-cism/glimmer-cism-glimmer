@@ -113,17 +113,17 @@ contains
     logical,                intent(in)   :: orogflag
 
     call interp_to_local(instance%lgrid,g_temp,      instance%downs,localsp=instance%artm)
-    call interp_to_local(instance%lgrid,g_temp_range,instance%downs,localsp=instance%arng)
-    call interp_to_local(instance%lgrid,g_precip,    instance%downs,localsp=instance%prcp)
+    call interp_to_local(instance%lgrid,g_temp_range,instance%downs,localsp=instance%arng,z_constrain=.true.)
+    call interp_to_local(instance%lgrid,g_precip,    instance%downs,localsp=instance%prcp,z_constrain=.true.)
 
     if (instance%whichacab==3) then
-       call interp_to_local(instance%lgrid,g_humid,   instance%downs,localrk=instance%humid)
+       call interp_to_local(instance%lgrid,g_humid,   instance%downs,localrk=instance%humid,z_constrain=.true.)
        call interp_to_local(instance%lgrid,g_lwdown,  instance%downs,localrk=instance%lwdown)
        call interp_to_local(instance%lgrid,g_swdown,  instance%downs,localrk=instance%swdown)
-       call interp_to_local(instance%lgrid,g_airpress,instance%downs,localrk=instance%airpress)
+       call interp_to_local(instance%lgrid,g_airpress,instance%downs,localrk=instance%airpress,z_constrain=.true.)
     end if
 
-    if (orogflag) call interp_to_local(instance%lgrid,g_orog,instance%downs,localdp=instance%global_orog)
+    if (orogflag) call interp_to_local(instance%lgrid,g_orog,instance%downs,localdp=instance%global_orog,z_constrain=.true.)
 
     if (instance%whichprecip==2.or.instance%whichacab==3) &
          call interp_wind_to_local(instance%lgrid,g_zonwind,g_merwind,instance%downs,instance%xwind,instance%ywind)

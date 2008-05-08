@@ -39,4 +39,27 @@ contains
 
   end function process_path
 
+  integer function get_free_unit()
+
+    use glimmer_log
+
+    !*FD returns the next free file unit between 20 and 100
+
+    integer :: unit
+    logical :: op
+
+    unit = 20
+    do
+       inquire(unit,opened=op)
+       if (.not.op) exit
+       unit=unit+1
+       if (unit>=100) then
+          call write_log('No file units available',GM_FATAL,__FILE__,__LINE__)
+       end if
+    end do
+
+    get_free_unit=unit
+
+  end function get_free_unit
+
 end module glimmer_filenames

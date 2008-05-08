@@ -431,8 +431,6 @@ module glide_types
     real(dp),dimension(4)         :: fc      = 0.0
     real(dp),dimension(6)         :: fc2     = 0.0
     integer :: ct     = 0
-    integer :: mlinit = 0
-    integer :: tlinit = 0
   end type glide_pcgdwk
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

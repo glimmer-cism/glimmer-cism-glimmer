@@ -198,7 +198,7 @@ contains
     !*FD Calculates the ice temperature, according to one
     !*FD of several alternative methods.
 
-    use glimmer_utils, only: hsum4,tridag
+    use glimmer_utils, only: hsum4,tridiag
     use glimmer_global, only : dp
     use glimmer_paramets,       only : thk0
     use glide_velo
@@ -386,11 +386,11 @@ contains
                 
                 prevtemp = model%temper%temp(:,ew,ns)
 
-                call tridag(subd(2:model%general%upn), &
+                call tridiag(subd(1:model%general%upn), &
                      diag(1:model%general%upn), &
-                     supd(1:model%general%upn-1), &
-                     rhsd(1:model%general%upn), &
-                     model%temper%temp(1:model%general%upn,ew,ns))
+                     supd(1:model%general%upn), &
+                     model%temper%temp(1:model%general%upn,ew,ns), &
+                     rhsd(1:model%general%upn))
 
                 call corrpmpt(model%temper%temp(:,ew,ns),model%geometry%thck(ew,ns),model%temper%bwat(ew,ns), &
                      model%numerics%sigma,model%general%upn)
@@ -429,11 +429,11 @@ contains
 
                    prevtemp = model%temper%temp(:,ew,ns)
 
-                   call tridag(subd(2:model%general%upn), &
+                   call tridiag(subd(1:model%general%upn), &
                         diag(1:model%general%upn), &
-                        supd(1:model%general%upn-1), &
-                        rhsd(1:model%general%upn), &
-                        model%temper%temp(1:model%general%upn,ew,ns))
+                        supd(1:model%general%upn), &
+                        model%temper%temp(1:model%general%upn,ew,ns), &
+                        rhsd(1:model%general%upn))
 
                    call corrpmpt(model%temper%temp(:,ew,ns),model%geometry%thck(ew,ns),model%temper%bwat(ew,ns), &
                         model%numerics%sigma,model%general%upn)
@@ -751,9 +751,9 @@ contains
             (2.0d0 - diag(model%general%upn)) &
             - temp(model%general%upn-1) * subd(model%general%upn) &
             - 0.5*model%tempwk%cons(3) * model%temper%bheatflx(ew,ns) / (thck * model%tempwk%dupn) & ! geothermal heat flux (diff)
-            - 0.5*model%tempwk%slide_f(1)*slterm &                                                   ! sliding heat flux    (diff)
+            - model%tempwk%slide_f(1)*slterm/ model%tempwk%dupn &                                    ! sliding heat flux    (diff)
             - model%tempwk%cons(4) * model%temper%bheatflx(ew,ns) * weff(model%general%upn) &        ! geothermal heat flux (adv)
-            - model%tempwk%slide_f(2)*thck*slterm &                                                  ! sliding heat flux    (adv)
+            - model%tempwk%slide_f(2)*thck*slterm* weff(model%general%upn) &                         ! sliding heat flux    (adv)
             - model%tempwk%initadvt(model%general%upn,ew,ns)  &
             + model%tempwk%dissip(model%general%upn,ew,ns)
     end if

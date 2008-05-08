@@ -51,6 +51,7 @@ module glint_interp
 
   use glimmer_global
   use glimmer_map_types
+  use glint_mpinterp
 
   implicit none
 
@@ -70,10 +71,15 @@ module glint_interp
                                                          !*FD interpolation domain.
      integer, dimension(:,:,:),pointer :: yloc => null() !*FD The y-locations of the corner points of the
                                                          !*FD interpolation domain.
+     integer, dimension(:,:), pointer :: xin => null() !*FD x-locations of global cell the point is in
+     integer, dimension(:,:), pointer :: yin => null() !*FD y-locations of global cell the point is in
+
      real(rk),dimension(:,:),  pointer :: xfrac => null()
      real(rk),dimension(:,:),  pointer :: yfrac => null()
      real(rk),dimension(:,:),pointer :: sintheta => NULL()  !*FD sines of grid angle relative to north.
      real(rk),dimension(:,:),pointer :: costheta => NULL()  !*FD coses of grid angle relative to north.
+     type(mpinterp) :: mpint !*FD Parameters for mean-preserving interpolation
+     logical :: use_mpint = .false. !*FD set true if we're using mean-preserving interpolation
 
   end type downscale
 
@@ -110,7 +116,7 @@ contains
 #undef RST_GLINT_INTERP
 #endif
 
-  subroutine new_downscale(downs,proj,ggrid,lgrid)
+  subroutine new_downscale(downs,proj,ggrid,lgrid,mpint)
 
     use glint_global_grid
     use glimmer_map_trans
@@ -126,12 +132,16 @@ contains
     type(glimmap_proj),intent(in)    :: proj    !*FD Projection to use
     type(global_grid),intent(in)     :: ggrid   !*FD Global grid to use
     type(coordsystem_type),intent(in) :: lgrid  !*FD Local (ice) grid 
+    logical,optional :: mpint !*FD Set true if we're using mean-preserving interp
 
     ! Internal variables
 
     real(rk) :: llat,llon
     integer :: i,j
+    type(upscale) :: ups
+    integer,dimension(:,:),pointer :: upsm
 
+    upsm => null()
     ! Allocate arrays
 
     allocate(downs%xloc(lgrid%size%pt(1),lgrid%size%pt(2),4))
@@ -142,6 +152,9 @@ contains
     call coordsystem_allocate(lgrid,downs%llats)
     call coordsystem_allocate(lgrid,downs%sintheta)
     call coordsystem_allocate(lgrid,downs%costheta)
+    call coordsystem_allocate(lgrid,downs%xin)
+    call coordsystem_allocate(lgrid,downs%yin)
+    call coordsystem_allocate(lgrid,upsm)
   
     ! index local boxes
 
@@ -161,6 +174,19 @@ contains
        end do
     end do
 
+    ! Initialise mean-preserving interpolation if necessary
+    if (present(mpint)) then
+       if (mpint) then
+          call new_mpinterp(downs%mpint,ggrid)
+          downs%use_mpint = .true.
+       end if
+    end if
+
+    call new_upscale(ups,ggrid,proj,upsm,lgrid)
+    downs%xin = ups%gboxx
+    downs%yin = ups%gboxy
+    deallocate(upsm)
+
   end subroutine new_downscale
 
   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -175,11 +201,11 @@ contains
 
     ! Argument declarations
 
-    type(coordsystem_type), intent(in)  :: lgrid            !*FD Target grid
-    real(rk),dimension(:,:),intent(in)  :: zonwind          !*FD Zonal component (input)
-    real(rk),dimension(:,:),intent(in)  :: merwind          !*FD Meridional components (input)
-    type(downscale),        intent(in)  :: downs            !*FD Downscaling parameters
-    real(rk),dimension(:,:),intent(out) :: xwind,ywind      !*FD x and y components on the projected grid (output)
+    type(coordsystem_type), intent(in)     :: lgrid            !*FD Target grid
+    real(rk),dimension(:,:),intent(in)     :: zonwind          !*FD Zonal component (input)
+    real(rk),dimension(:,:),intent(in)     :: merwind          !*FD Meridional components (input)
+    type(downscale),        intent(inout)  :: downs            !*FD Downscaling parameters
+    real(rk),dimension(:,:),intent(out)    :: xwind,ywind      !*FD x and y components on the projected grid (output)
 
     ! Declare two temporary arrays to hold the interpolated zonal and meridional winds
 
@@ -204,7 +230,7 @@ contains
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine interp_to_local(lgrid,global,downs,localsp,localdp,localrk,global_fn)
+  subroutine interp_to_local(lgrid,global,downs,localsp,localdp,localrk,global_fn,z_constrain)
 
     !*FD Interpolate a global scalar field
     !*FD onto a projected grid. 
@@ -224,7 +250,7 @@ contains
 
     type(coordsystem_type),  intent(in)           :: lgrid     !*FD Local grid
     real(rk), dimension(:,:),intent(in)           :: global    !*FD Global field (input)
-    type(downscale),         intent(in)           :: downs     !*FD Downscaling parameters
+    type(downscale),         intent(inout)        :: downs     !*FD Downscaling parameters
     real(sp),dimension(:,:), intent(out),optional :: localsp   !*FD Local field on projected grid (output) sp
     real(dp),dimension(:,:), intent(out),optional :: localdp   !*FD Local field on projected grid (output) dp
     real(rk),dimension(:,:), intent(out),optional :: localrk   !*FD Local field on projected grid (output) rk
@@ -234,18 +260,34 @@ contains
                                                                !*FD data-set is in a large file, being accessed point by point.
                                                                !*FD In these circumstances, \texttt{global}
                                                                !*FD may be of any size, and its contents are irrelevant.
+    logical,optional :: z_constrain
 
     ! Local variable declarations
 
     integer  :: i,j                          ! Counter variables for main loop
     real(rk),dimension(4) :: f               ! Temporary array holding the four points in the 
                                              ! interpolation domain.
+    real(rk), dimension(size(global,1),size(global,2)) :: g_loc
+    logical,  dimension(size(global,1),size(global,2)) :: zeros
+    logical :: zc
+
+    if (present(z_constrain)) then
+       zc=z_constrain
+    else
+       zc=.false.
+    end if
 
     ! check we have one output at least...
 
     if (.not.(present(localsp).or.present(localdp).or.present(localrk))) then
        call write_log('Interp_to_local has no output',GM_WARNING,__FILE__,__LINE__)
     endif
+
+    ! Do stuff for mean-preserving interpolation
+
+    if (downs%use_mpint) then
+       call mean_preserve_interp(downs%mpint,global,g_loc,zeros)
+    end if
 
     ! Main interpolation loop
 
@@ -260,17 +302,30 @@ contains
              f(3)=global_fn(downs%xloc(i,j,3),downs%yloc(i,j,3))
              f(4)=global_fn(downs%xloc(i,j,4),downs%yloc(i,j,4))
           else
-             f(1)=global(downs%xloc(i,j,1),downs%yloc(i,j,1))
-             f(2)=global(downs%xloc(i,j,2),downs%yloc(i,j,2))
-             f(3)=global(downs%xloc(i,j,3),downs%yloc(i,j,3))
-             f(4)=global(downs%xloc(i,j,4),downs%yloc(i,j,4))
+             if (downs%use_mpint) then
+                f(1)=g_loc(downs%xloc(i,j,1),downs%yloc(i,j,1))
+                f(2)=g_loc(downs%xloc(i,j,2),downs%yloc(i,j,2))
+                f(3)=g_loc(downs%xloc(i,j,3),downs%yloc(i,j,3))
+                f(4)=g_loc(downs%xloc(i,j,4),downs%yloc(i,j,4))
+             else
+                f(1)=global(downs%xloc(i,j,1),downs%yloc(i,j,1))
+                f(2)=global(downs%xloc(i,j,2),downs%yloc(i,j,2))
+                f(3)=global(downs%xloc(i,j,3),downs%yloc(i,j,3))
+                f(4)=global(downs%xloc(i,j,4),downs%yloc(i,j,4))
+             end if
           end if
 
           ! Apply the bilinear interpolation
 
-          if (present(localsp)) localsp(i,j)=bilinear_interp(downs%xfrac(i,j),downs%yfrac(i,j),f)
-          if (present(localdp)) localdp(i,j)=bilinear_interp(downs%xfrac(i,j),downs%yfrac(i,j),f)
-          if (present(localrk)) localrk(i,j)=bilinear_interp(downs%xfrac(i,j),downs%yfrac(i,j),f)
+          if (zc.and.zeros(downs%xin(i,j),downs%yin(i,j)).and.downs%use_mpint) then
+             if (present(localsp)) localsp(i,j)=0.0_sp
+             if (present(localdp)) localdp(i,j)=0.0_dp
+             if (present(localrk)) localrk(i,j)=0.0_rk
+          else
+             if (present(localsp)) localsp(i,j)=bilinear_interp(downs%xfrac(i,j),downs%yfrac(i,j),f)
+             if (present(localdp)) localdp(i,j)=bilinear_interp(downs%xfrac(i,j),downs%yfrac(i,j),f)
+             if (present(localrk)) localrk(i,j)=bilinear_interp(downs%xfrac(i,j),downs%yfrac(i,j),f)
+          end if
 
        enddo
     enddo

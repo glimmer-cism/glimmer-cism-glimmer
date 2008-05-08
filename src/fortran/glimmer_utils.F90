@@ -266,6 +266,8 @@ contains
 
   end function hsum
 
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
   function hsum4(inp)
 
     !*FD Calculates the sum of a given three-dimensional field at each
@@ -307,40 +309,39 @@ contains
   end function lsum
 
   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  subroutine tridag(a,b,c,r,u,n)
-    !*FD tri-diagonal matrix solver
 
-    use glimmer_global, only : dp
+  subroutine tridiag(a,b,c,x,y)
 
-    implicit none
+    !*FD Tridiagonal solver. All input/output arrays should have the 
+    !*FD same number of elements.
 
-    real(dp), dimension(:), intent(in) :: a,b,c,r
-    real(dp), dimension(:), intent(out) :: u
-    integer, intent(in), optional :: n
+    real(dp),dimension(:) :: a !*FD Lower diagonal; a(1) is ignored.
+    real(dp),dimension(:) :: b !*FD Centre diagonal
+    real(dp),dimension(:) :: c !*FD Upper diagonal; c(n) is ignored.
+    real(dp),dimension(:) :: x !*FD Unknown vector
+    real(dp),dimension(:) :: y !*FD Right-hand side
 
-    real(dp), dimension(size(b)) :: gam
-    integer :: nn, j
-    real(dp) :: bet
+    real(dp),dimension(size(a)) :: aa
+    real(dp),dimension(size(a)) :: bb
 
-    if (present(n)) then
-       nn = n
-    else
-       nn=size(b)
-    end if
+    integer :: n,i
 
-    bet = b(1)
-    u(1) = r(1)/bet
+    n=size(a)
 
-    do j = 2,nn
-       gam(j) = c(j-1) / bet
-       bet = b(j) - a(j-1) * gam(j)
-       u(j) = (r(j)- a(j-1) * u(j-1)) / bet
+    aa(1) = c(1)/b(1)
+    bb(1) = y(1)/b(1)
+
+    do i=2,n
+       aa(i) = c(i)/(b(i)-a(i)*aa(i-1))
+       bb(i) = (y(i)-a(i)*bb(i-1))/(b(i)-a(i)*aa(i-1))
+    end do
+    
+    x(n) = bb(n)
+
+    do i=n-1,1,-1
+       x(i) = bb(i)-aa(i)*x(i+1)
     end do
 
-    do j = nn-1,1,-1
-       u(j) = u(j) - gam(j+1) * u(j+1)
-    end do
-
-  end subroutine tridag
+  end subroutine tridiag
 
 end module glimmer_utils

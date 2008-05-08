@@ -136,6 +136,10 @@ module glint_type
      !*FD \item[2] Use parameterization of \emph{Roe and Lindzen} 
      !*FD \end{description}
 
+     integer :: use_mpint = 0
+   
+     !*FD Flag to control if mean-preserving interpolation is used
+
      ! Climate parameters ----------------------------------------------------------
 
      real(sp) :: ice_albedo   =   0.4 !*FD Ice albedo. (fraction)
@@ -307,6 +311,7 @@ contains
        call GetValue(section,'data_lapse_rate',instance%data_lapse_rate)
        call GetValue(section,'mbal_accum_time',mbal_time_temp)
        call GetValue(section,'ice_tstep_multiply',instance%ice_tstep_multiply)
+       call GetValue(section,'mean_preserving',instance%use_mpint)
     end if
 
     if (mbal_time_temp>0.0) then
@@ -401,6 +406,18 @@ contains
     end if
     write(message,*) 'ice_tstep_multiply',instance%ice_tstep_multiply
     call write_log(message)
+    select case(instance%use_mpint)
+    case(1)
+       write(message,*) 'Using mean-preserving interpolation'
+       call write_log(message)
+    case(0)
+       write(message,*) 'Using normal interpolation'
+       call write_log(message)
+    case default
+       write(message,*) 'Unrecognised value of instance%use_mpint'
+       call write_log(message,GM_FATAL)
+    end select
+
     call write_log('')
 
   end subroutine glint_i_printconfig
