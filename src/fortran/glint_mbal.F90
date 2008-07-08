@@ -119,8 +119,8 @@ contains
        params%tstep=years2hours
     case(3)
        allocate(params%smb)
-       params%tstep=3
-       call SMBInitWrapper(params%smb,nx,ny,nint(dxr),params%tstep*60,'/home/ggicr/work/ggdagw/src/smb/smb_config/online')
+       params%tstep=6
+       call SMBInitWrapper(params%smb,nx,ny,nint(dxr),params%tstep*60,'/data/ggdagw/src/smb/smb_config/online')
     case(4)
        allocate(params%daily_pdd)
        call glimmer_daily_pdd_init(params%daily_pdd,config)

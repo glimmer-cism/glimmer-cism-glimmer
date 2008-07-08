@@ -546,6 +546,7 @@ contains
     call GetValue(section,'topo_is_relaxed',model%options%whichrelaxed)
     call GetValue(section,'hotstart',model%options%hotstart)
     call GetValue(section,'periodic_ew',model%options%periodic_ew)
+    call GetValue(section,'basal_mass_balance',model%options%basal_mbal)
   end subroutine handle_options
   
   subroutine print_options(model)
@@ -573,12 +574,13 @@ contains
          'threshold         ', &
          'const calving rate', &
          'edge threshold    '/)
-    character(len=*), dimension(0:4), parameter :: slip_coeff = (/ &
-         'zero        ', &
-         'const       ', &
-         'const if T>0', &
-         '~basal water', &
-         '~basal melt '/)
+    character(len=*), dimension(0:5), parameter :: slip_coeff = (/ &
+         'zero           ', &
+         'const          ', &
+         'const if bwat>0', &
+         '~basal water   ', &
+         '~basal melt    ', &
+         'const if T>Tpmp'/)
     character(len=*), dimension(0:2), parameter :: evolution = (/ &
          'pseudo-diffusion', &
          'ADI scheme      ', &
@@ -586,6 +588,9 @@ contains
     character(len=*), dimension(0:1), parameter :: vertical_integration = (/ &
          'standard     ', &
          'obey upper BC' /)
+    character(len=*), dimension(0:1), parameter :: b_mbal = (/ &
+         'not in continutity eqn', &
+         'in continutity eqn    ' /)
 
     call write_log('GLIDE options')
     call write_log('-------------')
@@ -625,6 +630,11 @@ contains
        call write_log('Error, vertical_integration out of range',GM_FATAL)
     end if
     write(message,*) 'vertical_integration    : ',model%options%whichwvel,vertical_integration(model%options%whichwvel)
+    call write_log(message)
+    if (model%options%basal_mbal.lt.0 .or. model%options%basal_mbal.ge.size(b_mbal)) then
+       call write_log('Error, basal_mass_balance out of range',GM_FATAL)
+    end if
+    write(message,*) 'basal_mass_balance      : ',model%options%basal_mbal,b_mbal(model%options%basal_mbal)
     call write_log(message)
     if (model%options%whichrelaxed.eq.1) then
        call write_log('First topo time slice is relaxed')
@@ -671,6 +681,7 @@ contains
     call GetValue(section,'basal_tract_const',model%paramets%btrac_const)
     call GetValue(section,'basal_tract_max',model%paramets%btrac_max)
     call GetValue(section,'basal_tract_slope',model%paramets%btrac_slope)
+    call GetValue(section,'basal_water_smoothing',model%paramets%bwat_smooth)
   end subroutine handle_parameters
 
   subroutine print_parameters(model)
@@ -718,6 +729,8 @@ contains
        write(message,*) '                        ',model%paramets%bpar(5)
        call write_log(message)
     end if
+    write(message,*) 'basal water field smoothing strength: ',model%paramets%bwat_smooth
+    call write_log(message)
     call write_log('')
   end subroutine print_parameters
 

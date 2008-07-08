@@ -479,6 +479,20 @@ contains
             model%temper%temp(model%general%upn,:,:), &
             is_float(model%geometry%thkmask))
 
+       ! Transform basal temperature and pressure melting point onto velocity grid -
+
+       call stagvarb(model%temper%temp(model%general%upn,1:model%general%ewn,1:model%general%nsn), &
+            model%temper%stagbtemp ,&
+            model%general%  ewn, &
+            model%general%  nsn)
+       
+       call calcbpmp(model,model%geometry%thck,model%temper%bpmp)
+
+       call stagvarb(model%temper%bpmp, &
+            model%temper%stagbpmp ,&
+            model%general%  ewn, &
+            model%general%  nsn)
+
     case(2) ! Do something else, unspecified ---------------------------------------
 
        do ns = 1,model%general%nsn
@@ -517,9 +531,12 @@ contains
 
     implicit none
 
-    real(dp), dimension(:), intent(in) :: u,v
-    real(dp), dimension(:,:), intent(in) :: tempx, tempy
-    real(dp), dimension(:), intent(out) :: iteradvt, diagadvt
+    real(dp), dimension(:),   intent(out) :: iteradvt
+    real(dp), dimension(:),   intent(out) :: diagadvt
+    real(dp), dimension(:,:), intent(in)  :: tempx
+    real(dp), dimension(:,:), intent(in)  :: tempy
+    real(dp), dimension(:),   intent(in)  :: u
+    real(dp), dimension(:),   intent(in)  :: v
 
     iteradvt = 0.0d0
     diagadvt = 0.0d0
@@ -793,6 +810,28 @@ contains
 
   !-----------------------------------------------------------------------------------
 
+  subroutine calcbpmp(model,thck,bpmp)
+
+    ! Calculate the pressure melting point at the base of the ice sheet
+
+    type(glide_global_type) :: model
+    real(dp), dimension(:,:), intent(in)  :: thck
+    real(dp), dimension(:,:), intent(out) :: bpmp
+
+    integer :: ew,ns
+
+    bpmp = 0.0
+
+    do ns = 2, model%general%nsn-1
+       do ew = 2, model%general%ewn-1
+          call calcpmptb(bpmp(ns,ew),thck(ns,ew))
+       end do
+    end do
+
+  end subroutine calcbpmp
+
+  !-----------------------------------------------------------------------------------
+
   subroutine calcbmlt(model,temp,thck,stagthck,dusrfdew,dusrfdns,ubas,vbas,bmlt,floater)
 
     use glimmer_global, only : dp 
@@ -895,7 +934,6 @@ contains
     real(dp), dimension(2), parameter :: &
          blim = (/ 0.00001 / thk0, 0.001 / thk0 /)
 
-    real(dp), parameter :: smthf = 0.01d0 
     real(dp) :: dwphidew, dwphidns, dwphi, pmpt, bave
 
     integer :: t_wat,ns,ew
@@ -1081,7 +1119,7 @@ contains
       implicit none
       integer, intent(in) :: ewm,ew,ewp,nsm,ns,nsp
       if (blim(2) < bwat(ew,ns)) then
-         model%tempwk%smth(ew,ns) = bwat(ew,ns) + smthf * &
+         model%tempwk%smth(ew,ns) = bwat(ew,ns) + model%paramets%bwat_smooth * &
               (bwat(ewm,ns) + bwat(ewp,ns) + bwat(ew,nsm) + bwat(ew,nsp) - 4.0d0 * bwat(ew,ns))
       else 
          model%tempwk%smth(ew,ns) = bwat(ew,ns)
@@ -1134,6 +1172,8 @@ contains
   !-------------------------------------------------------------------
 
   subroutine calcpmpt(pmptemp,thck,sigma)
+
+    !*FD Returns the pressure melting point of water (degC)
 
     use glimmer_global, only : dp !, upn
     use physcon, only : rhoi, grav, pmlt 

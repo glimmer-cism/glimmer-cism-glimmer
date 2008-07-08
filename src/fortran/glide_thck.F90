@@ -414,6 +414,11 @@ contains
                                    + model%geometry%lsrf(ew,nsm) * sumd(3)  &
                                    + model%geometry%lsrf(ew,nsp) * sumd(4)) &
             + model%climate%acab(ew,ns) * model%pcgdwk%fc2(2)
+         if(model%options%basal_mbal) then
+            model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) =                    &
+                 model%pcgdwk%rhsd(model%geometry%mask(ew,ns))                 &
+                 - model%temper%bmlt(ew,ns) * model%pcgdwk%fc2(2) ! basal melt is +ve for mass loss
+         end if
       end if
 
       model%pcgdwk%answ(model%geometry%mask(ew,ns)) = new_thck(ew,ns)      
@@ -756,17 +761,20 @@ contains
 
   subroutine timeders(thckwk,ipvr,opvr,mask,time,which)
 
+    !*FD Calculates the time-derivative of a field. This subroutine is used by 
+    !*FD the temperature solver only.
+
     use glimmer_global, only : dp, sp
     use paramets, only : conv
 
     implicit none 
 
-    type(glide_thckwk) :: thckwk
-    real(dp), intent(out), dimension(:,:) :: opvr 
-    real(dp), intent(in), dimension(:,:) :: ipvr
-    real(sp), intent(in) :: time 
-    integer, intent(in), dimension(:,:) :: mask
-    integer, intent(in) :: which
+    type(glide_thckwk) :: thckwk    !*FD Derived-type containing work data
+    real(dp), intent(out), dimension(:,:) :: opvr  !*FD Input field
+    real(dp), intent(in),  dimension(:,:) :: ipvr  !*FD Output (derivative) field
+    real(sp), intent(in)                  :: time  !*FD current time
+    integer,  intent(in),  dimension(:,:) :: mask  !*FD mask for calculation
+    integer,  intent(in)                  :: which !*FD selector for stored field
 
     real(sp) :: factor
 
@@ -911,7 +919,7 @@ contains
                          model%thckwk%delta,                 &
                          model%geometry%thck(:,ns),          &
                          model%geometry%lsrf(:,ns),          &
-                         model%climate%acab(:,ns),           &
+                         model%climate%acab(:,ns)-real(model%options%basal_mbal)*real(model%temper%bmlt(:,ns),sp),           &
                          model%velocity%vflx(:,ns),          &
                          model%velocity%vflx(:,ns-1),        &
                          model%velocity%total_diffu(:,ns),   &
@@ -938,7 +946,7 @@ contains
                          model%thckwk%delta,                 &
                          model%thckwk%oldthck(ew,:),         &
                          model%geometry%lsrf(ew, :),         &
-                         model%climate%acab(ew, :),          &
+                         model%climate%acab(ew, :)-real(model%options%basal_mbal)*real(model%temper%bmlt(ew, :),sp),          &
                          model%velocity%uflx(ew,:),          &
                          model%velocity%uflx(ew-1,:),        &
                          model%velocity%total_diffu(ew,:),   &

@@ -1,3 +1,9 @@
+2008-07-08 Ian Rutt
+ * Added option to adjust basal water depth smoothing strength
+ * Added option to turn on sliding when T=Tpmp
+ * Added option to include basal melt rate in continuity equation
+ * Various comments and bits of tidying up
+
 2008-04-03 Ian Rutt
  * Corrected comments in GLINT API - wrong units for water_in and
  water_out. Spotted by Jeremy Fyke.

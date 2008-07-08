@@ -1061,7 +1061,19 @@ contains
              end if
           end do
        end do
-
+    case(5)
+       ! constant where basal temperature equal to pressure melting point
+       ! This is the actual EISMINT condition, which may not be the same
+       ! as case(2) above, depending on the hydrology
+       do ns = 1,nsn-1
+          do ew = 1,ewn-1
+             if (abs(model%temper%stagbpmp(ew,ns) - model%temper%stagbtemp(ew,ns))<0.001) then
+                btrc(ew,ns) = model%velocity%bed_softness(ew,ns)
+             else
+                btrc(ew,ns) = 0.0d0
+             end if
+          end do
+       end do
     case default
        ! zero everywhere
        btrc = 0.0d0
