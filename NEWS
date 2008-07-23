@@ -1,3 +1,10 @@
+Changes in Version 1.0.10
+=========================
+* Fixed gfortran build
+* Added various extra options for basal sliding and hydrology
+* Added option to include basal melt in continuity equation
+* Basal temperatures now set to pressure melting point if the ice is floating
+
 Changes in Version 1.0.8
 ========================
 * Fixed bug in calculation of basal sliding heat flux.

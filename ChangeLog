@@ -1,4 +1,8 @@
 2008-07-23 Ian Rutt
+ * configure.in: bump version to 1.0.10
+ * NEWS: update
+	
+2008-07-23 Ian Rutt
  * Changed basal temperature to be PMP if ice is floating
 
 2008-07-08 Ian Rutt
