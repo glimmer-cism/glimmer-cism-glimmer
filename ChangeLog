@@ -1,3 +1,6 @@
+2008-07-23 Ian Rutt
+ * Changed basal temperature to be PMP if ice is floating
+
 2008-07-08 Ian Rutt
  * Added option to adjust basal water depth smoothing strength
  * Added option to turn on sliding when T=Tpmp

@@ -611,7 +611,7 @@ contains
     !*FD Calculates the vertical velocity field, which is returned in \texttt{wvel}.
     !*FD This is found by doing this integration:
     !*FD \[
-    !*FD w(\sigma)=-\int_{1}^{\sigma}\left[\frac{\partial \mathbf{U}}{\partial \sigma}
+    !*FD w(\sigma)=\int_{1}^{\sigma}\left[\frac{\partial \mathbf{U}}{\partial \sigma}
     !*FD (\sigma) \cdot (\nabla s - \sigma \nabla H) +H\nabla \cdot \mathbf{U}(\sigma)\right]d\sigma
     !*FD + w(1)
     !*FD \]

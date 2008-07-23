@@ -712,7 +712,7 @@ contains
          + model%tempwk%dissip(2:model%general%upn-1,ew,ns)
     
     if (float) then
-       model%tempwk%inittemp(model%general%upn,ew,ns) = temp(model%general%upn) 
+       model%tempwk%inittemp(model%general%upn,ew,ns) = pmpt(thck)
     else 
        ! sliding contribution to basal heat flux
        slterm = 0.
@@ -807,6 +807,20 @@ contains
     end do
 
   end subroutine finddisp
+
+  !-----------------------------------------------------------------------------------
+
+  real(dp) function pmpt(thck)
+
+    !*FD Wrapper function for pressure-melting-point calculation
+
+    real(dp),intent(in) :: thck
+    real(dp) :: tmp
+
+    call calcpmptb(tmp,thck)
+    pmpt=tmp
+
+  end function pmpt
 
   !-----------------------------------------------------------------------------------
 
