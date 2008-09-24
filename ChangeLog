@@ -1,3 +1,7 @@
+2008-09-24 Ian Rutt
+ * Fixed minor build bug in glide_thck.F90. Thanks to Christian Ferrer for
+ identifying this one.
+
 2008-07-23 Ian Rutt
  * Bump version to 1.0.11 (new development series)
 	

@@ -414,7 +414,7 @@ contains
                                    + model%geometry%lsrf(ew,nsm) * sumd(3)  &
                                    + model%geometry%lsrf(ew,nsp) * sumd(4)) &
             + model%climate%acab(ew,ns) * model%pcgdwk%fc2(2)
-         if(model%options%basal_mbal) then
+         if(model%options%basal_mbal==1) then
             model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) =                    &
                  model%pcgdwk%rhsd(model%geometry%mask(ew,ns))                 &
                  - model%temper%bmlt(ew,ns) * model%pcgdwk%fc2(2) ! basal melt is +ve for mass loss
