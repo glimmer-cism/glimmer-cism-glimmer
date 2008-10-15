@@ -1,3 +1,3 @@
-SUBDIRS = m4macros src tests
+SUBDIRS = m4macros src 
 
 bin_SCRIPTS=glimmer-config

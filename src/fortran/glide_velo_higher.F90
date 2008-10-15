@@ -36,7 +36,7 @@ contains
                                thck, usrf, dthckdew, dthckdns, dusrfdew, dusrfdns, &
                                dlsrfdew, dlsrfdns, stagthck, flwa, btrc, which_sliding_law, &
                                periodic_ew, periodic_ns, &
-                               uvel, vvel, uflx, vflx, ubas,vbas, efvs, tau, gdsx, gdsy)
+                               uvel, vvel, uflx, vflx, efvs, tau, gdsx, gdsy)
                             
         integer  :: ewn !*FD Number of cells X
         integer  :: nsn !*FD Number of cells Y
@@ -62,8 +62,6 @@ contains
         real(dp), dimension(upn,ewn-1,nsn-1) :: vvel
         real(dp), dimension(:,:,:) :: uflx
         real(dp), dimension(:,:,:) :: vflx
-        real(dp), dimension(:,:) :: ubas
-        real(dp), dimension(:,:) :: vbas
         real(dp), dimension(:,:,:) :: efvs !*FD Effective viscosity
         type(glide_tensor)         :: tau
         real(dp), dimension(:,:) :: gdsx !*FD X driving stress

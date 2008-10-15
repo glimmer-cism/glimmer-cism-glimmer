@@ -172,7 +172,6 @@ contains
                           model%options%periodic_ew .eq. 1, .false.,&
                           model%velocity_hom%uvel, model%velocity_hom%vvel, &
                           model%velocity_hom%uflx, model%velocity_hom%vflx, &
-                          model%velocity_hom%ubas, model%velocity_hom%vbas, &
                           model%velocity_hom%efvs, model%velocity_hom%tau, &
                           model%velocity_hom%gdsx, model%velocity_hom%gdsy)
         end if
