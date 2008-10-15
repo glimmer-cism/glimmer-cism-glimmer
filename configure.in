@@ -104,6 +104,80 @@ fi
 AC_CHECK_LIB(netcdf,NF_INQ_LIBVERS)
 AC_MSG_CHECKING([for f90 netCDF interface])
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([],[use netcdf])],AC_MSG_RESULT([yes]),AC_MSG_FAILURE([no]))
+
+#Checking for alternate linear solvers
+AC_ARG_WITH(umfpack,AS_HELP_STRING([--with-umfpack],[Optional location of umfpack linear solver]),[ac_cv_umfpack_prefix=$withval])
+AC_ARG_WITH(pardiso,AS_HELP_STRING([--with-pardiso],[Optional location of pardiso linear solver]),[ac_cv_pardiso_prefix=$withval])
+
+#Call AC_CHECK_LIB for C librarieswith no arguments so the macro gets expanded here
+AC_LANG_PUSH(C)
+AC_CHECK_LIB([],[main])
+AC_LANG_POP(C)
+
+if test "$ac_cv_umfpack_prefix" != "" -a "$ac_cv_pardiso_prefix" != ""; then
+    AC_MSG_ERROR(Only one of --with-umfpack or --with-pardiso may be defined.)
+else
+    if test "$ac_cv_umfpack_prefix" != ""; then
+        AC_MSG_RESULT([Using Umfpack to solve sparse linear systems (located at $ac_cv_umfpack_prefix)])
+        FCFLAGS="$FCFLAGS -DSPARSE_SOLVER=umfpack"
+        LDFLAGS="$LDFLAGS -L$ac_cv_umfpack_prefix/lib"
+        
+        if test "$ac_cv_haveblas" == 0; then
+            AC_MSG_ERROR([
+Using UMFPACK requires use of an external BLAS library.  
+Please use the --with-blas flag and try again.
+If you are not sure what to do here but have BLAS installed in a standard location, try --with-blas=-lblas])
+        fi
+
+        #We should have already checked for BLAS, so we'll get on with checking for AMD and UMFPACK
+        #AMD is one of UMFPACK'S dependancies.  This means that the user needs to be careful:
+        #if UMFPACK is compiled with an external BLAS, then Glimmer will need to be as well.
+        #TODO: Relax this restriction?  Is there any advantage to NOT compiling Glimmer with external BLAS?
+
+        #Note that this assumes that AMD is installed to one of the standard library directories or
+        #to the same place as UMFPACK!!!
+        #To check these libraries, we need to use C, not Fortran, because of C-to-fortran linking issues
+        #that will be resolved below.
+        AC_LANG_PUSH(C)
+        AC_CHECK_LIB([amd], [amd_l_valid], , 
+                     AC_MSG_ERROR([Libamd not found. required to use --with-umfpack.  See http://www.cise.ufl.edu/research/sparse/umfpack]), [-lblas])
+                    
+        AC_CHECK_LIB([umfpack], [main], ,  AC_MSG_ERROR([Libumfpack not found.]), [-lblas -lamd])
+        AC_LANG_POP(C)
+
+        #A peculiarity of UMFPACK is that we need an *object* file (not a library) with the fortran77 bindings.  I'm going to say
+        #that this should be placed in the same directory as libumfpack (e.g. in the lib directory).  Check for that.
+        LDFLAGS="$LDFLAGS $ac_cv_umfpack_prefix/lib/umf4_f77wrapper.o"
+        AC_MSG_CHECKING(for UMFPACK F77 bindings)
+        AC_LINK_IFELSE(AC_LANG_PROGRAM([],[]), AC_MSG_RESULT(yes), 
+                       [AC_MSG_RESULT(no)
+                        AC_MSG_ERROR([
+In order to use UFMPACK you need to compile umf4_f77wrapper.c 
+(located in the Demo subdirectory of the source distribution) 
+and place the resulting object file in the same directory as 
+libumfpack.  This is not done with a standard UMFPACK install.  
+If you downloaded a binary distribution of Umfpack, you may 
+need to obtain the source at: 
+http://www.cise.ufl.edu/research/sparse/umfpack.])])
+
+        sparsesolver=umfpack
+    else
+        if test "$ac_cv_pardiso_prefix" != ""; then
+            AC_MSG_RESULT(Using Pardiso, located at $ac_cv_pardiso_prefix)
+            FCFLAGS="$FCFLAGS -DSPARSE_SOLVER=pardiso"
+            sparsesolver=pardiso
+        else
+            AC_MSG_RESULT([Using default sparse linear solver (SLAP)])
+            FCFLAGS="$FCFLAGS -DSPARSE_SOLVER=slap"
+            sparsesolver=slap
+        fi
+    fi
+fi
+
+AM_CONDITIONAL(SLAP, test x$sparsesolver = xslap)
+AM_CONDITIONAL(UMFPACK, test x$sparsesolver = xumfpack)
+AM_CONDITIONAL(PARDISO, test x$sparsesolver = xpardiso)
+
 #AC_LANG_POP(Fortran)
 
 # checking for ENMABAL

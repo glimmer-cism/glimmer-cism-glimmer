@@ -89,7 +89,7 @@
 !lipscomb - Later, may want to write glissade_velo module
     use glide_types
     use glide_velo
-    use glide_thck, only: geomders, stagvarb
+    use glide_thck, only: stagvarb
  
     implicit none
  
@@ -279,12 +279,23 @@
                         ewn,                           &
                         nsn) 
  
-          call geomders(model%numerics,                &
-                        model%geometry%usrf,           &
-                        model%geomderv%stagthck,       & 
-                        model%geomderv%dusrfdew,       &
-                        model%geomderv%dusrfdns)
- 
+          !call geomders(model%numerics,                &
+          !              model%geometry%usrf,           &
+          !              model%geomderv%stagthck,       & 
+          !              model%geomderv%dusrfdew,       &
+          !              model%geomderv%dusrfdns)
+          
+          call df_field_2d_staggered(model%geometry%usrf, &
+                                     model%numerics%dew, model%numerics%dns, &
+                                     model%geomderv%dusrfdew, &
+                                     model%geomderv%dusrfdns, &
+                                     .false.,.false.)
+          where (model%geomderv%stagthck == 0)
+              model%geomderv%dusrfdew = 0
+              model%geomderv%dusrfdns = 0
+          endwhere
+
+
           ! Correct the velocities
  
           call zerovelo (model%velowk,             &

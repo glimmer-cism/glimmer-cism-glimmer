@@ -319,6 +319,22 @@ data:          data%velocity%vvel(up,:,:)
 factor:        scale3d_f1
 standard_name: land_ice_y_velocity
 
+[uvelhom]
+dimensions:    time, level, y0, x0
+units:         meter/year
+long_name:     ice velocity in x direction according to higher order model
+data:          data%velocity_hom%uvel(up,:,:)
+factor:        scale3d_f1
+standard_name: land_ice_higher_order_x_velocity
+
+[vvelhom]
+dimensions:    time, level, y0, x0
+units:         meter/year
+long_name:     ice velocity in y direction according to higher order model
+data:          data%velocity_hom%vvel(up,:,:)
+factor:        scale3d_f1
+standard_name: land_ice_higher_order_y_velocity
+
 [wvel]
 dimensions:    time, level, y1, x1
 units:         meter/year

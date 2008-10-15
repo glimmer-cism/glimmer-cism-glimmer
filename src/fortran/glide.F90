@@ -53,6 +53,7 @@ module glide
   use glide_io
   use glide_lithot
   use glide_profile
+  use glide_deriv
   use glimmer_config
   integer, private, parameter :: dummyunit=99
 
@@ -233,17 +234,40 @@ contains
          model%general%  ewn, &
          model%general%  nsn)
 
-    call geomders(model%numerics, &
-         model%geometry% usrf, &
-         model%geomderv% stagthck,&
-         model%geomderv% dusrfdew, &
-         model%geomderv% dusrfdns)
+    !call geomders(model%numerics, &
+    !     model%geometry% usrf, &
+    !     model%geomderv% stagthck,&
+    !     model%geomderv% dusrfdew, &
+    !     model%geomderv% dusrfdns)
 
-    call geomders(model%numerics, &
-         model%geometry% thck, &
-         model%geomderv% stagthck,&
-         model%geomderv% dthckdew, &
-         model%geomderv% dthckdns)
+    call df_field_2d_staggered(model%geometry%usrf, &
+                               model%numerics%dew, model%numerics%dns, &
+                               model%geomderv%dusrfdew, & 
+                               model%geomderv%dusrfdns, &
+                               .false., .false.)
+          
+    !call geomders(model%numerics, &
+    !     model%geometry% thck, &
+    !     model%geomderv% stagthck,&
+    !     model%geomderv% dthckdew, &
+    !     model%geomderv% dthckdns)
+
+    call df_field_2d_staggered(model%geometry%thck, &
+                               model%numerics%dew, model%numerics%dns, &
+                               model%geomderv%dusrfdew, &
+                               model%geomderv%dusrfdns, &
+                               .false., .false.)
+          
+    !Make sure that the derivatives are 0 where staggered thickness is 0
+    where (model%geomderv%stagthck == 0)
+       model%geomderv%dusrfdew = 0
+       model%geomderv%dusrfdns = 0
+       model%geomderv%dthckdew = 0
+       model%geomderv%dthckdns = 0
+    endwhere
+
+
+
 #ifdef PROFILING
     call glide_prof_stop(model,model%glide_prof%geomderv)
 #endif

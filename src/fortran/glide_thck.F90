@@ -47,9 +47,10 @@
 module glide_thck
 
   use glide_types
-
+  use glide_velo_higher
+  use xls
   private
-  public :: init_thck, thck_nonlin_evolve, thck_lin_evolve, stagvarb, geomders, timeders, stagleapthck
+  public :: init_thck, thck_nonlin_evolve, thck_lin_evolve, stagvarb, timeders, stagleapthck
 
 #ifdef DEBUG_PICARD
   ! debugging Picard iteration
@@ -118,6 +119,7 @@ contains
           ! calculate Glen's A if necessary
           call velo_integrate_flwa(model%velowk,model%geomderv%stagthck,model%temper%flwa)
        end if
+
        call slipvelo(model,                &
             2,                             &
             model%velocity% btrc,          &
@@ -128,10 +130,9 @@ contains
        call velo_calc_diffu(model%velowk,model%geomderv%stagthck,model%geomderv%dusrfdew, &
             model%geomderv%dusrfdns,model%velocity%diffu)
 
-       ! get new thicknesses
-       call thck_evolve(model,.true.,model%geometry%thck,model%geometry%thck)
-
        ! calculate horizontal velocity field
+       !(these calls can appear either before or after thck_evolve because
+       !thck_evolve doesn't mutate the staggered or derivative fields)
        call slipvelo(model,                &
             3,                             &
             model%velocity%btrc,           &
@@ -140,7 +141,46 @@ contains
        call velo_calc_velo(model%velowk,model%geomderv%stagthck,model%geomderv%dusrfdew, &
             model%geomderv%dusrfdns,model%temper%flwa,model%velocity%diffu,model%velocity%ubas, &
             model%velocity%vbas,model%velocity%uvel,model%velocity%vvel,model%velocity%uflx,model%velocity%vflx)
-    end if
+
+       !Calculate higher-order velocities if the user asked for them
+       if (model%options%whichhomvel == 1) then
+            !Populate higher order velocities with initial guesses according
+            !to SIA
+            model%velocity_hom%uvel = model%velocity%uvel
+            model%velocity_hom%vvel = model%velocity%vvel
+
+            call stagvarb(model%geometry% thck, &
+                         model%geomderv%stagthck,&
+                         model%general%ewn, &
+                         model%general%nsn)
+               
+             call df_field_2d_staggered(model%geometry%usrf, model%numerics%dew, model%numerics%dns,& 
+                    model%geomderv%dusrfdew, model%geomderv%dusrfdns, .false., .false.)
+
+             call df_field_2d_staggered(model%geometry%thck, model%numerics%dew, model%numerics%dns, &
+                   model%geomderv%dthckdew, model%geomderv%dthckdns, .false., .false.)
+             write(*,*)"HELLO!!!!" 
+             call velo_hom_pattyn(model%general%ewn, model%general%nsn, model%general%upn, &
+                          model%numerics%dew, model%numerics%dns, model%numerics%sigma, &
+                          model%geometry%thck, model%geometry%usrf, &
+                          model%geomderv%dthckdew, model%geomderv%dthckdns, &
+                          model%geomderv%dusrfdew, model%geomderv%dusrfdns, &
+                          model%geomderv%dusrfdew-model%geomderv%dthckdew, & 
+                          model%geomderv%dusrfdns-model%geomderv%dthckdns, & 
+                          model%geomderv%stagthck, model%temper%flwa, model%velocity%btrc, &
+                          model%options%whichhomsliding,&
+                          model%options%periodic_ew .eq. 1, .false.,&
+                          model%velocity_hom%uvel, model%velocity_hom%vvel, &
+                          model%velocity_hom%uflx, model%velocity_hom%vflx, &
+                          model%velocity_hom%ubas, model%velocity_hom%vbas, &
+                          model%velocity_hom%efvs, model%velocity_hom%tau, &
+                          model%velocity_hom%gdsx, model%velocity_hom%gdsy)
+        end if
+ 
+       ! get new thicknesses
+       call thck_evolve(model,.true.,model%geometry%thck,model%geometry%thck)
+
+   end if
   end subroutine thck_lin_evolve
 
 !---------------------------------------------------------------------------------
@@ -197,17 +237,37 @@ contains
                model%general%  ewn, &
                model%general%  nsn)
 
-          call geomders(model%numerics, &
-               model%geometry% usrf, &
-               model%geomderv% stagthck,&
-               model%geomderv% dusrfdew, &
-               model%geomderv% dusrfdns)
+          !call geomders(model%numerics, &
+          !     model%geometry% usrf, &
+          !     model%geomderv% stagthck,&
+          !     model%geomderv% dusrfdew, &
+          !     model%geomderv% dusrfdns)
 
-          call geomders(model%numerics, &
-               model%geometry% thck, &
-               model%geomderv% stagthck,&
-               model%geomderv% dthckdew, &
-               model%geomderv% dthckdns)
+          call df_field_2d_staggered(model%geometry%usrf, &
+                                     model%numerics%dew, model%numerics%dns, &
+                                     model%geomderv%dusrfdew, & 
+                                     model%geomderv%dusrfdns, &
+                                     .false., .false.)
+          
+          !call geomders(model%numerics, &
+          !     model%geometry% thck, &
+          !     model%geomderv% stagthck,&
+          !     model%geomderv% dthckdew, &
+          !     model%geomderv% dthckdns)
+
+          call df_field_2d_staggered(model%geometry%thck, &
+                                     model%numerics%dew, model%numerics%dns, &
+                                     model%geomderv%dusrfdew, &
+                                     model%geomderv%dusrfdns, &
+                                     .false., .false.)
+          
+          !Make sure that the derivatives are 0 where staggered thickness is 0
+          where (model%geomderv%stagthck == 0)
+                model%geomderv%dusrfdew = 0
+                model%geomderv%dusrfdns = 0
+                model%geomderv%dthckdew = 0
+                model%geomderv%dthckdns = 0
+          endwhere
 
           call slipvelo(model,                &
                2,                             &
@@ -551,39 +611,39 @@ contains
   
 !---------------------------------------------------------------------------------
 
-  subroutine geomders(numerics,ipvr,stagthck,opvrew,opvrns)
+!  subroutine geomders(numerics,ipvr,stagthck,opvrew,opvrns)
+!
+!    use glimmer_global, only : dp
+!
+!    implicit none 
+!
+!    type(glide_numerics) :: numerics
+!    real(dp), intent(out), dimension(:,:) :: opvrew, opvrns
+!    real(dp), intent(in), dimension(:,:) :: ipvr, stagthck
+!
+!    real(dp) :: dew2, dns2 
+!    integer :: ew,ns,ewn,nsn
 
-    use glimmer_global, only : dp
-
-    implicit none 
-
-    type(glide_numerics) :: numerics
-    real(dp), intent(out), dimension(:,:) :: opvrew, opvrns
-    real(dp), intent(in), dimension(:,:) :: ipvr, stagthck
-
-    real(dp) :: dew2, dns2 
-    integer :: ew,ns,ewn,nsn
-
-    ! Obviously we don't need to do this every time,
-    ! but will do so for the moment.
-    dew2 = 1.d0/(2.0d0 * numerics%dew)
-    dns2 = 1.d0/(2.0d0 * numerics%dns)
-    ewn=size(ipvr,1)
-    nsn=size(ipvr,2)
-
-    do ns=1,nsn-1
-       do ew = 1,ewn-1
-          if (stagthck(ew,ns) /= 0.0d0) then
-             opvrew(ew,ns) = (ipvr(ew+1,ns+1)+ipvr(ew+1,ns)-ipvr(ew,ns)-ipvr(ew,ns+1)) * dew2
-             opvrns(ew,ns) = (ipvr(ew+1,ns+1)+ipvr(ew,ns+1)-ipvr(ew,ns)-ipvr(ew+1,ns)) * dns2
-          else
-             opvrew(ew,ns) = 0.
-             opvrns(ew,ns) = 0.
-          end if
-       end do
-    end do
-    
-  end subroutine geomders
+!    ! Obviously we don't need to do this every time,
+!    ! but will do so for the moment.
+!    dew2 = 1.d0/(2.0d0 * numerics%dew)
+!    dns2 = 1.d0/(2.0d0 * numerics%dns)
+!    ewn=size(ipvr,1)
+!    nsn=size(ipvr,2)
+!
+!    do ns=1,nsn-1
+!       do ew = 1,ewn-1
+!          if (stagthck(ew,ns) /= 0.0d0) then
+!             opvrew(ew,ns) = (ipvr(ew+1,ns+1)+ipvr(ew+1,ns)-ipvr(ew,ns)-ipvr(ew,ns+1)) * dew2
+!             opvrns(ew,ns) = (ipvr(ew+1,ns+1)+ipvr(ew,ns+1)-ipvr(ew,ns)-ipvr(ew+1,ns)) * dns2
+!          else
+!             opvrew(ew,ns) = 0.
+!             opvrns(ew,ns) = 0.
+!          end if
+!       end do
+!    end do
+!    
+!  end subroutine geomders
 
 !---------------------------------------------------------------------------------
 

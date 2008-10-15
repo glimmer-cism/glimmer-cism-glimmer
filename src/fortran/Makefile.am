@@ -42,7 +42,23 @@ libglimmer_a_SOURCES = glimmer_vers.F90 \
                        glimmer_restart_pointarr.F90 glimmer_anomcouple.F90 \
                        $(RESTART_INCS) glimmer_restart.F90 glimmer_filenames.F90
 nodist_libglimmer_a_SOURCES = glimmer_vers.F90
+
+
+#Select which sparse solver code file to compile based conditionally on
+#what solver was specified in the configure script.  The flags used
+#in the if statements (SLAP, UMFPACK, etc) are defined in <glimmer_root_dir>/configure.in
+if SLAP
+RESTART_CODE +=  glimmer_sparse_slap.F90
+libglimmer_a_SOURCES += glimmer_sparse_slap.F90
+else
+if UMFPACK
+RESTART_CODE += glimmer_sparse_umfpack.F90
+libglimmer_a_SOURCES += glimmer_sparse_umfpack.F90
+endif UMFPACK
+endif !SLAP
+
 libglide_a_SOURCES = glide.F90 glide_setup.F90 glide_types.F90 glide_temp.F90 \
+                     glide_deriv.F90 xls.F90 ice3d_lib.F90 glide_velo_higher.F90 \
                      glide_thck.F90 glide_velo.F90 glide_mask.F90 \
                      glide_stop.F90 glide_io.F90 glide_nc_custom.F90 \
                      isostasy.F90 isostasy_el.F90 isostasy_setup.F90 \

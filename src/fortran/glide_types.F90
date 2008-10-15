@@ -171,6 +171,27 @@ module glide_types
     !*FD \item[1] hotstart model from previous run
     !*FD \end{description}
 
+   
+    integer :: whichhomvel = 0
+    !*FD \begin{description}
+    !*FD \item[0] Do not compute higher-order velocity estimate
+    !*FD \item[1] Compute higher-order velocity estimate using Pattyn's model
+    !*FD \end{description}
+
+    integer :: whichhomdiff = 0
+    !*FD \begin{description}
+    !*FD \item[0] Compute diffusivities using shallow ice approximation only
+    !*FD \item[1] Compute diffusivities using Bueler and Brown scheme
+    !*FD \end{description}
+
+    integer :: whichhomsliding = 0
+    !*FD Flag that indicates which sliding law to use in higher-order velocity
+    !*FD computations
+    !*FD \begin{description}
+    !*FD \item[0] Linear sliding law, $\tau_b = \beta u_b$
+    !*FD \item[1] Plastic till sliding law, 
+    !*FD $\tau_{b,i} = -\tau_c \frac{v_i}{\lVert v \rVert}
+
     integer :: periodic_ew = 0
     !*FD \begin{description}
     !*FD \item[0] no periodic EW boundary conditions
@@ -189,6 +210,12 @@ module glide_types
     !*FD \item[1] sigma coordinates are given in external file
     !*FD \item[2] sigma coordinates are given in configuration file
     !*FD \end{description}
+    
+    !These options are added for higher order velocity computation
+    !Currently they are unused
+    integer :: whichbabc = 0
+    integer :: whichefvs = 0
+    integer :: whichresid = 0
 
   end type glide_options
 
@@ -278,6 +305,37 @@ module glide_types
     real(dp),dimension(:,:)  ,pointer :: tau_x => null() !*FD basal shear stress, x-dir
     real(dp),dimension(:,:)  ,pointer :: tau_y => null() !*FD basal shear stress, y-dir
   end type glide_velocity
+  
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    type glide_tensor
+  	real(dp), dimension(:,:,:), pointer :: scalar => null()
+  	real(dp), dimension(:,:,:), pointer :: xz => null()
+  	real(dp), dimension(:,:,:), pointer :: yz => null()
+  	real(dp), dimension(:,:,:), pointer :: xx => null()
+  	real(dp), dimension(:,:,:), pointer :: yy => null()
+  	real(dp), dimension(:,:,:), pointer :: xy => null()
+  end type glide_tensor
+  
+  type glide_velocity_hom
+    !*FD Holds velocity fields in 2D and 3D as computed by the Pattyn higher
+    !*FD order model.  At least some of these fields are stored on the
+    !*FD displaced grid.
+    
+    real(dp),dimension(:,:,:),pointer :: uvel  => null() !*FD 3D $x$-velocity.
+    real(dp),dimension(:,:,:),pointer :: vvel  => null() !*FD 3D $y$-velocity.
+    real(dp),dimension(:,:,:),pointer :: wvel  => null() !*FD 3D $z$-velocity.
+    real(dp),dimension(:,:,:),pointer :: wgrd  => null() !*FD 3D grid vertical velocity.
+    real(dp),dimension(:,:,:),pointer :: uflx  => null() !*FD 
+    real(dp),dimension(:,:,:),pointer :: vflx  => null() !*FD 
+    real(dp),dimension(:,:)  ,pointer :: diffu => null() !*FD 
+    real(dp),dimension(:,:)  ,pointer :: total_diffu => null() !*FD total diffusivity
+    real(dp),dimension(:,:)  ,pointer :: bed_softness => null() !*FD bed softness parameter
+    real(dp),dimension(:,:)  ,pointer :: btrc  => null() !*FD  basal traction
+    type(glide_tensor)                :: tau
+    real(dp),dimension(:,:)  ,pointer :: gdsx => null() !*FD basal shear stress, x-dir
+    real(dp),dimension(:,:)  ,pointer :: gdsy => null() !*FD basal shear stress, y-dir
+    real(dp),dimension(:,:,:),pointer :: efvs => null()
+  end type glide_velocity_hom
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -532,6 +590,7 @@ module glide_types
     type(glide_geometry) :: geometry
     type(glide_geomderv) :: geomderv
     type(glide_velocity) :: velocity
+    type(glide_velocity_hom) :: velocity_hom
     type(glide_climate)  :: climate
     type(glide_temper)   :: temper
     type(glide_lithot_type) :: lithot
@@ -674,6 +733,32 @@ contains
     call coordsystem_allocate(model%general%velo_grid, model%velocity%vbas_tavg)
     call coordsystem_allocate(model%general%velo_grid, model%velocity%tau_x)
     call coordsystem_allocate(model%general%velo_grid, model%velocity%tau_y)
+    
+    call coordsystem_allocate(model%general%velo_grid, upn, model%velocity_hom%uvel)
+    call coordsystem_allocate(model%general%velo_grid, upn, model%velocity_hom%vvel)
+    call coordsystem_allocate(model%general%ice_grid, upn, model%velocity_hom%wvel)
+    call coordsystem_allocate(model%general%ice_grid, upn, model%velocity_hom%wgrd)
+    call coordsystem_allocate(model%general%velo_grid, upn, model%velocity_hom%uflx)
+    call coordsystem_allocate(model%general%velo_grid, upn, model%velocity_hom%vflx)
+    call coordsystem_allocate(model%general%velo_grid, model%velocity_hom%diffu)
+    call coordsystem_allocate(model%general%velo_grid, model%velocity_hom%total_diffu)
+    call coordsystem_allocate(model%general%velo_grid, model%velocity_hom%bed_softness)
+    call coordsystem_allocate(model%general%velo_grid, model%velocity_hom%btrc)
+    call coordsystem_allocate(model%general%velo_grid, model%velocity_hom%ubas)
+    call coordsystem_allocate(model%general%velo_grid, model%velocity_hom%ubas_tavg)
+    call coordsystem_allocate(model%general%velo_grid, model%velocity_hom%vbas)
+    call coordsystem_allocate(model%general%velo_grid, model%velocity_hom%vbas_tavg)
+    call coordsystem_allocate(model%general%velo_grid, model%velocity_hom%usrf)
+    call coordsystem_allocate(model%general%velo_grid, model%velocity_hom%vsrf)
+    call coordsystem_allocate(model%general%velo_grid, upn, model%velocity_hom%tau%scalar)
+    call coordsystem_allocate(model%general%velo_grid, upn, model%velocity_hom%tau%xz)
+    call coordsystem_allocate(model%general%velo_grid, upn, model%velocity_hom%tau%yz)
+    call coordsystem_allocate(model%general%velo_grid, upn, model%velocity_hom%tau%xx)
+    call coordsystem_allocate(model%general%velo_grid, upn, model%velocity_hom%tau%yy)
+    call coordsystem_allocate(model%general%velo_grid, upn, model%velocity_hom%tau%xy)
+    call coordsystem_allocate(model%general%velo_grid, model%velocity_hom%gdsx)
+    call coordsystem_allocate(model%general%velo_grid, model%velocity_hom%gdsy)
+    call coordsystem_allocate(model%general%velo_grid, upn, model%velocity_hom%efvs)
 
     call coordsystem_allocate(model%general%ice_grid, model%climate%acab)
     call coordsystem_allocate(model%general%ice_grid, model%climate%acab_tavg)
@@ -773,6 +858,31 @@ contains
     deallocate(model%velocity%vbas_tavg)
     deallocate(model%velocity%tau_x)
     deallocate(model%velocity%tau_y)
+
+    deallocate(model%velocity_hom%uvel)
+    deallocate(model%velocity_hom%vvel)
+    deallocate(model%velocity_hom%wvel)
+    deallocate(model%velocity_hom%wgrd)
+    deallocate(model%velocity_hom%uflx)
+    deallocate(model%velocity_hom%vflx)
+    deallocate(model%velocity_hom%diffu)
+    deallocate(model%velocity_hom%total_diffu)
+    deallocate(model%velocity_hom%bed_softness)
+    deallocate(model%velocity_hom%btrc)
+    deallocate(model%velocity_hom%ubas)
+    deallocate(model%velocity_hom%ubas_tavg)
+    deallocate(model%velocity_hom%vbas)
+    deallocate(model%velocity_hom%vbas_tavg)
+    deallocate(model%velocity_hom%tau%scalar)
+    deallocate(model%velocity_hom%tau%xz)
+    deallocate(model%velocity_hom%tau%yz)
+    deallocate(model%velocity_hom%tau%xx)
+    deallocate(model%velocity_hom%tau%yy)
+    deallocate(model%velocity_hom%tau%xy)
+    deallocate(model%velocity_hom%gdsx)
+    deallocate(model%velocity_hom%gdsy)
+    deallocate(model%velocity_hom%efvs)
+
 
     deallocate(model%climate%acab)
     deallocate(model%climate%acab_tavg)

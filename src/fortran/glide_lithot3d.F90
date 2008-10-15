@@ -52,7 +52,8 @@ private
 public :: init_lithot3d, calc_lithot3d, finalise_lithot3d
 
 
-contains  
+contains 
+  !TODO: Rewrite using new SLAP-specific machinery in glimmer_sparse.F90
   subroutine init_lithot3d(model)
     use glide_types
     use glide_setup
@@ -66,8 +67,14 @@ contains
     ! allocate memory for 3D code
     ewn=model%general%ewn
     nsn=model%general%nsn
-    call new_sparse_matrix((model%lithot%nlayer-1)*ewn*nsn*7+ewn*nsn+1,model%lithot%fd_coeff)
-    call new_sparse_matrix((model%lithot%nlayer-1)*ewn*nsn*7+ewn*nsn+1,model%lithot%fd_coeff_slap)
+    call new_sparse_matrix(ewn * nsn * model%lithot%nlayer, &
+                           (model%lithot%nlayer-1) * ewn * nsn * 7 + ewn * nsn + 1, &
+                           model%lithot%fd_coeff)
+    
+    call new_sparse_matrix(ewn * nsn * model%lithot%nlayer, &
+                           (model%lithot%nlayer-1) * ewn * nsn * 7 + ewn * nsn + 1, &
+                           model%lithot%fd_coeff_slap)
+    
     allocate(model%lithot%rhs(model%lithot%nlayer*ewn*nsn))
     allocate(model%lithot%answer(model%lithot%nlayer*ewn*nsn))
     model%lithot%mxnelt = 20 * model%lithot%nlayer*ewn*nsn
@@ -190,7 +197,7 @@ contains
     end do
 
     ! solve matrix equation
-    call dslucs(model%general%nsn*model%general%ewn*model%lithot%nlayer, model%lithot%rhs, model%lithot%answer, &
+    call dslucs(model%lithot%fd_coeff_slap%order, model%lithot%rhs, model%lithot%answer, &
          model%lithot%fd_coeff_slap%n, model%lithot%fd_coeff_slap%col,model%lithot%fd_coeff_slap%row, &
          model%lithot%fd_coeff_slap%val, isym,itol,tol,itmax,iter,err,ierr,0, &
          model%lithot%rwork, model%lithot%mxnelt, model%lithot%iwork, model%lithot%mxnelt)

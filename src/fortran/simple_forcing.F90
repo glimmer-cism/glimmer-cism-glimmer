@@ -183,7 +183,12 @@ contains
           dummy=>NULL()
        end if
        return
-    end if    
+    end if
+    
+    call GetSection(config,section,'ISMIP-HOM-A')
+    if (associated(section)) then
+    	return
+    end if
 
     call write_log('No EISMINT forcing selected',GM_FATAL)
   end subroutine simple_readconfig

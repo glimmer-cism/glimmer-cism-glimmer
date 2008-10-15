@@ -547,6 +547,9 @@ contains
     call GetValue(section,'evolution',model%options%whichevol)
     call GetValue(section,'vertical_integration',model%options%whichwvel)
     call GetValue(section,'topo_is_relaxed',model%options%whichrelaxed)
+    call GetValue(section,'hom_velo_scheme',model%options%whichhomvel)
+    call GetValue(section,'hom_diff_scheme',model%options%whichhomdiff)
+    call GetValue(section,'hom_sliding_law',model%options%whichhomsliding)
     call GetValue(section,'hotstart',model%options%hotstart)
     call GetValue(section,'periodic_ew',model%options%periodic_ew)
   end subroutine handle_options

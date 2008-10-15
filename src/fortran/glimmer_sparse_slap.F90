@@ -1,0 +1,221 @@
+module glimmer_sparse_solver
+    !*FD This module builds on the glimmer_sparse module to provide an easy
+    !*FD interface to SLAP.  The SLAP interface is intended to be both
+    !*FD usable and a guide to implementing other interfaces
+    
+    use glimmer_sparse
+    use glimmer_global, only: dp
+    implicit none
+
+    type sparse_solver_workspace
+        !*FD This type contains any working memory needed for the sparse solver.
+        !*FD It is used to store states between calls to the solver
+        !*FD In the SLAP implementation, it is used to store the SLAP workspace
+        !*FD This module must have this type, but its contents should be opaque
+        !*FD to the user (e.g. client code should only manipulate the
+        !*FD sparse_solver_workspace as a whole and should never touch its members)
+        real(kind=dp), dimension(:), pointer :: rwork => NULL()
+        integer, dimension(:), pointer :: iwork => NULL()
+        integer :: max_nelt !*FD Maximum number of nonzeroes allowed given the allocated workspace
+    end type sparse_solver_workspace
+
+    type sparse_solver_options
+        !*FD This type holds options that are passed to the sparse solver, such
+        !*FD as preconditioner type, error tolerances, etc.  At a minimum, it
+        !*FD must define the tolerance and maxiters field, as these will be
+        !*FD common to any iterative sparse linear solver.  Other options
+        !*FD can be defined as necessary.
+        !*FD
+        !*FD Design note: the options are seperated from the workspace because
+        !*FD one set of options could apply to multiple matrices, and the
+        !*FD lifecycles for each could be different (a workspace need only
+        !*FD exist as long as the matrix does, the options could persist
+        !*FD throughout the entire program)
+        integer :: itol !*FD Tolerance code, see SLAP documentation
+        real(kind=dp) :: tolerance !*FD Error tolerance
+        integer :: maxiters !*FD Max iterations before giving up
+    end type sparse_solver_options
+
+contains
+    subroutine sparse_solver_default_options(opt)
+        !*FD Populates a sparse_solver_options (defined above) with default
+        !*FD options.  This is necessary because different solvers may define
+        !*FD different options beyond the required fields defined above.
+        !*FD Filling them in this function allows client code to pick "good"
+        !*FD values in a generic way.
+        type(sparse_solver_options), intent(out) :: opt
+        opt%itol = 2
+        opt%tolerance  = 1e-5
+        opt%maxiters = 2000
+    end subroutine sparse_solver_default_options
+
+    subroutine sparse_allocate_workspace(matrix, options, workspace, max_nonzeros_arg)
+        !*FD Allocate solver workspace.  This needs to be done once
+        !*FD (when the maximum number of nonzero entries is first known)
+        !*FD If this function is called on a workspace with allocated memory,
+        !*FD it should be handled safely and quickly; e.g. memory should not be
+        !*FD double-allocated, and new memory should only be allocated if the
+        !*FD memory requirements have increased.
+        !*FD Note that the max_nonzeros argument must be optional, and if
+        !*FD the current number of nonzeroes must be used.
+        type(sparse_matrix_type) :: matrix
+        type(sparse_solver_options) :: options
+        type(sparse_solver_workspace) :: workspace
+        integer, optional :: max_nonzeros_arg
+        integer :: max_nonzeros
+        integer :: lenrw
+        integer :: leniw
+        
+        if (present(max_nonzeros_arg)) then
+            max_nonzeros = max_nonzeros_arg
+        else
+            max_nonzeros = size(matrix%val)
+        end if
+        
+        !Only allocate the memory if it hasn't been allocated or it needs
+        !to grow
+        if (.not. associated(workspace%rwork) .or. workspace%max_nelt < max_nonzeros) then
+            !If memory is already allocated get rid of it
+            if (associated(workspace%rwork)) then
+                deallocate(workspace%rwork)
+                deallocate(workspace%iwork)
+            end if
+
+            !Figure out how much memory to allocate.  These figures were derived
+            !from the SLAP documentation.
+            lenrw = max_nonzeros + 9*matrix%order
+            leniw = max_nonzeros + 5*matrix%order + 12
+            
+            allocate(workspace%rwork(lenrw))
+            allocate(workspace%iwork(leniw))
+            !Recored the number of nonzeros so we know whether to allocate more
+            !memory in the future
+            workspace%max_nelt = max_nonzeros
+        end if
+    end subroutine sparse_allocate_workspace
+
+    subroutine sparse_solver_preprocess(matrix, options, workspace)
+        !*FD Performs any preprocessing needed to be performed on the sparse
+        !*FD matrix.  Workspace must have already been allocated. 
+        !*FD This function should be safe to call more than once.
+        !*FD
+        !*FD In general sparse_allocate_workspace should perform any actions
+        !*FD that depend on the *size* of the sparse matrix, and
+        !*FD sprase_solver_preprocess should perform any actions that depend
+        !*FD upon the *contents* of the sparse matrix.
+        type(sparse_matrix_type) :: matrix
+        type(sparse_solver_options) :: options
+        type(sparse_solver_workspace) :: workspace
+    end subroutine sparse_solver_preprocess
+
+    function sparse_solve(matrix, rhs, solution, options, workspace,err,niters, verbose)
+        !*FD Solves the sparse linear system, and reports status information.
+        !*FD This function returns an error code that should be zero if the
+        !*FD call succeeded and nonzero if it failed.  No additional error codes
+        !*FD are defined.  Although this function reports back the final error
+        !*FD and the number of iterations needed to converge, these should *not*
+        !*FD be relied upon as not every sparse linear solver may report them.
+        type(sparse_matrix_type), intent(inout) :: matrix 
+        !*FD Sparse matrix to solve.  This is inout because the sparse solver
+        !*FD may have to do some re-arranging of the matrix.
+        
+        real(kind=dp), dimension(:), intent(in) :: rhs 
+        !*FD Right hand side of the solution vector
+        
+        real(kind=dp), dimension(:), intent(inout) :: solution 
+        !*FD Solution vector, containing an initial guess.
+
+        type(sparse_solver_options), intent(in) :: options
+        !*FD Options such as convergence criteria
+        
+        type(sparse_solver_workspace), intent(inout) :: workspace
+        !*FD Internal solver workspace
+        
+        real(kind=dp), intent(out) :: err
+        !*FD Final solution error
+        
+        integer, intent(out) :: niters
+        !*FD Number of iterations required to reach the solution
+
+        logical, optional, intent(in) :: verbose
+        !*FD If present and true, this argument may cause diagnostic information
+        !*FD to be printed by the solver (not every solver may implement this).
+        
+        integer :: sparse_solve
+
+        integer :: ierr !SLAP-provided error code
+        integer :: iunit !Unit number to print verbose output to (6=stdout, 0=no output)
+        integer :: isym !Whether matrix is symmetric
+
+        iunit = 0
+        if (present(verbose)) then
+            if(verbose) then
+                iunit=6
+                write(*,*),"Tolerance=",options%tolerance
+            end if
+        end if
+
+        if (matrix%symmetric) then
+            isym = 1
+        else
+            isym = 0
+        end if
+
+        !Set up SLAP if it hasn't been already
+        call sparse_solver_preprocess(matrix, options, workspace)
+
+        call dslucs(matrix%order, rhs, solution, matrix%n, matrix%row, matrix%col, matrix%val, &
+                    isym, options%itol, options%tolerance, options%maxiters, niters, err, ierr, iunit, &
+                    workspace%rwork, size(workspace%rwork), workspace%iwork, size(workspace%iwork))
+
+        sparse_solve = ierr
+    end function sparse_solve
+
+    subroutine sparse_destroy_workspace(matrix, options, workspace)
+        !*FD Deallocates all working memory for the sparse linear solver.
+        !*FD This need *not* be safe to call of an unallocated workspace
+        !*FD No sparse solver should call this automatically.
+        type(sparse_matrix_type) :: matrix
+        type(sparse_solver_options) :: options
+        type(sparse_solver_workspace) :: workspace
+        !Deallocate all of the working memory
+        deallocate(workspace%rwork)
+        deallocate(workspace%iwork)
+    end subroutine sparse_destroy_workspace
+
+    subroutine sparse_interpret_error(error_code, error_string)
+        !*FD takes an error code output from sparse_solve and interprets it.
+        !*FD error_string must be an optional argument.
+        !*FD If it is not provided, the error is printed to standard out
+        !*FD instead of being put in the string
+        integer :: error_code
+        character(*), optional, intent(out) :: error_string
+        character(256) :: tmp_error_string
+        
+        select case (error_code)
+            case (0)
+                tmp_error_string="All went well"
+            case (1)
+                tmp_error_string="Insufficient space allocated for WORK or IWORK"
+            case (2)
+                tmp_error_string="Method failed to converge in ITMAX steps"
+            case (3)
+                tmp_error_string="Error in user input.  Check input values of N, ITOL."
+            case (4)
+                tmp_error_string="User error tolerance set too tight." 
+            case (5)
+                tmp_error_string="Breakdown of the method detected.  (r0,r) approximately 0."
+            case (6)
+                tmp_error_string="Stagnation of the method detected. (r0, v) approximately 0."
+            case (7)
+                tmp_error_string="Incomplete factorization broke down and was fudged."
+        end select
+
+
+        if (present(error_string)) then
+            error_string = tmp_error_string
+        else
+            write(*,*) tmp_error_string
+        endif
+    end subroutine sparse_interpret_error
+end module
