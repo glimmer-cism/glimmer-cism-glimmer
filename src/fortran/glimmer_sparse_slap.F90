@@ -69,7 +69,7 @@ contains
         if (present(max_nonzeros_arg)) then
             max_nonzeros = max_nonzeros_arg
         else
-            max_nonzeros = size(matrix%val)
+            max_nonzeros = matrix%n
         end if
         
         !Only allocate the memory if it hasn't been allocated or it needs
@@ -83,8 +83,8 @@ contains
 
             !Figure out how much memory to allocate.  These figures were derived
             !from the SLAP documentation.
-            lenrw = max_nonzeros + 9*matrix%order
-            leniw = max_nonzeros + 5*matrix%order + 12
+            lenrw = 20*max_nonzeros 
+            leniw = 20*max_nonzeros
             
             allocate(workspace%rwork(lenrw))
             allocate(workspace%iwork(leniw))

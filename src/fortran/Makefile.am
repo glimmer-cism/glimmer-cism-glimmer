@@ -33,7 +33,8 @@ libglimmer_a_SOURCES = glimmer_vers.F90 \
                        glimmer_paramets.F90 glimmer_physcon.F90 kelvin.F90 \
                        profile.F90 glimmer_pdd.F90 glimmer_routing.F90 \
                        glimmer_daily_pdd.F90 glint_global_interp.F90 \
-                       glimmer_sparse.F90 glimmer_coordinates.F90 \
+                       glimmer_sparse.F90 glimmer_sparse_util.F90 \
+		       glimmer_coordinates.F90 \
                        glimmer_integrate.F90 ncdf_utils.F90 \
                        glimmer_map_CFproj.F90 glimmer_map_proj4.F90 \
                        glimmer_map_types.F90 glimmer_map_init.F90 \

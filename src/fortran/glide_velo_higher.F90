@@ -13,7 +13,7 @@ module glide_velo_higher
     
     !TODO: Parameterize the following globals
     real(dp), parameter :: FLOWN    = 3. !TODO: This is passed in, but as an array
-    real(dp), parameter :: VEL2ERR  = 1e-4
+    real(dp), parameter :: VEL2ERR  = 4e-2
     real(dp), parameter :: TOLER    = 1e-6
     integer,  parameter :: CONVT    = 4
     real(dp), parameter :: SHTUNE   = 1.D-16
@@ -66,7 +66,7 @@ contains
         type(glide_tensor)         :: tau
         real(dp), dimension(:,:) :: gdsx !*FD X driving stress
         real(dp), dimension(:,:) :: gdsy !*FD Y driving stress
-        integer :: i
+        integer :: i, k
 
         !Second derivative of surface
         real(dp), dimension(ewn-1,nsn-1) :: d2zdx2, d2zdy2, d2hdx2, d2hdy2

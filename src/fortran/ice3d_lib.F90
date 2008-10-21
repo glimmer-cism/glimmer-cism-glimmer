@@ -1,9 +1,22 @@
+!--------------------------------------------------
+!ice3d_lib.F90
+!This file is adapted from Frank Pattyn's Ice3D model
+!Code updated to Fortran 90 and integrated with Glimmer
+!by Tim Bocek.
+!See F. Pattyn, "A new three-dimensional higher-order thermomechanical
+!        ice sheet model: basic sensitivity, ice stream development,
+!        and ice flow across subglacial lakes", Journal of Geophysical
+!        Research, Volume 108, no. B8, 2003.
+!----------------------------------------------------
+
 module ice3d_lib
     use glimmer_global
-    use glimmer_physcon, only: pi, grav,rhoi
+    use glimmer_physcon, only: pi, grav, rhoi, scyr
     use glide_deriv
     use glimmer_sparse
     use glimmer_sparse_solver
+    use glimmer_sparse_util
+    use glimmer_log
     use xls
     implicit none
     double precision :: small, zip, notdef
@@ -224,7 +237,7 @@ end subroutine init_zeta
         double precision, dimension(:,:), intent(in) :: d2zdx2,d2zdy2,d2hdx2,d2hdy2
         
         INTEGER :: i,j,k
-#if 1
+#if 0
         call write_xls("h.txt",h)
         call write_xls("hb.txt",hb)
         call write_xls("surf.txt",surf)
@@ -786,7 +799,16 @@ end subroutine init_zeta
         !iteration.
         double precision, dimension(:,:,:), allocatable :: ustar, vstar
         double precision, dimension(:,:), allocatable :: tau !Basal traction, to be computed from the provided beta parameter
-       
+        
+        double precision, dimension(:,:), allocatable ::ubas, vbas
+
+        !Holds the current iteration stage.
+        !In stage 1, only the velocity and basal stress are iterated; this is
+        !used to spin up an initial guess.
+        !In stage 2, all stresses are iterated (e.g. we do the full viscosity
+        !calculation
+        integer :: stage
+
         !Get the sizes from the mu field.  Calling code must make sure that
         !these all agree.
         maxy = size(mu,1)
@@ -797,11 +819,21 @@ end subroutine init_zeta
         allocate(ustar(maxy, maxx, nzeta))
         allocate(vstar(maxy, maxx, nzeta))
         allocate(tau(maxy, maxx))
-        maxiter=100
+        allocate(ubas(maxy, maxx))
+        allocate(vbas(maxy, maxx))
+        maxiter=100000
         error=VEL2ERR
         m=1
         lacc=0
         em = 0
+
+        !If we're doing the plastic bed iteration, it needs to be done in two
+        !stages
+        if (PLASTIC == 1) then
+            stage = 1
+        else
+            stage = 2
+        end if
 
 #if 1
         call write_xls_3d("arrh.txt",arrh)
@@ -815,6 +847,7 @@ end subroutine init_zeta
         call write_xls("h.txt",h)
         call write_xls_3d("uvel_sia.txt",uvel)
         call write_xls_3d("vvel_sia.txt",vvel)
+        call write_xls("uvel_sia_surf.txt",uvel(:,:,1))
         call write_xls("beta.txt",beta)
         call write_xls("dhbdx.txt",dhbdx)
         call write_xls("dhbdy.txt",dhbdy)
@@ -839,9 +872,10 @@ end subroutine init_zeta
             !an order of magnitude) under the assumption that we won't converge 
             !given the current error tolerance.
             !(TODO: This leads to exponential increase in the tolerance - can we
-            !get by without it?)
+            !get by without it?  Is this too liberal of a relaxation?)
             if (l == m*10) then
-                error = error*5.
+                error = error*1
+                write(*,*) "Error tolerance is now", error
                 m = m+1
             endif
             
@@ -851,10 +885,13 @@ end subroutine init_zeta
             if (PLASTIC == 0) then
                 tau = beta
             else
-                call plastic_bed(tau, beta, uvel, vvel)
+                if (stage == 1) then
+                    tau = beta/100 
+                else
+                    call plastic_bed(tau, beta, uvel(:,:,nzeta), vvel(:,:,nzeta))
+                end if
             end if
 
-       
             !Compute viscosity
             call muterm(mu,uvel,vvel,arrh,h,ax,ay,delta_x,delta_y,zeta,FLOWN,ZIP)
 
@@ -939,7 +976,8 @@ end subroutine init_zeta
                     end do
                 end do
             endif
-          
+            write(*,*) l,iter,tot,(teta*180./PI), "Unstable Manifold Correction Applied"
+  
         else
             n=0
           
@@ -950,16 +988,28 @@ end subroutine init_zeta
             vvel=vstar
             em(DU1,:) = em(DU2,:)
             em(DV1,:) = em(DV2,:)
-          
+            write(*,*) l,iter,tot,(teta*180./PI) 
         endif
         
         tot=sqrt(norm3/norm5)
-        write(*,*) l,iter,tot,(teta*180./PI)
-        
+                
         if (tot.lt.error) lacc=2*maxiter
        
-        if (lacc.gt.maxiter) exit nonlinear_iteration
-        
+        if (lacc.gt.maxiter) then
+            if (stage == 1) then
+                !Return to the conditions that were present at the beginning of
+                !the first stage, but use the new velocity estimate
+                error = VEL2ERR
+                lacc = 0
+                !em=0
+                stage = 2
+                write(*,*)"STAGE 2 REACHED"
+                call write_xls("uvel_surf_stage1.txt",uvel(:,:,1))
+                call write_xls("vvel_surf_stage1.txt",vvel(:,:,1))
+            else
+                exit nonlinear_iteration
+            end if
+        end if
       end do nonlinear_iteration
 
       call write_xls_3d("uvel.txt",uvel)
@@ -970,6 +1020,8 @@ end subroutine init_zeta
       deallocate(em)
       deallocate(ustar)
       deallocate(vstar)
+      deallocate(ubas)
+      deallocate(vbas)
       return
       END subroutine
       
@@ -1001,23 +1053,43 @@ end subroutine init_zeta
         end do
     end subroutine vel_2d_from_3d
 
+    subroutine fill_radial_symmetry(field, maxv, falloff)
+        double precision, dimension(:,:) :: field
+        double precision :: falloff
+        double precision :: maxv
+
+        integer :: maxx, maxy, centx, centy, i, j
+
+        maxx = size(field, 1)
+        maxy = size(field, 2)
+        centx = maxx/2
+        centy = maxy/2
+
+        do i=1,maxy
+            do j=1,maxx
+                field(i,j) = maxv / (1 + falloff*(i-centy)**2 + falloff*(j-centx)**2)
+            end do
+        end do
+
+    end subroutine fill_radial_symmetry
+
 !-----------------------------------------------------
 !   plastic bed computation
 !-----------------------------------------------------
-    subroutine plastic_bed(tau, tau0, uvel, vvel)
-        double precision, dimension(:,:), intent(out)  :: tau
-        double precision, dimension(:,:), intent(in)   :: tau0
-        double precision, dimension(:,:,:), intent(in) :: uvel
-        double precision, dimension(:,:,:), intent(in) :: vvel
+    subroutine plastic_bed(tau, tau0, ubas, vbas)
+        double precision, dimension(:,:), intent(out) :: tau
+        double precision, dimension(:,:), intent(in)  :: tau0
+        double precision, dimension(:,:), intent(in)  :: ubas
+        double precision, dimension(:,:), intent(in)  :: vbas
         
         integer :: maxy, maxx, nzeta, i, j, k
 
-        maxy = size(uvel,1)
-        maxx = size(uvel,2)
-        nzeta = size(uvel,3)
+        maxy = size(ubas,1)
+        maxx = size(ubas,2)
+        !TODO: Vectorize
         do i = 1,maxy
             do j = 1,maxx
-                tau(i,j) = tau0(i,j) / (sqrt(uvel(i,j,nzeta)**2 + vvel(i,j,nzeta)**2) + ZIP)
+                tau(i,j) = tau0(i,j) / (sqrt(ubas(i,j)**2 + vbas(i,j)**2) + 1e-10)
             end do
         end do
     end subroutine plastic_bed
@@ -1154,7 +1226,7 @@ end subroutine init_zeta
 
         !Create the sparse matrix
         call new_sparse_matrix(ijktot, ijktot*22, matrix)
-        call sparse_allocate_workspace(matrix, options, workspace)
+        call sparse_allocate_workspace(matrix, options, workspace, ijktot*22)
 
 !
 !-------  velocity u
@@ -1207,12 +1279,10 @@ end subroutine init_zeta
         
         ierr = sparse_solve(matrix, d, x, options, workspace,  err, iter, verbose=.false.)
         if (ierr /= 0) then
-            write(*,*)"Error in SLAP dslucs:",ierr
-            call sparse_interpret_error(ierr)
-            write(*,*)"This is considered fatal."
-            stop
+            call log_sparse_error(matrix, ierr, __FILE__, __LINE__)        
+            call write_log("The above error is fatal", GM_FATAL, __FILE__, __LINE__)
         end if
-        
+
         l=0
         do i=1,MAXY
             do j=1,MAXX
@@ -1257,7 +1327,7 @@ end subroutine init_zeta
             end do
         end do
 
-#if 1
+#if 0
         call write_sparse_system("uvel_triad.txt",matrix%row, matrix%col, matrix%val, matrix%n)
         open(37,file="uvel_rhs.txt")
         write(37,*) d
@@ -1267,10 +1337,8 @@ end subroutine init_zeta
 
         ierr = sparse_solve(matrix, d, x, options, workspace,  err, iter, verbose=.false.)
         if (ierr /= 0) then
-            write(*,*)"Error in SLAP dslucs:",ierr
-            call sparse_interpret_error(ierr)
-            write(*,*)"This is considered fatal."
-            stop
+            call log_sparse_error(matrix, ierr, __FILE__, __LINE__)        
+            call write_log("The above error is fatal", GM_FATAL, __FILE__, __LINE__)
         end if
 
         l=0
@@ -1303,7 +1371,7 @@ end subroutine init_zeta
       FUNCTION cspice(pos,i,j,MAXX)
 !
         INTEGER pos,i,j,cspice,MAXX
-!
+!Ho
       if (pos.eq.1) cspice=(i-2)*MAXX+j
       if (pos.eq.2) cspice=(i-1)*MAXX+j-1
       if (pos.eq.3) cspice=(i-1)*MAXX+j

@@ -60,6 +60,7 @@ module glide_types
   !*FD variables.
  
   use glimmer_sparse
+  use glimmer_sparse_solver
   use glimmer_global
   use glimmer_ncdf
   use isostasy_types
@@ -480,11 +481,9 @@ module glide_types
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   type glide_pcgdwk
-    real(dp),dimension(:),pointer :: pcgval  => null()
+    type(sparse_matrix_type) :: matrix
     real(dp),dimension(:),pointer :: rhsd    => null()
     real(dp),dimension(:),pointer :: answ    => null()
-    integer, dimension(:),pointer :: pcgcol  => null()
-    integer, dimension(:),pointer :: pcgrow  => null()
     integer, dimension(2)         :: pcgsize = 0
     real(dp),dimension(4)         :: fc      = 0.0
     real(dp),dimension(6)         :: fc2     = 0.0
@@ -795,11 +794,12 @@ contains
     endif
 
     ! allocate memory for sparse matrix
-    allocate (model%pcgdwk%pcgrow(ewn*nsn*5))
-    allocate (model%pcgdwk%pcgcol(ewn*nsn*5+2))
-    allocate (model%pcgdwk%pcgval(ewn*nsn*5))
+    !allocate (model%pcgdwk%pcgrow(ewn*nsn*5))
+    !allocate (model%pcgdwk%pcgcol(ewn*nsn*5+2))
+    !allocate (model%pcgdwk%pcgval(ewn*nsn*5))
     allocate (model%pcgdwk%rhsd(ewn*nsn))
     allocate (model%pcgdwk%answ(ewn*nsn))
+    call new_sparse_matrix(ewn*nsn, ewn*nsn*5, model%pcgdwk%matrix)
 
     ! allocate isostasy grids
     call isos_allocate(model%isos,ewn,nsn)
@@ -904,8 +904,8 @@ contains
     deallocate(model%thckwk%float)
     deallocate(model%numerics%sigma)
     
-    deallocate(model%pcgdwk%pcgrow,model%pcgdwk%pcgcol,model%pcgdwk%pcgval,model%pcgdwk%rhsd,model%pcgdwk%answ)
-
+    deallocate(model%pcgdwk%rhsd,model%pcgdwk%answ)
+    call del_sparse_matrix(model%pcgdwk%matrix)
     ! allocate isostasy grids
     call isos_deallocate(model%isos)
 

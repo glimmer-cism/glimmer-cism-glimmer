@@ -49,6 +49,9 @@ module glide_thck
   use glide_types
   use glide_velo_higher
   use xls
+  use glimmer_sparse
+  use glimmer_sparse_solver
+  use glimmer_sparse_util
   private
   public :: init_thck, thck_nonlin_evolve, thck_lin_evolve, stagvarb, timeders, stagleapthck
 
@@ -317,6 +320,9 @@ contains
 
     use glide_setup, only: glide_calclsrf
     use glimmer_global, only : dp
+    use glide_stop
+    use glimmer_log
+
 
     implicit none
 
@@ -336,21 +342,19 @@ contains
     integer :: linit
     integer :: ew,ns
 
-    ! the number of grid points
-    model%pcgdwk%pcgsize(1) = model%geometry%totpts
+    logical :: error_flag
+
+    error_flag = .false.
 
     ! Zero the arrays holding the sparse matrix
-    model%pcgdwk%pcgval = 0.0
-    model%pcgdwk%pcgcol = 0 
-    model%pcgdwk%pcgrow = 0
-    model%pcgdwk%ct = 1
+    call sparse_clear(model%pcgdwk%matrix)
 
     ! Boundary Conditions ---------------------------------------------------------------
     ! lower and upper BC
     do ew = 1,model%general%ewn
        ns=1
        if (model%geometry%mask(ew,ns) /= 0) then
-          call putpcgc(model%pcgdwk,1.0d0, model%geometry%mask(ew,ns), model%geometry%mask(ew,ns))
+          call sparse_insert_val(model%pcgdwk%matrix, model%geometry%mask(ew,ns), model%geometry%mask(ew,ns), 1d0)
           if (calc_rhs) then
              model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = old_thck(ew,ns) 
           end if
@@ -358,7 +362,7 @@ contains
        end if
        ns=model%general%nsn
        if (model%geometry%mask(ew,ns) /= 0) then
-          call putpcgc(model%pcgdwk,1.0d0, model%geometry%mask(ew,ns), model%geometry%mask(ew,ns))
+          call sparse_insert_val(model%pcgdwk%matrix, model%geometry%mask(ew,ns), model%geometry%mask(ew,ns), 1d0)
           if (calc_rhs) then
              model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = old_thck(ew,ns) 
           end if
@@ -384,7 +388,7 @@ contains
        do ns=2,model%general%nsn-1
           ew=1
           if (model%geometry%mask(ew,ns) /= 0) then
-             call putpcgc(model%pcgdwk,1.0d0, model%geometry%mask(ew,ns), model%geometry%mask(ew,ns))
+             call sparse_insert_val(model%pcgdwk%matrix, model%geometry%mask(ew,ns), model%geometry%mask(ew,ns), 1d0)
              if (calc_rhs) then
                 model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = old_thck(ew,ns) 
              end if
@@ -392,7 +396,7 @@ contains
           end if
           ew=model%general%ewn
           if (model%geometry%mask(ew,ns) /= 0) then
-             call putpcgc(model%pcgdwk,1.0d0, model%geometry%mask(ew,ns), model%geometry%mask(ew,ns))
+             call sparse_insert_val(model%pcgdwk%matrix, model%geometry%mask(ew,ns), model%geometry%mask(ew,ns), 1d0)
              if (calc_rhs) then
                 model%pcgdwk%rhsd(model%geometry%mask(ew,ns)) = old_thck(ew,ns) 
              end if
@@ -419,7 +423,12 @@ contains
     model%pcgdwk%pcgsize(2) = model%pcgdwk%ct - 1 
 
     ! Solve the system using SLAP
-    call slapsolv(model,linit,err)   
+    call sparse_easy_solve(model%pcgdwk%matrix, model%pcgdwk%rhsd, model%pcgdwk%answ, &
+                           err, linit, error_flag, __FILE__, __LINE__)
+    if (error_flag) then
+        call glide_finalise(model, .true.)
+        call write_log("The above error was fatal",GM_FATAL,__FILE__,__LINE__)
+    end if
 
     ! Rejig the solution onto a 2D array
     do ns = 1,model%general%nsn
@@ -453,11 +462,11 @@ contains
       integer, intent(in) :: nsm,ns,nsp  ! ns index to lower, central, upper node
 
       ! fill sparse matrix
-      call putpcgc(model%pcgdwk,sumd(1), model%geometry%mask(ewm,ns), model%geometry%mask(ew,ns))       ! point (ew-1,ns)
-      call putpcgc(model%pcgdwk,sumd(2), model%geometry%mask(ewp,ns), model%geometry%mask(ew,ns))       ! point (ew+1,ns)
-      call putpcgc(model%pcgdwk,sumd(3), model%geometry%mask(ew,nsm), model%geometry%mask(ew,ns))       ! point (ew,ns-1)
-      call putpcgc(model%pcgdwk,sumd(4), model%geometry%mask(ew,nsp), model%geometry%mask(ew,ns))       ! point (ew,ns+1)
-      call putpcgc(model%pcgdwk,1.0d0 + sumd(5), model%geometry%mask(ew,ns), model%geometry%mask(ew,ns))! point (ew,ns)
+      call sparse_insert_val(model%pcgdwk%matrix, model%geometry%mask(ew,ns), model%geometry%mask(ewm,ns), sumd(1)) ! point (ew-1,ns)
+      call sparse_insert_val(model%pcgdwk%matrix, model%geometry%mask(ew,ns), model%geometry%mask(ewp,ns), sumd(2)) ! point (ew+1,ns)
+      call sparse_insert_val(model%pcgdwk%matrix, model%geometry%mask(ew,ns), model%geometry%mask(ew,nsm), sumd(3)) ! point (ew,ns-1)
+      call sparse_insert_val(model%pcgdwk%matrix, model%geometry%mask(ew,ns), model%geometry%mask(ew,nsp), sumd(4)) ! point (ew,ns+1)
+      call sparse_insert_val(model%pcgdwk%matrix, model%geometry%mask(ew,ns), model%geometry%mask(ew,ns),  1d0 + sumd(5))! point (ew,ns)
 
       ! calculate RHS
       if (calc_rhs) then
@@ -503,299 +512,6 @@ contains
   end subroutine thck_evolve
 
 !---------------------------------------------------------------------------------
-
-  subroutine slapsolv(model,iter,err)
-
-    use glimmer_global, only : dp 
-    use glide_stop
-    use glimmer_log
-    use glimmer_filenames
-
-    implicit none
-
-    type(glide_global_type) :: model  !*FD Model data type
-    integer,  intent(out)   :: iter   !*FD Number of iterations
-    real(dp), intent(out)   :: err    !*FD Error estimate of result
-
-    ! For call to dslucs
-    real(dp), parameter :: tol   = 1.0d-12
-    integer,  parameter :: isym  = 0
-    integer,  parameter :: itol  = 2
-    integer,  parameter :: itmax = 101
-    real(dp), dimension(:),allocatable :: rwork ! Real work array
-    integer,  dimension(:),allocatable :: iwork ! Integer work array
-    integer :: ierr, mxnelt
-
-    ! Variables for error handling
-    character(200) :: message
-    character(100) :: errfname
-    integer :: lunit
-
-    mxnelt = 20 * model%pcgdwk%pcgsize(1)
-    allocate(rwork(mxnelt),iwork(mxnelt))
-
-    ! solve the problem using the SLAP package routines     
-
-    call dslucs(model%pcgdwk%pcgsize(1), &  ! n  ... order of matrix a (in)
-                model%pcgdwk%rhsd,       &  ! b  ... right hand side vector (in)
-                model%pcgdwk%answ,       &  ! x  ... initial quess/final solution vector (in/out)
-                model%pcgdwk%pcgsize(2), &  ! nelt ... number of non-zeroes in A (in)
-                model%pcgdwk%pcgrow,     &  ! ia  ... sparse matrix format of A (in)
-                model%pcgdwk%pcgcol,     &  ! ja  ... sparse matrix format of A (in)
-                model%pcgdwk%pcgval,     &  ! a   ... matrix (in)
-                isym,                    &  ! isym ... storage method (0 is complete) (in)
-                itol,                    &  ! itol ... convergence criteria (2 recommended) (in)
-                tol,                     &  ! tol  ... criteria for convergence (in)
-                itmax,                   &  ! itmax ... maximum number of iterations (in)
-                iter,                    &  ! iter  ... returned number of iterations (out)
-                err,                     &  ! err   ... error estimate of solution (out)
-                ierr,                    &  ! ierr  ... returned error message (0 is ok) (out)
-                0,                       &  ! iunit ... unit for error writes during iteration (0 no write) (in)
-                rwork,                   &  ! rwork ... workspace for SLAP routines (in)
-                mxnelt,                  &  ! lenw
-                iwork,                   &  ! iwork ... workspace for SLAP routines (in)
-                mxnelt)                     ! leniw
-
-    ! Handle errors gracefully
-    if (ierr /= 0) then
-
-       ! Acquire a file unit, and open the file
-       lunit = get_free_unit()
-       errfname = trim(process_path('slap_dump.txt'))
-       open(lunit,file=errfname)
-
-       ! Output data to file
-       call dcpplt(model%pcgdwk%pcgsize(1), &
-                   model%pcgdwk%pcgsize(2), &
-                   model%pcgdwk%pcgrow,     &
-                   model%pcgdwk%pcgcol,     &
-                   model%pcgdwk%pcgval,     &
-                   isym,                    &
-                   lunit)
-       write(lunit,*) '***SLAP data ends. PCGVAL follows'
-       write(lunit,*) model%pcgdwk%pcgval
-
-       ! Close unit and finish off
-       close(lunit)
-       call glide_finalise(model,.true.)
-       write(message,*)'SLAP solution error at time: ',model%numerics%time, &
-            '. Data dumped to ',trim(errfname)
-       call write_log(trim(message),GM_FATAL,__FILE__,__LINE__)
-    end if
-
-    deallocate(rwork,iwork)
-
-  end subroutine slapsolv 
-
-!---------------------------------------------------------------------------------
-
-  subroutine putpcgc(pcgdwk,value,col,row)
-
-    use glimmer_global, only : dp
-
-    implicit none
-
-    type(glide_pcgdwk) :: pcgdwk
-    integer, intent(in) :: row, col
-    real(dp), intent(in) :: value
-
-    if (value /= 0.0d0) then
-      pcgdwk%pcgval(pcgdwk%ct) = value
-      pcgdwk%pcgcol(pcgdwk%ct) = col
-      pcgdwk%pcgrow(pcgdwk%ct) = row
-      pcgdwk%ct = pcgdwk%ct + 1
-    end if
-
-  end subroutine putpcgc
-  
-!---------------------------------------------------------------------------------
-
-!  subroutine geomders(numerics,ipvr,stagthck,opvrew,opvrns)
-!
-!    use glimmer_global, only : dp
-!
-!    implicit none 
-!
-!    type(glide_numerics) :: numerics
-!    real(dp), intent(out), dimension(:,:) :: opvrew, opvrns
-!    real(dp), intent(in), dimension(:,:) :: ipvr, stagthck
-!
-!    real(dp) :: dew2, dns2 
-!    integer :: ew,ns,ewn,nsn
-
-!    ! Obviously we don't need to do this every time,
-!    ! but will do so for the moment.
-!    dew2 = 1.d0/(2.0d0 * numerics%dew)
-!    dns2 = 1.d0/(2.0d0 * numerics%dns)
-!    ewn=size(ipvr,1)
-!    nsn=size(ipvr,2)
-!
-!    do ns=1,nsn-1
-!       do ew = 1,ewn-1
-!          if (stagthck(ew,ns) /= 0.0d0) then
-!             opvrew(ew,ns) = (ipvr(ew+1,ns+1)+ipvr(ew+1,ns)-ipvr(ew,ns)-ipvr(ew,ns+1)) * dew2
-!             opvrns(ew,ns) = (ipvr(ew+1,ns+1)+ipvr(ew,ns+1)-ipvr(ew,ns)-ipvr(ew+1,ns)) * dns2
-!          else
-!             opvrew(ew,ns) = 0.
-!             opvrns(ew,ns) = 0.
-!          end if
-!       end do
-!    end do
-!    
-!  end subroutine geomders
-
-!---------------------------------------------------------------------------------
-
-  subroutine geom2ders(model,ipvr,stagthck,opvrew,opvrns)
-
-    use glimmer_global, only : dp ! ew, ewn, ns, nsn
-!    use numerics, only : dew, dns
-
-    implicit none 
-
-    type(glide_global_type) :: model
-    real(dp), intent(out), dimension(:,:) :: opvrew, opvrns
-    real(dp), intent(in), dimension(:,:) :: ipvr, stagthck
-
-    real(dp) :: dewsq4, dnssq4
-    integer :: ew,ns
-
-    integer :: pt(2)
-
-    dewsq4 = 4.0d0 * model%numerics%dew * model%numerics%dew
-    dnssq4 = 4.0d0 * model%numerics%dns * model%numerics%dns
- 
-    do ns = 2, model%general%nsn-2
-      do ew = 2, model%general%ewn-2
-        if (stagthck(ew,ns) .gt. 0.0d0) then
-          opvrew(ew,ns) = centerew(ew,ns)
-          opvrns(ew,ns) = centerns(ew,ns)
-        else
-          opvrew(ew,ns) = 0.0d0
-          opvrns(ew,ns) = 0.0d0
-        end if
-      end do
-    end do
-
-! *** 2nd order boundaries using upwinding
-
-    do ew = 1, model%general%ewn-1, model%general%ewn-2
-
-      pt = whichway(ew)
-
-      do ns = 2, model%general%nsn-2 
-        if (stagthck(ew,ns) .gt. 0.0d0) then
-          opvrew(ew,ns) = boundyew(pt,ns)
-          opvrns(ew,ns) = centerns(ew,ns)
-        else
-          opvrew(ew,ns) = 0.0d0
-          opvrns(ew,ns) = 0.0d0
-        end if
-      end do
-
-    end do
-
-    do ns = 1, model%general%nsn-1, model%general%nsn-2
-
-      pt = whichway(ns)
-
-      do ew = 2, model%general%ewn-2  
-        if (stagthck(ew,ns) .gt. 0.0d0) then
-          opvrew(ew,ns) = centerew(ew,ns)
-          opvrns(ew,ns) = boundyns(pt,ew)
-        else
-          opvrew(ew,ns) = 0.0d0
-          opvrns(ew,ns) = 0.0d0
-        end if
-      end do
-
-    end do
-
-    do ns = 1, model%general%nsn-1, model%general%nsn-2
-      do ew = 1, model%general%ewn-1, model%general%ewn-2
-        if (stagthck(ew,ns) .gt. 0.0d0) then
-          pt = whichway(ew)
-          opvrew(ew,ns) = boundyew(pt,ns)
-          pt = whichway(ns)
-          opvrns(ew,ns) = boundyns(pt,ew)
-        else
-          opvrew(ew,ns) = 0.0d0
-          opvrns(ew,ns) = 0.0d0
-        end if
-      end do
-    end do
-
-  contains
-
-    function centerew(ew,ns)
-
-      implicit none
-
-      real(dp) :: centerew
-      integer ns,ew
-
-      centerew = (sum(ipvr(ew+2,ns:ns+1)) + sum(ipvr(ew-1,ns:ns+1)) - &
-                  sum(ipvr(ew+1,ns:ns+1)) - sum(ipvr(ew,ns:ns+1))) / dewsq4
-    
-    end function centerew 
-
-    function centerns(ew,ns)
-
-      implicit none
-
-      real(dp) :: centerns
-      integer ns,ew
-
-      centerns = (sum(ipvr(ew:ew+1,ns+2)) + sum(ipvr(ew:ew+1,ns-1)) - &
-                  sum(ipvr(ew:ew+1,ns+1)) - sum(ipvr(ew:ew+1,ns))) / dnssq4
-  
-    end function centerns 
-
-    function boundyew(pt,ns)
-
-      implicit none
-
-      integer, intent(in) :: pt(2)
-      real(dp) :: boundyew
-      integer ns
-
-      boundyew = pt(1) * (3.0d0 * sum(ipvr(pt(2),ns:ns+1)) - 7.0d0 * sum(ipvr(pt(2)+pt(1),ns:ns+1)) + &
-                 5.0d0 * sum(ipvr(pt(2)+2*pt(1),ns:ns+1)) - sum(ipvr(pt(2)+3*pt(1),ns:ns+1))) / dewsq4
-
-    end function boundyew
-
-    function boundyns(pt,ew)
-
-      implicit none
-
-      integer, intent(in) :: pt(2)
-      real(dp) :: boundyns
-      integer ew
-
-      boundyns = pt(1) * (3.0d0 * sum(ipvr(ew:ew+1,pt(2))) - 7.0d0 * sum(ipvr(ew:ew+1,pt(2)+pt(1))) + &
-                 5.0d0 * sum(ipvr(ew:ew+1,pt(2)+2*pt(1))) - sum(ipvr(ew:ew+1,pt(2)+3*pt(1)))) / dnssq4
-
-    end function boundyns
-
-    function whichway(i)
-
-      implicit none
-
-      integer, intent(in) :: i
-      integer :: whichway(2) 
-
-      if (i == 1) then 
-        whichway = (/1,1/)
-      else
-        whichway = (/-1,i+1/)
-      end if
-
-    end function whichway
-
-  end subroutine geom2ders
-
-!---------------------------------------------------------------------------------
-
   subroutine stagvarb(ipvr,opvr,ewn,nsn)
 
     use glimmer_global, only : dp ! ewn, nsn

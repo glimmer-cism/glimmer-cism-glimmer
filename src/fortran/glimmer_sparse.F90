@@ -210,6 +210,10 @@ contains
     type(sparse_matrix_type) :: matrix
     
     matrix%n = 0
+    !Clearing these shouldn't be strictly necessary, but SLAP barfs if we don't
+    matrix%row = 0
+    matrix%col = 0
+    matrix%val = 0
   end subroutine
 
   function is_triad_format(matrix)
