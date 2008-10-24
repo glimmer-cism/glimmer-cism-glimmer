@@ -1,0 +1,62 @@
+<!doctype html public "-//W3C//DTD HTML 4.0 Transitional//EN"
+ "http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<title>CVS log for glimmer-example/README</title>
+<!-- hennerik CVSweb $Revision: 1.112 $ -->
+</head>
+<body text="#000000" bgcolor="#ffffff">
+ <h1 align="center">CVS log for glimmer-example/README</h1>
+<A HREF="/cgi-bin/cvsweb.cgi/glimmer-example/?cvsroot=glimmer#README"><IMG SRC="/icons/cvsweb/back.gif" ALT="[BACK]" BORDER="0" WIDTH="20" HEIGHT="22"></A>
+ <b>Up to  <a href="/cgi-bin/cvsweb.cgi/?cvsroot=glimmer#dirlist">[glimmer]</a> / <a href="/cgi-bin/cvsweb.cgi/glimmer-example/?cvsroot=glimmer#dirlist">glimmer-example</a></b><p>
+<A HREF="#diff">Request diff between arbitrary revisions</A>
+<HR NOSHADE>
+Default branch: 1<BR>
+<HR size=1 NOSHADE><a NAME="rev1.1"></a><a NAME="RELEASE_0_4"></a><a NAME="RELEASE_0_3"></a><a NAME="HEAD"></a>
+ Revision <A HREF="README?rev=1.1&amp;content-type=text/x-cvsweb-markup&amp;cvsroot=glimmer"><b>1.1</b></A> / (<A HREF="/cgi-bin/cvsweb.cgi/~checkout~/glimmer-example/README?rev=1.1&amp;content-type=text/plain&amp;cvsroot=glimmer" target="cvs_checkout" onClick="window.open('/cgi-bin/cvsweb.cgi/~checkout~/glimmer-example/README?rev=1.1&amp;content-type=text/plain','cvs_checkout','resizeable,scrollbars');"><b>download</b></A>) - <a href="/cgi-bin/cvsweb.cgi/glimmer-example/README?annotate=1.1&amp;cvsroot=glimmer">annotate</a> - <A HREF="/cgi-bin/cvsweb.cgi/glimmer-example/README?r1=1.1&amp;cvsroot=glimmer">[select for diffs]</A>
+, <i>Thu Feb  3 11:21:32 2005 UTC</i> (3 years, 8 months ago) by <i>magi</i>
+<BR>CVS Tags: <b><A HREF="README?cvsroot=glimmer&amp;only_with_tag=RELEASE_0_4">RELEASE_0_4</A>,
+<A HREF="README?cvsroot=glimmer&amp;only_with_tag=RELEASE_0_3">RELEASE_0_3</A>,
+<A HREF="README?cvsroot=glimmer&amp;only_with_tag=HEAD">HEAD</A>
+</b><BR>Diff<PRE>
+initial version
+</PRE>
+<HR NOSHADE><A NAME=diff>
+This form allows you to request diff's between any two
+revisions of a file.  You may select a symbolic revision
+name using the selection box or you may type in a numeric
+name using the type-in text box.
+</A><P>
+<FORM METHOD="GET" ACTION="/cgi-bin/cvsweb.cgi/glimmer-example/README.diff" NAME="diff_select">
+<INPUT TYPE=HIDDEN NAME="cvsroot" VALUE="glimmer">
+Diffs between 
+<SELECT NAME="r1">
+<OPTION VALUE="text" SELECTED>Use Text Field
+<OPTION VALUE="1.1:RELEASE_0_4">RELEASE_0_4
+<OPTION VALUE="1.1:RELEASE_0_3">RELEASE_0_3
+<OPTION VALUE="0.1:MAIN">MAIN
+<OPTION VALUE="1.1:HEAD">HEAD
+</SELECT>
+<INPUT TYPE="TEXT" SIZE="12" NAME="tr1" VALUE="1.1" onChange='document.diff_select.r1.selectedIndex=0'>
+ and 
+<SELECT NAME="r2">
+<OPTION VALUE="text" SELECTED>Use Text Field
+<OPTION VALUE="1.1:RELEASE_0_4">RELEASE_0_4
+<OPTION VALUE="1.1:RELEASE_0_3">RELEASE_0_3
+<OPTION VALUE="0.1:MAIN">MAIN
+<OPTION VALUE="1.1:HEAD">HEAD
+</SELECT>
+<INPUT TYPE="TEXT" SIZE="12" NAME="tr2" VALUE="1.1" onChange='document.diff_select.r2.selectedIndex=0'>
+<BR>Type of Diff should be a&nbsp;<SELECT NAME="f">
+<OPTION VALUE=h SELECTED>Colored Diff<OPTION VALUE=H>Long Colored Diff<OPTION VALUE=u>Unidiff<OPTION VALUE=c>Context Diff</SELECT><INPUT TYPE=SUBMIT VALUE="  Get Diffs  ">
+</FORM>
+<HR noshade>
+<A name=logsort></A>
+<FORM METHOD="GET" ACTION="/cgi-bin/cvsweb.cgi/glimmer-example/README">
+<INPUT TYPE=HIDDEN NAME="cvsroot" VALUE="glimmer">
+Sort log by: 
+<SELECT NAME="logsort" onchange="submit()">
+<OPTION VALUE=cvs>Not sorted<OPTION VALUE=date SELECTED>Commit date<OPTION VALUE=rev>Revision</SELECT>
+<INPUT TYPE=SUBMIT VALUE="  Sort  ">
+</FORM>
+<hr noshade>Back to <a href="/">forge.nesc.ac.uk</a> / <a href="/projects/glimmer">glimmer</a></body></html>
+</BODY></HTML>
