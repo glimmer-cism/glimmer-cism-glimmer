@@ -1,15 +1,4 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"><HTML>
-<HEAD>
-<!-- hennerik CVSweb $Revision: 1.112 $ -->
-<TITLE>glimmer-example/README - view - 1.1</TITLE></HEAD>
-<BODY BGCOLOR="#eeeeee">
-<table width="100%" border=0 cellspacing=0 cellpadding=1 bgcolor="#9999ee"><tr valign=bottom><td><a href="README?cvsroot=glimmer#rev1.1"><IMG SRC="/icons/cvsweb/back.gif" ALT="[BACK]" BORDER="0" WIDTH="20" HEIGHT="22"></a> <b>Return to <A HREF="README?cvsroot=glimmer#rev1.1">README</A>
- CVS log</b> <IMG SRC="/icons/cvsweb/text.gif" ALT="[TXT]" BORDER="0" WIDTH="20" HEIGHT="22"></td><td align=right><IMG SRC="/icons/cvsweb/dir.gif" ALT="[DIR]" BORDER="0" WIDTH="20" HEIGHT="22"> <b>Up to  <a href="/cgi-bin/cvsweb.cgi/?cvsroot=glimmer#dirlist">[glimmer]</a> / <a href="/cgi-bin/cvsweb.cgi/glimmer-example/?cvsroot=glimmer#dirlist">glimmer-example</a></b></td></tr></table><HR noshade><table width="100%"><tr><td bgcolor="#ffffff">File:  <a href="/cgi-bin/cvsweb.cgi/?cvsroot=glimmer#dirlist">[glimmer]</a> / <a href="/cgi-bin/cvsweb.cgi/glimmer-example/?cvsroot=glimmer#dirlist">glimmer-example</a> / <a href="/cgi-bin/cvsweb.cgi/glimmer-example/README?cvsroot=glimmer">README</a>&nbsp;(<A HREF="/cgi-bin/cvsweb.cgi/~checkout~/glimmer-example/README?rev=1.1&amp;cvsroot=glimmer" target="cvs_checkout" onClick="window.open('/cgi-bin/cvsweb.cgi/~checkout~/glimmer-example/README?rev=1.1','cvs_checkout','resizeable,scrollbars');"><b>download</b></A>)<BR>
-Revision <B>1.1</B>, <i>Thu Feb  3 11:21:32 2005 UTC</i> (3 years, 8 months ago) by <i>magi</i>
-<BR>CVS Tags: <b>RELEASE_0_4, RELEASE_0_3, HEAD</b><PRE>
-initial version
-</PRE>
-</td></tr></table><HR noshade><PRE>This directory contains a very simple example program demonstrating how
+This directory contains a very simple example program demonstrating how
 a climate driver for the ice sheet model can be written.
 
 In order to be able to use glide you need a f95 compiler. Set the 
@@ -19,4 +8,3 @@ Finally you might need to set the variables FCFLAGS and LDFLAGS so
 that the compiler and linker can find the netCDF library, e.g.
 FCFLAGS=-I/path/to/netcdf/include
 LDFLAGS=-L/path/to/netcdf/lib
-</PRE>
