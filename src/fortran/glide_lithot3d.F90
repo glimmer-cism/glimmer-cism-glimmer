@@ -145,7 +145,7 @@ contains
 
     ! convert from SLAP Triad to SLAP Column format
     call copy_sparse_matrix(model%lithot%fd_coeff,model%lithot%fd_coeff_slap)
-    call ds2y(model%general%nsn*model%general%ewn*model%lithot%nlayer,model%lithot%fd_coeff_slap%n, &
+    call ds2y(model%general%nsn*model%general%ewn*model%lithot%nlayer,model%lithot%fd_coeff_slap%nonzeros, &
          model%lithot%fd_coeff_slap%col,model%lithot%fd_coeff_slap%row,model%lithot%fd_coeff_slap%val, 0)
 
     ! initialise result vector
@@ -198,14 +198,14 @@ contains
 
     ! solve matrix equation
     call dslucs(model%lithot%fd_coeff_slap%order, model%lithot%rhs, model%lithot%answer, &
-         model%lithot%fd_coeff_slap%n, model%lithot%fd_coeff_slap%col,model%lithot%fd_coeff_slap%row, &
+         model%lithot%fd_coeff_slap%nonzeros, model%lithot%fd_coeff_slap%col,model%lithot%fd_coeff_slap%row, &
          model%lithot%fd_coeff_slap%val, isym,itol,tol,itmax,iter,err,ierr,0, &
          model%lithot%rwork, model%lithot%mxnelt, model%lithot%iwork, model%lithot%mxnelt)
 
     if (ierr /= 0) then
       print *, 'pcg error ', ierr, itmax, iter
       write(*,*) model%numerics%time
-      call glide_finalise(model,.true.)
+      call glide_finalise_all(.true.)
       call close_log
       stop
     end if

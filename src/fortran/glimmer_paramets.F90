@@ -52,17 +52,19 @@ module glimmer_paramets
 
   implicit none; save
 
-! real(dp), parameter :: thk0 = 2000.0d0          ! m
-! real(dp), parameter :: len0 = 200.0d3        ! m
-! real(dp), parameter :: vel0 = 500.0 / scyr    ! m yr^{-1} converted to S.I. units
-! !real(dp), parameter :: vis0 = 5.70d-18 / scyr  ! yr^{-1} Pa^{-3} converted to S.I. units
-! real(dp), parameter :: vis0 = 1d-16 / scyr 
-
+#ifdef NO_RESCALE
   real(dp), parameter :: thk0 = 1          ! m
   real(dp), parameter :: len0 = 1        ! m
   real(dp), parameter :: vel0 = 1 / scyr    ! m yr^{-1} converted to S.I. units
   real(dp), parameter :: vis0 = 1 / scyr 
- 
+#else
+  real(dp), parameter :: thk0 = 2000.0d0          ! m
+  real(dp), parameter :: len0 = 200.0d3        ! m
+  real(dp), parameter :: vel0 = 500.0 / scyr    ! m yr^{-1} converted to S.I. units
+  !real(dp), parameter :: vis0 = 5.70d-18 / scyr  ! yr^{-1} Pa^{-3} converted to S.I. units
+  real(dp), parameter :: vis0 = 1d-16 / scyr 
+#endif
+
   real(dp), parameter :: acc0 = thk0 * vel0 / len0  ! m s^{-1} 
   ! ** for zero order model real(dp), parameter :: tim0 = thk0 / acc0      ! s
   real(dp), parameter :: tim0 = len0 / vel0      ! s

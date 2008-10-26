@@ -336,6 +336,7 @@ module glide_types
     real(dp),dimension(:,:)  ,pointer :: gdsx => null() !*FD basal shear stress, x-dir
     real(dp),dimension(:,:)  ,pointer :: gdsy => null() !*FD basal shear stress, y-dir
     real(dp),dimension(:,:,:),pointer :: efvs => null()
+    logical :: is_velocity_valid = .false. !*FD True if uvel, vvel contains a HOM-computed velocity (and thus is valid as initial guess)
   end type glide_velocity_hom
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -482,9 +483,9 @@ module glide_types
 
   type glide_pcgdwk
     type(sparse_matrix_type) :: matrix
+   
     real(dp),dimension(:),pointer :: rhsd    => null()
     real(dp),dimension(:),pointer :: answ    => null()
-    integer, dimension(2)         :: pcgsize = 0
     real(dp),dimension(4)         :: fc      = 0.0
     real(dp),dimension(6)         :: fc2     = 0.0
     integer :: ct     = 0
@@ -584,6 +585,7 @@ module glide_types
   end type glide_prof_type
 
   type glide_global_type
+    integer              :: model_id !*FD Used in the global model list for error handling purposes
     type(glide_general)  :: general
     type(glide_options)  :: options
     type(glide_geometry) :: geometry
@@ -794,16 +796,12 @@ contains
     endif
 
     ! allocate memory for sparse matrix
-    !allocate (model%pcgdwk%pcgrow(ewn*nsn*5))
-    !allocate (model%pcgdwk%pcgcol(ewn*nsn*5+2))
-    !allocate (model%pcgdwk%pcgval(ewn*nsn*5))
     allocate (model%pcgdwk%rhsd(ewn*nsn))
     allocate (model%pcgdwk%answ(ewn*nsn))
-    call new_sparse_matrix(ewn*nsn, ewn*nsn*5, model%pcgdwk%matrix)
+    call new_sparse_matrix(ewn*nsn, ewn*nsn, model%pcgdwk%matrix)
 
     ! allocate isostasy grids
     call isos_allocate(model%isos,ewn,nsn)
-
     ! allocate grid quantities for remapping scheme
     call coordsystem_allocate(model%general%ice_grid, model%gridwk%hte) 
     call coordsystem_allocate(model%general%ice_grid, model%gridwk%htn) 

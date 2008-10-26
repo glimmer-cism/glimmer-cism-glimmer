@@ -52,12 +52,10 @@ contains
     subroutine sparse_allocate_workspace(matrix, options, workspace, max_nonzeros_arg)
         !*FD Allocate solver workspace.  This needs to be done once
         !*FD (when the maximum number of nonzero entries is first known)
-        !*FD If this function is called on a workspace with allocated memory,
-        !*FD it should be handled safely and quickly; e.g. memory should not be
-        !*FD double-allocated, and new memory should only be allocated if the
-        !*FD memory requirements have increased.
+        !*FD This function need not be safe to call on already allocated memory
+        !*FD
         !*FD Note that the max_nonzeros argument must be optional, and if
-        !*FD the current number of nonzeroes must be used.
+        !*FD it is not supplied the current number of nonzeroes must be used.
         type(sparse_matrix_type) :: matrix
         type(sparse_solver_options) :: options
         type(sparse_solver_workspace) :: workspace
@@ -69,7 +67,7 @@ contains
         if (present(max_nonzeros_arg)) then
             max_nonzeros = max_nonzeros_arg
         else
-            max_nonzeros = matrix%n
+            max_nonzeros = matrix%nonzeros
         end if
         
         !Only allocate the memory if it hasn't been allocated or it needs
@@ -83,7 +81,7 @@ contains
 
             !Figure out how much memory to allocate.  These figures were derived
             !from the SLAP documentation.
-            lenrw = 20*max_nonzeros 
+            lenrw = 40*max_nonzeros 
             leniw = 20*max_nonzeros
             
             allocate(workspace%rwork(lenrw))
@@ -98,6 +96,9 @@ contains
         !*FD Performs any preprocessing needed to be performed on the sparse
         !*FD matrix.  Workspace must have already been allocated. 
         !*FD This function should be safe to call more than once.
+        !*FD
+        !*FD It is an error to call this function on a workspace without
+        !*FD allocated memory
         !*FD
         !*FD In general sparse_allocate_workspace should perform any actions
         !*FD that depend on the *size* of the sparse matrix, and
@@ -164,7 +165,7 @@ contains
         !Set up SLAP if it hasn't been already
         call sparse_solver_preprocess(matrix, options, workspace)
 
-        call dslucs(matrix%order, rhs, solution, matrix%n, matrix%row, matrix%col, matrix%val, &
+        call dslucs(matrix%order, rhs, solution, matrix%nonzeros, matrix%row, matrix%col, matrix%val, &
                     isym, options%itol, options%tolerance, options%maxiters, niters, err, ierr, iunit, &
                     workspace%rwork, size(workspace%rwork), workspace%iwork, size(workspace%iwork))
 
@@ -218,4 +219,4 @@ contains
             write(*,*) tmp_error_string
         endif
     end subroutine sparse_interpret_error
-end module
+end module glimmer_sparse_solver

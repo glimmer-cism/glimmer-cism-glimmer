@@ -396,6 +396,23 @@ contains
     end do
 
   end subroutine nc_prefix_outfiles
+   
+   subroutine nc_errorhandle(file,line,status)
+        !*FD handle netCDF error
+        use netcdf
+        use glimmer_log
+        implicit none
+        character(len=*), intent(in) :: file
+        !*FD name of f90 file error occured in
+        integer, intent(in) :: line
+        !*FD line number error occured at
+        integer, intent(in) :: status
+        !*FD netCDF return value
+  
+        if (status.ne.NF90_NOERR) then
+            call write_log(nf90_strerror(status),type=GM_FATAL,file=file,line=line)
+        end if
+    end subroutine nc_errorhandle
 
 end module glimmer_ncdf
 
@@ -449,19 +466,4 @@ contains
   end subroutine glimmer_init_scales
 end module glimmer_scales
 
-subroutine nc_errorhandle(file,line,status)
-  !*FD handle netCDF error
-  use netcdf
-  use glimmer_log
-  implicit none
-  character(len=*), intent(in) :: file
-  !*FD name of f90 file error occured in
-  integer, intent(in) :: line
-  !*FD line number error occured at
-  integer, intent(in) :: status
-  !*FD netCDF return value
-  
-  if (status.ne.NF90_NOERR) then
-     call write_log(nf90_strerror(status),type=GM_FATAL,file=file,line=line)
-  end if
-end subroutine nc_errorhandle
+

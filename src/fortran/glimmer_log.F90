@@ -169,6 +169,7 @@ contains
 
     ! constructing message
     if (present(file) .and. present(line)) then
+       write(*,*)"Logged at",file,line
        write(line_num,'(I6)')line
        write(msg,*) trim(msg_prefix(local_type))//' (',trim(file),':',trim(adjustl(line_num)),') '//message
     else
@@ -182,6 +183,7 @@ contains
     end if
     ! stop logging if we encountered a fatal error
     if (local_type.eq.GM_FATAL) then
+       write(*,*) "Fatal error encountered, exiting..."
        call close_log
        stop
     end if

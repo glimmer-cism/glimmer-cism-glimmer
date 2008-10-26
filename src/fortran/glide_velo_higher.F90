@@ -13,7 +13,7 @@ module glide_velo_higher
     
     !TODO: Parameterize the following globals
     real(dp), parameter :: FLOWN    = 3. !TODO: This is passed in, but as an array
-    real(dp), parameter :: VEL2ERR  = 4e-2
+    real(dp), parameter :: VEL2ERR  = 4e-3
     real(dp), parameter :: TOLER    = 1e-6
     integer,  parameter :: CONVT    = 4
     real(dp), parameter :: SHTUNE   = 1.D-16
@@ -36,7 +36,7 @@ contains
                                thck, usrf, dthckdew, dthckdns, dusrfdew, dusrfdns, &
                                dlsrfdew, dlsrfdns, stagthck, flwa, btrc, which_sliding_law, &
                                periodic_ew, periodic_ns, &
-                               uvel, vvel, uflx, vflx, efvs, tau, gdsx, gdsy)
+                               uvel, vvel, valid_initial_guess, uflx, vflx, efvs, tau, gdsx, gdsy)
                             
         integer  :: ewn !*FD Number of cells X
         integer  :: nsn !*FD Number of cells Y
@@ -60,6 +60,7 @@ contains
         logical :: periodic_ns
         real(dp), dimension(upn,ewn-1,nsn-1) :: uvel 
         real(dp), dimension(upn,ewn-1,nsn-1) :: vvel
+        logical :: valid_initial_guess !*Whether or not the given uvel or vvel are appropriate initial guesses.  If not we'll have to roll our own.
         real(dp), dimension(:,:,:) :: uflx
         real(dp), dimension(:,:,:) :: vflx
         real(dp), dimension(:,:,:) :: efvs !*FD Effective viscosity
@@ -75,12 +76,7 @@ contains
         real(dp), dimension(nsn-1, ewn-1, upn) :: ax, ay, bx, by, cxy,arrh
         !Arrays for staggered versions of quantities that were passed unstaggered
         real(dp), dimension(ewn-1, nsn-1) :: stagusrf, staglsrf
-
         
-        !TODO: Figure out what U and V are???
-        !I have no idea!!!
-        !How are they different from uvel and vvel?  Are they needed?
-        !nsn,ewn
         real(dp), dimension(nsn, ewn)::u,v
 
         !Total number of grid points in 3 dimensions
@@ -130,18 +126,31 @@ contains
         d2hdx2_t = transpose(d2hdx2)
         d2hdy2_t = transpose(d2hdy2)
         call glimToIce3d_3d(uvel,uvel_t,ewn-1,nsn-1,upn-1)
-        call glimToIce3d_3d(vvel,uvel_t,ewn-1,nsn-1,upn-1)
+        call glimToIce3d_3d(vvel,vvel_t,ewn-1,nsn-1,upn-1)
        
         !Compute rescaled coordinate parameters (needed because Pattyn uses an
         !irregular Z grid and scales so that 0 is the surface, 1 is the bed)
         call init_rescaled_coordinates(dthckdew_t,dlsrfdew_t,dthckdns_t,dlsrfdns_t,stagusrf_t,stagthck_t,staglsrf_t,&
                                                dusrfdew_t,dusrfdns_t,d2zdx2_t,d2zdy2_t,d2hdx2_t,d2hdy2_t,&
                                                sigma,ax,ay,bx,by,cxy,dew,dns)
-        !"Spin up" estimate with SIA
-        !TODO: Figure out how to integrate this with Glimmer's SIA
-        call veloc1(dusrfdew_t, dusrfdns_t, stagthck_t, arrh, sigma, uvel_t, vvel_t, u, v, nsn-1, ewn-1, upn, &
-                    FLOWN, periodic_ew, periodic_ns)
         
+        !"Spin up" estimate with Pattyn's SIA model runs if we don't already
+        !have a good initial guess
+        if (.not. valid_initial_guess) then
+            write(*,*)"SIA spinup"
+            call veloc1(dusrfdew_t, dusrfdns_t, stagthck_t, arrh, sigma, uvel_t, vvel_t, u, v, nsn-1, ewn-1, upn, &
+                        FLOWN, periodic_ew, periodic_ns)
+            !If we are performing the plastic bed iteration, the SIA is not
+            !enough and we need to spin up a better estimate by shoehorning the
+            !tau0 values into a linear bed estimate
+            if (which_sliding_law == 1) then
+                write(*,*)"Linear bed spinup"
+                call veloc2(mu_t, uvel_t, vvel_t, arrh, dusrfdew_t, dusrfdns_t, stagthck_t, ax, ay, &
+                        sigma, bx, by, cxy, btrc_t/100, dlsrfdew_t, dlsrfdns_t, FLOWN, ZIP, VEL2ERR, MANIFOLD,&
+                        TOLER, periodic_ew,periodic_ns, 0, dew, dns)
+            end if
+            write(*,*)"Spinup complete"
+        end if
         !Higher order velocity estimation
         !I am assuming that efvs (effective viscosity) is the same as mu
         !A NOTE ON COORDINATE TRANSPOSITION:
@@ -151,7 +160,8 @@ contains
         call veloc2(mu_t, uvel_t, vvel_t, arrh, dusrfdew_t, dusrfdns_t, stagthck_t, ax, ay, &
                     sigma, bx, by, cxy, btrc_t, dlsrfdew_t, dlsrfdns_t, FLOWN, ZIP, VEL2ERR, MANIFOLD,&
                     TOLER, periodic_ew,periodic_ns, which_sliding_law, dew, dns)
-
+        call write_xls_3d("uvel_result.txt",uvel_t)
+        call write_xls_3d("vvel_result.txt",vvel_t)
         !Transpose from the ice3d coordinate system (y,x,z) to the glimmer
         !coordinate system (z,x,y).  We need to do this for all the 3D outputs
         !that Glimmer expects.

@@ -150,7 +150,6 @@ def usage():
     print '  -p file, --process=file\n\tonly processes dependencies for file (more than one can be specified)'
     print '  -m, --mod\n\tonly process modules (only honour when producing dot)'
     print '  -o file, --output=file\n\twrite to file (default: stdout'
-
 if __name__ == '__main__':
 
     try:
@@ -169,6 +168,7 @@ if __name__ == '__main__':
     mod = 0
     outfile = sys.stdout
     process = []
+    special = {}
     for o,a in opts:
         if o in ('-h', '--help'):
             usage()

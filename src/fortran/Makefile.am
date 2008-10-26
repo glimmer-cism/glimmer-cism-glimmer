@@ -5,7 +5,7 @@ RESTART_INCS=$(RESTART_INC_INS:.inc.in=.inc)
 RESTART_COMMON=glimmer_restart_common.F90 glimmer_restart_pointarr.F90 \
                glimmer_restart_statarr.F90 glimmer_restart_statscal.F90
 
-lib_LIBRARIES = libglimmer.a libglide.a libglint.a libclimate.a
+lib_LIBRARIES = libglide.a libglimmer.a libglint.a libclimate.a
 bin_PROGRAMS  =  simple_glide eis_glide glint_example glex_ebm eismint3_glide nc2config
 check_PROGRAMS = test_config test_setup test_ts test_lithot test_integrate
 
@@ -18,7 +18,7 @@ nodist_include_HEADERS := $(wildcard *.mod)
 EXTRA_DIST = f90_dep.mak $(RESTART_INC_INS)
 BUILT_SOURCES = glide_io.F90 eis_io.F90 glint_io.F90 glint_mbal_io.F90 \
                 eismint3_io.F90 $(RESTART_INCS)
-CLEANFILES = $(BUILT_SOURCES) glimmer_vers.F90 f90_dep.mak
+CLEANFILES = $(BUILT_SOURCES) glimmer_vers.F90 f90_dep.mak *.mod
 RESTART_CODE = glide_types.F90 glimmer_config.F90 glimmer_coordinates.F90 \
                   glimmer_daily_pdd.F90 glimmer_map_types.F90 glimmer_ncdf.F90 \
                   glimmer_pdd.F90 glimmer_searchcircle.F90 glimmer_sparse.F90 \
@@ -44,20 +44,6 @@ libglimmer_a_SOURCES = glimmer_vers.F90 \
                        $(RESTART_INCS) glimmer_restart.F90 glimmer_filenames.F90
 nodist_libglimmer_a_SOURCES = glimmer_vers.F90
 
-
-#Select which sparse solver code file to compile based conditionally on
-#what solver was specified in the configure script.  The flags used
-#in the if statements (SLAP, UMFPACK, etc) are defined in <glimmer_root_dir>/configure.in
-if SLAP
-RESTART_CODE +=  glimmer_sparse_slap.F90
-libglimmer_a_SOURCES += glimmer_sparse_slap.F90
-else
-if UMFPACK
-RESTART_CODE += glimmer_sparse_umfpack.F90
-libglimmer_a_SOURCES += glimmer_sparse_umfpack.F90
-endif UMFPACK
-endif !SLAP
-
 libglide_a_SOURCES = glide.F90 glide_setup.F90 glide_types.F90 glide_temp.F90 \
                      glide_deriv.F90 xls.F90 ice3d_lib.F90 glide_velo_higher.F90 \
                      glide_thck.F90 glide_velo.F90 glide_mask.F90 \
@@ -78,6 +64,23 @@ libclimate_a_SOURCES = eismint3_forcing.F90 eismint3_types.F90 \
                        eis_temp.F90 eis_slc.F90 eis_cony.F90 \
                        glimmer_searchcircle.F90 eis_io.F90 eis_types.F90 \
                        eismint3_io.F90
+
+#Select which sparse solver code file to compile based conditionally on
+#what solver was specified in the configure script.  The flags used
+#in the if statements (SLAP, UMFPACK, etc) are defined in <glimmer_root_dir>/configure.in
+if SLAP
+RESTART_CODE +=  glimmer_sparse_slap.F90
+libglimmer_a_SOURCES += glimmer_sparse_slap.F90
+else
+
+if UMFPACK
+RESTART_CODE += glimmer_sparse_umfpack.F90
+libglimmer_a_SOURCES += glimmer_sparse_umfpack.F90
+endif UMFPACK
+
+endif !SLAP
+
+
 
 eismint3_glide_SOURCES = eismint3_glide.F90
 eismint3_glide_LDADD = libclimate.a libglide.a libglimmer.a \
@@ -102,6 +105,11 @@ test_lithot_SOURCES = test_lithot.F90
 test_lithot_LDADD = libclimate.a libglide.a libglimmer.a SLAP_library/libslap.a
 test_integrate_SOURCES = test_integrate.F90 glimmer_global.F90 \
                          glimmer_physcon.F90 glimmer_integrate.F90
+
+ALL_SRC=$(test_integrage_SOURCES) $(test_lithot_SOURCES) $(test_ts_SOURCES) $(test_setup_SOURCES) \
+        $(test_config_SOURCES) $(nc2config_SOURCES) $(glex_ebm_SOURCES) $(glint_example_SOURCES) \
+	$(eis_glide_SOURCES) $(simple_glide_SOURCES) $(eismint3_glide_SOURCES) $(libglimmer_a_SOURCES) \
+	$(libglide_a_SOURCES) $(libglint_a_SOURCES) $(libclimate_a_SOURCES)
 
 #some special rules for automatically generating ncdf src code
 glide_io.F90:	glide_vars.def ncdf_template.F90.in
@@ -139,8 +147,11 @@ glimmer_vers.F90:	glimmer_vers.F90.in
 		cp $< $@
 endif
 
-
-f90_dep.mak:	$(srcdir)/*.F90 $(BUILT_SOURCES) glimmer_vers.F90
+# Originally, the makefile dependency builder used all files in $(srcdir)/*.F90
+# However, this doesn't work now that mutliple files (e.g. multiple sparse solvers)
+# could define the same module.
+# So, we give it all of the sources used to build Glimmer
+f90_dep.mak:	$(ALL_SRC) $(BUILT_SOURCES) glimmer_vers.F90
 		$(PYTHON) $(top_srcdir)/src/python/f90_dependencies.py -o $@ $^
 
 -include f90_dep.mak

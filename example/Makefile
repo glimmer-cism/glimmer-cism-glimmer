@@ -8,13 +8,15 @@ GLIMMER_LIBRARIES = `glimmer-config --libs` -lglide -lglimmer -lslap -lnetcdf
 
 # set variables FCFLAGS and LDFLAGS for extra libraries, e.g. netCDF
 
+FC=gfortran
+
 # how to build the example executable
 example:	example.o
 		$(FC) -o $@ $< $(LDFLAGS) $(GLIMMER_LIBRARIES)
 
 # implicit rule, telling the make system how to build an object file from a .f90 file
 .f90.o:
-		$(FC) -fpp $(FCFLAGS) $(GLIMMER_FFLAGS) -c $< -o $@
+		$(FC) $(FCFLAGS) $(GLIMMER_FFLAGS) -c $< -o $@
 
 
 .SUFFIXES:	.f90 .o
@@ -30,3 +32,6 @@ dist::
 	cp $(DIST_FILES) $(DIST_NAME)
 	tar cvzf $(DIST_NAME).tar.gz $(DIST_NAME)
 	rm -r $(DIST_NAME)
+
+clean:
+	rm example example.o

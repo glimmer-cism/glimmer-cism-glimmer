@@ -203,6 +203,11 @@ contains
 #ifdef PROFILING
     call glide_prof_init(model)
 #endif
+    
+    ! register the newly created model so that it can be finalised in the case
+    ! of an error without needing to pass the whole thing around to every
+    ! function that might cause an error
+    call register_model(model)
   end subroutine glide_initialise
   
   subroutine glide_tstep_p1(model,time)
@@ -234,28 +239,16 @@ contains
          model%general%  ewn, &
          model%general%  nsn)
 
-    !call geomders(model%numerics, &
-    !     model%geometry% usrf, &
-    !     model%geomderv% stagthck,&
-    !     model%geomderv% dusrfdew, &
-    !     model%geomderv% dusrfdns)
-
     call df_field_2d_staggered(model%geometry%usrf, &
                                model%numerics%dew, model%numerics%dns, &
                                model%geomderv%dusrfdew, & 
                                model%geomderv%dusrfdns, &
                                .false., .false.)
           
-    !call geomders(model%numerics, &
-    !     model%geometry% thck, &
-    !     model%geomderv% stagthck,&
-    !     model%geomderv% dthckdew, &
-    !     model%geomderv% dthckdns)
-
     call df_field_2d_staggered(model%geometry%thck, &
                                model%numerics%dew, model%numerics%dns, &
-                               model%geomderv%dusrfdew, &
-                               model%geomderv%dusrfdns, &
+                               model%geomderv%dthckdew, &
+                               model%geomderv%dthckdns, &
                                .false., .false.)
           
     !Make sure that the derivatives are 0 where staggered thickness is 0

@@ -48,7 +48,7 @@ module glimmer_sparse
   use glimmer_global, only:dp
   type sparse_matrix_type
      !*FD sparse matrix type
-     integer :: n                                           !*FD number of nonzero elements currently stored
+     integer :: nonzeros                                    !*FD number of nonzero elements currently stored
      integer :: order                                       !*FD order of the matrix (e.g. number of rows)
      logical :: symmetric                                   !*FD True if only one triangle of the symmetric matrix is stored
      integer, dimension(:), pointer :: col => NULL()        !*FD column index
@@ -98,7 +98,7 @@ contains
           allocate(mat%val(n))
        end if
     end if
-    mat%n = 0
+    mat%nonzeros = 0
     mat%order = order
     mat%symmetric = .false.
   end subroutine new_sparse_matrix
@@ -111,11 +111,11 @@ contains
     type(sparse_matrix_type) :: inmat  !*FD matrix to be copied
     type(sparse_matrix_type) :: outmat !*FD result matrix
 
-    call new_sparse_matrix(inmat%order,inmat%n,outmat)
+    call new_sparse_matrix(inmat%order,inmat%nonzeros,outmat)
     outmat%row(:) = inmat%row(:)
     outmat%col(:) = inmat%col(:)
     outmat%val(:) = inmat%val(:)
-    outmat%n = inmat%n
+    outmat%nonzeros = inmat%nonzeros
     outmat%symmetric = inmat%symmetric
   end subroutine copy_sparse_matrix
 
@@ -166,7 +166,7 @@ contains
     integer, intent(in) :: unit        !*FD unit to be printed to
 
     integer i
-    do i = 1, matrix%n
+    do i = 1, matrix%nonzeros
        write(unit,*) matrix%col(i), matrix%row(i), matrix%val(i)
     end do
   end subroutine print_sparse
@@ -181,7 +181,7 @@ contains
     integer i
 
     res = 0.
-    do i=1,matrix%n
+    do i=1,matrix%nonzeros
        res(matrix%col(i)) = res(matrix%col(i)) + vec(matrix%row(i))*matrix%val(i)
     end do
   end subroutine sparse_matrix_vec_prod
@@ -193,12 +193,12 @@ contains
     integer, intent(in) :: i,j         !*FD column and row
     real(kind=dp), intent(in) :: val   !*FD value
     if (val /= 0.0 ) then
-        matrix%n =  matrix%n + 1
-        matrix%row(matrix%n) = i
-        matrix%col(matrix%n) = j
-        matrix%val(matrix%n) = val
+        matrix%nonzeros =  matrix%nonzeros + 1
+        matrix%row(matrix%nonzeros) = i
+        matrix%col(matrix%nonzeros) = j
+        matrix%val(matrix%nonzeros) = val
 
-        if (matrix%n .eq. size(matrix%val)) then
+        if (matrix%nonzeros .eq. size(matrix%val)) then
             call grow_sparse_matrix(matrix)
         end if
     end if
@@ -209,7 +209,7 @@ contains
     !*FD previously used memory
     type(sparse_matrix_type) :: matrix
     
-    matrix%n = 0
+    matrix%nonzeros = 0
     !Clearing these shouldn't be strictly necessary, but SLAP barfs if we don't
     matrix%row = 0
     matrix%col = 0
@@ -228,14 +228,14 @@ contains
     type(sparse_matrix_type) :: matrix
     logical :: is_column_format
 
-    is_column_format = matrix%col(matrix%order + 1) == matrix%n + 1
+    is_column_format = matrix%col(matrix%order + 1) == matrix%nonzeros + 1
   end function
 
   subroutine to_column_format(matrix)
     type(sparse_matrix_type) :: matrix
      
     if(is_triad_format(matrix)) then
-        call ds2y(matrix%order, matrix%n, matrix%row, matrix%col, matrix%val, 0)
+        call ds2y(matrix%order, matrix%nonzeros, matrix%row, matrix%col, matrix%val, 0)
     end if
   end subroutine
 

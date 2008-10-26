@@ -9,7 +9,7 @@ module glimmer_sparse_util
     use glimmer_sparse_solver
     implicit none
 contains
-    subroutine sparse_easy_solve(matrix, rhs, answer, err, iter, error_flag, calling_file, calling_line)
+    subroutine sparse_easy_solve(matrix, rhs, answer, err, iter, calling_file, calling_line)
         !This subroutine wraps the basic (though probably the most inefficient)
         !workflow to solve a sparse matrix using the sparse matrix solver
         !framework.  It handles errors gracefully, and reports back the
@@ -25,8 +25,6 @@ contains
         
         real(dp), intent(out) :: err
         integer, intent(out) :: iter
-
-        logical, intent(out) :: error_flag
 
         character(100), optional :: calling_file
         integer, optional :: calling_line
@@ -44,18 +42,17 @@ contains
         
         if (ierr /= 0) then
             if (present(calling_file) .and. present(calling_line)) then
-                call log_sparse_error(matrix, ierr, calling_file, calling_line)
+                call handle_sparse_error(matrix, ierr, calling_file, calling_line)
             else
-                call log_sparse_error(matrix, ierr, __FILE__, __LINE__)
+                call handle_sparse_error(matrix, ierr, __FILE__, __LINE__)
             end if
-            error_flag = .true.
         end if
 
         call sparse_destroy_workspace(matrix, opt, wk)
 
     end subroutine sparse_easy_solve
 
-    subroutine log_sparse_error(matrix, error, error_file, error_line, time)
+    subroutine handle_sparse_error(matrix, error, error_file, error_line, time)
         !Checks a sparse error flag and, if an error occurred, log it to
         !the GLIMMER log file.  This does not stop Glimmer, it just writes
         !to the log
@@ -63,14 +60,16 @@ contains
         use glimmer_log
         use glimmer_filenames
         
-        integer :: error, error_line
-        character(*) :: error_file
+        integer :: error
+        integer, optional :: error_line
+        character(*), optional :: error_file
         real(dp), optional :: time
 
         type(sparse_matrix_type) :: matrix
 
         integer :: isym
         integer :: lunit
+        integer :: i
 
         character(512) :: message
         character(128) :: errfname
@@ -91,16 +90,18 @@ contains
         end if
 
         !Output sparse matrix data to the file
-        call dcpplt(matrix%order, matrix%n, matrix%row, matrix%col, matrix%val,&
+        call dcpplt(matrix%order, matrix%nonzeros, matrix%row, matrix%col, matrix%val,&
                     isym, lunit)
 
         write(lunit,*) '***Sparse matrix structure ends.  Value listing begins'
-        write(lunit,*) matrix%val
+        do i=1,matrix%nonzeros
+            write(lunit,*),matrix%val(i)
+        end do
 
         !Close unit and finish off
         close(lunit)
-        !call glide_finalise(model, .true.)
-
+        call glide_finalise_all(.true.)
+        call sparse_interpret_error(error)
         !Grab the error message from the sparse solver
         call sparse_interpret_error(error, errdesc)
 
@@ -114,7 +115,11 @@ contains
                              'Data dumped to ', trim(errfname)
         end if
 
-        call write_log(trim(message), GM_ERROR, error_file, error_line)
-    end subroutine log_sparse_error
+        if (present(error_file) .and. present(error_line)) then
+            call write_log(trim(errdesc), GM_FATAL, error_file, error_line)
+        else
+            call write_log(trim(errdesc), GM_FATAL, __FILE__, __LINE__)
+        end if
+    end subroutine handle_sparse_error
 
 end module glimmer_sparse_util

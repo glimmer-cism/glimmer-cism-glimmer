@@ -54,7 +54,8 @@ module glimmer_map_CFproj
   !*FD parameters in an appropriate format.
 
   use glimmer_map_types
-
+  use glimmer_ncdf, only: nc_errorhandle !For error handling
+  
   implicit none
 
   private

@@ -133,6 +133,9 @@ contains
        call velo_calc_diffu(model%velowk,model%geomderv%stagthck,model%geomderv%dusrfdew, &
             model%geomderv%dusrfdns,model%velocity%diffu)
 
+       ! get new thicknesses
+       call thck_evolve(model,.true.,model%geometry%thck,model%geometry%thck)
+
        ! calculate horizontal velocity field
        !(these calls can appear either before or after thck_evolve because
        !thck_evolve doesn't mutate the staggered or derivative fields)
@@ -147,11 +150,6 @@ contains
 
        !Calculate higher-order velocities if the user asked for them
        if (model%options%whichhomvel == 1) then
-            !Populate higher order velocities with initial guesses according
-            !to SIA
-            model%velocity_hom%uvel = model%velocity%uvel
-            model%velocity_hom%vvel = model%velocity%vvel
-
             call stagvarb(model%geometry% thck, &
                          model%geomderv%stagthck,&
                          model%general%ewn, &
@@ -162,7 +160,7 @@ contains
 
              call df_field_2d_staggered(model%geometry%thck, model%numerics%dew, model%numerics%dns, &
                    model%geomderv%dthckdew, model%geomderv%dthckdns, .false., .false.)
-             write(*,*)"HELLO!!!!" 
+             
              call velo_hom_pattyn(model%general%ewn, model%general%nsn, model%general%upn, &
                           model%numerics%dew, model%numerics%dns, model%numerics%sigma, &
                           model%geometry%thck, model%geometry%usrf, &
@@ -174,14 +172,13 @@ contains
                           model%options%whichhomsliding,&
                           model%options%periodic_ew .eq. 1, .false.,&
                           model%velocity_hom%uvel, model%velocity_hom%vvel, &
+                          model%velocity_hom%is_velocity_valid, &
                           model%velocity_hom%uflx, model%velocity_hom%vflx, &
                           model%velocity_hom%efvs, model%velocity_hom%tau, &
                           model%velocity_hom%gdsx, model%velocity_hom%gdsy)
-        end if
- 
-       ! get new thicknesses
-       call thck_evolve(model,.true.,model%geometry%thck,model%geometry%thck)
 
+                          model%velocity_hom%is_velocity_valid = .true.
+        end if
    end if
   end subroutine thck_lin_evolve
 
@@ -239,28 +236,16 @@ contains
                model%general%  ewn, &
                model%general%  nsn)
 
-          !call geomders(model%numerics, &
-          !     model%geometry% usrf, &
-          !     model%geomderv% stagthck,&
-          !     model%geomderv% dusrfdew, &
-          !     model%geomderv% dusrfdns)
-
           call df_field_2d_staggered(model%geometry%usrf, &
                                      model%numerics%dew, model%numerics%dns, &
                                      model%geomderv%dusrfdew, & 
                                      model%geomderv%dusrfdns, &
                                      .false., .false.)
-          
-          !call geomders(model%numerics, &
-          !     model%geometry% thck, &
-          !     model%geomderv% stagthck,&
-          !     model%geomderv% dthckdew, &
-          !     model%geomderv% dthckdns)
 
           call df_field_2d_staggered(model%geometry%thck, &
                                      model%numerics%dew, model%numerics%dns, &
-                                     model%geomderv%dusrfdew, &
-                                     model%geomderv%dusrfdns, &
+                                     model%geomderv%dthckdew, &
+                                     model%geomderv%dthckdns, &
                                      .false., .false.)
           
           !Make sure that the derivatives are 0 where staggered thickness is 0
@@ -342,13 +327,12 @@ contains
     integer :: linit
     integer :: ew,ns
 
-    logical :: error_flag
-
-    error_flag = .false.
-
     ! Zero the arrays holding the sparse matrix
     call sparse_clear(model%pcgdwk%matrix)
 
+    ! Set the order of the matrix
+    model%pcgdwk%matrix%order = model%geometry%totpts
+    
     ! Boundary Conditions ---------------------------------------------------------------
     ! lower and upper BC
     do ew = 1,model%general%ewn
@@ -409,7 +393,6 @@ contains
 
     do ns = 2,model%general%nsn-1
        do ew = 2,model%general%ewn-1
-
           if (model%geometry%mask(ew,ns) /= 0) then
                 
              call findsums(ew-1,ew,ns-1,ns)
@@ -419,21 +402,13 @@ contains
        end do
     end do
 
-    ! Calculate the total number of points
-    model%pcgdwk%pcgsize(2) = model%pcgdwk%ct - 1 
-
     ! Solve the system using SLAP
     call sparse_easy_solve(model%pcgdwk%matrix, model%pcgdwk%rhsd, model%pcgdwk%answ, &
-                           err, linit, error_flag, __FILE__, __LINE__)
-    if (error_flag) then
-        call glide_finalise(model, .true.)
-        call write_log("The above error was fatal",GM_FATAL,__FILE__,__LINE__)
-    end if
-
+                           err, linit)
+    
     ! Rejig the solution onto a 2D array
     do ns = 1,model%general%nsn
        do ew = 1,model%general%ewn 
-
           if (model%geometry%mask(ew,ns) /= 0) then
              new_thck(ew,ns) = model%pcgdwk%answ(model%geometry%mask(ew,ns))
           end if
@@ -461,7 +436,7 @@ contains
       integer, intent(in) :: ewm,ew,ewp  ! ew index to left, central, right node
       integer, intent(in) :: nsm,ns,nsp  ! ns index to lower, central, upper node
 
-      ! fill sparse matrix
+      !fill matrix using the new API
       call sparse_insert_val(model%pcgdwk%matrix, model%geometry%mask(ew,ns), model%geometry%mask(ewm,ns), sumd(1)) ! point (ew-1,ns)
       call sparse_insert_val(model%pcgdwk%matrix, model%geometry%mask(ew,ns), model%geometry%mask(ewp,ns), sumd(2)) ! point (ew+1,ns)
       call sparse_insert_val(model%pcgdwk%matrix, model%geometry%mask(ew,ns), model%geometry%mask(ew,nsm), sumd(3)) ! point (ew,ns-1)
@@ -512,6 +487,7 @@ contains
   end subroutine thck_evolve
 
 !---------------------------------------------------------------------------------
+
   subroutine stagvarb(ipvr,opvr,ewn,nsn)
 
     use glimmer_global, only : dp ! ewn, nsn

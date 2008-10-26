@@ -51,6 +51,7 @@ module glimmer_anomcouple
   !*FD is done linearly, precipitation proportionally.
 
   use glimmer_global
+  use glimmer_ncdf, only: nc_errorhandle
 
   implicit none
 

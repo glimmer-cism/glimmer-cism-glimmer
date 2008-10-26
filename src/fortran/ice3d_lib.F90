@@ -637,83 +637,7 @@ end subroutine init_zeta
             m(1,:) = m(maxy-1,:)
         end if
 
-        !UNCOMMENT for periodic boundary conditions set so that they reflect
-        !"standard" treatment of the periodic conditions on the unstaggered grid
-    
-!               do i = 1, maxy
-!                       
-!                       !Using the identities: 
-!                       !x_2 = (x_1.5 + x_2.5)/2 
-!                       !x_{n-1} = (x_{n-.5} + x_{n-1.5})/2
-!                       !x'_1.5 = x'_{n-.5} = (x_2 + x_{n-1})/2
-!                       !                   = (x_1.5 + x_2.5 + x_{n-1.5} + x_{n-.5})/4
-!                       new_boundary = (m(i,1) + m(i,2) + m(i,maxx-1) + m(i,maxx))/4
-!                       
-!                       !Because the periodic boundary conditions on the nonstaggered
-!                       !grid influence the first and last two elements on the staggered
-!                       !grid, we need to adjust the second boundary condition
-!                       !Starting with the identity x_2.5 = (x_2 + x_3)/4
-!                       != (x_1.5 + 2x_2.5 + x_3.5)/4
-!                       !And x'_2.5 = (x'_1.5 + 2x'_2.5 + x_3.5)/4
-!                       !We can solve x'_2.5 = x_2.5 + (x'_1.5 - x_1.5)/4
-!                       m(i,2) = m(i,2) + (new_boundary - m(i,1))/4
-!                       m(i,maxx-1) = m(i,maxx-1) + (new_boundary - m(i,maxx))/4
-!                       
-!                       !Now, place the new boundary conditions in the first and last
-!                       !elements of this row
-!                       m(i,1)     = new_boundary
-!                       m(i, maxx) = new_boundary
-!                       
-!                        
-!               end do
-!               
-!               !Do the same as the above for the y dimension
-!               do i = 1, maxx
-!                       new_boundary = (m(1,i) + m(2,i) + m(maxy-1,i) + m(maxy,i))/4
-!                       
-!                       m(2,i) = m(2,i) + (new_boundary - m(1,i))/4
-!                       m(maxy-1, i) = m(maxy-1,i) + (new_boundary - m(maxy,i))/4
-!                       
-!                       m(1,i)    = new_boundary
-!                       m(maxy,i) = new_boundary
-!               end do
-
-    !m(:,1) = (m(:,1) + m(:,2) + m(:,maxx-2) + m(:,maxx-1))/4
-    !m(:,maxx-1) = m(:,1)
-
-    !m(1,:) = (m(1,:) + m(2,:) + m(maxy-2,:) + m(maxy-1,:))/4
-    !m(maxy-1,:) = m(1,:)
-    
-    
-!               
     end subroutine periodic_boundaries_stag
-
-
-!       subroutine constant_boundaries_stag(m, minx, maxx, miny, maxy)
-!               double precision, dimension(:,:) :: m
-!               double precision :: minx, maxx, miny, maxy
-!               
-!               !In order to apply a boundary condition to the constant boundaries,
-!               !we need to pretend that we are applying the boundary condition on
-!               !the unstaggered grid.  However, to avoid over-averaging the
-!               !boundary conditions, we will control for the current "hidden" value
-!               !of the boundary on the unstaggered grid.
-!               !If we take x'_1.5 = (x'_1 + x_2)/2 and x_1.5 = (x_1 + x_2)/2,
-!               !then x'_1.5 = x_1.5 + (x'_1 - x_1) / 2program HOM3D
-!               !What we need is an expression for x_1, which can be found as
-!               !x_1 = 2x_1.5 - x_2 (rearranging the identity for x_1.5 above)
-!               !Substituting this, we get that
-!               !x'_1.5 = x_1.5 + (x'_1 - 2x_1.5 + x2)/2
-!               !However, we also don't know x2!  Substituting an interpolated
-!               !value for x2, we get:
-!               !x'_1.5 = 1/4*x_1.5 + 1/2*x'_1 + 1/4*x_2.5
-!               m(1,:) = .5*minx + .25*m(1,:) + .25*m(2,:)
-!               m(size(m,1),:) = .5*maxx + .25*m(size(m,1),:) + .25*m(size(m,1)-1,:)
-!               
-!               m(:,1) = .5*miny + .25*m(:,1) + .25*m(:,2)
-!               m(size(m,1),:) = .5*maxy + .25*m(:,size(m,2)) + .25*m(:,size(m,2)-1)
-!       
-!       end subroutine constant_boundaries_stag
     
     subroutine periodic_boundaries_3d(m, apply_to_x, apply_to_y)
         double precision, dimension(:,:,:) :: m
@@ -739,20 +663,6 @@ end subroutine init_zeta
             call periodic_boundaries_stag(m(:,:,k),apply_to_x, apply_to_y)
         end do
     end subroutine periodic_boundaries_3d_stag
-
-!       subroutine constant_boundaries_3d_stag(m, minx,miny,maxx,maxy)
-!               double precision, dimension(:,:,:) :: m
-!               double precision :: minx,miny,maxx,maxy
-!               integer :: k
-!               
-!               
-!               do k = 1, size(m,3)
-!                       call constant_boundaries_stag(m(:,:,k),minx,miny,maxx,maxy)
-!               end do
-!       
-!       end subroutine
-
-!
 !
 !------------------------------------------------------
 !   Velocity estimation according to higher order model
@@ -802,12 +712,7 @@ end subroutine init_zeta
         
         double precision, dimension(:,:), allocatable ::ubas, vbas
 
-        !Holds the current iteration stage.
-        !In stage 1, only the velocity and basal stress are iterated; this is
-        !used to spin up an initial guess.
-        !In stage 2, all stresses are iterated (e.g. we do the full viscosity
-        !calculation
-        integer :: stage
+        logical :: cont
 
         !Get the sizes from the mu field.  Calling code must make sure that
         !these all agree.
@@ -827,14 +732,6 @@ end subroutine init_zeta
         lacc=0
         em = 0
 
-        !If we're doing the plastic bed iteration, it needs to be done in two
-        !stages
-        if (PLASTIC == 1) then
-            stage = 1
-        else
-            stage = 2
-        end if
-
 #if 1
         call write_xls_3d("arrh.txt",arrh)
         call write_xls("dzdx.txt",dzdx)
@@ -851,7 +748,6 @@ end subroutine init_zeta
         call write_xls("beta.txt",beta)
         call write_xls("dhbdx.txt",dhbdx)
         call write_xls("dhbdy.txt",dhbdy)
-        write(*,*)zeta
 #endif
 
 
@@ -874,7 +770,7 @@ end subroutine init_zeta
             !(TODO: This leads to exponential increase in the tolerance - can we
             !get by without it?  Is this too liberal of a relaxation?)
             if (l == m*10) then
-                error = error*1
+                error = error*1.5
                 write(*,*) "Error tolerance is now", error
                 m = m+1
             endif
@@ -885,11 +781,7 @@ end subroutine init_zeta
             if (PLASTIC == 0) then
                 tau = beta
             else
-                if (stage == 1) then
-                    tau = beta/100 
-                else
-                    call plastic_bed(tau, beta, uvel(:,:,nzeta), vvel(:,:,nzeta))
-                end if
+                call plastic_bed(tau, beta, uvel(:,:,nzeta), vvel(:,:,nzeta))
             end if
 
             !Compute viscosity
@@ -899,118 +791,22 @@ end subroutine init_zeta
             !velocities will get spit into ustar and vstar, while uvel and vvel
             !will still hold the old velocities.
             iter=sparuv(mu,dzdx,dzdy,ax,ay,bx,by,cxy,h,&
-                uvel,vvel,ustar,vstar,tau,dhbdx, dhbdy,MAXX*MAXY*NZETA,MAXY,&
+                uvel,vvel,ustar,vstar,tau,dhbdx,dhbdy,MAXX*MAXY*NZETA,MAXY,&
                 MAXX,NZETA,TOLER, delta_x, delta_y, zeta)
-          
-            norm1=0.
-            norm2=0.
-            norm3=0.
-            norm4=0.
-            norm5=0.
-            n=0
-        
-            !em is a vector of distances between successive elements of uvel and vvel
-            !This is the correction vector referred to in section 5.1.2
-            !As we compute em, we also compute various L2 (Euclidean) norms for use
-            !in later computations
-            do i = 1, MAXY
-                do j = 1, MAXX
-                    do k = 1, NZETA
-                        n = n + 1
-              
-                        em(DU2,n)=ustar(i,j,k)-uvel(i,j,k)
-                        em(DV2,n)=vstar(i,j,k)-vvel(i,j,k)
-              
-                        !\| c^{l-1}\|
-                        norm1 = norm1 + ((em(DU2,n)-em(DU1,n))**2)+((em(DV2,n)-em(DV1,n))**2)
-                        !\|c^l - c^{l-1}\|
-                        norm2 = norm2 + (em(DU1,n)**2)+(em(DV1,n)**2)
-                        !\|c^l\|
-                        norm3 = norm3 + (em(DU2,n)**2)+(em(DV2,n)**2)
-                        !\|c^l \cdot c^{l-1}\|
-                        norm4 = norm4 + em(DU1,n)*em(DU2,n)+em(DV1,n)*em(DV2,n)
-              
-                        norm5 = norm5 + (ustar(i,j,k)**2)+(vstar(i,j,k)**2)
-                end do
-            end do
-        end do
-   
-        !Compute the angle between successive correction vectors
-        if ((abs(norm2) < SMALL) .or. (abs(norm3) < SMALL)) then
-            teta=PI/2.
-        else
-            teta=acos(norm4/sqrt(norm2*norm3))
-        endif
-        
-        if ( (teta <= (5.*PI/6.) ) .and. (MANIFOLD == 1) ) then
-            !We've requested unstable manifold correction, and the angle is
-            !small (less than 5pi/6, a value identified by Hindmarsh and Payne
-            !to work well).   If this is the case, we compute and apply
-            !a correction vector.
             
-            !Compute the error between the last two *correction vectors* (not
-            !the last two iteration values!)  (See (51) in Pattyn's paper)
-            if (abs(norm2) > 0.) then !We're just avoiding a divide by 0 here
-                alfa=sqrt(norm1/norm2)
-            else
-                alfa=1.
-            endif
+            !Apply unstable manifold correction.  This function returns
+            !true if we need to keep iterating, false if we reached convergence
+            cont = unstable_manifold_correction(ustar, uvel, em(DU1,:), &
+                                                vstar, vvel, em(DV1,:), &
+                                                maxy, maxx, nzeta, error, &
+                                                tot, teta)
             
-            if (alfa < 1.e-6) then
-                lacc=2*maxiter !This will end the iteration below - it occurs if
-                               !correction vector didn't change much.
-            else
-                !Update the previous guess of the velocity with the correction
-                !vector.  This throws out the current iteration's computed
-                !velocity, and instead uses the computed correction vector.
-                n=0
-                do i=1,MAXY
-                    do j=1,MAXX
-                        do k=1,NZETA
-                            n=n+1
-                            uvel(i,j,k)=uvel(i,j,k)+em(DU2,n)/alfa
-                            em(DU1,n)=em(DU2,n)
-                            vvel(i,j,k)=vvel(i,j,k)+em(DV2,n)/alfa
-                            em(DV1,n)=em(DV2,n)
-                        end do
-                    end do
-                end do
-            endif
-            write(*,*) l,iter,tot,(teta*180./PI), "Unstable Manifold Correction Applied"
-  
-        else
-            n=0
-          
-            !Copy this iteration's new values to the old values
-            !for the next iteration - because the angle between correction
-            !vectors is large we do not want to apply a correction.
-            uvel=ustar
-            vvel=vstar
-            em(DU1,:) = em(DU2,:)
-            em(DV1,:) = em(DV2,:)
-            write(*,*) l,iter,tot,(teta*180./PI) 
-        endif
-        
-        tot=sqrt(norm3/norm5)
-                
-        if (tot.lt.error) lacc=2*maxiter
-       
-        if (lacc.gt.maxiter) then
-            if (stage == 1) then
-                !Return to the conditions that were present at the beginning of
-                !the first stage, but use the new velocity estimate
-                error = VEL2ERR
-                lacc = 0
-                !em=0
-                stage = 2
-                write(*,*)"STAGE 2 REACHED"
-                call write_xls("uvel_surf_stage1.txt",uvel(:,:,1))
-                call write_xls("vvel_surf_stage1.txt",vvel(:,:,1))
-            else
-                exit nonlinear_iteration
-            end if
-        end if
-      end do nonlinear_iteration
+            write(*,*) l, iter, tot, teta
+            
+            !Check whether we have reached convergance
+            if (.not. cont) exit nonlinear_iteration
+
+     end do nonlinear_iteration
 
       call write_xls_3d("uvel.txt",uvel)
       call write_xls_3d("vvel.txt",vvel)
@@ -1024,7 +820,163 @@ end subroutine init_zeta
       deallocate(vbas)
       return
       END subroutine
-      
+    
+
+!----------------------------------------------------------------------------------------
+! BOP
+!
+! !IROUTINE: unstable_manifold_correction
+!
+! !INTERFACE:
+    function unstable_manifold_correction(u_new, u_old, u_correct, &
+                                          v_new, v_old, v_correct, &
+                                          maxy, maxx, nzeta, toler, &
+                                          tot_out, theta_out)
+! !RETURN VALUE:
+        logical :: unstable_manifold_correction !whether another iteration step is needed
+ 
+! !PARAMETERS:
+        real(dp), dimension(:,:,:), intent(in) :: u_new  !Computed u component from this iteration
+        real(dp), dimension(:,:,:), intent(inout) :: u_old !Computed u component from last iteration
+        real(dp), dimension(:), intent(inout) :: u_correct !Old correction vector for u  
+        real(dp), dimension(:,:,:), intent(in) :: v_new !Computed v component from this iteration
+        real(dp), dimension(:,:,:), intent(inout) :: v_old !Computed v component from last iteration
+        real(dp), dimension(:), intent(inout) :: v_correct !Old correction vector for v
+        integer, intent(in) :: maxy, maxx, nzeta !Grid size
+        real(dp), intent(in) :: toler !Error tolerance for the iteration
+        real(dp), intent(out), optional :: tot_out !Optional output of error
+        real(dp), intent(out), optional :: theta_out !Optional output of angle
+! !DESCRIPTION:
+! Provides an encapsulated implementation of unstable manifold correction.  If
+! unstable manifold correction is not used, picard iteration is used instead.
+! This function returns whether to continue iterating, as well as updating the
+! old velocities with the new guesses to feed back into the next iteration.  It
+! also keeps the correction vectors updated.
+!
+! !REVISION HISTORY:
+! 10/20/08  Tim Bocek       Pulled this out of veloc2 and made into its own function
+!
+! EOP
+!----------------------------------------------------------------------------------------
+! $Id:
+! $Author: tbocek $
+!----------------------------------------------------------------------------------------
+        !Combinations of vector norms used in the UMC scheme
+        real(dp) :: norm1, norm2, norm3, norm4, norm5
+        !Angle between correction vectors
+        real(dp) :: theta
+        !Scaling factor for manifold correction
+        real(dp) :: alpha
+        !Correction vectors for the current time step
+        real(dp), dimension(maxx*maxy*nzeta) :: u_correct_new, v_correct_new
+        integer :: n !Linearization counter
+        integer :: i,j,k !Loop counters
+        real(dp) :: tot !Total error
+
+        !Assume we need to iterate again until proven otherwise
+        unstable_manifold_correction = .true.
+
+            norm1=0.
+            norm2=0.
+            norm3=0.
+            norm4=0.
+            norm5=0.
+            n=0
+        
+            !Compute norms
+            do i = 1, MAXY
+                do j = 1, MAXX
+                    do k = 1, NZETA
+                        n = n + 1
+              
+                        u_correct_new(n)=u_new(i,j,k)-u_old(i,j,k)
+                        v_correct_new(n)=v_new(i,j,k)-v_old(i,j,k)
+              
+                        !\| c^{l-1}\|
+                        norm1 = norm1 + (u_correct_new(n)-u_correct(n))**2 &
+                                      + (v_correct_new(n)-v_correct(n))**2
+
+                        !\|c^l - c^{l-1}\|
+                        norm2 = norm2 + u_correct(n)**2 + v_correct(n)**2
+                        
+                        !\|c^l\|
+                        norm3 = norm3 + u_correct_new(n)**2 + v_correct_new(n)**2
+
+                        !\|c^l \cdot c^{l-1}\|
+                        norm4 = norm4 + u_correct(n)*u_correct_new(n) &
+                                      + v_correct(n)*v_correct_new(n)
+              
+                        norm5 = norm5 + (u_new(i,j,k)**2)+(v_new(i,j,k)**2)
+                end do
+            end do
+        end do
+   
+        !Compute the angle between successive correction vectors
+        if ((abs(norm2) < SMALL) .or. (abs(norm3) < SMALL)) then
+            theta=PI/2.
+        else
+            theta=acos(norm4/sqrt(norm2*norm3))
+        endif
+        
+        if ( (theta <= (5.*PI/6.) ) ) then
+            !We've requested unstable manifold correction, and the angle is
+            !small (less than 5pi/6, a value identified by Hindmarsh and Payne
+            !to work well).   If this is the case, we compute and apply
+            !a correction vector.
+            
+            !Compute the error between the last two *correction vectors* (not
+            !the last two iteration values!)  (See (51) in Pattyn's paper)
+            if (abs(norm2) > 0.) then !We're just avoiding a divide by 0 here
+                alpha=sqrt(norm1/norm2)
+            else
+                alpha=1.
+            endif
+            
+            if (alpha < 1.e-6) then
+                !If the correction vector didn't change much, we're done
+                unstable_manifold_correction = .false.
+            else
+                !Update the previous guess of the velocity with the correction
+                !vector.  This throws out the current iteration's computed
+                !velocity, and instead uses the computed correction vector.
+                n=0
+                do i=1,MAXY
+                    do j=1,MAXX
+                        do k=1,NZETA
+                            n=n+1
+                            u_old(i,j,k)=u_old(i,j,k)+u_correct_new(n)/alpha
+                            u_correct(n)=u_correct_new(n)
+                            v_old(i,j,k)=v_old(i,j,k)+v_correct_new(n)/alpha
+                            v_correct(n)=v_correct_new(n)
+                        end do
+                    end do
+                end do
+            endif
+        else
+            !Copy this iteration's new values to the old values
+            !for the next iteration - because the angle between correction
+            !vectors is large we do not want to apply a correction.
+            u_old=u_new
+            v_old=v_new
+            u_correct = u_correct_new
+            v_correct = v_correct_new
+            
+        endif
+        
+        tot=sqrt(norm3/norm5)
+
+        if (present(tot_out)) then
+            tot_out = tot
+        end if
+        
+        if (present(theta_out)) then
+            theta_out = theta * 180 / pi
+        end if
+
+        if (tot < toler) unstable_manifold_correction = .false.
+
+    end function unstable_manifold_correction
+
     !Reduces a 3d higher order velocity estimate to a 2d velocity field.
     subroutine vel_2d_from_3d(uvel, vvel, u, v, zeta)
         real(dp), dimension(:,:,:), intent(in) :: uvel
@@ -1256,7 +1208,6 @@ end subroutine init_zeta
                                   h, gridx, gridy, zeta, uvel, vvel, dhbdx, dhbdy, beta, &
                                   maxx, maxy, Nzeta, coef, rhs)
                     endif
-                    
                     d(csp(I_J_K,i,j,k,MAXX,NZETA))=rhs
                     !Preliminary benchmarks indicate the we actually reach
                     !convergance faster if we use a 0 initial guess rather than
@@ -1268,7 +1219,6 @@ end subroutine init_zeta
                         
                     do m=1,21
                       call sparse_insert_val(matrix,csp(11,i,j,k,MAXX,NZETA),csp(m,i,j,k,MAXX,NZETA),coef(m)) 
-                      !write(*,*)i,j,k,m,MAXX,NZETA,csp(m,i,j,k,MAXX,NZETA)
                     end do
 
                 end do
@@ -1278,11 +1228,7 @@ end subroutine init_zeta
         call sparse_solver_preprocess(matrix, options, workspace)
         
         ierr = sparse_solve(matrix, d, x, options, workspace,  err, iter, verbose=.false.)
-        if (ierr /= 0) then
-            call log_sparse_error(matrix, ierr, __FILE__, __LINE__)        
-            call write_log("The above error is fatal", GM_FATAL, __FILE__, __LINE__)
-        end if
-
+        call handle_sparse_error(matrix, ierr, __FILE__, __LINE__)        
         l=0
         do i=1,MAXY
             do j=1,MAXX
@@ -1336,10 +1282,7 @@ end subroutine init_zeta
 #endif
 
         ierr = sparse_solve(matrix, d, x, options, workspace,  err, iter, verbose=.false.)
-        if (ierr /= 0) then
-            call log_sparse_error(matrix, ierr, __FILE__, __LINE__)        
-            call write_log("The above error is fatal", GM_FATAL, __FILE__, __LINE__)
-        end if
+        call handle_sparse_error(matrix, ierr, __FILE__, __LINE__)        
 
         l=0
         do i=1,MAXY

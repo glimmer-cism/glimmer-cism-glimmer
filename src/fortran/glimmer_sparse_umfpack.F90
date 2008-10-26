@@ -80,7 +80,7 @@ contains
         !*FD matrix.  Workspace must have already been allocated. 
         !*FD This function should be safe to call more than once.
         !*FD 
-        !*FD It is an error to call this function on a workspace with already
+        !*FD It is an error to call this function on a workspace without already
         !*FD allocated memory.
         !*FD
         !*FD In general sparse_allocate_workspace should perform any actions
@@ -173,13 +173,16 @@ contains
         integer :: sys
 
         sys=0
-
+        
         
         call umf4solr(sys, matrix%col, matrix%row, matrix%val, solution, rhs, &
                      workspace%numeric, workspace%control, workspace%info)
         
         sparse_solve = workspace%info(1) 
     
+        !umfpack is a direct method, so the iters and err returns mean nothing
+        err = 0
+        niters = 0
     end function sparse_solve
 
     subroutine sparse_destroy_workspace(matrix, options, workspace)
@@ -245,4 +248,4 @@ contains
             write(*,*) tmp_error_string
         endif
     end subroutine sparse_interpret_error
-end module
+end module glimmer_sparse_solver
