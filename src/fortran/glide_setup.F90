@@ -458,7 +458,9 @@ contains
 
     ! We set this flag to one to indicate we've got a sigfile name.
     ! A warning/error is generated if sigma levels are specified in some other way
-    if (trim(model%funits%sigfile)/='') model%options%which_sigma=1
+    if (trim(model%funits%sigfile)/='') then 
+        model%options%which_sigma=1
+    end if
 
   end subroutine handle_grid
 
@@ -467,9 +469,7 @@ contains
     use glimmer_log
     implicit none
     type(glide_global_type)  :: model
-    character(len=100) :: message
-
-
+    character(len=512) :: message
     call write_log('Grid specification')
     call write_log('------------------')
     write(message,*) 'ewn             : ',model%general%ewn
@@ -482,8 +482,7 @@ contains
     call write_log(trim(message))
     write(message,*) 'NS grid spacing : ',model%numerics%dns
     call write_log(trim(message))
-    write(message,*) 'sigma file      : ',trim(model%funits%sigfile)
-    call write_log(trim(message))
+    call write_log(trim('sigma file      : '//model%funits%sigfile))
     call write_log('')
   end subroutine print_grid
 
@@ -669,7 +668,7 @@ contains
     call GetValue(section,'marine_limit',model%numerics%mlimit)
     call GetValue(section,'calving_fraction',model%numerics%calving_fraction)
     call GetValue(section,'geothermal',model%paramets%geot)
-    call GetValue(section,'flow_factor',model%paramets%fiddle)
+    call GetValue(section,'flow_factor',model%paramets%flow_factor)
     call GetValue(section,'hydro_time',model%paramets%hydtim)
     call GetValue(section,'basal_tract',temp,5)
     if (associated(temp)) then
@@ -700,7 +699,7 @@ contains
     end if
     write(message,*) 'geothermal heat flux  : ',model%paramets%geot
     call write_log(message)
-    write(message,*) 'flow enhancement      : ',model%paramets%fiddle
+    write(message,*) 'flow enhancement      : ',model%paramets%flow_factor
     call write_log(message)
     write(message,*) 'basal hydro time const: ',model%paramets%hydtim
     call write_log(message)

@@ -133,7 +133,7 @@ contains
     allocate(newrow(chunksize+oldsize))
     allocate(newcol(chunksize+oldsize))
     allocate(newval(chunksize+oldsize))
-
+    write(*,*)size(matrix%col), size(matrix%row), size(matrix%val), size(newcol), size(newrow), size(newval)
     newcol(1:oldsize) = matrix%col(:)
     newrow(1:oldsize) = matrix%row(:)
     newval(1:oldsize) = matrix%val(:)

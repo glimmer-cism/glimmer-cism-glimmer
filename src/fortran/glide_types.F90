@@ -466,7 +466,7 @@ module glide_types
     real(dp),dimension(:,:),pointer :: fslip    => null()
     real(dp),dimension(:,:),pointer :: dintflwa => null()
     real(dp),dimension(:),  pointer :: dups     => null()
-    real(dp),dimension(4) :: fact
+    
     real(dp),dimension(4) :: c    = 0.0
     real(dp) :: watwd  = 3.0d0
     real(dp) :: watct  = 10.0d0
@@ -566,7 +566,7 @@ module glide_types
     real(dp) :: btrac_slope = 0.0d0 ! Pa^{-1} (gets scaled during init)
     real(dp) :: btrac_max = 0.d0  !  m yr^{-1} Pa^{-1} (gets scaled during init)
     real(dp) :: geot   = -5.0d-2  ! W m^{-2}
-    real(dp) :: fiddle = 3.0d0    ! -
+    real(dp) :: flow_factor = 3   ! "fiddle" parameter for the Arrhenius relationship
     real(dp) :: hydtim = 1000.0d0 ! yr^{-1} converted to s^{-1} and scaled, 
                                   ! 0 if no drainage = 0.0d0 * tim0 / scyr
   end type glide_paramets
@@ -798,7 +798,7 @@ contains
     ! allocate memory for sparse matrix
     allocate (model%pcgdwk%rhsd(ewn*nsn))
     allocate (model%pcgdwk%answ(ewn*nsn))
-    call new_sparse_matrix(ewn*nsn, ewn*nsn, model%pcgdwk%matrix)
+    call new_sparse_matrix(ewn*nsn, 5*ewn*nsn, model%pcgdwk%matrix)
 
     ! allocate isostasy grids
     call isos_allocate(model%isos,ewn,nsn)

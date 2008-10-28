@@ -133,9 +133,6 @@ contains
        call velo_calc_diffu(model%velowk,model%geomderv%stagthck,model%geomderv%dusrfdew, &
             model%geomderv%dusrfdns,model%velocity%diffu)
 
-       ! get new thicknesses
-       call thck_evolve(model,.true.,model%geometry%thck,model%geometry%thck)
-
        ! calculate horizontal velocity field
        !(these calls can appear either before or after thck_evolve because
        !thck_evolve doesn't mutate the staggered or derivative fields)
@@ -168,7 +165,7 @@ contains
                           model%geomderv%dusrfdew, model%geomderv%dusrfdns, &
                           model%geomderv%dusrfdew-model%geomderv%dthckdew, & 
                           model%geomderv%dusrfdns-model%geomderv%dthckdns, & 
-                          model%geomderv%stagthck, model%temper%flwa, model%velocity%btrc, &
+                          model%geomderv%stagthck, model%temper%flwa, 3.0D0, model%velocity%btrc, &
                           model%options%whichhomsliding,&
                           model%options%periodic_ew .eq. 1, .false.,&
                           model%velocity_hom%uvel, model%velocity_hom%vvel, &
@@ -179,7 +176,10 @@ contains
 
                           model%velocity_hom%is_velocity_valid = .true.
         end if
-   end if
+ 
+       ! get new thicknesses
+       call thck_evolve(model,.true.,model%geometry%thck,model%geometry%thck)
+    end if
   end subroutine thck_lin_evolve
 
 !---------------------------------------------------------------------------------
@@ -485,6 +485,7 @@ contains
       sumd(5) = - (sumd(1) + sumd(2) + sumd(3) + sumd(4))
     end subroutine findsums
   end subroutine thck_evolve
+
 
 !---------------------------------------------------------------------------------
 

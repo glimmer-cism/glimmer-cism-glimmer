@@ -12,7 +12,6 @@ module glide_velo_higher
     implicit none
     
     !TODO: Parameterize the following globals
-    real(dp), parameter :: FLOWN    = 3. !TODO: This is passed in, but as an array
     real(dp), parameter :: VEL2ERR  = 4e-3
     real(dp), parameter :: TOLER    = 1e-6
     integer,  parameter :: CONVT    = 4
@@ -34,7 +33,7 @@ contains
     
     subroutine velo_hom_pattyn(ewn, nsn, upn, dew, dns, sigma, &
                                thck, usrf, dthckdew, dthckdns, dusrfdew, dusrfdns, &
-                               dlsrfdew, dlsrfdns, stagthck, flwa, btrc, which_sliding_law, &
+                               dlsrfdew, dlsrfdns, stagthck, flwa, flwn, btrc, which_sliding_law, &
                                periodic_ew, periodic_ns, &
                                uvel, vvel, valid_initial_guess, uflx, vflx, efvs, tau, gdsx, gdsy)
                             
@@ -53,8 +52,9 @@ contains
 	real(dp), dimension(ewn-1,nsn-1) :: dlsrfdew !*FD X bed gradient
 	real(dp), dimension(ewn-1,nsn-1) :: dlsrfdns !*FD Y bed gradient
 	real(dp), dimension(ewn-1,nsn-1) :: stagthck !*FD Staggered thickness
-	real(dp), dimension(:,:,:) :: flwa !*FD Glen's A (rate factor)
+	real(dp), dimension(:,:,:) :: flwa !*FD Glen's A (rate factor) - Used for thermomechanical coupling
         real(dp), dimension(ewn-1,nsn-1)   :: btrc !*FD Basal Traction, either betasquared or tau0
+        real(dp) :: flwn !*FD Exponent in Glenn power law
         integer :: which_sliding_law
         logical :: periodic_ew !*Whether to use periodic boundary conditions
         logical :: periodic_ns
@@ -73,7 +73,7 @@ contains
         real(dp), dimension(ewn-1,nsn-1) :: d2zdx2, d2zdy2, d2hdx2, d2hdy2
 
         !Arrays for rescaled coordinate parameters
-        real(dp), dimension(nsn-1, ewn-1, upn) :: ax, ay, bx, by, cxy,arrh
+        real(dp), dimension(nsn-1, ewn-1, upn) :: ax, ay, bx, by, cxy
         !Arrays for staggered versions of quantities that were passed unstaggered
         real(dp), dimension(ewn-1, nsn-1) :: stagusrf, staglsrf
         
@@ -87,12 +87,15 @@ contains
         dusrfdns_t, dthckdew_t, dthckdns_t, btrc_t, staglsrf_t, stagusrf_t, stagthck_t, &
         d2zdx2_t, d2zdy2_t, d2hdx2_t, d2hdy2_t
        
-        real(dp), dimension(nsn-1, ewn-1, upn) :: uvel_t, vvel_t, mu_t
+        real(dp), dimension(nsn, ewn, upn) :: flwa_t
+        real(dp), dimension(nsn-1, ewn-1, upn) :: uvel_t, vvel_t, mu_t, flwa_t_stag
 
         write(*,*)"BEGIN velo_hom_pattyn"
         write(*,*)"Sliding law = ", which_sliding_law
         ijktot = (nsn-1)*(ewn-1)*upn
-        arrh = SHTUNE
+
+        write(*,*) shape(flwa)
+        write(*,*) shape(flwa_t)
 
         !Put the surface, bed, and thickness onto staggered grids
         !We do this because Ice3d is by nature unstaggered.
@@ -125,8 +128,15 @@ contains
         d2zdy2_t = transpose(d2zdy2)
         d2hdx2_t = transpose(d2hdx2)
         d2hdy2_t = transpose(d2hdy2)
-        call glimToIce3d_3d(uvel,uvel_t,ewn-1,nsn-1,upn-1)
-        call glimToIce3d_3d(vvel,vvel_t,ewn-1,nsn-1,upn-1)
+
+        call write_xls_3d('uvel_notranspose.txt',uvel)
+        call glimToIce3d_3d(uvel,uvel_t,ewn-1,nsn-1,upn)
+        call glimToIce3d_3d(vvel,vvel_t,ewn-1,nsn-1,upn)
+
+        !The flow law field needs to be transposed AND staggered, which is a lot
+        !of fun!!!
+        call glimToIce3d_3d(flwa,flwa_t,ewn,nsn,upn)
+        call staggered_field_3d(flwa_t, flwa_t_stag)
        
         !Compute rescaled coordinate parameters (needed because Pattyn uses an
         !irregular Z grid and scales so that 0 is the surface, 1 is the bed)
@@ -138,18 +148,21 @@ contains
         !have a good initial guess
         if (.not. valid_initial_guess) then
             write(*,*)"SIA spinup"
-            call veloc1(dusrfdew_t, dusrfdns_t, stagthck_t, arrh, sigma, uvel_t, vvel_t, u, v, nsn-1, ewn-1, upn, &
-                        FLOWN, periodic_ew, periodic_ns)
+            call veloc1(dusrfdew_t, dusrfdns_t, stagthck_t, flwa_t_stag, sigma, uvel_t, vvel_t, u, v, nsn-1, ewn-1, upn, &
+                        FLWN, periodic_ew, periodic_ns)
             !If we are performing the plastic bed iteration, the SIA is not
             !enough and we need to spin up a better estimate by shoehorning the
             !tau0 values into a linear bed estimate
             if (which_sliding_law == 1) then
                 write(*,*)"Linear bed spinup"
-                call veloc2(mu_t, uvel_t, vvel_t, arrh, dusrfdew_t, dusrfdns_t, stagthck_t, ax, ay, &
-                        sigma, bx, by, cxy, btrc_t/100, dlsrfdew_t, dlsrfdns_t, FLOWN, ZIP, VEL2ERR, MANIFOLD,&
+                call veloc2(mu_t, uvel_t, vvel_t, flwa_t_stag, dusrfdew_t, dusrfdns_t, stagthck_t, ax, ay, &
+                        sigma, bx, by, cxy, btrc_t/100, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, MANIFOLD,&
                         TOLER, periodic_ew,periodic_ns, 0, dew, dns)
             end if
+            HACKY_DEBUG_CODE = 0
             write(*,*)"Spinup complete"
+        else
+            HACKY_DEBUG_CODE = 1
         end if
         !Higher order velocity estimation
         !I am assuming that efvs (effective viscosity) is the same as mu
@@ -157,17 +170,17 @@ contains
         !Because of the transposition, ewn=maxy and nsn=maxx.  However, veloc2
         !passes maxy in *first*, so these really get passed in the same order
         !that they normally would.
-        call veloc2(mu_t, uvel_t, vvel_t, arrh, dusrfdew_t, dusrfdns_t, stagthck_t, ax, ay, &
-                    sigma, bx, by, cxy, btrc_t, dlsrfdew_t, dlsrfdns_t, FLOWN, ZIP, VEL2ERR, MANIFOLD,&
+        call veloc2(mu_t, uvel_t, vvel_t, flwa_t, dusrfdew_t, dusrfdns_t, stagthck_t, ax, ay, &
+                    sigma, bx, by, cxy, btrc_t, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, MANIFOLD,&
                     TOLER, periodic_ew,periodic_ns, which_sliding_law, dew, dns)
         call write_xls_3d("uvel_result.txt",uvel_t)
         call write_xls_3d("vvel_result.txt",vvel_t)
         !Transpose from the ice3d coordinate system (y,x,z) to the glimmer
         !coordinate system (z,x,y).  We need to do this for all the 3D outputs
-        !that Glimmer expects.
-        call ice3dToGlim_3d(uvel_t, uvel, ewn-1, nsn-1, upn-1)
-        call ice3dToGlim_3d(vvel_t, vvel, ewn-1, nsn-1, upn-1)
-        call ice3dToGlim_3d(mu_t, efvs, ewn-1, nsn-1, upn-1)
+        !that Glimmer expects
+        call ice3dToGlim_3d(uvel_t, uvel, ewn-1, nsn-1, upn)
+        call ice3dToGlim_3d(vvel_t, vvel, ewn-1, nsn-1, upn)
+        call ice3dToGlim_3d(mu_t, efvs, ewn-1, nsn-1, upn)
 
         !TODO: Stress field computation and output
 

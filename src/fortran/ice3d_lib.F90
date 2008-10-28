@@ -22,7 +22,12 @@ module ice3d_lib
     double precision :: small, zip, notdef
     PARAMETER(SMALL=1.D-10,ZIP=1.D-30)
     PARAMETER(NOTDEF=-999999999.)
+
+    double precision, parameter :: plastic_bed_regularization = 1e-2
+
     integer,parameter :: dslucs_dbg_unit = 6
+
+    integer :: HACKY_DEBUG_CODE
 
 !------------------------------------------------------
 !   lookup coordinates in sparse matrix
@@ -760,7 +765,12 @@ end subroutine init_zeta
         call periodic_boundaries_3d_stag(vvel,periodic_x,periodic_y)
             !Compute basal traction
 
-      
+        !A zero in the flow law can be problematic, so where that happens we set
+        !it to the "standard" small flow law coefficient
+        where (arrh == 0)
+            arrh = 1d-17
+        end where
+
         nonlinear_iteration: do l=1,maxiter !Loop until we have reached the number of iterations allowed
             lacc=lacc+1
             
@@ -786,6 +796,8 @@ end subroutine init_zeta
 
             !Compute viscosity
             call muterm(mu,uvel,vvel,arrh,h,ax,ay,delta_x,delta_y,zeta,FLOWN,ZIP)
+            call write_xls_3d("mu.txt",mu)
+
 
             !Sparse matrix routine for determining velocities.  The new
             !velocities will get spit into ustar and vstar, while uvel and vvel
@@ -1041,7 +1053,7 @@ end subroutine init_zeta
         !TODO: Vectorize
         do i = 1,maxy
             do j = 1,maxx
-                tau(i,j) = tau0(i,j) / (sqrt(ubas(i,j)**2 + vbas(i,j)**2) + 1e-10)
+                tau(i,j) = tau0(i,j) / (sqrt(ubas(i,j)**2 + vbas(i,j)**2 + plastic_bed_regularization ** 2))
             end do
         end do
     end subroutine plastic_bed

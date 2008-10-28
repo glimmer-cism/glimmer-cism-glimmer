@@ -103,11 +103,7 @@ contains
 
     model%velowk%depthw = (/ ((model%numerics%sigma(up+1)+model%numerics%sigma(up)) / 2.0d0, up=1,upn-1), 0.0d0 /)
 
-    model%velowk%fact = (/ model%paramets%fiddle * arrmlh / vis0, &   ! Value of a when T* is above -263K
-         model%paramets%fiddle * arrmll / vis0, &                     ! Value of a when T* is below -263K
-         -actenh / gascon,        &                                   ! Value of -Q/R when T* is above -263K
-         -actenl / gascon/)                                           ! Value of -Q/R when T* is below -263K
-    
+   
     model%velowk%watwd  = model%paramets%bpar(1) / model%paramets%bpar(2)
     model%velowk%watct  = model%paramets%bpar(2) 
     model%velowk%trcmin = model%paramets%bpar(3) / scyr
@@ -732,110 +728,6 @@ contains
 
 !------------------------------------------------------------------------------------------
 
-  subroutine calcflwa(numerics,velowk,fiddle,flwa,temp,thck,flag)
-
-    !*FD Calculates Glenn's $A$ over the three-dimensional domain,
-    !*FD using one of three possible methods.
-    !*FD \textbf{I'm unsure how this ties in with the documentation, since}
-    !*FD \texttt{fiddle}\ \textbf{is set to 3.0. This needs checking} 
-
-    use glimmer_physcon, only : pmlt
-
-    implicit none
-
-    !------------------------------------------------------------------------------------
-    ! Subroutine arguments
-    !------------------------------------------------------------------------------------
-
-    type(glide_numerics),     intent(in)    :: numerics  !*FD Derived type containing
-                                                           !*FD model numerics parameters
-    type(glide_velowk),       intent(inout) :: velowk    !*FD Derived type containing
-                                                           !*FD work arrays for this module
-    real(dp),                   intent(in)    :: fiddle    !*FD Tuning parameter for the
-                                                           !*FD Paterson-Budd relationship
-    real(dp),dimension(:,:,:),  intent(out)   :: flwa      !*FD The calculated values of $A$
-    real(dp),dimension(:,0:,0:),intent(in)    :: temp      !*FD The 3D temperature field
-    real(dp),dimension(:,:),    intent(in)    :: thck      !*FD The ice thickness
-    integer,                    intent(in)    :: flag      !*FD Flag to select the method
-                                                           !*FD of calculation:
-    !*FD \begin{description}
-    !*FD \item[0] {\em Paterson and Budd} relationship.
-    !*FD \item[1] {\em Paterson and Budd} relationship, with temperature set to
-    !*FD -5$^{\circ}$C.
-    !*FD \item[2] Set constant, {\em but not sure how this works at the moment\ldots}
-    !*FD \end{description}
-
-    !------------------------------------------------------------------------------------
-    ! Internal variables
-    !------------------------------------------------------------------------------------
-
-    real(dp), parameter :: fact = grav * rhoi * pmlt * thk0
-    real(dp), parameter :: contemp = -5.0d0  
-    real(dp), dimension(size(numerics%sigma)) :: tempcor
-
-    integer :: ew,ns,up,ewn,nsn,upn
-
-    !------------------------------------------------------------------------------------
-    
-    upn=size(flwa,1) ; ewn=size(flwa,2) ; nsn=size(flwa,3)
-
-    !------------------------------------------------------------------------------------
-
-    select case(flag)
-    case(0)
-
-      ! This is the Paterson and Budd relationship
-
-      do ns = 1,nsn
-        do ew = 1,ewn
-          if (thck(ew,ns) > numerics%thklim) then
-            
-            ! Calculate the corrected temperature
-
-            tempcor = min(0.0d0, temp(:,ew,ns) + thck(ew,ns) * fact * numerics%sigma)
-            tempcor = max(-50.0d0, tempcor)
-
-            ! Calculate Glenn's A
-
-            call patebudd(tempcor,flwa(:,ew,ns),velowk%fact) 
-          else
-            flwa(:,ew,ns) = fiddle
-          end if
-        end do
-      end do
-
-    case(1)
-
-      ! This is the Paterson and Budd relationship, but with the temperature held constant
-      ! at -5 deg C
-
-      do ns = 1,nsn
-        do ew = 1,ewn
-          if (thck(ew,ns) > numerics%thklim) then
-
-            ! Calculate Glenn's A with a fixed temperature.
-
-            call patebudd((/(contemp, up=1,upn)/),flwa(:,ew,ns),velowk%fact) 
-          else
-            flwa(:,ew,ns) = fiddle
-          end if
-        end do
-      end do
-
-    case default 
-
-      ! Set A equal to the value of fiddle. According to the documentation, this
-      ! option means A=10^-16 yr^-1 Pa^-n, but I'm not sure how this squares with
-      ! the value of fiddle, which is currently set to three.
-
-      flwa = fiddle
-  
-    end select
-
-  end subroutine calcflwa 
-
-!------------------------------------------------------------------------------------------
-
   subroutine chckwvel(numerics,geomderv,uvel,vvel,wvel,thck,acab)
 
     !*FD Constrain the vertical velocity field to obey a kinematic upper boundary 
@@ -940,58 +832,6 @@ contains
     vertintg = 0.5d0*vertintg
 
   end function vertintg
-
-
-!------------------------------------------------------------------------------------------
-
-  subroutine patebudd(tempcor,calcga,fact)
-
-    !*FD Calculates the value of Glenn's $A$ for the temperature values in a one-dimensional
-    !*FD array. The input array is usually a vertical temperature profile. The equation used
-    !*FD is from \emph{Paterson and Budd} [1982]:
-    !*FD \[
-    !*FD A(T^{*})=a \exp \left(\frac{-Q}{RT^{*}}\right)
-    !*FD \]
-    !*FD This is equation 9 in {\em Payne and Dongelmans}. $a$ is a constant of proportionality,
-    !*FD $Q$ is the activation energy for for ice creep, and $R$ is the universal gas constant.
-    !*FD The pressure-corrected temperature, $T^{*}$ is given by:
-    !*FD \[
-    !*FD T^{*}=T-T_{\mathrm{pmp}}+T_0
-    !*FD \] 
-    !*FD \[
-    !*FD T_{\mathrm{pmp}}=T_0-\sigma \rho g H \Phi
-    !*FD \]
-    !*FD $T$ is the ice temperature, $T_{\mathrm{pmp}}$ is the pressure melting point 
-    !*FD temperature, $T_0$ is the triple point of water, $\rho$ is the ice density, and 
-    !*FD $\Phi$ is the (constant) rate of change of melting point temperature with pressure.
-
-    use glimmer_physcon, only : trpt
-
-    implicit none
-
-    !------------------------------------------------------------------------------------
-    ! Subroutine arguments
-    !------------------------------------------------------------------------------------
-
-    real(dp),dimension(:), intent(in)    :: tempcor  !*FD Input temperature profile. This is 
-                                                     !*FD {\em not} $T^{*}$, as it has $T_0$
-                                                     !*FD added to it later on; rather it is
-                                                     !*FD $T-T_{\mathrm{pmp}}$.
-    real(dp),dimension(:), intent(out)   :: calcga   !*FD The output values of Glenn's $A$.
-    real(dp),dimension(4), intent(in)    :: fact     !*FD Constants for the calculation. These
-                                                     !*FD are set when the velo module is initialised
-
-    !------------------------------------------------------------------------------------
-
-    ! Actual calculation is done here - constants depend on temperature -----------------
-
-    where (tempcor >= -10.0d0)         
-      calcga = fact(1) * exp(fact(3) / (tempcor + trpt))
-    elsewhere
-      calcga = fact(2) * exp(fact(4) / (tempcor + trpt))
-    end where
-
-  end subroutine patebudd
 
 !------------------------------------------------------------------------------------------
 

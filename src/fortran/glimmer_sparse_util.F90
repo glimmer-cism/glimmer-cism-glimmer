@@ -100,8 +100,9 @@ contains
 
         !Close unit and finish off
         close(lunit)
+        
         call glide_finalise_all(.true.)
-        call sparse_interpret_error(error)
+
         !Grab the error message from the sparse solver
         call sparse_interpret_error(error, errdesc)
 
