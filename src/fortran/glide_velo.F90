@@ -127,7 +127,6 @@ contains
     !*FD this routine calculates the part of the vertically averaged velocity 
     !*FD field which solely depends on the temperature
 
-    use glimmer_utils, only : hsum4
     implicit none
 
     !------------------------------------------------------------------------------------
@@ -149,7 +148,7 @@ contains
        do ew = 1,ewn-1
           if (stagthck(ew,ns) /= 0.0d0) then
              
-             hrzflwa = hsum4(flwa(:,ew:ew+1,ns:ns+1))  
+             hrzflwa = flwa(:,ew,ns) + flwa(:,ew,ns+1) + flwa(:,ew+1,ns) + flwa(:,ew+1,ns+1)
              intflwa(upn) = 0.0d0
 
              do up = upn-1, 1, -1
@@ -197,7 +196,6 @@ contains
   subroutine velo_calc_velo(velowk,stagthck,dusrfdew,dusrfdns,flwa,diffu,ubas,vbas,uvel,vvel,uflx,vflx)
 
     !*FD calculate 3D horizontal velocity field and 2D flux field from diffusivity
-    use glimmer_utils, only : hsum4
     implicit none
 
     !------------------------------------------------------------------------------------
@@ -235,7 +233,7 @@ contains
              uvel(upn,ew,ns) = ubas(ew,ns)
              vvel(upn,ew,ns) = vbas(ew,ns)
 
-             hrzflwa = hsum4(flwa(:,ew:ew+1,ns:ns+1))  
+             hrzflwa = flwa(:,ew,ns) + flwa(:,ew,ns+1) + flwa(:,ew+1,ns) + flwa(:,ew+1,ns+1)
 
              factor = velowk%dintflwa(ew,ns)*stagthck(ew,ns)
              if (factor /= 0.0d0) then
@@ -362,8 +360,6 @@ contains
     !*FD Performs the velocity calculation. This subroutine is called with
     !*FD different values of \texttt{flag}, depending on exactly what we want to calculate.
 
-    use glimmer_utils, only : hsum4
-
     implicit none
 
     !------------------------------------------------------------------------------------
@@ -417,7 +413,7 @@ contains
 
             ! Get column profile of Glenn's A
 
-            hrzflwa = hsum4(flwa(:,ew:ew+1,ns:ns+1))
+            hrzflwa = flwa(:,ew,ns) + flwa(:,ew,ns+1) + flwa(:,ew+1,ns) + flwa(:,ew+1,ns+1)
 
             ! Calculate coefficient for integration
 
@@ -465,7 +461,7 @@ contains
         do ew = 1,ewn
           if (stagthck(ew,ns) /= 0.0d0) then
 
-            hrzflwa = hsum4(flwa(:,ew:ew+1,ns:ns+1))  
+            hrzflwa = flwa(:,ew,ns) + flwa(:,ew,ns+1) + flwa(:,ew+1,ns) + flwa(:,ew+1,ns+1)
             intflwa(upn) = 0.0d0
 
             do up = upn-1, 1, -1
@@ -502,7 +498,7 @@ contains
             uvel(upn,ew,ns) = ubas(ew,ns)
             vvel(upn,ew,ns) = vbas(ew,ns)
 
-            hrzflwa = hsum4(flwa(:,ew:ew+1,ns:ns+1))  
+            hrzflwa = flwa(:,ew,ns) + flwa(:,ew,ns+1) + flwa(:,ew+1,ns) + flwa(:,ew+1,ns+1)
 
             if (velowk%dintflwa(ew,ns) /= 0.0d0) then
                const(2) = c * diffu(ew,ns) / velowk%dintflwa(ew,ns)/stagthck(ew,ns)
@@ -546,8 +542,6 @@ contains
     !*FD \]
     !*FD Compare this with equation A1 in {\em Payne and Dongelmans}.
 
-    use glimmer_utils, only: hsum4 
-
     implicit none 
 
     !------------------------------------------------------------------------------------
@@ -586,10 +580,10 @@ contains
       do ew = 2,ewn-1
         if (thck(ew,ns) > thklim) then
           wgrd(:,ew,ns) = geomderv%dusrfdtm(ew,ns) - sigma * geomderv%dthckdtm(ew,ns) + & 
-                      (hsum4(uvel(:,ew-1:ew,ns-1:ns)) * &
+                      ((uvel(:,ew-1,ns-1) + uvel(:,ew-1,ns) + uvel(:,ew,ns-1) + uvel(:,ew,ns)) * &
                       (sum(geomderv%dusrfdew(ew-1:ew,ns-1:ns)) - sigma * &
                        sum(geomderv%dthckdew(ew-1:ew,ns-1:ns))) + &
-                       hsum4(vvel(:,ew-1:ew,ns-1:ns)) * &
+                       (vvel(:,ew-1,ns-1) + vvel(:,ew-1,ns) + vvel(:,ew,ns-1) + vvel(:,ew,ns)) * &
                       (sum(geomderv%dusrfdns(ew-1:ew,ns-1:ns)) - sigma * &
                        sum(geomderv%dthckdns(ew-1:ew,ns-1:ns)))) / 16.0d0
         else
@@ -613,8 +607,6 @@ contains
     !*FD \]
     !*FD (This is equation 13 in {\em Payne and Dongelmans}.) Note that this is only 
     !*FD done if the thickness is greater than the threshold given by \texttt{numerics\%thklim}.
-
-    use glimmer_utils, only : hsum4 
 
     implicit none
 
@@ -691,8 +683,8 @@ contains
           !cons(5) = (thck(ew-1,ns)+2.0d0*thck(ew,ns)+thck(ew+1,ns)) * dew16
           !cons(6) = (thck(ew,ns-1)+2.0d0*thck(ew,ns)+thck(ew,ns+1)) * dns16
 
-          velowk%suvel = hsum4(uvel(:,ew-1:ew,ns-1:ns))
-          velowk%svvel = hsum4(vvel(:,ew-1:ew,ns-1:ns))
+          velowk%suvel(:) = uvel(:,ew-1,ns-1) + uvel(:,ew-1,ns) + uvel(:,ew,ns-1) + uvel(:,ew,ns)
+          velowk%svvel(:) = vvel(:,ew-1,ns-1) + vvel(:,ew-1,ns) + vvel(:,ew,ns-1) + vvel(:,ew,ns)
 
           ! Loop over each model level, starting from the bottom ----------------------
 

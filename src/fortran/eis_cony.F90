@@ -44,6 +44,8 @@
 #include <config.inc>
 #endif
 
+#include <glide_mask.inc>
+
 module eis_cony
   !*FD climate forcing similar to the old Edinburgh Ice Sheet model
   !*FD Magnus Hagdorn, June 2004
@@ -143,7 +145,8 @@ contains
     
     if (cony%period.gt.0 .and. cony%next_update.ge.time) then
        
-       where (.not.is_ocean(model%geometry%thkmask) .and. .not.is_float(model%geometry%thkmask))
+       where (.not. GLIDE_IS_OCEAN(model%geometry%thkmask) &
+         .and. .not. GLIDE_IS_FLOAT(model%geometry%thkmask))
           cony%topo = 1.
        elsewhere
           cony%topo = 0.

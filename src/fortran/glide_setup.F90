@@ -44,6 +44,8 @@
 #include <config.inc>
 #endif
 
+#include <glide_mask.inc>
+
 module glide_setup
 
   !*FD Contains general routines for initialisation, etc, called
@@ -346,7 +348,7 @@ contains
     select case (which)
         
     case(1) ! Set thickness to zero if ice is floating
-      where (is_float(mask))
+      where (GLIDE_IS_FLOAT(mask))
         ablation_field=thck
         thck = 0.0d0
       end where
@@ -361,7 +363,7 @@ contains
     case(3) ! remove fraction of ice when floating
        do ns = 2,size(thck,2)-1
           do ew = 2,size(thck,1)-1
-             if (is_calving(mask(ew,ns))) then
+             if (GLIDE_IS_CALVING(mask(ew,ns))) then
                 ablation_field(ew,ns)=(1.0-calving_fraction)*thck(ew,ns)
                 thck(ew,ns) =  calving_fraction*thck(ew,ns)
                 !mask(ew,ns) = glide_mask_ocean
@@ -371,7 +373,7 @@ contains
 
     case(4) ! Set thickness to zero at marine edge if present
             ! bedrock is below a given level
-       where (is_marine_ice_edge(mask).and.topg<mlimit+eus)
+       where (GLIDE_IS_MARINE_ICE_EDGE(mask).and.topg<mlimit+eus)
           ablation_field=thck
           thck = 0.0d0
        end where

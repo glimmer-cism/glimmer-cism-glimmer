@@ -65,7 +65,7 @@ module glide_stop
 
   !*FD Pointers to all registered models
   !*FD This has a fixed size at compile time
-  type(pmodel_type), dimension(max_models) :: registered_models
+  type(pmodel_type), dimension(max_models), save :: registered_models
 
 contains
   subroutine register_model(model)

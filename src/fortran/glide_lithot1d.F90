@@ -44,6 +44,8 @@
 #include <config.inc>
 #endif
 
+#include <glide_mask.inc>
+
 ! module for 1D temperature calculations in the upper lithosphere
 
 module glide_lithot1d
@@ -90,14 +92,16 @@ contains
     do j=1,model%general%nsn
        do i=1,model%general%ewn
           ! calculate RHS for upper BC
-          if (is_ground(model%geometry%thkmask(i,j)) .and. .not. is_thin(model%geometry%thkmask(i,j)) ) then
+          if (GLIDE_IS_GROUND(model%geometry%thkmask(i,j)) &
+             .and. .not. GLIDE_IS_THIN(model%geometry%thkmask(i,j)) &
+          ) then
              model%lithot%rhs(1) = model%temper%temp(model%general%upn,i,j) ! ice basal temperature
              model%lithot%mask(i,j) = .true.
           else
              if (model%lithot%mask(i,j)) then
-                if (is_ocean(model%geometry%thkmask(i,j))) then
+                if (GLIDE_IS_OCEAN(model%geometry%thkmask(i,j))) then
                    model%lithot%rhs(1) = model%lithot%mart
-                else if (is_land(model%geometry%thkmask(i,j))) then
+                else if (GLIDE_IS_LAND(model%geometry%thkmask(i,j))) then
                    model%lithot%rhs(1) = model%climate%artm(i,j) ! air temperature outside ice sheet
                 end if
              end if
