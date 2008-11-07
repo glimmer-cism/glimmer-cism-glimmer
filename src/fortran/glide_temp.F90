@@ -1368,17 +1368,19 @@ contains
 
     real(dp), parameter :: fact = grav * rhoi * pmlt * thk0
     real(dp), parameter :: contemp = -5.0d0
-    real(dp), parameter :: default_flwa = 1.0d-16
+    real(dp) :: default_flwa
     real(dp), dimension(size(numerics%sigma)) :: tempcor
     real(dp),dimension(4) :: arrfact
     integer :: ew,ns,up,ewn,nsn,upn
 
     !------------------------------------------------------------------------------------
     
+    default_flwa = flow_factor * 1.0d-16 / (vis0*scyr) 
+
     upn=size(flwa,1) ; ewn=size(flwa,2) ; nsn=size(flwa,3)
 
     !------------------------------------------------------------------------------------
-
+    write(*,*)"Default flwa = ",default_flwa
     arrfact = (/ flow_factor * arrmlh / vis0, &   ! Value of a when T* is above -263K
                  flow_factor * arrmll / vis0, &   ! Value of a when T* is below -263K
                  -actenh / gascon,        &       ! Value of -Q/R when T* is above -263K
@@ -1402,7 +1404,7 @@ contains
 
             call patebudd(tempcor,flwa(:,ew,ns),arrfact) 
           else
-            flwa(:,ew,ns) = flow_factor
+            flwa(:,ew,ns) = default_flwa
           end if
         end do
       end do
@@ -1420,14 +1422,14 @@ contains
 
             call patebudd((/(contemp, up=1,upn)/),flwa(:,ew,ns),arrfact) 
           else
-            flwa(:,ew,ns) = flow_factor
+            flwa(:,ew,ns) = default_flwa
           end if
         end do
       end do
 
     case default 
 
-      flwa = flow_factor
+      flwa = default_flwa
   
     end select
 
