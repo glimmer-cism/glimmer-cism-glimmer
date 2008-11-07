@@ -1402,7 +1402,7 @@ contains
 
             call patebudd(tempcor,flwa(:,ew,ns),arrfact) 
           else
-            flwa(:,ew,ns) = default_flwa
+            flwa(:,ew,ns) = flow_factor
           end if
         end do
       end do
@@ -1420,14 +1420,14 @@ contains
 
             call patebudd((/(contemp, up=1,upn)/),flwa(:,ew,ns),arrfact) 
           else
-            flwa(:,ew,ns) = default_flwa
+            flwa(:,ew,ns) = flow_factor
           end if
         end do
       end do
 
     case default 
 
-      flwa = default_flwa
+      flwa = flow_factor
   
     end select
 

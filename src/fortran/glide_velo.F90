@@ -117,6 +117,67 @@ contains
     model%velowk%c(4)   = model%velowk%watct * 4.0d0 / thk0 
 
   end subroutine init_velo
+#if 0
+  subroutine velo_compute_strain_rates(strain_zx, strain_zy, 
+                                       stagthck, dusrfdew, dusrfdns, sigma, 
+                                       flwa, ho_stress_zx, ho_stress_zy)
+    !*FD Computes the strain rates \epsilon_{zx} and \epsilon{zy} using the
+    !*FD formula:
+    !*FD \epsilon_{zi}(\sigma) = A(\sigma)(-\rho g H \sigma \frac{\partial s}{\partial i} - HO_i)^n
+    !*FD No vertical integration is done at this point
+    
+    ewn = size(strain_zx, 2)
+    nsn = size(strain_zx, 3)
+    upn = size(strain_zx, 1)
+
+    !TODO: Make this work with rescaling!!
+    !TODO: Vectorize
+    do i = 1, upn
+      do j = 1, ewn
+        do k = 1, nsn
+          !Compute everything inside the exponentiation
+          !(we factor out -rhoi*g*H*\sigma so it's only computed once
+          zx = -rhoi*g*sigma(i)*stagthck(j,k)
+          zy = zx*dusrfdns(j,k)
+          zx = zx*dusrfdew(j,k)
+
+          !Add higher-order stresses if they were provided
+          if (present(ho_stress_zx) .and. present(ho_stress_zy)) then
+            zx = zx - ho_stress_zx(i,j,k)
+            zy = zy - ho_stress_zy(i,j,k)
+          end if
+
+          !Exponentiate and finish computation
+          zx = A(i,j,k)*zx**gn
+          zy = A(i,j,k)*zy**gn
+
+          strain_zx(i,j,k) = zx
+          strain_zy(i,j,k) = zy
+        end do
+      end do
+    end do
+  end subroutine
+
+  
+  !*FD Integrates the strain rates to compute both the 3d velocity fields and the
+  !*FD vertically averaged velocities
+  subroutine velo_integrate_strain(strain_zx, strain_zy, ubas, vbas,
+    !Find the 3d velocity field by vertically integrating the strain rate from
+    !the base up
+    call vertint_output3d(strain_zx, uvel, sigma, .false., ubas)
+    call vertint_output3d(strain_zy, vvel, sigma, .false., vbas)
+    
+    !Normally, we have \epsilon_{xz} = \frac{1}{2}(\frac{\partial u}{\partial z} + \frac{\partial w}{\partial x})
+    !However, we assume that $u_z >> w_x$ by assuming simple shear deformation.
+    !This gives us $u_z$ = 2\epsilon_{xz}
+    !This 2 is pulled out of the integral.  We correct for it here.
+    uvel = 2*uvel
+    vvel = 2*vvel
+    
+       
+  end subroutine
+#endif
+  
 
   !*****************************************************************************
   ! new velo functions come here
@@ -126,6 +187,7 @@ contains
     
     !*FD this routine calculates the part of the vertically averaged velocity 
     !*FD field which solely depends on the temperature
+    !*FD (The integral in eq. 3.22d)
 
     implicit none
 
@@ -151,6 +213,7 @@ contains
              hrzflwa = flwa(:,ew,ns) + flwa(:,ew,ns+1) + flwa(:,ew+1,ns) + flwa(:,ew+1,ns+1)
              intflwa(upn) = 0.0d0
 
+             !Perform inner integration.
              do up = upn-1, 1, -1
                 intflwa(up) = intflwa(up+1) + velowk%depth(up) * (hrzflwa(up)+hrzflwa(up+1))
              end do
@@ -182,7 +245,6 @@ contains
     real(dp),dimension(:,:),  intent(in)    :: dusrfdew
     real(dp),dimension(:,:),  intent(in)    :: dusrfdns
     real(dp),dimension(:,:),  intent(out)   :: diffu
-
 
     where (stagthck .ne. 0.)
        diffu = velowk%dintflwa * stagthck**p4 * sqrt(dusrfdew**2 + dusrfdns**2)**p2 

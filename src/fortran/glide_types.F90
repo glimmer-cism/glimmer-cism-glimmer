@@ -566,7 +566,7 @@ module glide_types
     real(dp) :: btrac_slope = 0.0d0 ! Pa^{-1} (gets scaled during init)
     real(dp) :: btrac_max = 0.d0  !  m yr^{-1} Pa^{-1} (gets scaled during init)
     real(dp) :: geot   = -5.0d-2  ! W m^{-2}
-    real(dp) :: flow_factor = 3   ! "fiddle" parameter for the Arrhenius relationship
+    real(dp) :: flow_factor = 3.0d0   ! "fiddle" parameter for the Arrhenius relationship
     real(dp) :: hydtim = 1000.0d0 ! yr^{-1} converted to s^{-1} and scaled, 
                                   ! 0 if no drainage = 0.0d0 * tim0 / scyr
   end type glide_paramets
@@ -802,6 +802,7 @@ contains
 
     ! allocate isostasy grids
     call isos_allocate(model%isos,ewn,nsn)
+
     ! allocate grid quantities for remapping scheme
     call coordsystem_allocate(model%general%ice_grid, model%gridwk%hte) 
     call coordsystem_allocate(model%general%ice_grid, model%gridwk%htn) 
@@ -904,6 +905,7 @@ contains
     
     deallocate(model%pcgdwk%rhsd,model%pcgdwk%answ)
     call del_sparse_matrix(model%pcgdwk%matrix)
+
     ! allocate isostasy grids
     call isos_deallocate(model%isos)
 

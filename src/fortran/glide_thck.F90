@@ -72,9 +72,12 @@ contains
 
     
     model%pcgdwk%fc2 = (/ model%numerics%alpha * model%numerics%dt / (2.0d0 * model%numerics%dew * model%numerics%dew), &
-         model%numerics%dt, (1.0d0-model%numerics%alpha) / model%numerics%alpha, &
-         1.0d0 / model%numerics%alpha, model%numerics%alpha * model%numerics%dt / &
-         (2.0d0 * model%numerics%dns * model%numerics%dns), 0.0d0 /) 
+                          model%numerics%dt, &
+                          (1.0d0-model%numerics%alpha) / model%numerics%alpha, &
+                          1.0d0 / model%numerics%alpha, &
+                          model%numerics%alpha * model%numerics%dt / &
+                          (2.0d0 * model%numerics%dns * model%numerics%dns), &
+                          0.0d0 /) 
 
 #ifdef DEBUG_PICARD
     call write_log('Logging Picard iterations')

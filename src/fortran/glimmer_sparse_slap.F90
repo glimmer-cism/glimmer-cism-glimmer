@@ -5,6 +5,7 @@ module glimmer_sparse_solver
     
     use glimmer_sparse
     use glimmer_global, only: dp
+    use glimmer_log
     implicit none
 
     type sparse_solver_workspace
@@ -45,7 +46,7 @@ contains
         !*FD values in a generic way.
         type(sparse_solver_options), intent(out) :: opt
         opt%itol = 2
-        opt%tolerance  = 1e-5
+        opt%tolerance  = 5e-5
         opt%maxiters = 2000
     end subroutine sparse_solver_default_options
 
@@ -120,7 +121,7 @@ contains
         !*FD Sparse matrix to solve.  This is inout because the sparse solver
         !*FD may have to do some re-arranging of the matrix.
         
-        real(kind=dp), dimension(:), intent(in) :: rhs 
+        real(kind=dp), dimension(:), intent(inout) :: rhs 
         !*FD Right hand side of the solution vector
         
         real(kind=dp), dimension(:), intent(inout) :: solution 
@@ -147,6 +148,9 @@ contains
         integer :: ierr !SLAP-provided error code
         integer :: iunit !Unit number to print verbose output to (6=stdout, 0=no output)
         integer :: isym !Whether matrix is symmetric
+        
+        logical :: allzeros = .true.
+        integer :: i
 
         iunit = 0
         if (present(verbose)) then
@@ -162,13 +166,30 @@ contains
             isym = 0
         end if
 
-        !Set up SLAP if it hasn't been already
-        call sparse_solver_preprocess(matrix, options, workspace)
+        !Check if the RHS is zero; if it is, don't iterate!  The biconjugate
+        !gradient method doesn't work in this case
+        zero_check: do i = 1, size(rhs)
+            if (rhs(i) /= 0) then
+                allzeros = .false.
+                exit zero_check
+            end if
+        end do zero_check
 
-        call dslucs(matrix%order, rhs, solution, matrix%nonzeros, matrix%row, matrix%col, matrix%val, &
+        if (allzeros) then
+            err = 0
+            ierr = 0
+            niters = 0
+            solution = 0
+            call write_log("RHS of all zeros passed to BCG method; iteration not perfomred.", &
+                           GM_WARNING, __FILE__, __LINE__)        
+        else
+            !Set up SLAP if it hasn't been already
+            call sparse_solver_preprocess(matrix, options, workspace)
+
+            call dslucs(matrix%order, rhs, solution, matrix%nonzeros, matrix%row, matrix%col, matrix%val, &
                     isym, options%itol, options%tolerance, options%maxiters, niters, err, ierr, iunit, &
                     workspace%rwork, size(workspace%rwork), workspace%iwork, size(workspace%iwork))
-
+        end if
         sparse_solve = ierr
     end function sparse_solve
 
