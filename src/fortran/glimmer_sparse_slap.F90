@@ -82,7 +82,7 @@ contains
 
             !Figure out how much memory to allocate.  These figures were derived
             !from the SLAP documentation.
-            lenrw = 40*max_nonzeros 
+            lenrw = 20*max_nonzeros 
             leniw = 20*max_nonzeros
             
             allocate(workspace%rwork(lenrw))

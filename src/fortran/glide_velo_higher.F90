@@ -2,13 +2,13 @@
 #include <config.inc>
 #endif
 
-#define print_size(var) write(*,*)"size of var", shape(var)
-#define assert(expr) call assert_impl("expr",(expr),__FILE__, __LINE__)
+#include "glide_nan.inc"
 
 module glide_velo_higher
     use ice3d_lib
     use glimmer_global, only : dp
     use glide_types
+    use glide_vertint
     implicit none
     
     !TODO: Parameterize the following globals
@@ -19,18 +19,26 @@ module glide_velo_higher
     integer,  parameter :: UPSTREAM = 0
     integer,  parameter :: MANIFOLD = 1
 contains
-    subroutine assert_impl(cond, res, filename, line)
-        character(256) :: cond
-        character(64) :: filename
-        integer :: line
-        logical :: res
+    subroutine init_velo_hom_pattyn(model)
+        type(glide_global_type) :: model
 
-        if (.not.res) then
-            write(*,*) "Assertion Failed:", cond, "at", filename, ":", line
-            stop
-        end if
+        !Init the beta field based on the selected option
+        !If we selected to use 1/btrc, this needs to be computed later
+        !If we selected to read the beta field, it's been done already and no
+        !action is needed
+        select case (model%options%whichhombeta)
+            case(HOMBETA_ALL_NAN)
+                model%velocity_hom%beta = NAN
+            case(HOMBETA_USE_SOFT)
+                where (model%velocity%bed_softness /= 0)
+                    model%velocity_hom%beta = 1 / model%velocity%bed_softness
+                elsewhere
+                    model%velocity_hom%beta = NAN
+                end where
+        end select
+
     end subroutine
-    
+
     subroutine velo_hom_pattyn(ewn, nsn, upn, dew, dns, sigma, &
                                thck, usrf, dthckdew, dthckdns, dusrfdew, dusrfdns, &
                                dlsrfdew, dlsrfdns, stagthck, flwa, flwn, btrc, which_sliding_law, &
@@ -90,19 +98,14 @@ contains
         real(dp), dimension(nsn, ewn, upn) :: flwa_t
         real(dp), dimension(nsn-1, ewn-1, upn) :: uvel_t, vvel_t, mu_t, flwa_t_stag
 
-        write(*,*)"BEGIN velo_hom_pattyn"
-        write(*,*)"Sliding law = ", which_sliding_law
         ijktot = (nsn-1)*(ewn-1)*upn
-
-        write(*,*) shape(flwa)
-        write(*,*) shape(flwa_t)
 
         !Put the surface, bed, and thickness onto staggered grids
         !We do this because Ice3d is by nature unstaggered.
         !Note that we are already passed the staggered thickness
         call staggered_field_2d(usrf, stagusrf)
         staglsrf = stagusrf - stagthck
-       
+
         !Compute second derivatives of thickness and surface, these are needed
         !for the rescaled coordinate parameters
         call d2f_field_stag(usrf, dew, dns, d2zdx2, d2zdy2, .false., .false.)
@@ -129,7 +132,6 @@ contains
         d2hdx2_t = transpose(d2hdx2)
         d2hdy2_t = transpose(d2hdy2)
 
-        call write_xls_3d('uvel_notranspose.txt',uvel)
         call glimToIce3d_3d(uvel,uvel_t,ewn-1,nsn-1,upn)
         call glimToIce3d_3d(vvel,vvel_t,ewn-1,nsn-1,upn)
 
@@ -147,23 +149,18 @@ contains
         !"Spin up" estimate with Pattyn's SIA model runs if we don't already
         !have a good initial guess
         if (.not. valid_initial_guess) then
-            write(*,*)"SIA spinup"
             call veloc1(dusrfdew_t, dusrfdns_t, stagthck_t, flwa_t_stag, sigma, uvel_t, vvel_t, u, v, nsn-1, ewn-1, upn, &
                         FLWN, periodic_ew, periodic_ns)
             !If we are performing the plastic bed iteration, the SIA is not
             !enough and we need to spin up a better estimate by shoehorning the
             !tau0 values into a linear bed estimate
             if (which_sliding_law == 1) then
-                write(*,*)"Linear bed spinup"
                 call veloc2(mu_t, uvel_t, vvel_t, flwa_t_stag, dusrfdew_t, dusrfdns_t, stagthck_t, ax, ay, &
                         sigma, bx, by, cxy, btrc_t/100, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, MANIFOLD,&
                         TOLER, periodic_ew,periodic_ns, 0, dew, dns)
             end if
-            HACKY_DEBUG_CODE = 0
-            write(*,*)"Spinup complete"
-        else
-            HACKY_DEBUG_CODE = 1
         end if
+
         !Higher order velocity estimation
         !I am assuming that efvs (effective viscosity) is the same as mu
         !A NOTE ON COORDINATE TRANSPOSITION:
@@ -173,8 +170,7 @@ contains
         call veloc2(mu_t, uvel_t, vvel_t, flwa_t, dusrfdew_t, dusrfdns_t, stagthck_t, ax, ay, &
                     sigma, bx, by, cxy, btrc_t, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, MANIFOLD,&
                     TOLER, periodic_ew,periodic_ns, which_sliding_law, dew, dns)
-        call write_xls_3d("uvel_result.txt",uvel_t)
-        call write_xls_3d("vvel_result.txt",vvel_t)
+        
         !Transpose from the ice3d coordinate system (y,x,z) to the glimmer
         !coordinate system (z,x,y).  We need to do this for all the 3D outputs
         !that Glimmer expects
@@ -183,9 +179,31 @@ contains
         call ice3dToGlim_3d(mu_t, efvs, ewn-1, nsn-1, upn)
 
         !TODO: Stress field computation and output
-
-        write(*,*)"END velo_hom_pattyn"
     end subroutine velo_hom_pattyn
+
+    subroutine hom_diffusion_pattyn(uvel_hom, vvel_hom, stagthck, dusrfdew, dusrfdns, sigma, diffu_x, diffu_y)
+        !*FD Estimate of higher-order diffusivity vector given Pattyn's approach
+        !*FD Implements (54) in Pattyn 2003, including vertical integration
+        real(dp), dimension(:,:,:), intent(in) :: uvel_hom
+        real(dp), dimension(:,:,:), intent(in) :: vvel_hom
+        real(dp), dimension(:,:),   intent(in) :: stagthck
+        real(dp), dimension(:,:),   intent(in) :: dusrfdew
+        real(dp), dimension(:,:),   intent(in) :: dusrfdns
+        real(dp), dimension(:),     intent(in) :: sigma
+        real(dp), dimension(:,:),   intent(out):: diffu_x
+        real(dp), dimension(:,:),   intent(out):: diffu_y
+
+        !Local Variables
+        real(dp), dimension(size(uvel_hom, 2), size(uvel_hom, 3)) :: u_int !*FD Vertically integrated u velocity
+        real(dp), dimension(size(uvel_hom, 2), size(uvel_hom, 3)) :: v_int !*FD Vertically integrated v velocity
+
+        call vertint_output2d(uvel_hom, u_int, sigma)
+        call vertint_output2d(vvel_hom, v_int, sigma)
+
+        diffu_x = u_int*stagthck*dusrfdew
+        diffu_y = u_int*stagthck*dusrfdns
+
+    end subroutine hom_diffusion_pattyn
 
     !Transposes from Glimmer 3D fields, stored (z,x,y), to Ice3D fields, stored
     !(y,x,z)

@@ -1380,7 +1380,6 @@ contains
     upn=size(flwa,1) ; ewn=size(flwa,2) ; nsn=size(flwa,3)
 
     !------------------------------------------------------------------------------------
-    write(*,*)"Default flwa = ",default_flwa
     arrfact = (/ flow_factor * arrmlh / vis0, &   ! Value of a when T* is above -263K
                  flow_factor * arrmll / vis0, &   ! Value of a when T* is below -263K
                  -actenh / gascon,        &       ! Value of -Q/R when T* is above -263K

@@ -154,7 +154,7 @@ contains
     integer,intent(in),optional          :: line    !*FD the line number at the which the message was triggered
 
     ! local variables
-    character(len=250) :: msg
+    character(len=1000) :: msg
     integer :: local_type
     character(len=6) :: line_num
 

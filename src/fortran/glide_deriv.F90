@@ -26,8 +26,6 @@ contains
         real(dp), intent(in) :: delta
         real(dp) :: dfdx_2d
         
-        
-        
         dfdx_2d = (-.5/delta)*f(i-1, j) + (.5/delta)*f(i+1, j)
         !write(*,*), i, j, f(i,j), ip1, im1, delta, dfdx_2d
     end function dfdx_2d

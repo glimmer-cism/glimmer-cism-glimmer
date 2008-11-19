@@ -410,7 +410,20 @@ contains
     case(0)
        call write_log('Calculating sigma levels')
        do up=1,upn
-          model%numerics%sigma(up) = glide_calc_sigma(real(up-1)/real(upn-1),2.)
+          select case(model%options%which_sigma_builtin)
+            case (SIGMA_BUILTIN_DEFAULT)
+              model%numerics%sigma(up) = glide_calc_sigma(real(up-1)/real(upn-1),2.)
+            case (SIGMA_BUILTIN_EVEN)
+              model%numerics%sigma(up) = real(up-1)/real(upn-1)
+            case (SIGMA_BUILTIN_PATTYN)
+              if (up == 1) then
+                model%numerics%sigma(up) = 0
+              else if (up == upn) then
+                model%numerics%sigma(up) = 1
+              else
+                model%numerics%sigma(up) = glide_calc_sigma_pattyn(real(up-1)/real(upn))
+              end if
+          end select
        end do
     case(1)
        inquire (exist=there,file=process_path(model%funits%sigfile))
@@ -420,7 +433,7 @@ contains
        end if
        call write_log('Reading sigma file: '//process_path(model%funits%sigfile))
        open(unit,file=process_path(model%funits%sigfile))
-       read(unit,'(f5.2)',err=10,end=10) (model%numerics%sigma(up), up=1,upn)
+       read(unit,'(f9.7)',err=10,end=10) (model%numerics%sigma(up), up=1,upn)
        close(unit)
     case(2)
        call write_log('Using sigma levels from main configuration file')
@@ -437,8 +450,17 @@ contains
       real :: glide_calc_sigma,x,n
       
       glide_calc_sigma = (1-(x+1)**(-n))/(1-2**(-n))
-    end function glide_calc_sigma
+  end function glide_calc_sigma
 
+  !Implements an alternate set of sigma levels that encourages better
+  !convergance for higher-order velocities
+  function glide_calc_sigma_pattyn(x)
+        implicit none
+        real :: glide_calc_sigma_pattyn, x
+
+        glide_calc_sigma_pattyn=(-2.5641025641D-4)*(41*x)**2+3.5256410256D-2*(41*x)-&
+          8.0047080075D-13
+  end function glide_calc_sigma_pattyn
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! private procedures
@@ -457,6 +479,7 @@ contains
     call GetValue(section,'dew',model%numerics%dew)
     call GetValue(section,'dns',model%numerics%dns)
     call GetValue(section,'sigma_file',model%funits%sigfile)
+    call GetValue(section,'sigma_builtin',model%options%which_sigma_builtin)
 
     ! We set this flag to one to indicate we've got a sigfile name.
     ! A warning/error is generated if sigma levels are specified in some other way
@@ -550,9 +573,12 @@ contains
     call GetValue(section,'topo_is_relaxed',model%options%whichrelaxed)
     call GetValue(section,'hom_velo_scheme',model%options%whichhomvel)
     call GetValue(section,'hom_diff_scheme',model%options%whichhomdiff)
+    call GetValue(section,'hom_beta_coeff',model%options%whichhombeta)
     call GetValue(section,'hom_sliding_law',model%options%whichhomsliding)
     call GetValue(section,'hotstart',model%options%hotstart)
     call GetValue(section,'periodic_ew',model%options%periodic_ew)
+    call GetValue(section,'periodic_ns',model%options%periodic_ns)
+    call GetValue(section,'diagnostic_run',model%options%diagnostic_run)
   end subroutine handle_options
   
   subroutine print_options(model)
@@ -560,7 +586,7 @@ contains
     use glimmer_log
     implicit none
     type(glide_global_type)  :: model
-    character(len=100) :: message
+    character(len=500) :: message
 
     ! local variables
     character(len=*), dimension(0:1), parameter :: temperature = (/ &
@@ -586,12 +612,14 @@ contains
          'const if T>0', &
          '~basal water', &
          '~basal melt '/)
-    character(len=*), dimension(0:4), parameter :: evolution = (/ &
+    character(len=*), dimension(0:6), parameter :: evolution = (/ &
          'pseudo-diffusion               ', &
          'ADI scheme                     ', &
-         'diffusion                      ', &
+         'iterated diffusion             ', &
          'remap thickness                ', &
-         'remap thickness and temperature' /)
+         'remap thickness and temperature', &
+         'pseudo-diffusion using HO diffusive vectors only (Pattyn scheme)', &
+         'iterated diffusion using HO diffusive vectors only (Pattyn scheme)'/)
     character(len=*), dimension(0:1), parameter :: vertical_integration = (/ &
          'standard     ', &
          'obey upper BC' /)

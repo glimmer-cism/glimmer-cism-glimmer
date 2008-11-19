@@ -44,14 +44,19 @@
 #include <config.inc>
 #endif
 
+#include <glide_nan.inc>
+
 module glide_thck
 
   use glide_types
   use glide_velo_higher
-  use xls
   use glimmer_sparse
   use glimmer_sparse_solver
   use glimmer_sparse_util
+  !DEBUG ONLY, these should be deleted eventually
+  use glide_stop
+  use xls
+  use glide_io
   private
   public :: init_thck, thck_nonlin_evolve, thck_lin_evolve, stagvarb, timeders, stagleapthck
 
@@ -136,18 +141,6 @@ contains
        call velo_calc_diffu(model%velowk,model%geomderv%stagthck,model%geomderv%dusrfdew, &
             model%geomderv%dusrfdns,model%velocity%diffu)
 
-       ! calculate horizontal velocity field
-       !(these calls can appear either before or after thck_evolve because
-       !thck_evolve doesn't mutate the staggered or derivative fields)
-       call slipvelo(model,                &
-            3,                             &
-            model%velocity%btrc,           &
-            model%velocity%ubas,           &
-            model%velocity%vbas)
-       call velo_calc_velo(model%velowk,model%geomderv%stagthck,model%geomderv%dusrfdew, &
-            model%geomderv%dusrfdns,model%temper%flwa,model%velocity%diffu,model%velocity%ubas, &
-            model%velocity%vbas,model%velocity%uvel,model%velocity%vvel,model%velocity%uflx,model%velocity%vflx)
-
        !Calculate higher-order velocities if the user asked for them
        if (model%options%whichhomvel == 1) then
             call stagvarb(model%geometry% thck, &
@@ -161,16 +154,26 @@ contains
              call df_field_2d_staggered(model%geometry%thck, model%numerics%dew, model%numerics%dns, &
                    model%geomderv%dthckdew, model%geomderv%dthckdns, .false., .false.)
              
+             !If we want to invert BTRC
+             if (model%options%whichhombeta == HOMBETA_USE_BTRC) then
+                where (model%velocity%btrc /= 0)
+                    model%velocity_hom%beta = 1/model%velocity%btrc
+                elsewhere
+                    model%velocity_hom%beta = NAN
+                end where
+             end if
+
              call velo_hom_pattyn(model%general%ewn, model%general%nsn, model%general%upn, &
                           model%numerics%dew, model%numerics%dns, model%numerics%sigma, &
                           model%geometry%thck, model%geometry%usrf, &
                           model%geomderv%dthckdew, model%geomderv%dthckdns, &
                           model%geomderv%dusrfdew, model%geomderv%dusrfdns, &
-                          model%geomderv%dusrfdew-model%geomderv%dthckdew, & 
-                          model%geomderv%dusrfdns-model%geomderv%dthckdns, & 
-                          model%geomderv%stagthck, model%temper%flwa, 3.0D0, model%velocity%btrc, &
+                          model%geomderv%dthckdew-model%geomderv%dusrfdew, & 
+                          model%geomderv%dthckdns-model%geomderv%dusrfdns, & 
+                          model%geomderv%stagthck, model%temper%flwa, 3.0D0, model%velocity_hom%beta, &
                           model%options%whichhomsliding,&
-                          model%options%periodic_ew .eq. 1, .false.,&
+                          model%options%periodic_ew .eq. 1, &
+                          model%options%periodic_ns .eq. 1,&
                           model%velocity_hom%uvel, model%velocity_hom%vvel, &
                           model%velocity_hom%is_velocity_valid, &
                           model%velocity_hom%uflx, model%velocity_hom%vflx, &
@@ -179,9 +182,35 @@ contains
 
                           model%velocity_hom%is_velocity_valid = .true.
         end if
- 
+    
+       if (model%options%whichevol == EVOL_PSEUDO_DIFF) then
        ! get new thicknesses
-       call thck_evolve(model,.true.,model%geometry%thck,model%geometry%thck)
+            call thck_evolve(model,model%velocity%diffu, model%velocity%diffu, .true.,model%geometry%thck,model%geometry%thck)
+       else if (model%options%whichevol == EVOL_HOM_PSEUDO_DIFF_PATTYN) then
+            call hom_diffusion_pattyn(model%velocity_hom%uvel, model%velocity_hom%vvel, model%geomderv%stagthck, &
+                                      model%geomderv%dusrfdew, model%geomderv%dusrfdns, model%numerics%sigma, &
+                                      model%velocity_hom%diffu_x, model%velocity_hom%diffu_y) 
+
+            call thck_evolve(model,model%velocity_hom%diffu_x, model%velocity_hom%diffu_y, .true., model%geometry%thck, model%geometry%thck)
+    
+       end if
+
+       ! calculate horizontal velocity field
+       ! (These calls must appear after thck_evolve, as thck_evolve uses ubas,
+       ! which slipvelo mutates)
+       call slipvelo(model,                &
+            3,                             &
+            model%velocity%btrc,           &
+            model%velocity%ubas,           &
+            model%velocity%vbas)
+       call velo_calc_velo(model%velowk,model%geomderv%stagthck,model%geomderv%dusrfdew, &
+            model%geomderv%dusrfdns,model%temper%flwa,model%velocity%diffu,model%velocity%ubas, &
+            model%velocity%vbas,model%velocity%uvel,model%velocity%vvel,model%velocity%uflx,model%velocity%vflx)
+
+       if (model%options%diagnostic_run == 1) then
+          call glide_finalise_all(.true.)
+          stop
+       end if
     end if
   end subroutine thck_lin_evolve
 
@@ -270,7 +299,7 @@ contains
                model%geomderv%dusrfdns,model%velocity%diffu)
 
           ! get new thicknesses
-          call thck_evolve(model,first_p,model%thckwk%oldthck,model%geometry%thck)
+          call thck_evolve(model,model%velocity%diffu, model%velocity%diffu, first_p,model%thckwk%oldthck,model%geometry%thck)
 
           first_p = .false.
           residual = maxval(abs(model%geometry%thck-model%thckwk%oldthck2))
@@ -301,7 +330,7 @@ contains
 
 !---------------------------------------------------------------------------------
 
-  subroutine thck_evolve(model,calc_rhs,old_thck,new_thck)
+  subroutine thck_evolve(model,diffu_x, diffu_y,calc_rhs,old_thck,new_thck)
 
     !*FD set up sparse matrix and solve matrix equation to find new ice thickness distribution
     !*FD this routine does not override the old thickness distribution
@@ -310,8 +339,9 @@ contains
     use glimmer_global, only : dp
     use glide_stop
     use glimmer_log
-
-
+#if DEBUG
+    use glimmer_paramets, only: vel0, thk0
+#endif
     implicit none
 
     ! subroutine arguments -------------------------------------------------------------
@@ -319,6 +349,8 @@ contains
     type(glide_global_type) :: model
     logical,intent(in) :: calc_rhs                      !*FD set to true when rhs should be calculated 
                                                         !*FD i.e. when doing lin solution or first picard iteration
+    real(dp), intent(in), dimension(:,:) :: diffu_x
+    real(dp), intent(in), dimension(:,:) :: diffu_y
     real(dp), intent(in), dimension(:,:) :: old_thck    !*FD contains ice thicknesses from previous time step
     real(dp), intent(inout), dimension(:,:) :: new_thck !*FD on entry contains first guess for new ice thicknesses
                                                         !*FD on exit contains ice thicknesses of new time step
@@ -474,16 +506,16 @@ contains
 
       ! calculate sparse matrix elements
       sumd(1) = model%pcgdwk%fc2(1) * (&
-           (model%velocity%diffu(ewm,nsm) + model%velocity%diffu(ewm,ns)) + &
+           (diffu_x(ewm,nsm) + diffu_x(ewm,ns)) + &
            (model%velocity%ubas (ewm,nsm) + model%velocity%ubas (ewm,ns)))
       sumd(2) = model%pcgdwk%fc2(1) * (&
-           (model%velocity%diffu(ew,nsm) + model%velocity%diffu(ew,ns)) + &
+           (diffu_x(ew,nsm) + diffu_x(ew,ns)) + &
            (model%velocity%ubas (ew,nsm) + model%velocity%ubas (ew,ns)))
       sumd(3) = model%pcgdwk%fc2(5) * (&
-           (model%velocity%diffu(ewm,nsm) + model%velocity%diffu(ew,nsm)) + &
+           (diffu_y(ewm,nsm) + diffu_y(ew,nsm)) + &
            (model%velocity%ubas (ewm,nsm) + model%velocity%ubas (ew,nsm)))
       sumd(4) = model%pcgdwk%fc2(5) * (&
-           (model%velocity%diffu(ewm,ns) + model%velocity%diffu(ew,ns)) + &
+           (diffu_y(ewm,ns) + diffu_y(ew,ns)) + &
            (model%velocity%ubas (ewm,ns) + model%velocity%ubas (ew,ns)))
       sumd(5) = - (sumd(1) + sumd(2) + sumd(3) + sumd(4))
     end subroutine findsums

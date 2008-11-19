@@ -85,6 +85,33 @@ module glide_types
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+  !Constants that describe the options available
+  integer, parameter :: TEMP_SURFACE_AIR_TEMP = 0
+  integer, parameter :: TEMP_FULL_SOLUTION = 1
+
+  integer, parameter :: FLWA_PATTERSON_BUDD = 0
+  integer, parameter :: FLWA_PATTERSON_BUDD_CONST_TEMP = 1
+  integer, parameter :: FLWA_CONST_FLWA = 2
+
+  !...etc, don't have time to do all of these now
+
+  integer, parameter :: EVOL_PSEUDO_DIFF = 0
+  integer, parameter :: EVOL_ADI = 1
+  integer, parameter :: EVOL_DIFFUSION = 2
+  integer, parameter :: EVOL_INC_REMAP = 3
+  integer, parameter :: EVOL_INC_REMAP_WITHTEMP = 4
+  integer, parameter :: EVOL_HOM_PSEUDO_DIFF_PATTYN = 5
+  integer, parameter :: EVOL_HOM_DIFFUSION_PATTYN = 6
+
+  integer, parameter :: HOMBETA_ALL_NAN = 0
+  integer, parameter :: HOMBETA_USE_SOFT = 1
+  integer, parameter :: HOMBETA_USE_BTRC = 2
+  integer, parameter :: HOMBETA_USE_BETA = 3
+
+  integer, parameter :: SIGMA_BUILTIN_DEFAULT = 0 !Use default Sigma coordinate spacing
+  integer, parameter :: SIGMA_BUILTIN_EVEN = 1 !Use an evenly spaced Sigma coordinate
+  integer, parameter :: SIGMA_BUILTIN_PATTYN = 2 !Use Pattyn's sigma coordinates
+
   type glide_options
 
     !*FD Holds user options controlling the methods used in the ice-model
@@ -145,7 +172,11 @@ module glide_types
     !*FD Thickness evolution method:
     !*FD \begin{description}
     !*FD \item[0] Pseudo-diffusion approach 
-    !*FD \item[2] Diffusion approach (also calculates velocities) 
+    !*FD \item[2] Diffusion approach (also calculates velocities)
+    !*FD \item[3] Incremental remapping
+    !*FD \item[4] Incremental remapping
+    !*FD \item[5] Diffusion, as estimated from vertically-integrated higher-order velocities, used in pseudo-diffusion approach
+    !*FD \item[6] (5), but incorporating nonlinear iteration
     !*FD \end{description}
 
     integer :: whichwvel = 0
@@ -185,6 +216,16 @@ module glide_types
     !*FD \item[1] Compute diffusivities using Bueler and Brown scheme
     !*FD \end{description}
 
+    integer :: whichhombeta = 1
+    !*FD Flag that indicates how to compute beta, the higher-order basal stress
+    !*FD coefficient
+    !*FD \begin{description}
+    !*FD \item[0] Set to NaN everywhere (no sliding, ice glued to the bed)
+    !*FD \item[1] Set to 1/soft (default)
+    !*FD \item[2] Set to 1/btrc (re-computed at each time step)
+    !*FD \item[3] Set to beta field of input netcdf file
+    !*FD \end{description}
+
     integer :: whichhomsliding = 0
     !*FD Flag that indicates which sliding law to use in higher-order velocity
     !*FD computations
@@ -199,6 +240,8 @@ module glide_types
     !*FD \item[1] periodic EW boundary conditions
     !*FD \end{description}
 
+    integer :: periodic_ns = 0
+
     integer :: gthf = 0
     !*FD \begin{description}
     !*FD \item[0] no geothermal heat flux calculations
@@ -211,7 +254,18 @@ module glide_types
     !*FD \item[1] sigma coordinates are given in external file
     !*FD \item[2] sigma coordinates are given in configuration file
     !*FD \end{description}
-    
+  
+    integer :: which_sigma_builtin = 0
+    !If Glimmer generates the sigma coordinates, selects which built-in sigma to
+    !use
+    !*FD \begin{description}
+    !*FD \item[0] standard Glimmer setup
+    !*FD \item[1] evenly spaced levels
+    !*FD \item[2] Pattyn's sigma levels
+    !*FD \end{description}
+
+    integer :: diagnostic_run = 0
+
     !These options are added for higher order velocity computation
     !Currently they are unused
     integer :: whichbabc = 0
@@ -328,10 +382,10 @@ module glide_types
     real(dp),dimension(:,:,:),pointer :: wgrd  => null() !*FD 3D grid vertical velocity.
     real(dp),dimension(:,:,:),pointer :: uflx  => null() !*FD 
     real(dp),dimension(:,:,:),pointer :: vflx  => null() !*FD 
-    real(dp),dimension(:,:)  ,pointer :: diffu => null() !*FD 
+    real(dp),dimension(:,:)  ,pointer :: diffu_x => null() !*FD 
+    real(dp),dimension(:,:)  ,pointer :: diffu_y => null()
     real(dp),dimension(:,:)  ,pointer :: total_diffu => null() !*FD total diffusivity
-    real(dp),dimension(:,:)  ,pointer :: bed_softness => null() !*FD bed softness parameter
-    real(dp),dimension(:,:)  ,pointer :: btrc  => null() !*FD  basal traction
+    real(dp),dimension(:,:)  ,pointer :: beta  => null() !*FD basal shear coefficient
     type(glide_tensor)                :: tau
     real(dp),dimension(:,:)  ,pointer :: gdsx => null() !*FD basal shear stress, x-dir
     real(dp),dimension(:,:)  ,pointer :: gdsy => null() !*FD basal shear stress, y-dir
@@ -741,10 +795,10 @@ contains
     call coordsystem_allocate(model%general%ice_grid, upn, model%velocity_hom%wgrd)
     call coordsystem_allocate(model%general%velo_grid, upn, model%velocity_hom%uflx)
     call coordsystem_allocate(model%general%velo_grid, upn, model%velocity_hom%vflx)
-    call coordsystem_allocate(model%general%velo_grid, model%velocity_hom%diffu)
+    call coordsystem_allocate(model%general%velo_grid, model%velocity_hom%diffu_x)
+    call coordsystem_allocate(model%general%velo_grid, model%velocity_hom%diffu_y)
     call coordsystem_allocate(model%general%velo_grid, model%velocity_hom%total_diffu)
-    call coordsystem_allocate(model%general%velo_grid, model%velocity_hom%bed_softness)
-    call coordsystem_allocate(model%general%velo_grid, model%velocity_hom%btrc)
+    call coordsystem_allocate(model%general%velo_grid, model%velocity_hom%beta)
     call coordsystem_allocate(model%general%velo_grid, upn, model%velocity_hom%tau%scalar)
     call coordsystem_allocate(model%general%velo_grid, upn, model%velocity_hom%tau%xz)
     call coordsystem_allocate(model%general%velo_grid, upn, model%velocity_hom%tau%yz)
@@ -858,10 +912,10 @@ contains
     deallocate(model%velocity_hom%wgrd)
     deallocate(model%velocity_hom%uflx)
     deallocate(model%velocity_hom%vflx)
-    deallocate(model%velocity_hom%diffu)
+    deallocate(model%velocity_hom%diffu_x)
+    deallocate(model%velocity_hom%diffu_y)
     deallocate(model%velocity_hom%total_diffu)
-    deallocate(model%velocity_hom%bed_softness)
-    deallocate(model%velocity_hom%btrc)
+    deallocate(model%velocity_hom%beta)
     deallocate(model%velocity_hom%tau%scalar)
     deallocate(model%velocity_hom%tau%xz)
     deallocate(model%velocity_hom%tau%yz)

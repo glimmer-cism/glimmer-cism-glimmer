@@ -55,6 +55,7 @@ module glide
   use glide_profile
   use glide_deriv
   use glimmer_config
+  use glimmer_global
   integer, private, parameter :: dummyunit=99
 
 contains
@@ -105,6 +106,7 @@ contains
     use glide_setup
     use glimmer_ncio
     use glide_velo
+    use glide_velo_higher
     use glide_thck
     use glide_temp
     use glimmer_log
@@ -122,6 +124,7 @@ contains
 
     ! initialise scales
     call glimmer_init_scales
+    call initnan !Initialize the NAN representation, hack to get smart compilers like gfortran to divide by zero
 
     ! scale parameters
     call glide_scale_params(model)
@@ -173,6 +176,10 @@ contains
     call init_thck(model)
     if (model%options%gthf.gt.0) then
        call init_lithot(model)
+    end if
+
+    if (model%options%whichhomvel == 1) then
+        call init_velo_hom_pattyn(model)
     end if
 
     ! initialisations for remapping, ice age
@@ -344,28 +351,27 @@ contains
     call glide_prof_start(model,model%glide_prof%ice_evo)
 #endif
     select case(model%options%whichevol)
-    case(0) ! Use precalculated uflx, vflx -----------------------------------
+    case(EVOL_PSEUDO_DIFF, EVOL_HOM_PSEUDO_DIFF_PATTYN) ! Use precalculated uflx, vflx -----------------------------------
 
        call thck_lin_evolve(model,model%temper%newtemps)
 
-    case(1) ! Use explicit leap frog method with uflx,vflx -------------------
+    case(EVOL_ADI) ! Use explicit leap frog method with uflx,vflx -------------------
 
        call stagleapthck(model,model%temper%newtemps)
 
-    case(2) ! Use non-linear calculation that incorporates velocity calc -----
+    case(EVOL_DIFFUSION, EVOL_HOM_DIFFUSION_PATTYN) ! Use non-linear calculation that incorporates velocity calc -----
 
        call thck_nonlin_evolve(model,model%temper%newtemps)
 
-    case(3) ! Use incremental remapping scheme for advecting ice thickness ---
+    case(EVOL_INC_REMAP) ! Use incremental remapping scheme for advecting ice thickness ---
             ! (Temperature is advected by glide_temp)
  
        call thck_remap_evolve(model, model%temper%newtemps, 6, .false.)
  
-    case(4) ! Use incremental remapping scheme for advecting thickness
+    case(EVOL_INC_REMAP_WITHTEMP) ! Use incremental remapping scheme for advecting thickness
             ! and temperature, as well as tracers such as ice age. 
  
        call thck_remap_evolve(model, model%temper%newtemps, 6, .true.)
-
     end select
 #ifdef PROFILING
     call glide_prof_stop(model,model%glide_prof%ice_evo)

@@ -9,6 +9,8 @@
 !        Research, Volume 108, no. B8, 2003.
 !----------------------------------------------------
 
+#include "glide_nan.inc"
+
 module ice3d_lib
     use glimmer_global
     use glimmer_physcon, only: pi, grav, rhoi, scyr
@@ -19,9 +21,8 @@ module ice3d_lib
     use glimmer_log
     use xls
     implicit none
-    double precision :: small, zip, notdef
+    double precision :: small, zip
     PARAMETER(SMALL=1.D-10,ZIP=1.D-30)
-    PARAMETER(NOTDEF=-999999999.)
 
     double precision, parameter :: plastic_bed_regularization = 1e-2
 
@@ -700,42 +701,50 @@ end subroutine init_zeta
         double precision :: FLOWN,ZIP,VEL2ERR,TOLER,delta_x, delta_y
 
         INTEGER i,j,k,l,lacc,m,n,maxiter,iter,DU1,DU2,DV1,DV2,&
-            sparuv
+            sparuv, ijktot
         double precision :: error,tot,alfa,norm1,norm2,norm3,norm4,&
             norm5,teta
 
         logical :: periodic_x, periodic_y
         PARAMETER (DU1=1,DU2=2,DV1=3,DV2=4)
 
-        double precision, dimension(:,:), allocatable :: em
+        double precision, dimension(4,size(mu,1)*size(mu,2)*size(mu,3)) :: em
 
         !Velocity estimates computed for the *current* iteration.  uvel and
         !vvel, comparitively, hold the velocity estimates for the *last*
         !iteration.
-        double precision, dimension(:,:,:), allocatable :: ustar, vstar
-        double precision, dimension(:,:), allocatable :: tau !Basal traction, to be computed from the provided beta parameter
+        double precision, dimension(size(mu,1),size(mu,2),size(mu,3)) :: ustar, vstar
+        double precision, dimension(size(mu,1),size(mu,2)) :: tau !Basal traction, to be computed from the provided beta parameter
         
-        double precision, dimension(:,:), allocatable ::ubas, vbas
+        double precision, dimension(size(mu,1),size(mu,2)) ::ubas, vbas
 
         logical :: cont
 
+        type(sparse_matrix_type) :: matrix
+        type(sparse_solver_workspace) :: workspace
+        type(sparse_solver_options) :: options
+        
         !Get the sizes from the mu field.  Calling code must make sure that
         !these all agree.
         maxy = size(mu,1)
         maxx = size(mu,2)
         nzeta = size(mu,3)
+        ijktot = maxy*maxx*nzeta
 
-        allocate(em(4, maxx*maxy*nzeta))
-        allocate(ustar(maxy, maxx, nzeta))
-        allocate(vstar(maxy, maxx, nzeta))
-        allocate(tau(maxy, maxx))
-        allocate(ubas(maxy, maxx))
-        allocate(vbas(maxy, maxx))
         maxiter=100000
         error=VEL2ERR
         m=1
         lacc=0
         em = 0
+
+        !Set up sparse matrix options
+        call sparse_solver_default_options(options)
+        options%tolerance=TOLER
+
+        !Create the sparse matrix
+        call new_sparse_matrix(ijktot, ijktot*22, matrix)
+        call sparse_allocate_workspace(matrix, options, workspace, ijktot*22)
+
 
 #if 1
         call write_xls_3d("arrh.txt",arrh)
@@ -759,7 +768,7 @@ end subroutine init_zeta
         !Copy the velocity estimate from the previous iteration as the current velocity
         ustar=uvel
         vstar=vvel
-      
+
         !Deal with periodic boundary conditions
         call periodic_boundaries_3d_stag(uvel,periodic_x,periodic_y)
         call periodic_boundaries_3d_stag(vvel,periodic_x,periodic_y)
@@ -781,7 +790,9 @@ end subroutine init_zeta
             !get by without it?  Is this too liberal of a relaxation?)
             if (l == m*10) then
                 error = error*1.5
+#if DEBUG
                 write(*,*) "Error tolerance is now", error
+#endif
                 m = m+1
             endif
             
@@ -796,15 +807,14 @@ end subroutine init_zeta
 
             !Compute viscosity
             call muterm(mu,uvel,vvel,arrh,h,ax,ay,delta_x,delta_y,zeta,FLOWN,ZIP)
-            call write_xls_3d("mu.txt",mu)
-
 
             !Sparse matrix routine for determining velocities.  The new
             !velocities will get spit into ustar and vstar, while uvel and vvel
             !will still hold the old velocities.
             iter=sparuv(mu,dzdx,dzdy,ax,ay,bx,by,cxy,h,&
-                uvel,vvel,ustar,vstar,tau,dhbdx,dhbdy,MAXX*MAXY*NZETA,MAXY,&
-                MAXX,NZETA,TOLER, delta_x, delta_y, zeta)
+                uvel,vvel,ustar,vstar,tau,dhbdx,dhbdy,ijktot,MAXY,&
+                MAXX,NZETA,TOLER, delta_x, delta_y, zeta, &
+                matrix, workspace, options)
             
             !Apply unstable manifold correction.  This function returns
             !true if we need to keep iterating, false if we reached convergence
@@ -812,9 +822,9 @@ end subroutine init_zeta
                                                 vstar, vvel, em(DV1,:), &
                                                 maxy, maxx, nzeta, error, &
                                                 tot, teta)
-            
+#if DEBUG 
             write(*,*) l, iter, tot, teta
-            
+#endif
             !Check whether we have reached convergance
             if (.not. cont) exit nonlinear_iteration
 
@@ -825,11 +835,9 @@ end subroutine init_zeta
       call write_xls("uvel_surf.txt",uvel(:,:,1))
       call write_xls("vvel_surf.txt",vvel(:,:,1))
 
-      deallocate(em)
-      deallocate(ustar)
-      deallocate(vstar)
-      deallocate(ubas)
-      deallocate(vbas)
+      call sparse_destroy_workspace(matrix, options, workspace)
+      call del_sparse_matrix(matrix) 
+
       return
       END subroutine
     
@@ -975,7 +983,7 @@ end subroutine init_zeta
             
         endif
         
-        tot=sqrt(norm3/norm5)
+        tot=sqrt(norm3/(norm5+ZIP)) !Regularize the denominator so we don't get NAN with simple geometries
 
         if (present(tot_out)) then
             tot_out = tot
@@ -1080,12 +1088,9 @@ end subroutine init_zeta
         
         !Derivatives of velocity.  These will be allocated and torn down during this function.
         !TODO: Make this more efficient, so that we are only allocating these once per run!!
-        double precision, dimension(:,:,:), allocatable :: dudx
-        double precision, dimension(:,:,:), allocatable :: dudy
-        double precision, dimension(:,:,:), allocatable :: dudz
-        double precision, dimension(:,:,:), allocatable :: dvdx
-        double precision, dimension(:,:,:), allocatable :: dvdy
-        double precision, dimension(:,:,:), allocatable :: dvdz
+        double precision, dimension(size(uvel,1),size(uvel,2),size(uvel,3)) :: dudx, dudy, dudz
+        double precision, dimension(size(uvel,1),size(uvel,2),size(uvel,3)) :: dvdx, dvdy, dvdz
+
 !
         INTEGER :: i,j,k, MAXX, MAXY, NZETA
         double precision :: macht
@@ -1097,14 +1102,6 @@ end subroutine init_zeta
 
         macht=(1.-FLOWN)/(2.*FLOWN)
       
-        !Allocate temporary derivative data
-        allocate(dudx(MAXY, MAXX, NZETA))
-        allocate(dudy(MAXY, MAXX, NZETA))
-        allocate(dudz(MAXY, MAXX, NZETA))
-        allocate(dvdx(MAXY, MAXX, NZETA))
-        allocate(dvdy(MAXY, MAXX, NZETA))
-        allocate(dvdz(MAXY, MAXX, NZETA))
-
         !TODO: Implement option for upstream differencing
         call df_field_3d(uvel, dy, dx, dz, dudy, dudx, dudz)
         call df_field_3d(vvel, dy, dx, dz, dvdy, dvdx, dvdz)
@@ -1134,13 +1131,6 @@ end subroutine init_zeta
             end do
         end do
 
-        !Free temporary derivative data
-        deallocate(dudx)
-        deallocate(dudy)
-        deallocate(dudz)
-        deallocate(dvdx)
-        deallocate(dvdy)
-        deallocate(dvdz)
         return
     end subroutine
 
@@ -1152,7 +1142,8 @@ end subroutine init_zeta
 !------------------------------------------------------
 !
     function sparuv(mu,dzdx,dzdy,ax,ay,bx,by,cxy,h,uvel,vvel,ustar,vstar,beta,dhbdx,dhbdy,&
-                    IJKTOT,MAXY,MAXX,NZETA,TOLER,GRIDX,GRIDY,zeta)
+                    IJKTOT,MAXY,MAXX,NZETA,TOLER,GRIDX,GRIDY,zeta, &
+                    matrix, workspace, options)
         INTEGER IJKTOT,MAXY,MAXX,NZETA
         double precision, dimension(:,:,:) :: mu
         double precision, dimension(:,:) :: dzdx
@@ -1179,19 +1170,13 @@ end subroutine init_zeta
         INTEGER i,j,k,l,m,sparuv,iter, ierr
         double precision :: d(IJKTOT),x(IJKTOT),coef(22),err
       
+        !Sparse matrix variables.  These are passed in so that allocation can be
+        !done once per velocity solve instead of once per iteration
         type(sparse_matrix_type) :: matrix
         type(sparse_solver_workspace) :: workspace
         type(sparse_solver_options) :: options
 
-       
-        !Set up sparse matrix options
-        call sparse_solver_default_options(options)
-        options%tolerance=TOLER
-
-        !Create the sparse matrix
-        call new_sparse_matrix(ijktot, ijktot*22, matrix)
-        call sparse_allocate_workspace(matrix, options, workspace, ijktot*22)
-
+        call sparse_clear(matrix)
 !
 !-------  velocity u
 !
@@ -1307,8 +1292,6 @@ end subroutine init_zeta
         end do
         sparuv=iter
         
-        call sparse_destroy_workspace(matrix, options, workspace)
-        call del_sparse_matrix(matrix) 
     end function sparuv
 !
 !
@@ -1580,8 +1563,6 @@ end subroutine init_zeta
         end if
 
          
-     
-      
         !Set up a system of pointers
 
         if (k.eq.1) then !Upper boundary condition (stress-free surface)
@@ -1616,7 +1597,7 @@ end subroutine init_zeta
             dz_up2=(dz(k-2)-dz(k))/(dz(k)-dz(k-1))/(dz(k-1)-dz(k-2))
             dz_up3=(2.*dz(k)-dz(k-1)-dz(k-2))/(dz(k)-dz(k-1))/(dz(k)-dz(k-2))
 
-            if (beta(i,j).le.NOTDEF) then !No sliding at the base
+            if (IS_NAN(beta(i,j))) then !No sliding at the base
                 coef(I_J_K)=1.
                 rhs=0.
             else !Compute sliding 

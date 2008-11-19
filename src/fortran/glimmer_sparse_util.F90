@@ -101,8 +101,6 @@ contains
         !Close unit and finish off
         close(lunit)
         
-        call glide_finalise_all(.true.)
-
         !Grab the error message from the sparse solver
         call sparse_interpret_error(error, errdesc)
 
@@ -115,6 +113,10 @@ contains
             write(message, *)'Sparse matrix error. Error description: ', errdesc, &
                              'Data dumped to ', trim(errfname)
         end if
+
+        write(*,*)message
+
+        call glide_finalise_all(.true.)
 
         if (present(error_file) .and. present(error_line)) then
             call write_log(trim(errdesc), GM_FATAL, error_file, error_line)

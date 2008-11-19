@@ -136,6 +136,14 @@ data:          data%velocity%bed_softness
 factor:        scale2d_f6
 load:          1
 
+[beta]
+dimensions:    time, y0, x0
+units:         unknown
+long_name:     higher-order bed stress coefficient
+data:          data%velocity_hom%beta
+factor:        scale2d_f6
+load:          1
+
 [ubas]
 dimensions:    time, y0, x0
 units:         meter/year
