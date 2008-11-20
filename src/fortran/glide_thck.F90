@@ -191,7 +191,8 @@ contains
                                       model%geomderv%dusrfdew, model%geomderv%dusrfdns, model%numerics%sigma, &
                                       model%velocity_hom%diffu_x, model%velocity_hom%diffu_y) 
 
-            call thck_evolve(model,model%velocity_hom%diffu_x, model%velocity_hom%diffu_y, .true., model%geometry%thck, model%geometry%thck)
+            call thck_evolve(model,model%velocity_hom%diffu_x, model%velocity_hom%diffu_y, .true.,& 
+                  model%geometry%thck, model%geometry%thck)
     
        end if
 
