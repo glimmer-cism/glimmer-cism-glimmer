@@ -178,14 +178,14 @@ contains
        call init_lithot(model)
     end if
 
-    if (model%options%whichhomvel == 1) then
+    if (model%options%which_ho_diagnostic == HO_DIAG_PATTYN) then
         call init_velo_hom_pattyn(model)
     end if
 
     ! initialisations for remapping, ice age
     ! This call may be removed later
     ! initialise grid-related arrays for remap transport
-    if (model%options%whichevol==3 .or. model%options%whichevol==4) then
+    if (model%options%whichevol==EVOL_INC_REMAP .or. model%options%whichevol==EVOL_INC_REMAP_WITHTEMP) then
        call init_glissade(model)
     endif 
 
@@ -351,7 +351,7 @@ contains
     call glide_prof_start(model,model%glide_prof%ice_evo)
 #endif
     select case(model%options%whichevol)
-    case(EVOL_PSEUDO_DIFF, EVOL_HOM_PSEUDO_DIFF_PATTYN) ! Use precalculated uflx, vflx -----------------------------------
+    case(EVOL_PSEUDO_DIFF) ! Use precalculated uflx, vflx -----------------------------------
 
        call thck_lin_evolve(model,model%temper%newtemps)
 
@@ -359,7 +359,7 @@ contains
 
        call stagleapthck(model,model%temper%newtemps)
 
-    case(EVOL_DIFFUSION, EVOL_HOM_DIFFUSION_PATTYN) ! Use non-linear calculation that incorporates velocity calc -----
+    case(EVOL_DIFFUSION) ! Use non-linear calculation that incorporates velocity calc -----
 
        call thck_nonlin_evolve(model,model%temper%newtemps)
 

@@ -84,6 +84,12 @@ contains
     if (associated(section)) then
        call handle_options(section, model)
     end if
+    !read options for higher-order computation
+    call GetSection(config,section,'ho_options')
+    if (associated(section)) then
+        call handle_ho_options(section, model)
+    end if
+
     ! read parameters
     call GetSection(config,section,'parameters')
     if (associated(section)) then
@@ -571,16 +577,26 @@ contains
     call GetValue(section,'evolution',model%options%whichevol)
     call GetValue(section,'vertical_integration',model%options%whichwvel)
     call GetValue(section,'topo_is_relaxed',model%options%whichrelaxed)
-    call GetValue(section,'hom_velo_scheme',model%options%whichhomvel)
-    call GetValue(section,'hom_diff_scheme',model%options%whichhomdiff)
-    call GetValue(section,'hom_beta_coeff',model%options%whichhombeta)
-    call GetValue(section,'hom_sliding_law',model%options%whichhomsliding)
     call GetValue(section,'hotstart',model%options%hotstart)
     call GetValue(section,'periodic_ew',model%options%periodic_ew)
     call GetValue(section,'periodic_ns',model%options%periodic_ns)
     call GetValue(section,'diagnostic_run',model%options%diagnostic_run)
   end subroutine handle_options
   
+  !Higher order options
+  subroutine handle_ho_options(section, model)
+    use glimmer_config
+    use glide_types
+    implicit none
+    type(ConfigSection), pointer :: section
+    type(glide_global_type) :: model
+    
+    call GetValue(section, 'diagnostic_scheme', model%options%which_ho_diagnostic)
+    call GetValue(section, 'prognostic_scheme', model%options%which_ho_prognostic)
+    call GetValue(section, 'basal_stress_input', model%options%which_ho_beta_in)
+    call GetValue(section, 'basal_stress_type',  model%options%which_ho_bstress)
+  end subroutine handle_ho_options
+
   subroutine print_options(model)
     use glide_types
     use glimmer_log
@@ -612,17 +628,23 @@ contains
          'const if T>0', &
          '~basal water', &
          '~basal melt '/)
-    character(len=*), dimension(0:6), parameter :: evolution = (/ &
+    character(len=*), dimension(0:4), parameter :: evolution = (/ &
          'pseudo-diffusion               ', &
          'ADI scheme                     ', &
          'iterated diffusion             ', &
          'remap thickness                ', &
-         'remap thickness and temperature', &
-         'pseudo-diffusion using HO diffusive vectors only (Pattyn scheme)', &
-         'iterated diffusion using HO diffusive vectors only (Pattyn scheme)'/)
+         'remap thickness and temperature' /)
     character(len=*), dimension(0:1), parameter :: vertical_integration = (/ &
          'standard     ', &
          'obey upper BC' /)
+    character(len=*), dimension(0:1), parameter :: ho_diagnostic = (/ &
+         'Do not compute higher-order velocities', &
+         'Pattyn 2003                           '/)
+    character(len=*), dimension(0:3), parameter :: ho_prognostic = (/ &
+         'Evolve ice with SIA only', &
+         'Pattyn scheme           ', &
+         'Pollard scheme          ', &
+         'Bueler scheme           ' /)
 
     call write_log('GLIDE options')
     call write_log('-------------')
@@ -667,7 +689,7 @@ contains
        call write_log('First topo time slice is relaxed')
     end if
     if (model%options%periodic_ew.eq.1) then
-       if (model%options%whichevol.eq.1) then
+       if (model%options%whichevol .eq. EVOL_ADI) then
           call write_log('Periodic boundary conditions not implemented in ADI scheme',GM_FATAL)
        end if
        call write_log('Periodic EW lateral boundary condition')
@@ -676,6 +698,24 @@ contains
     if (model%options%hotstart.eq.1) then
        call write_log('Hotstarting model')
     end if
+
+    !HO options
+    if (model%options%which_ho_diagnostic < 0 .or. model%options%which_ho_diagnostic >= size(ho_diagnostic)) then
+        call write_log('Error, ho_diagnostic out of range', GM_FATAL)
+    end if
+    write(message,*), 'ho_diagnostic           :',model%options%which_ho_diagnostic, &
+                       ho_diagnostic(model%options%which_ho_diagnostic)
+    call write_log(message)
+    if (model%options%which_ho_prognostic < 0 .or. model%options%which_ho_prognostic >= size(ho_prognostic)) then
+        call write_log('Error, ho_proggnostic out of range', GM_FATAL)
+    end if
+    write(message,*), 'ho_prognostic           :',model%options%which_ho_prognostic, &
+                       ho_prognostic(model%options%which_ho_diagnostic)
+    call write_log(message)
+
+    !TODO: which_ho_beta_in
+    !TODO: which_ho_bstress
+
     call write_log('')
   end subroutine print_options
 

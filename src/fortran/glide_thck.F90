@@ -142,7 +142,7 @@ contains
             model%geomderv%dusrfdns,model%velocity%diffu)
 
        !Calculate higher-order velocities if the user asked for them
-       if (model%options%whichhomvel == 1) then
+       if (model%options%which_ho_diagnostic == HO_DIAG_PATTYN) then
             call stagvarb(model%geometry% thck, &
                          model%geomderv%stagthck,&
                          model%general%ewn, &
@@ -155,7 +155,7 @@ contains
                    model%geomderv%dthckdew, model%geomderv%dthckdns, .false., .false.)
              
              !If we want to invert BTRC
-             if (model%options%whichhombeta == HOMBETA_USE_BTRC) then
+             if (model%options%which_ho_beta_in == HO_BETA_USE_BTRC) then
                 where (model%velocity%btrc /= 0)
                     model%velocity_hom%beta = 1/model%velocity%btrc
                 elsewhere
@@ -171,7 +171,7 @@ contains
                           model%geomderv%dthckdew-model%geomderv%dusrfdew, & 
                           model%geomderv%dthckdns-model%geomderv%dusrfdns, & 
                           model%geomderv%stagthck, model%temper%flwa, 3.0D0, model%velocity_hom%beta, &
-                          model%options%whichhomsliding,&
+                          model%options%which_ho_bstress,&
                           model%options%periodic_ew .eq. 1, &
                           model%options%periodic_ns .eq. 1,&
                           model%velocity_hom%uvel, model%velocity_hom%vvel, &
@@ -183,10 +183,10 @@ contains
                           model%velocity_hom%is_velocity_valid = .true.
         end if
     
-       if (model%options%whichevol == EVOL_PSEUDO_DIFF) then
+       if (model%options%which_ho_prognostic == HO_PROG_SIAONLY) then
        ! get new thicknesses
             call thck_evolve(model,model%velocity%diffu, model%velocity%diffu, .true.,model%geometry%thck,model%geometry%thck)
-       else if (model%options%whichevol == EVOL_HOM_PSEUDO_DIFF_PATTYN) then
+       else if (model%options%which_ho_prognostic == HO_PROG_PATTYN) then
             call hom_diffusion_pattyn(model%velocity_hom%uvel, model%velocity_hom%vvel, model%geomderv%stagthck, &
                                       model%geomderv%dusrfdew, model%geomderv%dusrfdns, model%numerics%sigma, &
                                       model%velocity_hom%diffu_x, model%velocity_hom%diffu_y) 

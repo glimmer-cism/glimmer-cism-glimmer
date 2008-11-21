@@ -100,17 +100,26 @@ module glide_types
   integer, parameter :: EVOL_DIFFUSION = 2
   integer, parameter :: EVOL_INC_REMAP = 3
   integer, parameter :: EVOL_INC_REMAP_WITHTEMP = 4
-  integer, parameter :: EVOL_HOM_PSEUDO_DIFF_PATTYN = 5
-  integer, parameter :: EVOL_HOM_DIFFUSION_PATTYN = 6
-
-  integer, parameter :: HOMBETA_ALL_NAN = 0
-  integer, parameter :: HOMBETA_USE_SOFT = 1
-  integer, parameter :: HOMBETA_USE_BTRC = 2
-  integer, parameter :: HOMBETA_USE_BETA = 3
 
   integer, parameter :: SIGMA_BUILTIN_DEFAULT = 0 !Use default Sigma coordinate spacing
   integer, parameter :: SIGMA_BUILTIN_EVEN = 1 !Use an evenly spaced Sigma coordinate
   integer, parameter :: SIGMA_BUILTIN_PATTYN = 2 !Use Pattyn's sigma coordinates
+
+  integer, parameter :: HO_DIAG_NONE = 0
+  integer, parameter :: HO_DIAG_PATTYN = 1
+
+  integer, parameter :: HO_PROG_SIAONLY = 0
+  integer, parameter :: HO_PROG_PATTYN = 1
+  integer, parameter :: HO_PROG_POLLARD = 2
+  integer, parameter :: HO_PROG_BUELER = 3
+
+  integer, parameter :: HO_BETA_ALL_NAN = 0
+  integer, parameter :: HO_BETA_USE_SOFT = 1
+  integer, parameter :: HO_BETA_USE_BTRC = 2
+  integer, parameter :: HO_BETA_USE_BETA = 3
+
+  integer, parameter :: HO_BSTRESS_LINEAR = 0
+  integer, parameter :: HO_BSTRESS_PLASTIC = 1
 
   type glide_options
 
@@ -204,19 +213,28 @@ module glide_types
     !*FD \end{description}
 
    
-    integer :: whichhomvel = 0
+    integer :: which_ho_diagnostic = 0
+    !*FD Higher-order velocity computation scheme
     !*FD \begin{description}
     !*FD \item[0] Do not compute higher-order velocity estimate
     !*FD \item[1] Compute higher-order velocity estimate using Pattyn's model
     !*FD \end{description}
 
-    integer :: whichhomdiff = 0
+    integer :: which_ho_prognostic = 0
+    !*FD Higher-order prognostic scheme.  Note that this flag applies only when
+    !*FD using Glimmer's existing ice evolution functions; new evolution methods
+    !*FD may be added that do not use the diffusive scheme.  In other words,
+    !*FD this flag states how to transform the HO velocities into diffusion and
+    !*FD basal velocity fields.
     !*FD \begin{description}
-    !*FD \item[0] Compute diffusivities using shallow ice approximation only
-    !*FD \item[1] Compute diffusivities using Bueler and Brown scheme
+    !*FD \item[0] Do not not use higher-order velocities prognostically; compute
+    !*FD          and output them but use SIA to evolve the ice
+    !*FD \item[1] Pattyn scheme (compute higher-order diffusivities only)
+    !*FD \item[2] Pollard scheme (Not implemented yet)
+    !*FD \item[3] Bueler scheme (Not implemented yet)
     !*FD \end{description}
 
-    integer :: whichhombeta = 1
+    integer :: which_ho_beta_in = 0
     !*FD Flag that indicates how to compute beta, the higher-order basal stress
     !*FD coefficient
     !*FD \begin{description}
@@ -226,7 +244,7 @@ module glide_types
     !*FD \item[3] Set to beta field of input netcdf file
     !*FD \end{description}
 
-    integer :: whichhomsliding = 0
+    integer :: which_ho_bstress = 0
     !*FD Flag that indicates which sliding law to use in higher-order velocity
     !*FD computations
     !*FD \begin{description}

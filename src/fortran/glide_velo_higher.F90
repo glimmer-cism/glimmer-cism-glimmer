@@ -26,10 +26,10 @@ contains
         !If we selected to use 1/btrc, this needs to be computed later
         !If we selected to read the beta field, it's been done already and no
         !action is needed
-        select case (model%options%whichhombeta)
-            case(HOMBETA_ALL_NAN)
+        select case (model%options%which_ho_beta_in)
+            case(HO_BETA_ALL_NAN)
                 model%velocity_hom%beta = NAN
-            case(HOMBETA_USE_SOFT)
+            case(HO_BETA_USE_SOFT)
                 where (model%velocity%bed_softness /= 0)
                     model%velocity_hom%beta = 1 / model%velocity%bed_softness
                 elsewhere

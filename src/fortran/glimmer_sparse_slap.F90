@@ -84,7 +84,8 @@ contains
             !from the SLAP documentation.
             lenrw = 20*max_nonzeros 
             leniw = 20*max_nonzeros
-            
+            write(*,*) "MAX NONZEROS",max_nonzeros
+            write(*,*) "ALLOCATING WORKSPACE",lenrw,leniw 
             allocate(workspace%rwork(lenrw))
             allocate(workspace%iwork(leniw))
             !Recored the number of nonzeros so we know whether to allocate more
