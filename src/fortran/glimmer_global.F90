@@ -79,6 +79,8 @@ module glimmer_global
 
 #endif
 
+  integer,parameter :: size_t = kind(1)
+
   !*FD Precision of glimmer module --- the general Fortran real-type kind value 
   !*FD for the Glimmer module and its interfaces.
   !*FD

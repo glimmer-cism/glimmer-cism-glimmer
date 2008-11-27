@@ -4,7 +4,7 @@ module glimmer_sparse_solver
     !*FD usable and a guide to implementing other interfaces
     
     use glimmer_sparse
-    use glimmer_global, only: dp
+    use glimmer_global, only: dp, size_t
     use glimmer_log
     implicit none
 
@@ -62,8 +62,8 @@ contains
         type(sparse_solver_workspace) :: workspace
         integer, optional :: max_nonzeros_arg
         integer :: max_nonzeros
-        integer :: lenrw
-        integer :: leniw
+        integer(kind=size_t) :: lenrw
+        integer(kind=size_t) :: leniw
         
         if (present(max_nonzeros_arg)) then
             max_nonzeros = max_nonzeros_arg
@@ -84,6 +84,14 @@ contains
             !from the SLAP documentation.
             lenrw = 20*max_nonzeros 
             leniw = 20*max_nonzeros
+
+            if (lenrw < 0 .or. leniw < 0) then
+                call write_log("The amount of workspace memory that SLAP needs caused a numerical overflow.  " // &
+                               "If you are not running on a 64-bit architecture, you will need to decrease" // & 
+                               "the size of your data set.  If you are running a 64-bit architecture, try" // & 
+                               "modifying size_t in glimmer_global to a larger size and recompiling Glimmer.", GM_FATAL)
+            end if
+
             write(*,*) "MAX NONZEROS",max_nonzeros
             write(*,*) "ALLOCATING WORKSPACE",lenrw,leniw 
             allocate(workspace%rwork(lenrw))

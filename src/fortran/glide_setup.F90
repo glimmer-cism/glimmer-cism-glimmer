@@ -53,7 +53,7 @@ module glide_setup
 
   private
   public :: glide_readconfig, glide_printconfig, glide_scale_params, &
-       glide_calclsrf, glide_marinlim, glide_load_sigma, glide_maskthck, &
+       glide_calclsrf, glide_marinlim, glide_load_sigma, &
        glide_read_sigma, glide_calc_sigma
 
 contains
@@ -169,121 +169,6 @@ contains
 !-------------------------------------------------------------------------
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-  subroutine glide_maskthck(whichthck,crita,critb,dom,pointno,totpts,empty)
-    
-    !*FD Calculates the contents of the mask array.
-
-    use glimmer_global, only : dp, sp 
-
-    implicit none
-
-    !-------------------------------------------------------------------------
-    ! Subroutine arguments
-    !-------------------------------------------------------------------------
-
-    integer,                intent(in)  :: whichthck  !*FD Option determining
-                                                      !*FD which method to use.
-    real(dp),dimension(:,:),intent(in)  :: crita      !*FD Ice thickness
-    real(sp),dimension(:,:),intent(in)  :: critb      !*FD Mass balance
-    integer, dimension(:),  intent(out) :: dom        
-    integer, dimension(:,:),intent(out) :: pointno    !*FD Output mask
-    integer,                intent(out) :: totpts     !*FD Total number of points
-    logical,                intent(out) :: empty      !*FD Set if no mask points set.
-
-    !-------------------------------------------------------------------------
-    ! Internal variables
-    !-------------------------------------------------------------------------
-
-    integer,dimension(size(crita,2),2) :: band
-    logical,dimension(size(crita,2))   :: full
-    integer :: covtot 
-    integer :: ew,ns,ewn,nsn
-
-    !-------------------------------------------------------------------------
-
-    ewn=size(crita,1) ; nsn=size(crita,2)
-
-    pointno = 0
-    covtot  = 0 
-
-    !-------------------------------------------------------------------------
-
-    do ns = 1,nsn
-
-      full(ns) = .false.
-
-      do ew = 1,ewn
-        if ( thckcrit(crita(max(1,ew-1):min(ewn,ew+1),max(1,ns-1):min(nsn,ns+1)),critb(ew,ns)) ) then
-
-          covtot = covtot + 1
-          pointno(ew,ns) = covtot 
-
-          if ( .not. full(ns) ) then
-            band(ns,1) = ew
-            full(ns)   = .true.
-          else
-            band(ns,2) = ew
-          end if
-               
-        end if
-      end do
-    end do
-  
-    totpts = covtot
-                                             
-    dom(1:2) = (/ewn,1/); empty = .true.
-
-    do ns = 1,nsn
-           
-      if (full(ns)) then
-
-        if (empty) then
-          empty  = .false.
-          dom(3) = ns
-        end if
-        dom(4) = ns
-        dom(1) = min0(dom(1),band(ns,1))
-        dom(2) = max0(dom(2),band(ns,2))
-      end if
-    end do
-
-  contains
-
-    logical function thckcrit(ca,cb)
-
-      implicit none
-
-      real(dp),dimension(:,:),intent(in) :: ca 
-      real(sp),               intent(in) :: cb
-
-      select case (whichthck)
-      case(5)
-
-        ! whichthck=5 is not a 'known case'
-
-        if ( ca(2,2) > 0.0d0 .or. cb > 0.0) then
-          thckcrit = .true.
-        else
-          thckcrit = .false.
-        end if
-
-      case default
-
-        ! If the thickness in the region under consideration
-        ! or the mass balance is positive, thckcrit is .true.
-
-        if ( any((ca(:,:) > 0.0d0)) .or. cb > 0.0 ) then
-          thckcrit = .true.
-        else
-          thckcrit = .false.
-        end if
-
-      end select
-
-    end function thckcrit
-
-  end subroutine glide_maskthck
 
   subroutine glide_calclsrf(thck,topg,eus,lsrf)
 
@@ -645,6 +530,14 @@ contains
          'Pattyn scheme           ', &
          'Pollard scheme          ', &
          'Bueler scheme           ' /)
+    character(len=*), dimension(0:3), parameter :: ho_beta_in = (/ &
+         'All NaN (ice glued to bed)', &
+         '1/soft                    ', &
+         '1/btrc                    ', &
+         'beta field from input     ' /)
+    character(len=*), dimension(0:1), parameter :: ho_bstress = (/ &
+         'Linear bed (betasquared)', &
+         'Plastic bed (tau0)      ' /)
 
     call write_log('GLIDE options')
     call write_log('-------------')
@@ -700,20 +593,30 @@ contains
     end if
 
     !HO options
+    call write_log("***Higher-order options:")
     if (model%options%which_ho_diagnostic < 0 .or. model%options%which_ho_diagnostic >= size(ho_diagnostic)) then
-        call write_log('Error, ho_diagnostic out of range', GM_FATAL)
+        call write_log('Error, diagnostic_scheme out of range', GM_FATAL)
     end if
     write(message,*), 'ho_diagnostic           :',model%options%which_ho_diagnostic, &
                        ho_diagnostic(model%options%which_ho_diagnostic)
     call write_log(message)
     if (model%options%which_ho_prognostic < 0 .or. model%options%which_ho_prognostic >= size(ho_prognostic)) then
-        call write_log('Error, ho_proggnostic out of range', GM_FATAL)
+        call write_log('Error, prognostic_scheme out of range', GM_FATAL)
     end if
     write(message,*), 'ho_prognostic           :',model%options%which_ho_prognostic, &
-                       ho_prognostic(model%options%which_ho_diagnostic)
+                       ho_prognostic(model%options%which_ho_prognostic)
     call write_log(message)
+    if (model%options%which_ho_beta_in < 0 .or. model%options%which_ho_beta_in >= size(ho_beta_in)) then
+        call write_log('Error, basal_stress_input out of range', GM_FATAL)
+    end if
+    write(message,*), 'basal_stress_input      :',model%options%which_ho_beta_in, &
+                       ho_beta_in(model%options%which_ho_beta_in)
+    if (model%options%which_ho_bstress < 0 .or. model%options%which_ho_bstress >= size(ho_bstress)) then
+        call write_log('Error, basal_stress_input out of range', GM_FATAL)
+    end if
+    write(message,*), 'basal_stress_type       :',model%options%which_ho_bstress, &
+                       ho_bstress(model%options%which_ho_bstress)
 
-    !TODO: which_ho_beta_in
     !TODO: which_ho_bstress
 
     call write_log('')

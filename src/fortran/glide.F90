@@ -226,6 +226,7 @@ contains
     use glide_setup
     use glide_temp
     use glide_mask
+    use glide_thckmask
     implicit none
 
     type(glide_global_type) :: model        !*FD model instance
@@ -275,9 +276,10 @@ contains
 #ifdef PROFILING
     call glide_prof_start(model,model%glide_prof%ice_mask1)
 #endif
-    call glide_maskthck(0, &                                    !magi a hack, someone explain what whichthck=5 does
+    call glide_maskthck(&
          model%geometry% thck,      &
          model%climate%  acab,      &
+         .true.,&
          model%geometry% dom,       &
          model%geometry% mask,      &
          model%geometry% totpts,    &
@@ -372,6 +374,7 @@ contains
             ! and temperature, as well as tracers such as ice age. 
  
        call thck_remap_evolve(model, model%temper%newtemps, 6, .true.)
+
     end select
 #ifdef PROFILING
     call glide_prof_stop(model,model%glide_prof%ice_evo)

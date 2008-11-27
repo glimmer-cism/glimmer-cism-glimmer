@@ -41,7 +41,7 @@ contains
 
     subroutine velo_hom_pattyn(ewn, nsn, upn, dew, dns, sigma, &
                                thck, usrf, dthckdew, dthckdns, dusrfdew, dusrfdns, &
-                               dlsrfdew, dlsrfdns, stagthck, flwa, flwn, btrc, which_sliding_law, &
+                               dlsrfdew, dlsrfdns, stagthck, mask, totpts, flwa, flwn, btrc, which_sliding_law, &
                                periodic_ew, periodic_ns, &
                                uvel, vvel, valid_initial_guess, uflx, vflx, efvs, tau, gdsx, gdsy)
                             
@@ -60,6 +60,8 @@ contains
 	real(dp), dimension(ewn-1,nsn-1) :: dlsrfdew !*FD X bed gradient
 	real(dp), dimension(ewn-1,nsn-1) :: dlsrfdns !*FD Y bed gradient
 	real(dp), dimension(ewn-1,nsn-1) :: stagthck !*FD Staggered thickness
+        integer,  dimension(ewn-1,nsn-1) :: mask     !*FD Numbers points in the staggered grid that are included in computation
+        integer :: totpts
 	real(dp), dimension(:,:,:) :: flwa !*FD Glen's A (rate factor) - Used for thermomechanical coupling
         real(dp), dimension(ewn-1,nsn-1)   :: btrc !*FD Basal Traction, either betasquared or tau0
         real(dp) :: flwn !*FD Exponent in Glenn power law
@@ -98,6 +100,8 @@ contains
         real(dp), dimension(nsn, ewn, upn) :: flwa_t
         real(dp), dimension(nsn-1, ewn-1, upn) :: uvel_t, vvel_t, mu_t, flwa_t_stag
 
+        integer, dimension(nsn-1, ewn-1) :: mask_t
+        
         ijktot = (nsn-1)*(ewn-1)*upn
 
         !Put the surface, bed, and thickness onto staggered grids
@@ -132,6 +136,8 @@ contains
         d2hdx2_t = transpose(d2hdx2)
         d2hdy2_t = transpose(d2hdy2)
 
+        mask_t = transpose(mask)
+
         call glimToIce3d_3d(uvel,uvel_t,ewn-1,nsn-1,upn)
         call glimToIce3d_3d(vvel,vvel_t,ewn-1,nsn-1,upn)
 
@@ -145,7 +151,7 @@ contains
         call init_rescaled_coordinates(dthckdew_t,dlsrfdew_t,dthckdns_t,dlsrfdns_t,stagusrf_t,stagthck_t,staglsrf_t,&
                                                dusrfdew_t,dusrfdns_t,d2zdx2_t,d2zdy2_t,d2hdx2_t,d2hdy2_t,&
                                                sigma,ax,ay,bx,by,cxy,dew,dns)
-        
+       
         !"Spin up" estimate with Pattyn's SIA model runs if we don't already
         !have a good initial guess
         if (.not. valid_initial_guess) then
@@ -157,7 +163,7 @@ contains
             if (which_sliding_law == 1) then
                 call veloc2(mu_t, uvel_t, vvel_t, flwa_t_stag, dusrfdew_t, dusrfdns_t, stagthck_t, ax, ay, &
                         sigma, bx, by, cxy, btrc_t/100, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, MANIFOLD,&
-                        TOLER, periodic_ew,periodic_ns, 0, dew, dns)
+                        TOLER, periodic_ew,periodic_ns, 0, dew, dns,mask_t,totpts)
             end if
         end if
 
@@ -169,7 +175,8 @@ contains
         !that they normally would.
         call veloc2(mu_t, uvel_t, vvel_t, flwa_t, dusrfdew_t, dusrfdns_t, stagthck_t, ax, ay, &
                     sigma, bx, by, cxy, btrc_t, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, MANIFOLD,&
-                    TOLER, periodic_ew,periodic_ns, which_sliding_law, dew, dns)
+                    TOLER, periodic_ew,periodic_ns, which_sliding_law, dew,&
+                    dns,mask_t,totpts)
         
         !Transpose from the ice3d coordinate system (y,x,z) to the glimmer
         !coordinate system (z,x,y).  We need to do this for all the 3D outputs

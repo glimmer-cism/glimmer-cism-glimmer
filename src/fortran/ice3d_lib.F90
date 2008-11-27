@@ -677,7 +677,9 @@ end subroutine init_zeta
     SUBROUTINE veloc2(mu,uvel,vvel,arrh,dzdx,dzdy,h,ax,ay,&
                 zeta,bx,by,cxy,beta,&
                 dhbdx,dhbdy,FLOWN,ZIP,VEL2ERR,&
-                MANIFOLD,TOLER,PERIODIC_X, PERIODIC_Y, PLASTIC, delta_x, delta_y)
+                MANIFOLD,TOLER,PERIODIC_X, PERIODIC_Y, PLASTIC, delta_x, delta_y, &
+                mask, active_points)
+                
 
         INTEGER MAXY,MAXX,NZETA,MANIFOLD,PLASTIC
 
@@ -699,6 +701,12 @@ end subroutine init_zeta
         double precision, dimension(:,:) :: beta
 
         double precision :: FLOWN,ZIP,VEL2ERR,TOLER,delta_x, delta_y
+
+        integer, dimension(:,:), intent(in) :: mask 
+        !*FD Contains a unique nonzero number on each point of ice that should be computed or that is
+        !*FD ajdacent to a point that should be computed. Other numbers contain
+        !*FD zeros
+        integer, intent(in) :: active_points !*FD The number of points that should be computed.  This is equivalent to the number of nonzero entries in mask.
 
         INTEGER i,j,k,l,lacc,m,n,maxiter,iter,DU1,DU2,DV1,DV2,&
             sparuv, ijktot
@@ -729,7 +737,7 @@ end subroutine init_zeta
         maxy = size(mu,1)
         maxx = size(mu,2)
         nzeta = size(mu,3)
-        ijktot = maxy*maxx*nzeta
+        ijktot = active_points*nzeta
 
         maxiter=100000
         error=VEL2ERR
@@ -813,7 +821,7 @@ end subroutine init_zeta
             !will still hold the old velocities.
             iter=sparuv(mu,dzdx,dzdy,ax,ay,bx,by,cxy,h,&
                 uvel,vvel,ustar,vstar,tau,dhbdx,dhbdy,ijktot,MAXY,&
-                MAXX,NZETA,TOLER, delta_x, delta_y, zeta, &
+                MAXX,NZETA,TOLER, delta_x, delta_y, zeta, mask, &
                 matrix, workspace, options)
             
             !Apply unstable manifold correction.  This function returns
@@ -1142,7 +1150,7 @@ end subroutine init_zeta
 !------------------------------------------------------
 !
     function sparuv(mu,dzdx,dzdy,ax,ay,bx,by,cxy,h,uvel,vvel,ustar,vstar,beta,dhbdx,dhbdy,&
-                    IJKTOT,MAXY,MAXX,NZETA,TOLER,GRIDX,GRIDY,zeta, &
+                    IJKTOT,MAXY,MAXX,NZETA,TOLER,GRIDX,GRIDY,zeta, mask, &
                     matrix, workspace, options)
         INTEGER IJKTOT,MAXY,MAXX,NZETA
         double precision, dimension(:,:,:) :: mu
@@ -1176,62 +1184,82 @@ end subroutine init_zeta
         type(sparse_solver_workspace) :: workspace
         type(sparse_solver_options) :: options
 
-        call sparse_clear(matrix)
+        integer, dimension(:,:) :: mask
+
 !
 !-------  velocity u
 !
         !Initialize sparse matrix & vectors
         d=0
         x=0
-
+        call sparse_clear(matrix)
         do i=1,MAXY
             do j=1,MAXX
-                do k=1,NZETA 
-                    coef = 0
-                    if (h(i,j).lt.SMALL) then
-                        !No ice - "pass through"
-                        coef(I_J_K)=1.
-                        !Normally, we use uvel(i,j,k) as our initial guess.
-                        !However, in this case, we know the velocity
-                        !should be 0, so we'll replace our uvel with that
-                        uvel(i,j,k) = 0
-                    else if ((i.eq.1).or.(i.eq.MAXY).or.(j.eq.1).or.(j.eq.MAXX)) then
-                        !Boundary condition
-                        coef(I_J_K)=1.
-                        rhs=uvel(i,j,k)
-                    else
+                if (mask(i,j) /= 0) then
+                    do k=1,NZETA 
+                        coef = 0
 
-                        call sparse_setup("u", i, j, k, mu, dzdx, dzdy, ax, ay, bx, by, cxy, &
+                        if (h(i,j).lt.SMALL) then
+                            !No ice - "pass through"
+                            coef(I_J_K)=1.
+                            !Normally, we use uvel(i,j,k) as our initial guess.
+                            !However, in this case, we know the velocity
+                            !should be 0, so we'll replace our uvel with that
+                            uvel(i,j,k) = 0
+                            rhs = 0
+                        else if ((i.eq.1).or.(i.eq.MAXY).or.(j.eq.1).or.(j.eq.MAXX)) then
+                            !Boundary condition
+                            coef(I_J_K)=1.
+                            rhs=uvel(i,j,k)
+                        else
+
+                            call sparse_setup("u", i, j, k, mu, dzdx, dzdy, ax, ay, bx, by, cxy, &
                                   h, gridx, gridy, zeta, uvel, vvel, dhbdx, dhbdy, beta, &
                                   maxx, maxy, Nzeta, coef, rhs)
-                    endif
-                    d(csp(I_J_K,i,j,k,MAXX,NZETA))=rhs
-                    !Preliminary benchmarks indicate the we actually reach
-                    !convergance faster if we use a 0 initial guess rather than
-                    !the previous velocity.  More testing is needed.
-                    !To use the current velocity as the guess, uncomment this
-                    !line here and and in the Y velocity section of this
-                    !function.
-                    !x(csp(I_J_K,i,j,k,MAXX,NZETA))=uvel(i,j,k) !Use current velocity as guess of solution
+                        endif
+                        d(csp_masked(I_J_K,i,j,k,mask,NZETA))=rhs
+                        !Preliminary benchmarks indicate the we actually reach
+                        !convergance faster if we use a 0 initial guess rather than
+                        !the previous velocity.  More testing is needed.
+                        !To use the current velocity as the guess, uncomment this
+                        !line here and and in the Y velocity section of this
+                        !function.
+                        !x=csp(I_J_K,i,j,k,MAXX,NZETA))=uvel(i,j,k) !Use current velocity as guess of solution
                         
-                    do m=1,21
-                      call sparse_insert_val(matrix,csp(11,i,j,k,MAXX,NZETA),csp(m,i,j,k,MAXX,NZETA),coef(m)) 
+                        do m=1,21
+                            if (stencil_i(m, i) > 0 .and. stencil_i(m, i) <= maxy .and. &
+                                stencil_j(m, j) > 0 .and. stencil_j(m, j) <= maxx .and. &
+                                stencil_k(m, k) > 0 .and. stencil_k(m, k) <= nzeta) then
+                                    call sparse_insert_val(matrix, &
+                                                    csp_masked(11,i,j,k,mask,nzeta), &
+                                                    csp_masked(m,i,j,k,mask,NZETA), &
+                                                    coef(m)) 
+                            end if
+                        end do
                     end do
-
-                end do
+                end if
              end do
         end do
-
+        call write_sparse_system('sparse.txt',matrix%row, matrix%col, matrix%val, matrix%nonzeros)
         call sparse_solver_preprocess(matrix, options, workspace)
-        
         ierr = sparse_solve(matrix, d, x, options, workspace,  err, iter, verbose=.false.)
         call handle_sparse_error(matrix, ierr, __FILE__, __LINE__)        
-        l=0
+
+        open(unit=37, file="solution_vector.txt")
+        write(37,*)x
+        close(37)
+
+ 
+        !Delinearize the solution
         do i=1,MAXY
             do j=1,MAXX
                 do k=1,NZETA
-                    l=l+1
-                    ustar(i,j,k)=x(l)
+                    if (mask(i,j) /= 0) then
+                        !write(*,*)csp_masked(11,i,j,k,mask,nzeta)
+                        ustar(i,j,k)=x(csp_masked(11,i,j,k,mask,nzeta))
+                    else
+                        ustar(i,j,k)=0
+                    end if
                 end do
             end do
         end do
@@ -1242,58 +1270,75 @@ end subroutine init_zeta
         d=0
         x=0
         call sparse_clear(matrix)
-     
+
         do i=1,MAXY
             do j=1,MAXX
-                do k=1,NZETA
-                    coef = 0
-                    if (h(i,j).lt.SMALL) then
-                        coef(I_J_K)=1.
-                        uvel(i,j,k) = 0
-                    else if ((i.eq.1).or.(i.eq.MAXY).or.(j.eq.1).or.(j.eq.MAXX)) then
-                        coef(I_J_K)=1.
-                        rhs=vvel(i,j,k)
-                    else
-                        call sparse_setup("v", i, j, k, mu, dzdx, dzdy, ax, ay, bx, by, cxy, &
+                if (mask(i,j) /= 0) then
+                    do k=1,NZETA 
+                        coef = 0
+
+                        if (h(i,j).lt.SMALL) then
+                            !No ice - "pass through"
+                            coef(I_J_K)=1.
+                            !Normally, we use uvel(i,j,k) as our initial guess.
+                            !However, in this case, we know the velocity
+                            !should be 0, so we'll replace our uvel with that
+                            vvel(i,j,k) = 0
+                            rhs = 0
+                        else if ((i.eq.1).or.(i.eq.MAXY).or.(j.eq.1).or.(j.eq.MAXX)) then
+                            !Boundary condition
+                            coef(I_J_K)=1.
+                            rhs=vvel(i,j,k)
+                        else
+
+                            call sparse_setup("v", i, j, k, mu, dzdx, dzdy, ax, ay, bx, by, cxy, &
                                   h, gridx, gridy, zeta, uvel, vvel, dhbdx, dhbdy, beta, &
                                   maxx, maxy, Nzeta, coef, rhs)
-                     endif
-                    coef(22) = rhs
-                    !11 corresponds to position (i,j,k)
-                    d(csp(11,i,j,k,MAXX,NZETA))=rhs
-                    !x(csp(11,i,j,k,MAXX,NZETA))=vvel(i,j,k) !Use current velocity as guess of solution
-            
-                    do m=1,21
-                      call sparse_insert_val(matrix,csp(11,i,j,k,MAXX,NZETA),csp(m,i,j,k,MAXX,NZETA),coef(m))
+                        endif
+                        d(csp_masked(I_J_K,i,j,k,mask,NZETA))=rhs
+                        !Preliminary benchmarks indicate the we actually reach
+                        !convergance faster if we use a 0 initial guess rather than
+                        !the previous velocity.  More testing is needed.
+                        !To use the current velocity as the guess, uncomment this
+                        !line here and and in the Y velocity section of this
+                        !function.
+                        !x=csp(I_J_K,i,j,k,MAXX,NZETA))=uvel(i,j,k) !Use current velocity as guess of solution
+                        do m=1,21
+                            if (stencil_i(m, i) > 0 .and. stencil_i(m, i) <= maxy .and. &
+                                stencil_j(m, j) > 0 .and. stencil_j(m, j) <= maxx .and. &
+                                stencil_k(m, k) > 0 .and. stencil_k(m, k) <= nzeta) then
+                                    call sparse_insert_val(matrix, &
+                                                    csp_masked(11,i,j,k,mask,nzeta), &
+                                                    csp_masked(m,i,j,k,mask,NZETA), &
+                                                    coef(m)) 
+                            end if
+                        end do
                     end do
-                end do
-            end do
+                end if
+             end do
         end do
 
-#if 0
-        call write_sparse_system("uvel_triad.txt",matrix%row, matrix%col, matrix%val, matrix%n)
-        open(37,file="uvel_rhs.txt")
-        write(37,*) d
-        close(37)
-        !stop
-#endif
-
+        call sparse_solver_preprocess(matrix, options, workspace)
         ierr = sparse_solve(matrix, d, x, options, workspace,  err, iter, verbose=.false.)
         call handle_sparse_error(matrix, ierr, __FILE__, __LINE__)        
-
-        l=0
+        
+        !Delinearize the solution
         do i=1,MAXY
             do j=1,MAXX
                 do k=1,NZETA
-                    l=l+1
-                    vstar(i,j,k)=x(l)
+                    if (mask(i,j) /= 0) then
+                        !write(*,*)csp_masked(11,i,j,k,mask,nzeta)
+                        vstar(i,j,k)=x(csp_masked(11,i,j,k,mask,nzeta))
+                    else
+                        vstar(i,j,k)=0
+                    end if
                 end do
             end do
         end do
         sparuv=iter
         
     end function sparuv
-!
+
 !
 !------------------------------------------------------
 !   lookup coordinates in sparse matrix for 2D matrix
@@ -1346,43 +1391,59 @@ end subroutine init_zeta
 !    21   ->   i + 1, j + 1, k
 !------------------------------------------------------
 !
-      FUNCTION csp(pos,i,j,k,MAXX,NZETA)
-!
-        INTEGER pos,i,j,k,csp,MAXX,NZETA
-!
-      if (pos.eq.1) csp=(i-2)*MAXX*NZETA+(j-2)*NZETA+k
-!
-      if (pos.eq.2) csp=(i-2)*MAXX*NZETA+(j-1)*NZETA+k-1
-      if (pos.eq.3) csp=(i-2)*MAXX*NZETA+(j-1)*NZETA+k
-      if (pos.eq.4) csp=(i-2)*MAXX*NZETA+(j-1)*NZETA+k+1
-!
-      if (pos.eq.5) csp=(i-2)*MAXX*NZETA+j*NZETA+k
-!
-      if (pos.eq.6) csp=(i-1)*MAXX*NZETA+(j-2)*NZETA+k-1
-      if (pos.eq.7) csp=(i-1)*MAXX*NZETA+(j-2)*NZETA+k
-      if (pos.eq.8) csp=(i-1)*MAXX*NZETA+(j-2)*NZETA+k+1
-!
-      if (pos.eq.9) csp=(i-1)*MAXX*NZETA+(j-1)*NZETA+k-2
-      if (pos.eq.10) csp=(i-1)*MAXX*NZETA+(j-1)*NZETA+k-1
-      if (pos.eq.11) csp=(i-1)*MAXX*NZETA+(j-1)*NZETA+k
-      if (pos.eq.12) csp=(i-1)*MAXX*NZETA+(j-1)*NZETA+k+1
-      if (pos.eq.13) csp=(i-1)*MAXX*NZETA+(j-1)*NZETA+k+2
-!
-      if (pos.eq.14) csp=(i-1)*MAXX*NZETA+j*NZETA+k-1
-      if (pos.eq.15) csp=(i-1)*MAXX*NZETA+j*NZETA+k
-      if (pos.eq.16) csp=(i-1)*MAXX*NZETA+j*NZETA+k+1
-!
-      if (pos.eq.17) csp=i*MAXX*NZETA+(j-2)*NZETA+k
-!
-      if (pos.eq.18) csp=i*MAXX*NZETA+(j-1)*NZETA+k-1
-      if (pos.eq.19) csp=i*MAXX*NZETA+(j-1)*NZETA+k
-      if (pos.eq.20) csp=i*MAXX*NZETA+(j-1)*NZETA+k+1
-!
-      if (pos.eq.21) csp=i*MAXX*NZETA+j*NZETA+k
-      return
-      END function
-      
-      
+      !Given a point and a stencil location,
+      !the following three functions return the equivalent location
+      function stencil_i(pos, i)
+        integer :: pos, i, stencil_i
+        if (pos <= 5) then
+            stencil_i = i - 1
+        else if (pos <= 16) then
+            stencil_i = i
+        else
+            stencil_i = i + 1
+        end if
+      end function
+
+      function stencil_j(pos, j)
+        integer :: pos, j, stencil_j
+        select case(pos)
+            case(1, 6, 7, 8, 17)
+                stencil_j = j - 1
+            case(5, 14, 15, 16, 21)
+                stencil_j = j + 1
+            case default
+                stencil_j = j
+        end select
+      end function
+
+      function stencil_k(pos, k)
+        integer :: pos, k, stencil_k
+        select case(pos)
+            case(2, 6, 10, 14, 18)
+                stencil_k = k - 1
+            case(4, 8, 12, 16, 20)
+                stencil_k = k + 1
+            case(9)
+                stencil_k = k - 2
+            case(13)
+                stencil_k = k + 2
+            case default
+                stencil_k = k
+        end select
+      end function
+ !
+      function csp_masked(pos, i, j, k, mask, nzeta)
+         integer :: pos
+         integer :: i !Y coordinate
+         integer :: j !X coordinate
+         integer :: k !Z coordinate
+         integer, dimension(:,:) :: mask
+         integer :: nzeta
+         integer :: csp_masked
+
+         csp_masked = (mask(stencil_i(pos,i), stencil_j(pos,j)) - 1) * nzeta &
+                      + stencil_k(pos, k)
+      end function
 !
 !------------------------------------------------------
 !   central difference calculation for uvel

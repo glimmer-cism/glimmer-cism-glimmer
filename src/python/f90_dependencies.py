@@ -48,9 +48,9 @@ def search_file(name):
         if pos is not -1:
             l = l[:pos]
         # finding use statement
-        pos = string.find(l,'use')
+        pos = string.find(l,'use ')
         if pos is not -1:
-            pos = pos+len('use')
+            pos = pos+len('use ')
             pos2 = string.find(l,',')
             if pos2==-1:
                 module = string.strip(l[pos:])
@@ -60,9 +60,9 @@ def search_file(name):
                 result['uses'].append(module)
             continue
         # finding include statements
-        pos = string.find(l,'include')
+        pos = string.find(l,'include ')
         if pos is not -1:
-            pos = pos+len('include')
+            pos = pos+len('include ')
             include = string.strip(l[pos:])
             if string.find(include,'<') is not -1:
                 continue
@@ -72,9 +72,9 @@ def search_file(name):
                 result['includes'].append(include)
             continue
         # finding module statement
-        pos = string.find(l,'end module')
+        pos = string.find(l,'end module ')
         if pos is not -1:
-            pos = pos + len('end module')
+            pos = pos + len('end module ')
             result['modname'].append(string.strip(l[pos:]))
             continue
         if string.find(l,'end program') is not -1:

@@ -107,11 +107,18 @@ contains
     !*FD diffusivity from quantities of the previous time step
 
     use glide_velo
+    use glide_thckmask
     implicit none
     ! subroutine arguments
     type(glide_global_type) :: model
     logical, intent(in) :: newtemps                     !*FD true when we should recalculate Glen's A
+    
+    !For HO masking
+    logical :: empty
+    integer :: totpts
+    real(sp), dimension(model%general%ewn-1, model%general%nsn-1) :: stagmassb
 
+    stagmassb = 0
     if (model%geometry%empty) then
 
        model%geometry%thck = dmax1(0.0d0,model%geometry%thck + model%climate%acab * model%pcgdwk%fc2(2))
@@ -163,6 +170,10 @@ contains
                 end where
              end if
 
+             call glide_maskthck(model%geomderv%stagthck, stagmassb, .true., model%geometry%dom, &
+                                 model%velocity_hom%velmask, totpts, empty)
+             print *, "totpts=",totpts
+             !Compute the mask.  We do this in this step because otherwise it sucks...
              call velo_hom_pattyn(model%general%ewn, model%general%nsn, model%general%upn, &
                           model%numerics%dew, model%numerics%dns, model%numerics%sigma, &
                           model%geometry%thck, model%geometry%usrf, &
@@ -170,7 +181,8 @@ contains
                           model%geomderv%dusrfdew, model%geomderv%dusrfdns, &
                           model%geomderv%dthckdew-model%geomderv%dusrfdew, & 
                           model%geomderv%dthckdns-model%geomderv%dusrfdns, & 
-                          model%geomderv%stagthck, model%temper%flwa, 3.0D0, model%velocity_hom%beta, &
+                          model%geomderv%stagthck, model%velocity_hom%velmask, totpts, &
+                          model%temper%flwa, 3.0D0, model%velocity_hom%beta, &
                           model%options%which_ho_bstress,&
                           model%options%periodic_ew .eq. 1, &
                           model%options%periodic_ns .eq. 1,&
