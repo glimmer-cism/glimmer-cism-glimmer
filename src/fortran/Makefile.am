@@ -45,7 +45,7 @@ libglimmer_a_SOURCES = glimmer_vers.F90 \
 nodist_libglimmer_a_SOURCES = glimmer_vers.F90
 
 libglide_a_SOURCES = glide.F90 glide_setup.F90 glide_types.F90 glide_temp.F90 \
-                     glide_deriv.F90 xls.F90 ice3d_lib.F90 glide_velo_higher.F90 \
+                     glide_deriv.F90 xls.F90 ice3d_lib.F90 glide_velo_higher.F90\
                      glide_thck.F90 glide_velo.F90 glide_mask.F90 \
                      glide_stop.F90 glide_io.F90 glide_nc_custom.F90 \
                      isostasy.F90 isostasy_el.F90 isostasy_setup.F90 \
