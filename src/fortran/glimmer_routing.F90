@@ -1,5 +1,5 @@
 #ifdef HAVE_CONFIG_H
-#include <config.inc>
+#include "config.inc"
 #endif
 
 module glimmer_routing

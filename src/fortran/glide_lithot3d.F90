@@ -41,7 +41,7 @@
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 #ifdef HAVE_CONFIG_H
-#include <config.inc>
+#include "config.inc"
 #endif
 
 ! module for 3D temperature calculations in the upper lithosphere
