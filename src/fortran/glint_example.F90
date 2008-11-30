@@ -41,7 +41,7 @@
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 #ifdef HAVE_CONFIG_H
-#include <config.inc>
+#include "config.inc"
 #endif
 
 program glint_example

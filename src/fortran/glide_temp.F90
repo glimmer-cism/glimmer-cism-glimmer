@@ -41,7 +41,7 @@
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 #ifdef HAVE_CONFIG_H
-#include <config.inc>
+#include "config.inc"
 #endif
 
 ! some macros used to disable parts of the temperature equation
