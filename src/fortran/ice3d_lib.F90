@@ -281,11 +281,11 @@ end subroutine init_zeta
                         ay(i,j,k) = (dzdy(i, j) - zeta(k) * dhdy(i, j)) / h(i, j)
               
                         bx(i,j,k) = ( d2zdx2(i, j) - &
-                                      zeta(k) * d2hdy2(i, j) - & 
+                                      zeta(k) * d2hdx2(i, j) - & 
                                       2. * ax(i, j, k) * dhdx(i, j) ) / h(i,j)
                          
                         by(i,j,k) = ( d2zdy2(i, j) - &
-                                      zeta(k) * d2hdx2(i, j) - & 
+                                      zeta(k) * d2hdy2(i, j) - & 
                                       2. * ay(i, j, k) * dhdy(i, j) ) / h(i,j)
                          
                         cxy(i,j,k) = ( dfdy_2d(dzdy, i, j, dx) - & 
@@ -766,7 +766,6 @@ end subroutine init_zeta
         call write_xls("h.txt",h)
         call write_xls_3d("uvel_sia.txt",uvel)
         call write_xls_3d("vvel_sia.txt",vvel)
-        call write_xls("uvel_sia_surf.txt",uvel(:,:,1))
         call write_xls("beta.txt",beta)
         call write_xls("dhbdx.txt",dhbdx)
         call write_xls("dhbdy.txt",dhbdy)
@@ -780,7 +779,7 @@ end subroutine init_zeta
         !Deal with periodic boundary conditions
         call periodic_boundaries_3d_stag(uvel,periodic_x,periodic_y)
         call periodic_boundaries_3d_stag(vvel,periodic_x,periodic_y)
-            !Compute basal traction
+        !Compute basal traction
 
         !A zero in the flow law can be problematic, so where that happens we set
         !it to the "standard" small flow law coefficient
@@ -803,7 +802,7 @@ end subroutine init_zeta
 #endif
                 m = m+1
             endif
-            
+             
             !Compute the basal traction.  This is done by either passing through
             !the beta parameter, or by using Shoof's plastic bed model (Schoof
             !2004).
@@ -815,7 +814,8 @@ end subroutine init_zeta
 
             !Compute viscosity
             call muterm(mu,uvel,vvel,arrh,h,ax,ay,delta_x,delta_y,zeta,FLOWN,ZIP)
-
+            call write_xls_3d("mu.txt",mu)
+            !stop
             !Sparse matrix routine for determining velocities.  The new
             !velocities will get spit into ustar and vstar, while uvel and vvel
             !will still hold the old velocities.
