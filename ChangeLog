@@ -1,4 +1,7 @@
-2008-07-23 Ian Rutt
+2008-12-02 Ian Rutt
+ * Bump version to 1.0.15 (new development series)
+	
+2008-12-02 Ian Rutt
  * configure.in: bump version to 1.0.14
  * NEWS: update
 	
