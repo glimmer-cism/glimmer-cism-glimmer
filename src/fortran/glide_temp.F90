@@ -838,7 +838,7 @@ contains
 
     do ns = 2, model%general%nsn-1
        do ew = 2, model%general%ewn-1
-          call calcpmptb(bpmp(ns,ew),thck(ns,ew))
+          call calcpmptb(bpmp(ew,ns),thck(ew,ns))
        end do
     end do
 

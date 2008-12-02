@@ -1,3 +1,7 @@
+2008-12-02 Ian Rutt
+ * Corrected index transposition in glide_temp.F90 (calcbpmp). Thanks to
+ Jonathan Gregory for finding and fixing this.
+
 2008-11-30 Ian Rutt
  * Changed all <config.inc> to "config.inc", to conform with
    strict requirements of gfortran 4.4.0
