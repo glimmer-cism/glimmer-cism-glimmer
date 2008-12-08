@@ -404,22 +404,20 @@ contains
                                 !For each of the variables in x, y, check whether or not
                                 !we need to use an upwinding or downwinding differentiation
                                 !scheme.
-                                if (x == 1 .or. grad_x > 1) then
+                                if (x == 1 .or. grad_x > 0) then
                                         out_dfdx(x, y, z) = dfdx_3d_downwind(f, x, y, z, deltax)
-                                else if (x == nx .or. grad_x < 1) then
+                                else if (x == nx .or. grad_x < 0) then
                                         out_dfdx(x, y, z) = dfdx_3d_upwind(f, x, y, z, deltax)
                                 else
                                         out_dfdx(x, y, z) = dfdx_3d(f, x, y, z, deltax)
                                 end if
-                                
-                                if (y == 1 .or. grad_y > 1) then
+                                if (y == 1 .or. grad_y > 0) then
                                         out_dfdy(x, y, z) = dfdy_3d_downwind(f, x, y, z, deltay)
-                                else if (y == ny .or. grad_y < 1) then
+                                else if (y == ny .or. grad_y < 0) then
                                         out_dfdy(x, y, z) = dfdy_3d_upwind(f, x, y, z, deltay)
                                 else
                                         out_dfdy(x, y, z) = dfdy_3d(f, x, y, z, deltay)
                                 end if
-                                
                                 if (z == 1) then
                                         out_dfdz(x, y, z) = dfdz_3d_downwind_irregular(f, x, y, z, deltaz)
                                 else if (z == nz) then
