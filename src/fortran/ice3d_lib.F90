@@ -29,6 +29,7 @@ module ice3d_lib
     integer,parameter :: dslucs_dbg_unit = 6
 
     integer :: HACKY_DEBUG_CODE
+    logical, parameter :: sparverbose = .true.
 
 !------------------------------------------------------
 !   lookup coordinates in sparse matrix
@@ -548,20 +549,25 @@ end subroutine init_zeta
           us=0.
           vs=0.
           d = (RHOI*GRAV*h(i,j))**FLOWN
+          !Accumulated vertical integration using trapezoid rule??
           do 30 k=(NZETA-1),1,-1
             z = (0.5*(zeta(k+1)+zeta(k)))**FLOWN
             diff1(k)=d*grad*h(i,j)*(arrh(i,j,k+1)+arrh(i,j,k))*z*&
               (zeta(k)-zeta(k+1))+diff1(k+1)
    30     CONTINUE
           diffus=0.
+          !Vertical averaging of diffusivity (this works because the
+          !differences between successive vertical layers must sum to 1!)
           do 40 k=2,NZETA
             diffus=diffus+0.5*(diff1(k)+diff1(k-1))*&
               (zeta(k)-zeta(k-1))
    40     CONTINUE
+          !Estimation of velocity from SIA diffusivity
           do 50 k=1,NZETA
             uvel(i,j,k)=diff1(k)*dzdx(i,j)+us
             vvel(i,j,k)=diff1(k)*dzdy(i,j)+vs
    50     CONTINUE
+        !Estimation of vertical average velocity from vertical average diff.
         u(i,j)=diffus*dzdx(i,j)
         v(i,j)=diffus*dzdy(i,j)
    20   CONTINUE
@@ -748,6 +754,12 @@ end subroutine init_zeta
         !Set up sparse matrix options
         call sparse_solver_default_options(options)
         options%tolerance=TOLER
+!If we've compiled with the SLAP solver, we want to configure to use the GMRES method instead of the BiCG method.
+!GMRES works much better for the HO solves
+#if SPARSE_SOLVER == slap
+        options%use_gmres = .true.
+        options%maxiters  = 10000
+#endif
 
         !Create the sparse matrix
         call new_sparse_matrix(ijktot, ijktot*22, matrix)
@@ -813,9 +825,8 @@ end subroutine init_zeta
             end if
 
             !Compute viscosity
-            call muterm(mu,uvel,vvel,arrh,h,ax,ay,delta_x,delta_y,zeta,FLOWN,ZIP)
+            call muterm(mu,uvel,vvel,arrh,h,dzdx,dzdy,ax,ay,delta_x,delta_y,zeta,FLOWN,ZIP,.true.)
             call write_xls_3d("mu.txt",mu)
-            !stop
             !Sparse matrix routine for determining velocities.  The new
             !velocities will get spit into ustar and vstar, while uvel and vvel
             !will still hold the old velocities.
@@ -848,7 +859,37 @@ end subroutine init_zeta
 
       return
       END subroutine
-    
+   
+      subroutine smooth_field_3d(field, factor, outfield)
+        double precision, dimension(:,:,:) ::    field
+        double precision, dimension(:,:,:) :: outfield
+        integer :: factor
+
+        integer :: i, j, k
+        integer :: maxx, maxy, nzeta
+
+        integer :: xlow, xhi, ylow, yhi
+        integer :: npoints
+
+        maxx = size(field, 2)
+        maxy = size(field, 1)
+        nzeta = size(field, 3)
+
+        do i=1,maxy
+            do j=1,maxx
+                !Clamp the range that we are going to average to the limits of the grid
+                xlow = max(1, j - factor)
+                ylow = max(1, i - factor)
+                xhi  = min(maxx, j + factor)
+                yhi  = min(maxy, i + factor)
+                npoints = (xhi-xlow)*(yhi-ylow)
+                do k=1,nzeta
+                    outfield(i,j,k) = sum(field(ylow, yhi : xlow, xhi : k))/npoints
+                end do
+            end do
+        end do
+
+      end subroutine 
 
 !----------------------------------------------------------------------------------------
 ! BOP
@@ -1080,14 +1121,17 @@ end subroutine init_zeta
 !   nonlinear viscosity term
 !------------------------------------------------------
 !
-      subroutine muterm(mu,uvel,vvel,arrh,h,ax,ay,dx,dy,dz,FLOWN,ZIP)
+      subroutine muterm(mu,uvel,vvel,arrh,h,dzdx,dzdy,ax,ay,dx,dy,dz,FLOWN,ZIP,UPSTREAM)
 !
         double precision,                   intent(in)  :: FLOWN,ZIP
+        logical,                            intent(in)  :: UPSTREAM
         double precision, dimension(:,:,:), intent(out) :: mu
         double precision, dimension(:,:,:), intent(in)  :: uvel
         double precision, dimension(:,:,:), intent(in)  :: vvel
         double precision, dimension(:,:,:), intent(in)  :: arrh
         double precision, dimension(:,:),   intent(in)  :: h
+        double precision, dimension(:,:),   intent(in)  :: dzdx
+        double precision, dimension(:,:),   intent(in)  :: dzdy
         double precision, dimension(:,:,:), intent(in)  :: ax
         double precision, dimension(:,:,:), intent(in)  :: ay
         double precision,                   intent(in)  :: dx
@@ -1111,8 +1155,8 @@ end subroutine init_zeta
         macht=(1.-FLOWN)/(2.*FLOWN)
       
         !TODO: Implement option for upstream differencing
-        call df_field_3d(uvel, dy, dx, dz, dudy, dudx, dudz)
-        call df_field_3d(vvel, dy, dx, dz, dvdy, dvdx, dvdz)
+        call df_field_3d(uvel, dy, dx, dz, dudy, dudx, dudz, UPSTREAM, dzdx, dzdy)
+        call df_field_3d(vvel, dy, dx, dz, dvdy, dvdx, dvdz, UPSTREAM, dzdx, dzdy)
       
         !Compute mu term from the acceleration fields
         do i=1,MAXY
@@ -1225,7 +1269,6 @@ end subroutine init_zeta
                         !line here and and in the Y velocity section of this
                         !function.
                         !x=csp(I_J_K,i,j,k,MAXX,NZETA))=uvel(i,j,k) !Use current velocity as guess of solution
-                        
                         do m=1,21
                             if (stencil_i(m, i) > 0 .and. stencil_i(m, i) <= maxy .and. &
                                 stencil_j(m, j) > 0 .and. stencil_j(m, j) <= maxx .and. &
@@ -1242,12 +1285,8 @@ end subroutine init_zeta
         end do
         call write_sparse_system('sparse.txt',matrix%row, matrix%col, matrix%val, matrix%nonzeros)
         call sparse_solver_preprocess(matrix, options, workspace)
-        ierr = sparse_solve(matrix, d, x, options, workspace,  err, iter, verbose=.false.)
+        ierr = sparse_solve(matrix, d, x, options, workspace,  err, iter, verbose=sparverbose)
         call handle_sparse_error(matrix, ierr, __FILE__, __LINE__)        
-
-        open(unit=37, file="solution_vector.txt")
-        write(37,*)x
-        close(37)
 
  
         !Delinearize the solution
@@ -1302,7 +1341,7 @@ end subroutine init_zeta
                         !To use the current velocity as the guess, uncomment this
                         !line here and and in the Y velocity section of this
                         !function.
-                        !x=csp(I_J_K,i,j,k,MAXX,NZETA))=uvel(i,j,k) !Use current velocity as guess of solution
+                        !x=csp(I_J_K,i,j,k,MAXX,NZETA))=vvel(i,j,k) !Use current velocity as guess of solution
                         do m=1,21
                             if (stencil_i(m, i) > 0 .and. stencil_i(m, i) <= maxy .and. &
                                 stencil_j(m, j) > 0 .and. stencil_j(m, j) <= maxx .and. &
@@ -1319,7 +1358,7 @@ end subroutine init_zeta
         end do
 
         call sparse_solver_preprocess(matrix, options, workspace)
-        ierr = sparse_solve(matrix, d, x, options, workspace,  err, iter, verbose=.false.)
+        ierr = sparse_solve(matrix, d, x, options, workspace,  err, iter, verbose=sparverbose)
         call handle_sparse_error(matrix, ierr, __FILE__, __LINE__)        
         
         !Delinearize the solution
@@ -1465,6 +1504,8 @@ end subroutine init_zeta
     !
     !The "component" argument should be a single character indicating
     !whether the "u" or "v" component is being requested.
+    !DON'T PANIC, this works!  It's been tested!  Really!  The bug is somewhere
+    !else!
     subroutine sparse_setup(component, i,j,k,mu,dzdx,dzdy,ax,ay,bx,by,cxy,&
         h,dx,dy,dz,uvel,vvel,dhbdx,dhbdy,beta,MAXX,MAXY,Ndz,&
         coef, rhs)

@@ -35,6 +35,8 @@ module glimmer_sparse_solver
         integer :: itol !*FD Tolerance code, see SLAP documentation
         real(kind=dp) :: tolerance !*FD Error tolerance
         integer :: maxiters !*FD Max iterations before giving up
+        logical :: use_gmres !*FD Whether to use the GMRES method instead of Biconjugate Gradient
+        integer :: gmres_saved_vectors !*FD How many vectors to save while performing GMRES iteration
     end type sparse_solver_options
 
 contains
@@ -48,6 +50,8 @@ contains
         opt%itol = 2
         opt%tolerance  = 5e-5
         opt%maxiters = 2000
+        opt%use_gmres = .false.
+        opt%gmres_saved_vectors = 20
     end subroutine sparse_solver_default_options
 
     subroutine sparse_allocate_workspace(matrix, options, workspace, max_nonzeros_arg)
@@ -195,9 +199,16 @@ contains
             !Set up SLAP if it hasn't been already
             call sparse_solver_preprocess(matrix, options, workspace)
 
-            call dslucs(matrix%order, rhs, solution, matrix%nonzeros, matrix%row, matrix%col, matrix%val, &
-                    isym, options%itol, options%tolerance, options%maxiters, niters, err, ierr, iunit, &
-                    workspace%rwork, size(workspace%rwork), workspace%iwork, size(workspace%iwork))
+            if (options%use_gmres) then
+                call dslugm(matrix%order, rhs, solution, matrix%nonzeros, matrix%row, matrix%col, matrix%val, &
+                            isym, options%gmres_saved_vectors, options%itol, options%tolerance, options%maxiters, &
+                            niters, err, ierr, iunit, &
+                            workspace%rwork, size(workspace%rwork), workspace%iwork, size(workspace%iwork))
+            else
+                call dslucs(matrix%order, rhs, solution, matrix%nonzeros, matrix%row, matrix%col, matrix%val, &
+                            isym, options%itol, options%tolerance, options%maxiters, niters, err, ierr, iunit, &
+                            workspace%rwork, size(workspace%rwork), workspace%iwork, size(workspace%iwork))
+            end if
         end if
         sparse_solve = ierr
     end function sparse_solve

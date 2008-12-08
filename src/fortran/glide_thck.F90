@@ -179,8 +179,8 @@ contains
                           model%geometry%thck, model%geometry%usrf, &
                           model%geomderv%dthckdew, model%geomderv%dthckdns, &
                           model%geomderv%dusrfdew, model%geomderv%dusrfdns, &
-                          -1*(model%geomderv%dthckdew-model%geomderv%dusrfdew), & 
-                          -1*(model%geomderv%dthckdns-model%geomderv%dusrfdns), & 
+                          model%geomderv%dthckdew-model%geomderv%dusrfdew, & 
+                          model%geomderv%dthckdns-model%geomderv%dusrfdns, & 
                           model%geomderv%stagthck, model%velocity_hom%velmask, totpts, &
                           model%temper%flwa, 3.0D0, model%velocity_hom%beta, &
                           model%options%which_ho_bstress,&

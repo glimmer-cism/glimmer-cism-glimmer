@@ -47,7 +47,7 @@
 #include <glide_mask.inc>
 
 module glide_setup
-
+  use glimmer_global, only: dp
   !*FD Contains general routines for initialisation, etc, called
   !*FD from the top-level glimmer subroutines.
 
@@ -280,6 +280,7 @@ contains
     use glide_types
     use glimmer_log
     use glimmer_filenames
+    use glimmer_global, only: dp
     implicit none
 
     ! Arguments
@@ -287,34 +288,23 @@ contains
     integer,               intent(in)    :: unit  !*FD Logical file unit to use. 
                                                   !*FD The logical file unit specified 
                                                   !*FD must not already be in use
-
+    
     ! Internal variables
 
-    integer :: up,upn
-    logical :: there
-
+    integer  :: up,upn
+    logical  :: there
+    real(dp) :: level
     ! Beginning of code
 
     upn=model%general%upn
 
+    
     select case(model%options%which_sigma)
     case(0)
        call write_log('Calculating sigma levels')
        do up=1,upn
-          select case(model%options%which_sigma_builtin)
-            case (SIGMA_BUILTIN_DEFAULT)
-              model%numerics%sigma(up) = glide_calc_sigma(real(up-1)/real(upn-1),2.)
-            case (SIGMA_BUILTIN_EVEN)
-              model%numerics%sigma(up) = real(up-1)/real(upn-1)
-            case (SIGMA_BUILTIN_PATTYN)
-              if (up == 1) then
-                model%numerics%sigma(up) = 0
-              else if (up == upn) then
-                model%numerics%sigma(up) = 1
-              else
-                model%numerics%sigma(up) = glide_calc_sigma_pattyn(real(up-1)/real(upn))
-              end if
-          end select
+          level = real(up-1)/real(upn-1)
+          model%numerics%sigma(up) = glide_find_level(level, model%options%which_sigma_builtin)
        end do
     case(1)
        inquire (exist=there,file=process_path(model%funits%sigfile))
@@ -336,9 +326,35 @@ contains
     
   end subroutine glide_load_sigma
 
+  !Returns the sigma coordinate of one level using a specific builtin scheme
+  function glide_find_level(level, scheme)
+    use glide_types
+    use glimmer_global, only: dp
+    real(dp) :: level
+    integer  :: scheme
+    real(dp) :: glide_find_level
+
+    select case(scheme)
+      case (SIGMA_BUILTIN_DEFAULT)
+        glide_find_level = glide_calc_sigma(level,2D0)
+      case (SIGMA_BUILTIN_EVEN)
+        glide_find_level = level
+      case (SIGMA_BUILTIN_PATTYN)
+        if (up == 1) then
+          glide_find_level = 0
+        else if (up == upn) then
+          glide_find_level = 1
+        else
+           glide_find_level = glide_calc_sigma_pattyn(level)
+        end if
+    end select
+     
+  end function glide_find_level
+
   function glide_calc_sigma(x,n)
+      use glimmer_global, only:dp
       implicit none
-      real :: glide_calc_sigma,x,n
+      real(dp) :: glide_calc_sigma,x,n
       
       glide_calc_sigma = (1-(x+1)**(-n))/(1-2**(-n))
   end function glide_calc_sigma
@@ -346,10 +362,11 @@ contains
   !Implements an alternate set of sigma levels that encourages better
   !convergance for higher-order velocities
   function glide_calc_sigma_pattyn(x)
+        use glimmer_global, only:dp
         implicit none
-        real :: glide_calc_sigma_pattyn, x
+        real(dp) :: glide_calc_sigma_pattyn, x
 
-        glide_calc_sigma_pattyn=(-2.5641025641D-4)*(41*x)**2+3.5256410256D-2*(41*x)-&
+        glide_calc_sigma_pattyn=(-2.5641025641D-4)*(41D0*x)**2+3.5256410256D-2*(41D0*x)-&
           8.0047080075D-13
   end function glide_calc_sigma_pattyn
 
