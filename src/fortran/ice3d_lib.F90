@@ -29,7 +29,7 @@ module ice3d_lib
     integer,parameter :: dslucs_dbg_unit = 6
 
     integer :: HACKY_DEBUG_CODE
-    logical, parameter :: sparverbose = .true.
+    logical, parameter :: sparverbose = .false.
 
 !------------------------------------------------------
 !   lookup coordinates in sparse matrix
@@ -724,6 +724,8 @@ end subroutine init_zeta
 
         double precision, dimension(4,size(mu,1)*size(mu,2)*size(mu,3)) :: em
 
+
+        double precision, dimension(2*size(mu,1)*size(mu,2)*size(mu,3)) :: correction_vec
         !Velocity estimates computed for the *current* iteration.  uvel and
         !vvel, comparitively, hold the velocity estimates for the *last*
         !iteration.
@@ -750,6 +752,7 @@ end subroutine init_zeta
         m=1
         lacc=0
         em = 0
+        correction_vec = 0
 
         !Set up sparse matrix options
         call sparse_solver_default_options(options)
@@ -837,10 +840,11 @@ end subroutine init_zeta
             
             !Apply unstable manifold correction.  This function returns
             !true if we need to keep iterating, false if we reached convergence
-            cont = unstable_manifold_correction(ustar, uvel, em(DU1,:), &
-                                                vstar, vvel, em(DV1,:), &
+            cont = unstable_manifold_correction_hov(ustar, uvel, &
+                                                vstar, vvel, correction_vec, &
                                                 maxy, maxx, nzeta, error, &
-                                                tot, teta)
+                                                tot, teta)    
+
 #if DEBUG 
             write(*,*) l, iter, tot, teta
 #endif
@@ -897,154 +901,46 @@ end subroutine init_zeta
 ! !IROUTINE: unstable_manifold_correction
 !
 ! !INTERFACE:
-    function unstable_manifold_correction(u_new, u_old, u_correct, &
-                                          v_new, v_old, v_correct, &
+    function unstable_manifold_correction_hov(u_new, u_old, &
+                                          v_new, v_old, vec_correction, &
                                           maxy, maxx, nzeta, toler, &
                                           tot_out, theta_out)
+        use glide_nonlin
 ! !RETURN VALUE:
-        logical :: unstable_manifold_correction !whether another iteration step is needed
+        logical :: unstable_manifold_correction_hov !whether another iteration step is needed
  
 ! !PARAMETERS:
         real(dp), dimension(:,:,:), intent(in) :: u_new  !Computed u component from this iteration
         real(dp), dimension(:,:,:), intent(inout) :: u_old !Computed u component from last iteration
-        real(dp), dimension(:), intent(inout) :: u_correct !Old correction vector for u  
         real(dp), dimension(:,:,:), intent(in) :: v_new !Computed v component from this iteration
         real(dp), dimension(:,:,:), intent(inout) :: v_old !Computed v component from last iteration
-        real(dp), dimension(:), intent(inout) :: v_correct !Old correction vector for v
+        real(dp), dimension(:), intent(inout) :: vec_correction !Old correction vector for v
         integer, intent(in) :: maxy, maxx, nzeta !Grid size
         real(dp), intent(in) :: toler !Error tolerance for the iteration
-        real(dp), intent(out), optional :: tot_out !Optional output of error
-        real(dp), intent(out), optional :: theta_out !Optional output of angle
-! !DESCRIPTION:
-! Provides an encapsulated implementation of unstable manifold correction.  If
-! unstable manifold correction is not used, picard iteration is used instead.
-! This function returns whether to continue iterating, as well as updating the
-! old velocities with the new guesses to feed back into the next iteration.  It
-! also keeps the correction vectors updated.
-!
-! !REVISION HISTORY:
-! 10/20/08  Tim Bocek       Pulled this out of veloc2 and made into its own function
-!
-! EOP
-!----------------------------------------------------------------------------------------
-! $Id:
-! $Author: tbocek $
-!----------------------------------------------------------------------------------------
-        !Combinations of vector norms used in the UMC scheme
-        real(dp) :: norm1, norm2, norm3, norm4, norm5
-        !Angle between correction vectors
-        real(dp) :: theta
-        !Scaling factor for manifold correction
-        real(dp) :: alpha
-        !Correction vectors for the current time step
-        real(dp), dimension(maxx*maxy*nzeta) :: u_correct_new, v_correct_new
-        integer :: n !Linearization counter
-        integer :: i,j,k !Loop counters
-        real(dp) :: tot !Total error
+        real(dp), intent(out):: tot_out !Optional output of error
+        real(dp), intent(out):: theta_out !Optional output of angle
 
-        !Assume we need to iterate again until proven otherwise
-        unstable_manifold_correction = .true.
-
-            norm1=0.
-            norm2=0.
-            norm3=0.
-            norm4=0.
-            norm5=0.
-            n=0
+        real(dp), dimension(maxy*maxx*nzeta*2) :: vec_new, vec_old
+        integer :: linearize_idx
         
-            !Compute norms
-            do i = 1, MAXY
-                do j = 1, MAXX
-                    do k = 1, NZETA
-                        n = n + 1
-              
-                        u_correct_new(n)=u_new(i,j,k)-u_old(i,j,k)
-                        v_correct_new(n)=v_new(i,j,k)-v_old(i,j,k)
-              
-                        !\| c^{l-1}\|
-                        norm1 = norm1 + (u_correct_new(n)-u_correct(n))**2 &
-                                      + (v_correct_new(n)-v_correct(n))**2
-
-                        !\|c^l - c^{l-1}\|
-                        norm2 = norm2 + u_correct(n)**2 + v_correct(n)**2
-                        
-                        !\|c^l\|
-                        norm3 = norm3 + u_correct_new(n)**2 + v_correct_new(n)**2
-
-                        !\|c^l \cdot c^{l-1}\|
-                        norm4 = norm4 + u_correct(n)*u_correct_new(n) &
-                                      + v_correct(n)*v_correct_new(n)
-              
-                        norm5 = norm5 + (u_new(i,j,k)**2)+(v_new(i,j,k)**2)
-                end do
-            end do
-        end do
-   
-        !Compute the angle between successive correction vectors
-        if ((abs(norm2) < SMALL) .or. (abs(norm3) < SMALL)) then
-            theta=PI/2.
-        else
-            theta=acos(norm4/sqrt(norm2*norm3))
-        endif
+        linearize_idx = 1
+        call linearize_3d(vec_new, linearize_idx, u_new)
+        call linearize_3d(vec_new, linearize_idx, v_new)
         
-        if ( (theta <= (5.*PI/6.) ) ) then
-            !We've requested unstable manifold correction, and the angle is
-            !small (less than 5pi/6, a value identified by Hindmarsh and Payne
-            !to work well).   If this is the case, we compute and apply
-            !a correction vector.
-            
-            !Compute the error between the last two *correction vectors* (not
-            !the last two iteration values!)  (See (51) in Pattyn's paper)
-            if (abs(norm2) > 0.) then !We're just avoiding a divide by 0 here
-                alpha=sqrt(norm1/norm2)
-            else
-                alpha=1.
-            endif
-            
-            if (alpha < 1.e-6) then
-                !If the correction vector didn't change much, we're done
-                unstable_manifold_correction = .false.
-            else
-                !Update the previous guess of the velocity with the correction
-                !vector.  This throws out the current iteration's computed
-                !velocity, and instead uses the computed correction vector.
-                n=0
-                do i=1,MAXY
-                    do j=1,MAXX
-                        do k=1,NZETA
-                            n=n+1
-                            u_old(i,j,k)=u_old(i,j,k)+u_correct_new(n)/alpha
-                            u_correct(n)=u_correct_new(n)
-                            v_old(i,j,k)=v_old(i,j,k)+v_correct_new(n)/alpha
-                            v_correct(n)=v_correct_new(n)
-                        end do
-                    end do
-                end do
-            endif
-        else
-            !Copy this iteration's new values to the old values
-            !for the next iteration - because the angle between correction
-            !vectors is large we do not want to apply a correction.
-            u_old=u_new
-            v_old=v_new
-            u_correct = u_correct_new
-            v_correct = v_correct_new
-            
-        endif
+        linearize_idx = 1
+        call linearize_3d(vec_old, linearize_idx, u_old)
+        call linearize_3d(vec_old, linearize_idx, v_old)
+
+
+        unstable_manifold_correction_hov = unstable_manifold_correction(vec_new, &
+                vec_old, vec_correction, maxy*maxx*nzeta*2, toler, tot_out, theta_out)
+
+        linearize_idx = 1
+        call delinearize_3d(vec_new, linearize_idx, u_new)
+        call delinearize_3d(vec_new, linearize_idx, v_new)
         
-        tot=sqrt(norm3/(norm5+ZIP)) !Regularize the denominator so we don't get NAN with simple geometries
+    end function unstable_manifold_correction_hov
 
-        if (present(tot_out)) then
-            tot_out = tot
-        end if
-        
-        if (present(theta_out)) then
-            theta_out = theta * 180 / pi
-        end if
-
-        if (tot < toler) unstable_manifold_correction = .false.
-
-    end function unstable_manifold_correction
 
     !Reduces a 3d higher order velocity estimate to a 2d velocity field.
     subroutine vel_2d_from_3d(uvel, vvel, u, v, zeta)

@@ -238,6 +238,7 @@ contains
     use glimmer_global, only : dp
     use glide_velo
     use glide_setup
+    use glide_nonlin !For unstable manifold correction
     implicit none
     ! subroutine arguments
     type(glide_global_type) :: model
@@ -250,6 +251,15 @@ contains
     integer p
     logical first_p
 
+    ! local variables used by unstable manifold correction
+    real(kind=dp), dimension(model%general%ewn*model%general%nsn) :: umc_new_vec   
+    real(kind=dp), dimension(model%general%ewn*model%general%nsn) :: umc_old_vec 
+    real(kind=dp), dimension(model%general%ewn*model%general%nsn) :: umc_correction_vec
+    logical :: umc_continue_iteration
+
+    umc_correction_vec = 0
+    umc_new_vec = 0
+    umc_old_vec = 0
 
     if (model%geometry%empty) then
 
@@ -273,9 +283,9 @@ contains
        first_p = .true.
        model%thckwk%oldthck = model%geometry%thck
        ! do Picard iteration
+       model%thckwk%oldthck2 = model%geometry%thck
        do p=1,pmax
-          model%thckwk%oldthck2 = model%geometry%thck
-
+          
           call stagvarb(model%geometry% thck, &
                model%geomderv% stagthck,&
                model%general%  ewn, &
@@ -315,11 +325,27 @@ contains
           call thck_evolve(model,model%velocity%diffu, model%velocity%diffu, first_p,model%thckwk%oldthck,model%geometry%thck)
 
           first_p = .false.
+
+#ifdef USE_UNSTABLE_MANIFOLD
+          call linearize_2d(umc_new_vec, 1, model%geometry%thck)
+          call linearize_2d(umc_old_vec, 1, model%thckwk%oldthck2)
+          umc_continue_iteration = unstable_manifold_correction(umc_new_vec, umc_old_vec, &
+                                                                umc_correction_vec, size(umc_correction_vec),&
+                                                                tol)
+          !Only the old thickness might change as a result of this call
+          call delinearize_2d(umc_old_vec, 1, model%thckwk%oldthck2)
+          
+          if (umc_continue_iteration) then
+            exit
+          end if
+#else
           residual = maxval(abs(model%geometry%thck-model%thckwk%oldthck2))
           if (residual.le.tol) then
              exit
           end if
-          
+          model%thckwk%oldthck2 = model%geometry%thck
+#endif
+
        end do
 #ifdef DEBUG_PICARD
        picard_max=max(picard_max,p)
