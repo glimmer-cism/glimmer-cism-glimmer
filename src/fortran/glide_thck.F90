@@ -238,6 +238,7 @@ contains
     use glimmer_global, only : dp
     use glide_velo
     use glide_setup
+    use glide_thckmask
     use glide_nonlin !For unstable manifold correction
     implicit none
     ! subroutine arguments
@@ -256,6 +257,14 @@ contains
     real(kind=dp), dimension(model%general%ewn*model%general%nsn) :: umc_old_vec 
     real(kind=dp), dimension(model%general%ewn*model%general%nsn) :: umc_correction_vec
     logical :: umc_continue_iteration
+    integer :: linearize_start
+
+    !For HO masking
+    logical :: empty
+    integer :: totpts
+    real(sp), dimension(model%general%ewn-1, model%general%nsn-1) :: stagmassb
+
+    stagmassb = 0
 
     umc_correction_vec = 0
     umc_new_vec = 0
@@ -321,19 +330,79 @@ contains
           call velo_calc_diffu(model%velowk,model%geomderv%stagthck,model%geomderv%dusrfdew, &
                model%geomderv%dusrfdns,model%velocity%diffu)
 
-          ! get new thicknesses
-          call thck_evolve(model,model%velocity%diffu, model%velocity%diffu, first_p,model%thckwk%oldthck,model%geometry%thck)
+       !Calculate higher-order velocities if the user asked for them
+       if (model%options%which_ho_diagnostic == HO_DIAG_PATTYN) then
+            call stagvarb(model%geometry% thck, &
+                         model%geomderv%stagthck,&
+                         model%general%ewn, &
+                         model%general%nsn)
+               
+             call df_field_2d_staggered(model%geometry%usrf, model%numerics%dew, model%numerics%dns,& 
+                    model%geomderv%dusrfdew, model%geomderv%dusrfdns, .false., .false.)
+
+             call df_field_2d_staggered(model%geometry%thck, model%numerics%dew, model%numerics%dns, &
+                   model%geomderv%dthckdew, model%geomderv%dthckdns, .false., .false.)
+             
+             !If we want to invert BTRC
+             if (model%options%which_ho_beta_in == HO_BETA_USE_BTRC) then
+                where (model%velocity%btrc /= 0)
+                    model%velocity_hom%beta = 1/model%velocity%btrc
+                elsewhere
+                    model%velocity_hom%beta = NAN
+                end where
+             end if
+
+             call glide_maskthck(model%geomderv%stagthck, stagmassb, .true., model%geometry%dom, &
+                                 model%velocity_hom%velmask, totpts, empty)
+             print *, "totpts=",totpts
+             !Compute the mask.  We do this in this step because otherwise it sucks...
+             call velo_hom_pattyn(model%general%ewn, model%general%nsn, model%general%upn, &
+                          model%numerics%dew, model%numerics%dns, model%numerics%sigma, &
+                          model%geometry%thck, model%geometry%usrf, &
+                          model%geomderv%dthckdew, model%geomderv%dthckdns, &
+                          model%geomderv%dusrfdew, model%geomderv%dusrfdns, &
+                          model%geomderv%dthckdew-model%geomderv%dusrfdew, & 
+                          model%geomderv%dthckdns-model%geomderv%dusrfdns, & 
+                          model%geomderv%stagthck, model%velocity_hom%velmask, totpts, &
+                          model%temper%flwa, 3.0D0, model%velocity_hom%beta, &
+                          model%options%which_ho_bstress,&
+                          model%options%periodic_ew .eq. 1, &
+                          model%options%periodic_ns .eq. 1,&
+                          model%velocity_hom%uvel, model%velocity_hom%vvel, &
+                          model%velocity_hom%is_velocity_valid, &
+                          model%velocity_hom%uflx, model%velocity_hom%vflx, &
+                          model%velocity_hom%efvs, model%velocity_hom%tau, &
+                          model%velocity_hom%gdsx, model%velocity_hom%gdsy)
+
+                          model%velocity_hom%is_velocity_valid = .true.
+        end if
+    
+       if (model%options%which_ho_prognostic == HO_PROG_SIAONLY) then
+       ! get new thicknesses
+            call thck_evolve(model,model%velocity%diffu, model%velocity%diffu, .true.,model%geometry%thck,model%geometry%thck)
+       else if (model%options%which_ho_prognostic == HO_PROG_PATTYN) then
+            call hom_diffusion_pattyn(model%velocity_hom%uvel, model%velocity_hom%vvel, model%geomderv%stagthck, &
+                                      model%geomderv%dusrfdew, model%geomderv%dusrfdns, model%numerics%sigma, &
+                                      model%velocity_hom%diffu_x, model%velocity_hom%diffu_y) 
+
+            call thck_evolve(model,model%velocity_hom%diffu_x, model%velocity_hom%diffu_y, .true.,& 
+                  model%geometry%thck, model%geometry%thck)
+    
+       end if
+
 
           first_p = .false.
-
 #ifdef USE_UNSTABLE_MANIFOLD
-          call linearize_2d(umc_new_vec, 1, model%geometry%thck)
-          call linearize_2d(umc_old_vec, 1, model%thckwk%oldthck2)
+          linearize_start = 1
+          call linearize_2d(umc_new_vec, linearize_start, model%geometry%thck)
+          linearize_start = 1
+          call linearize_2d(umc_old_vec, linearize_start, model%thckwk%oldthck2)
           umc_continue_iteration = unstable_manifold_correction(umc_new_vec, umc_old_vec, &
                                                                 umc_correction_vec, size(umc_correction_vec),&
                                                                 tol)
           !Only the old thickness might change as a result of this call
-          call delinearize_2d(umc_old_vec, 1, model%thckwk%oldthck2)
+           linearize_start = 1
+           call delinearize_2d(umc_old_vec, linearize_start, model%thckwk%oldthck2)
           
           if (umc_continue_iteration) then
             exit

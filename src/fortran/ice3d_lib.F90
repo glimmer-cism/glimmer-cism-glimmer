@@ -936,8 +936,8 @@ end subroutine init_zeta
                 vec_old, vec_correction, maxy*maxx*nzeta*2, toler, tot_out, theta_out)
 
         linearize_idx = 1
-        call delinearize_3d(vec_new, linearize_idx, u_new)
-        call delinearize_3d(vec_new, linearize_idx, v_new)
+        call delinearize_3d(vec_old, linearize_idx, u_old)
+        call delinearize_3d(vec_old, linearize_idx, v_old)
         
     end function unstable_manifold_correction_hov
 

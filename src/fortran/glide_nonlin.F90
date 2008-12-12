@@ -7,6 +7,16 @@ module glide_nonlin
     use glimmer_physcon, only: pi
     implicit none
 contains
+    subroutine check_vector_size(start, veclen, ni, nj, nk)
+       use glimmer_log
+       integer :: start, veclen, ni, nj, nk
+       character(256) :: message
+       if (ni*nj*nk > veclen - start + 1) then
+           write(message, *) "Need ",ni*nj*nk," elements in vector, starting from element ",start," only have ",veclen - start+1
+           call write_log(message, GM_FATAL)
+       end if
+    end subroutine
+
 
     subroutine linearize_3d(vector, start, field)
         real(dp), dimension(:) :: vector
@@ -14,11 +24,13 @@ contains
         real(dp), dimension(:,:,:) :: field
         integer :: ni, nj, nk
         integer :: i,j,k
-
+        
         ni = size(field, 1)
         nj = size(field, 2)
         nk = size(field, 3)
-        
+#if DEBUG        
+        call check_vector_size(start, size(vector), ni, nj, nk)
+#endif
         do i=1,ni
             do j=1,nj
                 do k=1,nk
@@ -38,7 +50,9 @@ contains
 
         ni = size(field, 1)
         nj = size(field, 2)
-        
+#if DEBUG        
+        call check_vector_size(start, size(vector), ni, nj, 1)
+#endif        
         do i=1,ni
             do j=1,nj
                 vector(start) = field(i,j)
