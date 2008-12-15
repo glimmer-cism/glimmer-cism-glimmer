@@ -731,7 +731,10 @@ end subroutine init_zeta
         !iteration.
         double precision, dimension(size(mu,1),size(mu,2),size(mu,3)) :: ustar, vstar
         double precision, dimension(size(mu,1),size(mu,2)) :: tau !Basal traction, to be computed from the provided beta parameter
-        
+       
+        double precision, dimension(size(mu,1),size(mu,2),size(mu,3)) :: dudx, dudy, dudz
+        double precision, dimension(size(mu,1),size(mu,2),size(mu,3)) :: dvdx, dvdy, dvdz
+
         double precision, dimension(size(mu,1),size(mu,2)) ::ubas, vbas
 
         logical :: cont
@@ -828,7 +831,8 @@ end subroutine init_zeta
             end if
 
             !Compute viscosity
-            call muterm(mu,uvel,vvel,arrh,h,dzdx,dzdy,ax,ay,delta_x,delta_y,zeta,FLOWN,ZIP,.true.)
+            call muterm(mu,uvel,vvel,arrh,h,dzdx,dzdy,ax,ay,delta_x,delta_y,zeta,FLOWN,ZIP,.true., &
+                        dudx, dudy, dudz, dvdx, dvdy, dvdz)
             call write_xls_3d("mu.txt",mu)
             !Sparse matrix routine for determining velocities.  The new
             !velocities will get spit into ustar and vstar, while uvel and vvel
@@ -1017,7 +1021,8 @@ end subroutine init_zeta
 !   nonlinear viscosity term
 !------------------------------------------------------
 !
-      subroutine muterm(mu,uvel,vvel,arrh,h,dzdx,dzdy,ax,ay,dx,dy,dz,FLOWN,ZIP,UPSTREAM)
+      subroutine muterm(mu,uvel,vvel,arrh,h,dzdx,dzdy,ax,ay,dx,dy,dz,FLOWN,ZIP,UPSTREAM, &
+                        dudx, dudy, dudz, dvdx, dvdy, dvdz)
 !
         double precision,                   intent(in)  :: FLOWN,ZIP
         logical,                            intent(in)  :: UPSTREAM
@@ -1033,12 +1038,9 @@ end subroutine init_zeta
         double precision,                   intent(in)  :: dx
         double precision,                   intent(in)  :: dy
         double precision, dimension(:),     intent(in)  :: dz
-        
-        !Derivatives of velocity.  These will be allocated and torn down during this function.
-        !TODO: Make this more efficient, so that we are only allocating these once per run!!
-        double precision, dimension(size(uvel,1),size(uvel,2),size(uvel,3)) :: dudx, dudy, dudz
-        double precision, dimension(size(uvel,1),size(uvel,2),size(uvel,3)) :: dvdx, dvdy, dvdz
-
+        !Pre-allocated variables, no info need be passed in these
+        double precision, dimension(:,:,:), intent(inout) :: dudx, dudy, dudz
+        double precision, dimension(:,:,:), intent(inout) :: dvdx, dvdy, dvdz
 !
         INTEGER :: i,j,k, MAXX, MAXY, NZETA
         double precision :: macht
@@ -1125,7 +1127,9 @@ end subroutine init_zeta
         type(sparse_solver_options) :: options
 
         integer, dimension(:,:) :: mask
-
+        
+        integer :: stencil_center_idx
+        integer :: si, sj, sk
 !
 !-------  velocity u
 !
@@ -1138,7 +1142,7 @@ end subroutine init_zeta
                 if (mask(i,j) /= 0) then
                     do k=1,NZETA 
                         coef = 0
-
+                        stencil_center_idx = csp_masked(I_J_K,i,j,k,mask,NZETA) 
                         if (h(i,j).lt.SMALL) then
                             !No ice - "pass through"
                             coef(I_J_K)=1.
@@ -1157,7 +1161,7 @@ end subroutine init_zeta
                                   h, gridx, gridy, zeta, uvel, vvel, dhbdx, dhbdy, beta, &
                                   maxx, maxy, Nzeta, coef, rhs)
                         endif
-                        d(csp_masked(I_J_K,i,j,k,mask,NZETA))=rhs
+                        d(stencil_center_idx)=rhs
                         !Preliminary benchmarks indicate the we actually reach
                         !convergance faster if we use a 0 initial guess rather than
                         !the previous velocity.  More testing is needed.
@@ -1166,12 +1170,15 @@ end subroutine init_zeta
                         !function.
                         !x=csp(I_J_K,i,j,k,MAXX,NZETA))=uvel(i,j,k) !Use current velocity as guess of solution
                         do m=1,21
-                            if (stencil_i(m, i) > 0 .and. stencil_i(m, i) <= maxy .and. &
-                                stencil_j(m, j) > 0 .and. stencil_j(m, j) <= maxx .and. &
-                                stencil_k(m, k) > 0 .and. stencil_k(m, k) <= nzeta) then
+                            si = stencil_i(m,i)
+                            sj = stencil_j(m,j)
+                            sk = stencil_k(m,k)
+                            if (si > 0 .and. si <= maxy .and. &
+                                sj > 0 .and. sj <= maxx .and. &
+                                sk > 0 .and. sk <= nzeta) then
                                     call sparse_insert_val(matrix, &
-                                                    csp_masked(11,i,j,k,mask,nzeta), &
-                                                    csp_masked(m,i,j,k,mask,NZETA), &
+                                                    stencil_center_idx, &
+                                                    csp_stenciled(si,sj,sk,mask,NZETA), &
                                                     coef(m)) 
                             end if
                         end do
@@ -1211,7 +1218,7 @@ end subroutine init_zeta
                 if (mask(i,j) /= 0) then
                     do k=1,NZETA 
                         coef = 0
-
+                        stencil_center_idx = csp_masked(I_J_K,i,j,k,mask,NZETA) 
                         if (h(i,j).lt.SMALL) then
                             !No ice - "pass through"
                             coef(I_J_K)=1.
@@ -1230,7 +1237,7 @@ end subroutine init_zeta
                                   h, gridx, gridy, zeta, uvel, vvel, dhbdx, dhbdy, beta, &
                                   maxx, maxy, Nzeta, coef, rhs)
                         endif
-                        d(csp_masked(I_J_K,i,j,k,mask,NZETA))=rhs
+                        d(stencil_center_idx)=rhs
                         !Preliminary benchmarks indicate the we actually reach
                         !convergance faster if we use a 0 initial guess rather than
                         !the previous velocity.  More testing is needed.
@@ -1239,12 +1246,16 @@ end subroutine init_zeta
                         !function.
                         !x=csp(I_J_K,i,j,k,MAXX,NZETA))=vvel(i,j,k) !Use current velocity as guess of solution
                         do m=1,21
-                            if (stencil_i(m, i) > 0 .and. stencil_i(m, i) <= maxy .and. &
-                                stencil_j(m, j) > 0 .and. stencil_j(m, j) <= maxx .and. &
-                                stencil_k(m, k) > 0 .and. stencil_k(m, k) <= nzeta) then
+                            si = stencil_i(m,i)
+                            sj = stencil_j(m,j)
+                            sk = stencil_k(m,k)
+
+                            if (si > 0 .and. si <= maxy .and. &
+                                sj > 0 .and. sj <= maxx .and. &
+                                sk > 0 .and. sk <= nzeta) then
                                     call sparse_insert_val(matrix, &
-                                                    csp_masked(11,i,j,k,mask,nzeta), &
-                                                    csp_masked(m,i,j,k,mask,NZETA), &
+                                                    stencil_center_idx, &
+                                                    csp_stenciled(si,sj,sk,mask,NZETA), &
                                                     coef(m)) 
                             end if
                         end do
@@ -1379,6 +1390,18 @@ end subroutine init_zeta
          csp_masked = (mask(stencil_i(pos,i), stencil_j(pos,j)) - 1) * nzeta &
                       + stencil_k(pos, k)
       end function
+
+      !Returns the coordinate without performing stencil lookups (this assumes
+      !those have already been done)
+      function csp_stenciled(si, sj, sk, mask, nzeta)
+            integer :: si, sj, sk
+            integer, dimension(:,:) :: mask
+            integer :: nzeta
+            integer :: csp_stenciled
+
+            csp_stenciled = (mask(si, sj) - 1)*nzeta + sk
+      end function
+
 !
 !------------------------------------------------------
 !   central difference calculation for uvel
