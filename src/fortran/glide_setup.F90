@@ -547,11 +547,12 @@ contains
          'Pattyn scheme           ', &
          'Pollard scheme          ', &
          'Bueler scheme           ' /)
-    character(len=*), dimension(0:3), parameter :: ho_beta_in = (/ &
+    character(len=*), dimension(0:4), parameter :: ho_beta_in = (/ &
          'All NaN (ice glued to bed)', &
          '1/soft                    ', &
          '1/btrc                    ', &
-         'beta field from input     ' /)
+         'beta field from input     ', &
+         'slip ratio (ISMIP-HOM F)  '/)
     character(len=*), dimension(0:1), parameter :: ho_bstress = (/ &
          'Linear bed (betasquared)', &
          'Plastic bed (tau0)      ' /)
@@ -659,6 +660,7 @@ contains
     call GetValue(section,'calving_fraction',model%numerics%calving_fraction)
     call GetValue(section,'geothermal',model%paramets%geot)
     call GetValue(section,'flow_factor',model%paramets%flow_factor)
+    call GetValue(section,'flow_exponent',model%paramets%flow_exponent)
     call GetValue(section,'hydro_time',model%paramets%hydtim)
     call GetValue(section,'basal_tract',temp,5)
     if (associated(temp)) then

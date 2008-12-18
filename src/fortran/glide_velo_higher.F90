@@ -39,6 +39,15 @@ contains
 
     end subroutine
 
+    subroutine calc_slip_ratio(flwa, thick, slip_ratio_coef, beta)
+        real(dp), dimension(:,:), intent(in) :: flwa !*FD Glen's A at the base
+        real(dp), dimension(:,:), intent(in) :: thick !*FD Ice thickness
+        real(dp),                 intent(in) :: slip_ratio_coef
+        real(dp), dimension(:,:), intent(out):: beta
+
+        beta = 1.0D0/(slip_ratio_coef*flwa*thick)
+    end subroutine  
+
     subroutine velo_hom_pattyn(ewn, nsn, upn, dew, dns, sigma, &
                                thck, usrf, dthckdew, dthckdns, dusrfdew, dusrfdns, &
                                dlsrfdew, dlsrfdns, stagthck, mask, totpts, flwa, flwn, btrc, which_sliding_law, &

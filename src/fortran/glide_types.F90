@@ -117,6 +117,7 @@ module glide_types
   integer, parameter :: HO_BETA_USE_SOFT = 1
   integer, parameter :: HO_BETA_USE_BTRC = 2
   integer, parameter :: HO_BETA_USE_BETA = 3
+  integer, parameter :: HO_BETA_SLIP_RATIO = 4
 
   integer, parameter :: HO_BSTRESS_LINEAR = 0
   integer, parameter :: HO_BSTRESS_PLASTIC = 1
@@ -642,6 +643,8 @@ module glide_types
     real(dp) :: btrac_max = 0.d0  !  m yr^{-1} Pa^{-1} (gets scaled during init)
     real(dp) :: geot   = -5.0d-2  ! W m^{-2}
     real(dp) :: flow_factor = 3.0d0   ! "fiddle" parameter for the Arrhenius relationship
+    real(dp) :: flow_exponent = 3.0d0 ! Flow law exponent
+    real(dp) :: slip_ratio = 1.0d0 ! Slip ratio, used only in higher order code when the slip ratio beta computation is requested
     real(dp) :: hydtim = 1000.0d0 ! yr^{-1} converted to s^{-1} and scaled, 
                                   ! 0 if no drainage = 0.0d0 * tim0 / scyr
   end type glide_paramets

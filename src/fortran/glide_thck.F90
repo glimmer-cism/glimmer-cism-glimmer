@@ -161,13 +161,17 @@ contains
              call df_field_2d_staggered(model%geometry%thck, model%numerics%dew, model%numerics%dns, &
                    model%geomderv%dthckdew, model%geomderv%dthckdns, .false., .false.)
              
-             !If we want to invert BTRC
+
+             !Beta field computations that change in time
              if (model%options%which_ho_beta_in == HO_BETA_USE_BTRC) then
                 where (model%velocity%btrc /= 0)
                     model%velocity_hom%beta = 1/model%velocity%btrc
                 elsewhere
                     model%velocity_hom%beta = NAN
                 end where
+             else if (model%options%which_ho_beta_in == HO_BETA_SLIP_RATIO) then
+                call calc_slip_ratio(model%temper%flwa(model%general%upn,:,:), model%geomderv%stagthck, &
+                                     model%paramets%slip_ratio, model%velocity_hom%beta)
              end if
 
              call glide_maskthck(model%geomderv%stagthck, stagmassb, .true., model%geometry%dom, &
@@ -182,7 +186,7 @@ contains
                           model%geomderv%dthckdew-model%geomderv%dusrfdew, & 
                           model%geomderv%dthckdns-model%geomderv%dusrfdns, & 
                           model%geomderv%stagthck, model%velocity_hom%velmask, totpts, &
-                          model%temper%flwa, 3.0D0, model%velocity_hom%beta, &
+                          model%temper%flwa, model%paramets%flow_exponent, model%velocity_hom%beta, &
                           model%options%which_ho_bstress,&
                           model%options%periodic_ew .eq. 1, &
                           model%options%periodic_ns .eq. 1,&
@@ -343,13 +347,16 @@ contains
              call df_field_2d_staggered(model%geometry%thck, model%numerics%dew, model%numerics%dns, &
                    model%geomderv%dthckdew, model%geomderv%dthckdns, .false., .false.)
              
-             !If we want to invert BTRC
+             !Beta field computations that change in time
              if (model%options%which_ho_beta_in == HO_BETA_USE_BTRC) then
                 where (model%velocity%btrc /= 0)
                     model%velocity_hom%beta = 1/model%velocity%btrc
                 elsewhere
                     model%velocity_hom%beta = NAN
                 end where
+             else if (model%options%which_ho_beta_in == HO_BETA_SLIP_RATIO) then
+                call calc_slip_ratio(model%temper%flwa(model%general%upn,:,:), model%geomderv%stagthck, &
+                                     model%paramets%slip_ratio, model%velocity_hom%beta)
              end if
 
              call glide_maskthck(model%geomderv%stagthck, stagmassb, .true., model%geometry%dom, &
@@ -364,7 +371,7 @@ contains
                           model%geomderv%dthckdew-model%geomderv%dusrfdew, & 
                           model%geomderv%dthckdns-model%geomderv%dusrfdns, & 
                           model%geomderv%stagthck, model%velocity_hom%velmask, totpts, &
-                          model%temper%flwa, 3.0D0, model%velocity_hom%beta, &
+                          model%temper%flwa, model%paramets%flow_exponent, model%velocity_hom%beta, &
                           model%options%which_ho_bstress,&
                           model%options%periodic_ew .eq. 1, &
                           model%options%periodic_ns .eq. 1,&
