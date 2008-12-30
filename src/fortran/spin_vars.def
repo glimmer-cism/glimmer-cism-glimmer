@@ -1,0 +1,77 @@
+#[]
+#dimensions:    time, level, y1, x1
+#units:         
+#long_name:     
+#data:          
+#factor:        
+
+# setup for code generator
+[VARSET]
+# prefix of the generated module
+name:     spin
+# f90 type containing all necessary data
+datatype: spin_climate_type
+# module where type is defined
+datamod:  spin_types
+
+
+[arng]
+dimensions:    time, y1, x1
+units:         degree_Celsius
+long_name:     half range temp
+data:          data%temp%arng
+standard_name: degree half range
+#cell_methods:  time: mean
+coordinates:   lon lat
+
+[prcp]
+dimensions:    time, y1, x1
+units:         meters/year
+long_name:     precipitation
+data:          data%mb%prcp
+standard_name: precipitation
+coordinates:   lon lat
+
+
+[presprcp]
+dimensions:    time, y1, x1
+units:         meters/year
+long_name:     present precipitation
+data:          data%mb%presprcp
+standard_name: present precipitation
+coordinates:   lon lat
+load: 1
+
+[ablt]
+dimensions:    time, y1, x1
+units:         meters/year
+long_name:     ablation
+data:          data%mb%ablt
+standard_name: ablation
+coordinates:   lon lat
+
+#[landsea]
+#dimensions:    time, y1, x1
+#units:         1
+#long_name:     landsea
+#data:          data%mb%landsea
+#standard_name: landsea
+#type:         int
+#coordinates:   lon lat
+
+
+[presartm]
+dimensions:    time, y1, x1
+units:         degree_Celsius
+long_name:     annual mean air temperature 
+data:          data%temp%presartm
+standard_name: surface_temperature
+cell_methods:  time: mean
+coordinates:   lon lat
+load:          1
+
+#[temp_file]
+#dimensions:    temptimes
+#units          degree_Celsius
+#long_name:     temperature series
+
