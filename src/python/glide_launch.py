@@ -59,6 +59,8 @@ def get_runtype(config):
         elif ('EIS ELA' in config.sections()):
             model = 'eis_glide'
             # no idea
+        elif ('SPIN MB' in config.sections()):
+            model = 'spin_glide'
         else:
             raise KeyError, 'no idea what model I should start'
     return model
