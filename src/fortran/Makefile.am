@@ -6,17 +6,19 @@ RESTART_COMMON=glimmer_restart_common.F90 glimmer_restart_pointarr.F90 \
                glimmer_restart_statarr.F90 glimmer_restart_statscal.F90
 
 lib_LIBRARIES = libglide.a libglimmer.a libglint.a libclimate.a
-bin_PROGRAMS  =  simple_glide eis_glide glint_example glex_ebm eismint3_glide nc2config
+bin_PROGRAMS  =  simple_glide eis_glide glint_example glex_ebm eismint3_glide \
+                nc2config spin_glide
 check_PROGRAMS = test_config test_setup test_ts test_lithot test_integrate
 
 variable_DATA = glide_vars.def eis_vars.def glint_vars.def time_vars.def \
-                glint_mbal_vars.def eismint3_vars.def ncdf_template.F90.in
+                glint_mbal_vars.def eismint3_vars.def spin_vars.def ncdf_template.F90.in
+
 variabledir = $(pkgdatadir)
 dist_variable_DATA = $(variable_DATA)
 
 nodist_include_HEADERS := $(wildcard *.mod)
 EXTRA_DIST = f90_dep.mak $(RESTART_INC_INS)
-BUILT_SOURCES = glide_io.F90 eis_io.F90 glint_io.F90 glint_mbal_io.F90 \
+BUILT_SOURCES = glide_io.F90 eis_io.F90 spin_io.F90 glint_io.F90 glint_mbal_io.F90 \
                 eismint3_io.F90 $(RESTART_INCS)
 CLEANFILES = $(BUILT_SOURCES) glimmer_vers.F90 f90_dep.mak *.mod
 RESTART_CODE = glide_types.F90 glimmer_config.F90 glimmer_coordinates.F90 \
@@ -65,7 +67,9 @@ libclimate_a_SOURCES = eismint3_forcing.F90 eismint3_types.F90 \
                        simple_forcing.F90 eis_forcing.F90 eis_ela.F90 \
                        eis_temp.F90 eis_slc.F90 eis_cony.F90 \
                        glimmer_searchcircle.F90 eis_io.F90 eis_types.F90 \
-                       eismint3_io.F90
+                       eismint3_io.F90 spin_forcing.F90 spin_mb.F90 \
+                       spin_temp.F90 spin_slc.F90 spin_io.F90 \
+                       spin_types.F90 
 
 #Select which sparse solver code file to compile based conditionally on
 #what solver was specified in the configure script.  The flags used
@@ -92,6 +96,8 @@ simple_glide_LDADD = libclimate.a libglide.a libglimmer.a \
                      SLAP_library/libslap.a
 eis_glide_SOURCES = eis_glide.F90
 eis_glide_LDADD = libclimate.a libglide.a libglimmer.a SLAP_library/libslap.a
+spin_glide_SOURCES = spin_glide.F90
+spin_glide_LDADD = libclimate.a libglide.a libglimmer.a SLAP_library/libslap.a
 glint_example_SOURCES = glint_example.F90
 glint_example_LDADD = libglint.a libglide.a libglimmer.a SLAP_library/libslap.a
 glex_ebm_SOURCES = glex_ebm.F90
@@ -111,7 +117,7 @@ test_integrate_SOURCES = test_integrate.F90 glimmer_global.F90 \
 ALL_SRC=$(test_integrage_SOURCES) $(test_lithot_SOURCES) $(test_ts_SOURCES) $(test_setup_SOURCES) \
         $(test_config_SOURCES) $(nc2config_SOURCES) $(glex_ebm_SOURCES) $(glint_example_SOURCES) \
 	$(eis_glide_SOURCES) $(simple_glide_SOURCES) $(eismint3_glide_SOURCES) $(libglimmer_a_SOURCES) \
-	$(libglide_a_SOURCES) $(libglint_a_SOURCES) $(libclimate_a_SOURCES)
+	$(libglide_a_SOURCES) $(libglint_a_SOURCES) $(libclimate_a_SOURCES) $(spin_glide_SOURCES)
 
 #some special rules for automatically generating ncdf src code
 glide_io.F90:	glide_vars.def ncdf_template.F90.in
@@ -124,7 +130,8 @@ glint_io.F90:	glint_vars.def ncdf_template.F90.in
 		$(PYTHON) $(top_srcdir)/src/python/generate_ncvars.py $^
 glint_mbal_io.F90:	glint_mbal_vars.def ncdf_template.F90.in
 		$(PYTHON) $(top_srcdir)/src/python/generate_ncvars.py $^
-
+spin_io.F90:	spin_vars.def ncdf_template.F90.in
+		$(PYTHON) $(top_srcdir)/src/python/generate_ncvars.py $^
 # Pattern rule for restart include files
 if BUILD_RESTARTS
 $(RESTART_STEM)_body.inc: $(RESTART_STEM)_body.inc.in Makefile
