@@ -4,10 +4,40 @@
 ! +                                                           +
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+! The Spin drivers are intended for model spin-up for Antarctica and Greenland.  The
+! model_type variable differentiates between the two models, (0) for Antarctica,
+! and (1) for Greenland.  These can be set inside the configuration file.  Also,
+! included in the drivers are a earlier versions of the mass balance and
+! temperature and are meant to be the same as the ones used in the EISMINT model
+! intercomparison experiment.  More information can be found at
+! http://homepages.vub.ac.be/~phuybrec/eismint.html.  These can be specified by
+! setting the variable use_simple = 1 in the configuration file under temperature
+! and massbalance separately.  These drivers also vary for Antarctica and
+! Greenland.  The other drivers available in these drivers are based on the
+! current papers of Philippe Huybrechts:  
+
+! P. Huybrechts and J. de Wolde. The dynamic response of the greenland and
+! antarctic ice sheets to multiple-century climatic warming. Journal of Climate,
+! 12(8):2169-2188, 1999.
+
+! I. Janssens and P. Huybrects. The treatment of meltwater retention in
+! massbalance parameterisations of the greenland ice sheet. Annals of Glaciology,
+! 31:133-140, 2000.
+
+! P. Huybrechts. Sea-level changes at the LGM from ice-dynamic reconstructions
+! of the Greenland and Antarctic ice sheets during the glacial cycles. Quater-
+! nary Science Reviews, 21:203-231, 2002.
+
+! P. Huybrechts, O. Rybak, F. Pattyn, U. Ruth, and D. Steinhage. Ice thinning,
+! upstream advection, and non-climatic biases for the upper ice sheet. Climate
+! of the Past, 3:577-589, 2007.
+
+! The Spin series of drivers were developed by Brian Hand, at the University of
+! Montana, 2008.
+
 #ifdef HAVE_CONFIG_H
 #include <config.inc>
 #endif
-
 !The mass balance model
 module spin_mb
    
@@ -117,7 +147,8 @@ contains
     type(glimmer_pdd_params)  :: pdd_scheme
     real(kind=rk), intent(in) :: time  !*FD current time
      
-    if (len(trim(mb%fname)).ne.0) then
+    if (mb%model_type == 1) then
+      !get the value for the oxygen isotope in the case of Greenland
       call glimmer_ts_linear(mb%mb_ts,real(time),mb%oisotope)
     end if 
     if(mb%use_simple == 1) then
@@ -176,7 +207,8 @@ contains
     real(sp), dimension(:,:), intent(in) :: presprcp !present precipitation
     integer, intent(in) :: model_type !(0) is Antarcitca, (1) is Greenland
     real(sp) :: pfac=1.0533 !*FD Precip enhancement factor (default is supposed EISMINT value)
-    !calculate the landsea matrix
+    !calculate the landsea matrix which determines where the pdd method will be
+    !used
     where(usrf > 0.0) 
       landsea =.True.
     elsewhere
@@ -236,7 +268,7 @@ contains
         landsea = .False.
       end where 
     
-      !on the first step calculate the present inversion temp, add
+      !calculate the present inversion temp, add
       !tzero to get the right temp in Kelvin
       tinvp = 0.67 * presartm + 88.9 + tzero
     
@@ -251,14 +283,11 @@ contains
    !end of Antarctica model type calculations
 
    case(1) !start of Greenland model calculations
-     
-     !this is a temporary way to handle the calculation of the precip
-     !pertubation, and relies on the perturbed temp from the temp file
-     !and is currently assumed to be equal to -34.83 * the oxygen-isotope
-     !value
+    
+    !calculate the perturbed precipitation using a file containing
+    !oxygen isotopes instead of temperatures
      prcp = presprcp * exp(0.169*(oisotope + 34.83)) 
-   !write(*,*), oisotope
-   !end if !end of Green model calculations
+   !end of Green model calculations
    end select     
        
     !call the glimmer pdd scheme and send in the correct fields
