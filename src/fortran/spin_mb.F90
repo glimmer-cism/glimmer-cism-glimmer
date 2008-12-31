@@ -259,14 +259,17 @@ contains
     real(dp), dimension(:,:),intent(inout)     :: usrf !ice elevation
     real                                  :: tzero = 273.16 !Kelvin 
     real, intent(in)                      :: oisotope !oxygen-isotope
+    
+    
+    !set up the landsea matrix as a true/false map of land/sea
+    where(usrf > 0.0) 
+      landsea =.True.
+    elsewhere
+      landsea = .False.
+    end where 
     select case(model_type)
     case(0) !Antarctica Model, model_type = 0
-      !set up the landsea matrix as a true/false map of land/sea
-      where(usrf > 0.0) 
-        landsea =.True.
-      elsewhere
-        landsea = .False.
-      end where 
+
     
       !calculate the present inversion temp, add
       !tzero to get the right temp in Kelvin
