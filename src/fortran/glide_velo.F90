@@ -255,7 +255,8 @@ contains
 
   !*****************************************************************************
 
-  subroutine velo_calc_velo(velowk,stagthck,dusrfdew,dusrfdns,flwa,diffu,ubas,vbas,uvel,vvel,uflx,vflx)
+  subroutine velo_calc_velo(velowk,stagthck,dusrfdew,dusrfdns,flwa,diffu,ubas,vbas,uvel,vvel,uflx,vflx,&
+  surfvel)
 
     !*FD calculate 3D horizontal velocity field and 2D flux field from diffusivity
     implicit none
@@ -275,6 +276,7 @@ contains
     real(dp),dimension(:,:,:),intent(out)   :: vvel
     real(dp),dimension(:,:),  intent(out)   :: uflx
     real(dp),dimension(:,:),  intent(out)   :: vflx
+    real(dp),dimension(:,:,:), intent(out)    :: surfvel
     !------------------------------------------------------------------------------------
     ! Internal variables
     !------------------------------------------------------------------------------------
@@ -322,6 +324,9 @@ contains
           end if
        end do
     end do
+    
+    !calc surface velocity from the u and v velocties
+    surfvel(:,:,:) = (uvel(:,:,:)**2 + vvel(:,:,:)**2)**(1.0/2.0)
   end subroutine velo_calc_velo
 
   !*****************************************************************************
@@ -407,7 +412,7 @@ contains
         ubas = 0.0d0
         vbas = 0.0d0
       end where
-
+    
     case default
       ubas = 0.0d0
       vbas = 0.0d0

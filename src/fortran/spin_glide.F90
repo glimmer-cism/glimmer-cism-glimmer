@@ -71,13 +71,11 @@ program spin_glide
   call glide_config(model,config)
   call glide_initialise(model)
   call spin_initialise(climate,config,model,pdd_scheme)
-  !call spin_initialise(climate,config,model)
   call CheckSections(config)
   ! fill dimension variables
   call glide_nc_fillall(model)
 
   time = model%numerics%tstart
- ! call spin_climate(climate,model,time)
   call spin_climate(climate,model,time, pdd_scheme)
   call spinup_lithot(model)
 
@@ -89,7 +87,6 @@ program spin_glide
      ! override masking stuff for now
      time = time + model%numerics%tinc
      call spin_climate(climate,model,time, pdd_scheme)
-     !call spin_climate(climate,model,time)
   end do
 
   ! finalise GLIDE

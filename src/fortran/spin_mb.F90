@@ -127,9 +127,9 @@ contains
     call coordsystem_allocate(model%general%ice_grid, mb%landsea) 
     call coordsystem_allocate(model%general%ice_grid, mb%presprcp)
 
- 
-    call glimmer_read_ts(mb%mb_ts,mb%fname)
- 
+    if (mb%model_type == 1) then
+      call glimmer_read_ts(mb%mb_ts,mb%fname)
+    end if
  end subroutine spin_init_mb
     
   
@@ -163,6 +163,8 @@ contains
                                    model%climate%acab, &
                                    mb%ablt, &
                                    temp%arng)
+                                   
+                                  
     
     else
       call spin_massbalance(pdd_scheme, &
@@ -180,6 +182,9 @@ contains
                             model%general%ewn, &
                             model%general%nsn, &
                             mb%oisotope)
+                            
+                           
+
     end if  
   
     !glimmer requires rescaling for acab
@@ -206,6 +211,8 @@ contains
     real(sp), dimension(:,:), intent(in) :: presartm !present mean annual temp
     real(sp), dimension(:,:), intent(in) :: presprcp !present precipitation
     integer, intent(in) :: model_type !(0) is Antarcitca, (1) is Greenland
+    !real, intent(in) :: eus !eustatic sea level
+    !real(dp), intent(in) :: topg !topgraphy field
     real(sp) :: pfac=1.0533 !*FD Precip enhancement factor (default is supposed EISMINT value)
     !calculate the landsea matrix which determines where the pdd method will be
     !used
@@ -259,7 +266,8 @@ contains
     real(dp), dimension(:,:),intent(inout)     :: usrf !ice elevation
     real                                  :: tzero = 273.16 !Kelvin 
     real, intent(in)                      :: oisotope !oxygen-isotope
-    
+    !real, intent(in) :: eus !eustatic sea level
+    !real(dp), intent(in) :: topg !topgraphy field
     
     !set up the landsea matrix as a true/false map of land/sea
     where(usrf > 0.0) 
@@ -283,15 +291,15 @@ contains
       prcp = presprcp * exp(22.47*(tzero/tinvp - &
       tzero/tinv))*((tinvp/tinv)**2)*(1 + 0.046*(tinv - tinvp)) 
     
-   !end of Antarctica model type calculations
+    !end of Antarctica model type calculations
 
-   case(1) !start of Greenland model calculations
+    case(1) !start of Greenland model calculations
     
     !calculate the perturbed precipitation using a file containing
     !oxygen isotopes instead of temperatures
-     prcp = presprcp * exp(0.169*(oisotope + 34.83)) 
-   !end of Green model calculations
-   end select     
+      prcp = presprcp * exp(0.169*(oisotope + 34.83)) 
+    !end of Green model calculations
+    end select     
        
     !call the glimmer pdd scheme and send in the correct fields
     call glimmer_pdd_mbal(pdd_scheme, &
@@ -301,19 +309,7 @@ contains
                           ablt, & 
                           acab, &
                           landsea) 
-     
     
-    !adjust for sea level change
-    !where (model%geometry%topg.ge.climate%eus .or. &
-    !model%geometry%thck.gt.0)
-    !z =  model%geometry%topg + model%geometry%thck - climate%eus
-    !end where
-    !where(z.lt.0)
-    !climate%acab = climate%mb%shelf_ablation
-    !end where
-    
-    !destroy the landsea matrix
-    !deallocate(landsea)
   end subroutine spin_massbalance
   
   

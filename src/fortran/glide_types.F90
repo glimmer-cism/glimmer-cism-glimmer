@@ -366,6 +366,7 @@ module glide_types
     real(dp),dimension(:,:,:),pointer :: vvel  => null() !*FD 3D $y$-velocity.
     real(dp),dimension(:,:,:),pointer :: wvel  => null() !*FD 3D $z$-velocity.
     real(dp),dimension(:,:,:),pointer :: wgrd  => null() !*FD 3D grid vertical velocity.
+    real(dp),dimension(:,:,:),pointer :: surfvel => null() !Surface velocity
     real(dp),dimension(:,:)  ,pointer :: uflx  => null() !*FD 
     real(dp),dimension(:,:)  ,pointer :: vflx  => null() !*FD 
     real(dp),dimension(:,:)  ,pointer :: diffu => null() !*FD 
@@ -399,6 +400,7 @@ module glide_types
     real(dp),dimension(:,:,:),pointer :: vvel  => null() !*FD 3D $y$-velocity.
     real(dp),dimension(:,:,:),pointer :: wvel  => null() !*FD 3D $z$-velocity.
     real(dp),dimension(:,:,:),pointer :: wgrd  => null() !*FD 3D grid vertical velocity.
+    
     real(dp),dimension(:,:,:),pointer :: uflx  => null() !*FD 
     real(dp),dimension(:,:,:),pointer :: vflx  => null() !*FD 
     real(dp),dimension(:,:)  ,pointer :: diffu_x => null() !*FD 
@@ -800,6 +802,7 @@ contains
     call coordsystem_allocate(model%general%velo_grid, upn, model%velocity%vvel)
     call coordsystem_allocate(model%general%ice_grid, upn, model%velocity%wvel)
     call coordsystem_allocate(model%general%ice_grid, upn, model%velocity%wgrd)
+    call coordsystem_allocate(model%general%ice_grid,upn,model%velocity%surfvel)
     call coordsystem_allocate(model%general%velo_grid, model%velocity%uflx)
     call coordsystem_allocate(model%general%velo_grid, model%velocity%vflx)
     call coordsystem_allocate(model%general%velo_grid, model%velocity%diffu)
@@ -918,6 +921,8 @@ contains
     deallocate(model%velocity%vvel)
     deallocate(model%velocity%wvel)
     deallocate(model%velocity%wgrd)
+    deallocate(model%velocity%surfvel)
+    
     deallocate(model%velocity%uflx)
     deallocate(model%velocity%vflx)
     deallocate(model%velocity%diffu)

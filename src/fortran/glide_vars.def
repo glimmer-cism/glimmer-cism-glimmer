@@ -361,16 +361,14 @@ data:          data%velocity%wgrd(up,:,:)
 factor:        scale3d_f7
 coordinates:   lon lat
 
-####Modified 2009 Brian Hand
 [surfvel]
 dimensions:    time, level, y1, x1
 units:         meter/year
 long_name:     ice surface velocity 
 data:          data%velocity%surfvel(up,:,:)
-factor:        scale3d_f7
+factor:        scale3d_f1
 coordinates:   lon lat
 
-####
 
 [flwa]
 dimensions:    time, level, y1, x1
