@@ -6,7 +6,7 @@
 !*FD for a single value and for an entire field.
 !*FD Note that this module is written with the first index in a matrix corresponding
 !*FD to the x (east-west) coordinate.  If this is not the case (i.e. if the first
-!*FD index corresponds to the y (north-south) coordinate), then some transposition
+!*FD index corresponds to the y (north-south) coordinate), then transposition
 !*FD will be necessary.  Simply ask for the y-derivative when you mean to ask for
 !*FD the x-derivative, and vice versa.
 module glide_deriv
