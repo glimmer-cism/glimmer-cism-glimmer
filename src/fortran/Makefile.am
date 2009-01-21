@@ -64,27 +64,30 @@ libclimate_a_SOURCES = eismint3_forcing.F90 eismint3_types.F90 \
 
 eismint3_glide_SOURCES = eismint3_glide.F90
 eismint3_glide_LDADD = libclimate.a libglide.a libglimmer.a \
-                       SLAP_library/libslap.a
+                       SLAP_library/libslap.a $(BLAS_LIBS) $(NETCDF_LIBS)
 simple_glide_SOURCES = simple_glide.F90 
 simple_glide_LDADD = libclimate.a libglide.a libglimmer.a \
-                     SLAP_library/libslap.a
+                     SLAP_library/libslap.a $(BLAS_LIBS) $(NETCDF_LIBS)
 eis_glide_SOURCES = eis_glide.F90
-eis_glide_LDADD = libclimate.a libglide.a libglimmer.a SLAP_library/libslap.a
+eis_glide_LDADD = libclimate.a libglide.a libglimmer.a SLAP_library/libslap.a $(BLAS_LIBS) $(NETCDF_LIBS)
 glint_example_SOURCES = glint_example.F90
-glint_example_LDADD = libglint.a libglide.a libglimmer.a SLAP_library/libslap.a
+glint_example_LDADD = libglint.a libglide.a libglimmer.a SLAP_library/libslap.a $(BLAS_LIBS) $(NETCDF_LIBS)
 glex_ebm_SOURCES = glex_ebm.F90
-glex_ebm_LDADD = libglint.a libglide.a libglimmer.a SLAP_library/libslap.a
+glex_ebm_LDADD = libglint.a libglide.a libglimmer.a SLAP_library/libslap.a $(BLAS_LIBS) $(NETCDF_LIBS)
 nc2config_SOURCES = nc2config.F90
-nc2config_LDADD = libglimmer.a
+nc2config_LDADD = libglimmer.a $(NETCDF_LIBS)
 
 test_config_SOURCES = test_config.F90 glimmer_config.F90 glimmer_log.F90
 test_setup_SOURCES = test_setup.F90
-test_setup_LDADD = libglide.a libglimmer.a
+test_setup_LDADD = libglide.a libglimmer.a $(NETCDF_LIBS)
 test_ts_SOURCES = glimmer_ts.F90 glimmer_log.F90 test_ts.F90
 test_lithot_SOURCES = test_lithot.F90
-test_lithot_LDADD = libclimate.a libglide.a libglimmer.a SLAP_library/libslap.a
+test_lithot_LDADD = libclimate.a libglide.a libglimmer.a SLAP_library/libslap.a $(BLAS_LIBS) $(NETCDF_LIBS)
 test_integrate_SOURCES = test_integrate.F90 glimmer_global.F90 \
                          glimmer_physcon.F90 glimmer_integrate.F90
+
+AM_FCFLAGS = $(NETCDF_FCFLAGS)
+LDADD = $(NETCDF_LIBS)
 
 #some special rules for automatically generating ncdf src code
 glide_io.F90:	glide_vars.def ncdf_template.F90.in
