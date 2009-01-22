@@ -28,4 +28,10 @@ ishom.d.nc: ishom.d.config ismip_hom_d.py glimcdf.py
 ishom.d.out.nc: ishom.d.config ishom.d.nc
 	echo ishom.d.config | ${GLIDE}
 
+ishom.f.nc: ishom.f.config ismip_hom_f.py glimcdf.py
+	${PYTHON} ismip_hom_f.py
+
+ishom.f.out.nc: ishom.f.config ishom.f.nc
+	echo ishom.f.config | ${GLIDE}
+
 
