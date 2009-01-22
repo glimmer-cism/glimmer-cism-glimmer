@@ -107,7 +107,8 @@ contains
         d2zdx2_t, d2zdy2_t, d2hdx2_t, d2hdy2_t
        
         real(dp), dimension(nsn, ewn, upn) :: flwa_t
-        real(dp), dimension(nsn-1, ewn-1, upn) :: uvel_t, vvel_t, mu_t, flwa_t_stag
+        real(dp), dimension(nsn-1, ewn-1, upn) :: uvel_t, vvel_t, mu_t, flwa_t_stag, &
+                                                  tau_xz_t, tau_yz_t, tau_xx_t, tau_yy_t, tau_xy_t
 
         integer, dimension(nsn-1, ewn-1) :: mask_t
         
@@ -186,15 +187,25 @@ contains
                     sigma, bx, by, cxy, btrc_t, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, MANIFOLD,&
                     TOLER, periodic_ew,periodic_ns, which_sliding_law, dew,&
                     dns,mask_t,totpts)
-        
+       
+        !Final computation of stress field for output
+        call stressf(mu_t, uvel_t, vvel_t, flwa_t, stagthck_t, ax, ay, dew, dns, sigma, & 
+                     tau_xz_t, tau_yz_t, tau_xx_t, tau_yy_t, tau_xy_t, flwn, zip, periodic_ew, periodic_ns) 
+
         !Transpose from the ice3d coordinate system (y,x,z) to the glimmer
         !coordinate system (z,x,y).  We need to do this for all the 3D outputs
         !that Glimmer expects
         call ice3dToGlim_3d(uvel_t, uvel, ewn-1, nsn-1, upn)
         call ice3dToGlim_3d(vvel_t, vvel, ewn-1, nsn-1, upn)
         call ice3dToGlim_3d(mu_t, efvs, ewn-1, nsn-1, upn)
-
-        !TODO: Stress field computation and output
+        
+        call ice3dToGlim_3d(tau_xz_t, tau%xz, ewn-1, nsn-1, upn)
+        call ice3dToGlim_3d(tau_yz_t, tau%yz, ewn-1, nsn-1, upn)
+        call ice3dToGlim_3d(tau_xx_t, tau%xx, ewn-1, nsn-1, upn)
+        call ice3dToGlim_3d(tau_yy_t, tau%yy, ewn-1, nsn-1, upn)
+        call ice3dToGlim_3d(tau_xy_t, tau%xy, ewn-1, nsn-1, upn)
+ 
+        
     end subroutine velo_hom_pattyn
 
     subroutine hom_diffusion_pattyn(uvel_hom, vvel_hom, stagthck, dusrfdew, dusrfdns, sigma, diffu_x, diffu_y)
