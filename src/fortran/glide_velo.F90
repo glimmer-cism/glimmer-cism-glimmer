@@ -897,6 +897,7 @@ contains
   subroutine calc_btrc(model,flag,btrc)
     !*FD Calculate the value of $B$ used for basal sliding calculations.
     use glimmer_global, only : dp 
+    use glimmer_physcon, only : rhoo, rhoi
     implicit none
 
     type(glide_global_type) :: model        !*FD model instance
@@ -909,7 +910,10 @@ contains
 
     real(dp) :: stagbwat 
     integer :: ew,ns,nsn,ewn
-
+    real :: Asl = 1.8d-10 !in units N^-3 yr^-1 m^8 for case(5)
+    real :: Z !accounts for reduced basal traction due to pressure of
+              !subglacial water for case(5)
+    real :: tau !basal shear stress
     !------------------------------------------------------------------------------------
 
     ewn=model%general%ewn
@@ -960,7 +964,30 @@ contains
              end if
           end do
        end do
-
+    case(5)
+       ! increases with the third power of the basal shear stress, from
+       ! Huybrechts
+       
+       do ns = 1, nsn-1
+          do ew = 1, ewn-1
+             if(model%geometry%topg(ew,ns) > model%climate%eus) then
+               Z = model%geometry%thck(ew,ns)
+             else  
+               Z = model%geometry%thck(ew,ns) + rhoi*((model%geometry%topg(ew,ns) &
+                   - model%climate%eus)/ rhoo)
+             end if 
+             if(Z <= 10d-4) then !avoid division by zero
+                Z = 10d-4
+             end if 
+             
+             tau = (model%velocity%tau_x(ew,ns)**2 + model%velocity%tau_y(ew,ns)**2)**(1.0/2.0)
+             btrc(ew,ns) = -(Asl*(tau)**2)/Z !assuming that that btrc is later
+                                             !multiplied again by the basal shear stress
+          end do
+       end do
+       
+       
+    
     case default
        ! zero everywhere
        btrc = 0.0d0

@@ -89,7 +89,22 @@ contains
        call nc_errorhandle(__FILE__,__LINE__,status)
        NCO%define_mode = .FALSE.
     end if
-
+    if (associated(model%funits%in_first)) then
+    ! if a netcdf input file exists, use the x and y grid data from it
+    status = nf90_inq_varid(NCO%id,'x0',varid)
+       status=nf90_put_var(NCO%id,varid,model%general%x0)
+       call nc_errorhandle(__FILE__,__LINE__,status)
+    status = nf90_inq_varid(NCO%id,'y0',varid)
+       status=nf90_put_var(NCO%id,varid,model%general%y0)
+       call nc_errorhandle(__FILE__,__LINE__,status)
+    status = nf90_inq_varid(NCO%id,'x1',varid)
+       status=nf90_put_var(NCO%id,varid,model%general%x1)
+       call nc_errorhandle(__FILE__,__LINE__,status)
+    status = nf90_inq_varid(NCO%id,'y1',varid)
+       status=nf90_put_var(NCO%id,varid,model%general%y1)
+       call nc_errorhandle(__FILE__,__LINE__,status)
+    
+    else if(.not. associated(model%funits%in_first)) then
     ! filling coordinate variables
     status = nf90_inq_varid(NCO%id,'x0',varid)
     do i=1, model%general%ewn-1
@@ -111,6 +126,7 @@ contains
        status=nf90_put_var(NCO%id,varid,(i-1.)*model%numerics%dns*len0,(/i/))
        call nc_errorhandle(__FILE__,__LINE__,status)
     end do
+    end if
     status = nf90_inq_varid(NCO%id,'level',varid)
     status=nf90_put_var(NCO%id,varid,model%numerics%sigma)
     call nc_errorhandle(__FILE__,__LINE__,status)

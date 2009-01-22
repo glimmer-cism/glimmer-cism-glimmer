@@ -524,12 +524,13 @@ contains
          'threshold         ', &
          'const calving rate', &
          'edge threshold    '/)
-    character(len=*), dimension(0:4), parameter :: slip_coeff = (/ &
+    character(len=*), dimension(0:5), parameter :: slip_coeff = (/ &
          'zero        ', &
          'const       ', &
          'const if T>0', &
          '~basal water', &
-         '~basal melt '/)
+         '~basal melt ', &
+         'third power of the basal shear stress'/)
     character(len=*), dimension(0:4), parameter :: evolution = (/ &
          'pseudo-diffusion               ', &
          'ADI scheme                     ', &

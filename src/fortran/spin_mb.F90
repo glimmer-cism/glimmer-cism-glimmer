@@ -93,21 +93,22 @@ contains
     character(len=100) :: message
     call write_log('Spin MB')
     call write_log('-------')
-    write(message,*) 'oxygen isotope file : ',trim(mb%fname)
+    
     call write_log(message)
     if (mb%model_type == 0) then
       write(message,*) 'model type: ', mb%model_type, ' Antarctica Model'
       else if (mb%model_type == 1) then
         write(message,*) 'model type: ', mb%model_type, ' Greenland Model'
+        write(message,*) 'oxygen isotope file : ',trim(mb%fname)
       else
         write(message,*) 'Model type is default: ', mb%model_type, &
         ' Antarctica Model'
     end if
     call write_log(message)
     if(mb%use_simple == 0) then
-      write(message,*) 'use simple: ', mb%use_simple, ' off'
+      write(message,*) 'use simple forcing: ', mb%use_simple, ' off'
     else
-      write(message,*) 'use simple: ', mb%use_simple, ' on'
+      write(message,*) 'use simple forcing: ', mb%use_simple, ' on'
     end if 
     call write_log(message)
     call write_log('')
@@ -146,7 +147,7 @@ contains
     type(glide_global_type)   :: model !*FD model instance
     type(glimmer_pdd_params)  :: pdd_scheme
     real(kind=rk), intent(in) :: time  !*FD current time
-     
+    !write(*,*), model%general%x0 
     if (mb%model_type == 1) then
       !get the value for the oxygen isotope in the case of Greenland
       call glimmer_ts_linear(mb%mb_ts,real(time),mb%oisotope)

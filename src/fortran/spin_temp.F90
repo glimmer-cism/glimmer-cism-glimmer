@@ -135,9 +135,7 @@ contains
     integer i
     
     temp%local_usrf = model%geometry%usrf*thk0
-    !call glimmer_ts_step(temp%temp_ts, temp%tperturb)
-    call glimmer_ts_step(temp%temp_ts,real(time),temp%tperturb)
-    !call glimmer_ts_step(temp%tperturb, temp%fname)
+    call glimmer_ts_linear(temp%temp_ts,real(time),temp%tperturb)
     select case(temp%use_simple)
 
     case(0) !use the more advanced temperature forcing as given by Huybrechts
@@ -183,11 +181,11 @@ contains
     case(0) !Antarctica Temperature Model, model_type = 0
     
       !calculate the artm for Antarctica following the eismint  method
-      artm = 34.46  - 0.00914*usrf - 0.68775*lati + tperturb
+      artm = 34.46  - 0.00914*usrf + 0.68775*lati + tperturb
     
       !calculate the temperature half range by subtracting the artm from the 
       !summer temperature
-      arng = 16.81 - 0.00692*usrf - 0.27937*lati + tperturb -  artm 
+      arng = 16.81 - 0.00692*usrf +  0.27937*lati + tperturb -  artm 
     
     case(1) !Greenland Temperature Model, model_type = 1
       
@@ -231,16 +229,16 @@ contains
     
       !calculate the artm for Antarctica following Huybrechts method
       where (usrf <= 1500.)
-        artm = 34.46  - 0.005102*usrf - 0.68775*lati + tperturb
+        artm = 34.46  - 0.005102*usrf + 0.68775*lati + tperturb
     
       elsewhere    
-        artm = 34.46  - 0.014285*usrf - 0.68775*lati + tperturb
+        artm = 34.46  - 0.014285*usrf + 0.68775*lati + tperturb
 
       end where
     
       !calculate the temperature half range by subtracting the artm from the 
       !summer temperature
-      arng = 16.81 - 0.00692*usrf - 0.27937*lati + tperturb -  artm 
+      arng = 16.81 - 0.00692*usrf + 0.27937*lati + tperturb -  artm 
     case(1) !Greenland Temperature Model, model_type = 1
     
     
