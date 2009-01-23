@@ -197,9 +197,9 @@ contains
                           model%velocity_hom%gdsx, model%velocity_hom%gdsy)
 
                           model%velocity_hom%is_velocity_valid = .true.
+                          
         end if
-    
-       if (model%options%which_ho_prognostic == HO_PROG_SIAONLY) then
+              if (model%options%which_ho_prognostic == HO_PROG_SIAONLY) then
        ! get new thicknesses
             call thck_evolve(model,model%velocity%diffu, model%velocity%diffu, .true.,model%geometry%thck,model%geometry%thck)
        else if (model%options%which_ho_prognostic == HO_PROG_PATTYN) then
@@ -225,6 +225,7 @@ contains
             model%velocity%vbas,model%velocity%uvel,model%velocity%vvel,model%velocity%uflx,model%velocity%vflx,&
             model%velocity%surfvel)
        if (model%options%diagnostic_run == 1) then
+       call write_xls_3d("tau_xz.txt", model%velocity_hom%tau%xz)
           call glide_finalise_all(.true.)
           stop
        end if

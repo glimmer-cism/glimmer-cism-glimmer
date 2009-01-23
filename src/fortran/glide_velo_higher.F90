@@ -191,7 +191,6 @@ contains
         !Final computation of stress field for output
         call stressf(mu_t, uvel_t, vvel_t, flwa_t, stagthck_t, ax, ay, dew, dns, sigma, & 
                      tau_xz_t, tau_yz_t, tau_xx_t, tau_yy_t, tau_xy_t, flwn, zip, periodic_ew, periodic_ns) 
-
         !Transpose from the ice3d coordinate system (y,x,z) to the glimmer
         !coordinate system (z,x,y).  We need to do this for all the 3D outputs
         !that Glimmer expects
@@ -204,8 +203,6 @@ contains
         call ice3dToGlim_3d(tau_xx_t, tau%xx, ewn-1, nsn-1, upn)
         call ice3dToGlim_3d(tau_yy_t, tau%yy, ewn-1, nsn-1, upn)
         call ice3dToGlim_3d(tau_xy_t, tau%xy, ewn-1, nsn-1, upn)
- 
-        
     end subroutine velo_hom_pattyn
 
     subroutine hom_diffusion_pattyn(uvel_hom, vvel_hom, stagthck, dusrfdew, dusrfdns, sigma, diffu_x, diffu_y)

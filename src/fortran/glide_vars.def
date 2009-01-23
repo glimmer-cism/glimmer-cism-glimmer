@@ -362,14 +362,14 @@ standard_name: land_ice_y_velocity
 dimensions: time, level, y0, x0
 units:      kPa
 long_name:  X component vertical shear stress
-data:       data%velocity_hom%tau%xz
+data:       data%velocity_hom%tau%xz(up,:,:)
 factor:     scale3d_f9
 
 [tau_yz]
 dimensions: time, level, y0, x0
 units:      kPa
 long_name:  Y component vertical shear stress
-data:       data%velocity_hom%tau%yz
+data:       data%velocity_hom%tau%yz(up,:,:)
 factor:     scale3d_f9
 
 [wvel]
