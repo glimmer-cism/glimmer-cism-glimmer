@@ -463,7 +463,7 @@ contains
     scale3d_f6 = scale3d_f4**(1.0/gn)
     scale3d_f7 = scyr * thk0/tim0
     scale3d_f8 = vis0*scyr
-    scale3d_f9 = tau0
+    scale3d_f9 = 1.0d0
   end subroutine glimmer_init_scales
 end module glimmer_scales
 
