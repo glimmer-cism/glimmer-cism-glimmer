@@ -3,9 +3,10 @@
 import glimcdf
 from math import sin,cos,tan,pi
 import numpy
+import sys
 
 #Parse the config file to determine how to set up the netcdf file
-nc, shape = glimcdf.nc_from_config("ishom.b.config")
+nc, shape = glimcdf.nc_from_config(sys.argv[1])
 
 #Create variables for topography and ice thickness
 topg = glimcdf.setup_variable(nc, "topg")
