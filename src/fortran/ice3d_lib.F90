@@ -328,7 +328,7 @@ end subroutine init_zeta
         double precision :: u(MAXY,MAXX),v(MAXY,MAXX)
         double precision :: GRIDX,GRIDY,TSTEP,SMALL
 !
-        INTEGER i,j,k,m,iter,cspice
+        INTEGER i,j,k,m,iter
         double precision :: d(IJTOT),coef(6),x(IJTOT),hmean
         double precision :: err,dipx,dipy,dimx,dimy,dtdx,dtdy,tol
         double precision :: alfa,beta,gamma,delta,admx,adpx,admy,adpy
@@ -715,7 +715,7 @@ end subroutine init_zeta
         integer, intent(in) :: active_points !*FD The number of points that should be computed.  This is equivalent to the number of nonzero entries in mask.
 
         INTEGER i,j,k,l,lacc,m,n,maxiter,iter,DU1,DU2,DV1,DV2,&
-            sparuv, ijktot
+           ijktot
         double precision :: error,tot,alfa,norm1,norm2,norm3,norm4,&
             norm5,teta
 
