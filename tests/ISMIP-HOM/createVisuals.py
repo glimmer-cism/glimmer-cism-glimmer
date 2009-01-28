@@ -1,10 +1,19 @@
+#!/usr/bin/python
+
 import os
 import os.path
 import math
 from matplotlib import pyplot
+import matplotlib.lines
+import matplotlib.patches
+import matplotlib.figure
+import matplotlib.font_manager
 
 #Lists of model classifications
 fullStokes = ["aas1", "aas2", "cma1", "fpa2", "ghg1", "jvj1", "mmr1", "oga1", "rhi1", "rhi3", "spr1", "ssu1", "yko1"]
+
+#Prefix for data files that came from glimmer
+glimPrefix = "glm1"
 
 def getDataFiles(root, experiment, domainSizeKm, isFullStokes):    
     fnameSuffix = experiment + "%03d"%domainSizeKm +".txt"
@@ -157,8 +166,7 @@ def readFlowlineFile(filename):
     flowline = Flowline()
     for line in f:
         data = [float(i) for i in line.strip().split()]
-        if checkForNan(data):
-            raise Exception("NaN found in input data!")
+        fixNan(data)
         x = data[0]
         data = data[1:]
         flowline.addDataPoint(x,data)
@@ -170,8 +178,7 @@ def readPlanviewFile(filename):
     plan = Planview()
     for line in f:
         data = [float(i) for i in line.strip().split()]
-        if checkForNan(data):
-            raise Exception("NaN found in input data!")
+        fixNan(data)
         x = data[0]
         y = data[1]
         data = data[2:]
@@ -185,6 +192,10 @@ def checkForNan(numberList):
             return True
     return False
     
+def fixNan(data):
+    for i,n in enumerate(data):
+        if not n == n:
+            data[i] = 0
 
 #Returns a new flowline with one data member: the norm of the surface velocity.
 #Assumes that surface velocity components are the first two data members
@@ -223,21 +234,33 @@ def plotAggregatedFlowlines(axis, meanFlowline, stdevFlowline, dataMember, color
     #Plot the polygon as the same color but at only 1/4 opacity
     axis.fill(polyX, polyY, facecolor=color,edgecolor=color,alpha=.25, label=labelPrefix + " Std. Dev.")
 
-def createPlot(experiment, domainSizeKm):
-    fig = pyplot.figure()
-    axis = fig.add_subplot(111, xlabel="Rescaled X coordinate", ylabel="Velocity (m/a)", 
-           title="ISMIP-HOM Experiment " + experiment.upper() + ", " + str(domainSizeKm) + " km")
-    print axis.__class__
+#Returns a tuple with two tuples suitable for creating a legend.  The first tuple contains
+#the lines and patches, the second contains the names
+def createPlot(experiment, domainSizeKm, fig, subplotNum):
+    isFlowlineExp = experiment in ["b","d","e"] 
+    
+    axis = fig.add_subplot(2,3,subplotNum)
+    axis.set_title(str(domainSizeKm) + " km", size="medium")
+    #Read the data that came from the Glimmer run
+    glimFileName = glimPrefix + experiment + "%03d"%domainSizeKm + ".txt"
+    print glimFileName
+    if isFlowlineExp:
+        glimFlowline = readFlowlineFile(glimFileName)
+    else:
+        glimPlan = readPlanviewFile(glimFileName)
+        glimFlowline = glimPlan.extractFlowline(.25)
+        glimFlowline = normSurfaceVelocity(glimFlowline)
+    
+    axis.plot(glimFlowline.getPointLocations(), glimFlowline.getDependantVariable(0), color=(0,0,0))
+
     for isFullStokes in [True, False]:
         models = getDataFiles("ismip_all", experiment, domainSizeKm, isFullStokes)
-        print models
         
         #Certain ISMIP-HOM experiments are 3-D experiments that produce a plan view of the surface
         #velocity as their output.  If this is the case, we need to read in a plan view format 
         #file, extract a flowline at a standard location (y=L/4), and find the norm of the surface
         #velocity.  Other experiments are flowline experiments; that is, they only occur in the x and
         #z axis.  If this is the case, we can just read in the flowline file and use it as-is
-        isFlowlineExp = experiment in ["b","d","e"] 
         if isFlowlineExp: #Experiment has flowline output already
             flowlines = []
             for f in models:
@@ -257,27 +280,54 @@ def createPlot(experiment, domainSizeKm):
             #For each flowline, create another flowline with the norm of the
             #surface velocity.
             flowlines = [normSurfaceVelocity(fl) for fl in flowlines]
-
+        
         #Simple fix if a flowline has a range that is less than [0..1].  In this case,
         #we are at the moment simply extending the boundaries out.
         for fl in flowlines:
             fl.fixRange()
 
         #Compute the mean and standard deviations of the experiments
-        mean, stdev = aggregateExperimentFlowlines(flowlines, flowlines[0].getPointLocations())
+        mean, stdev = aggregateExperimentFlowlines(flowlines, glimFlowline.getPointLocations())
         
         #Plot the mean and std. dev.
         if isFullStokes:
             plotAggregatedFlowlines(axis, mean, stdev, 0, (1,0,0), "Full Stokes")
         else:
             plotAggregatedFlowlines(axis, mean, stdev, 0, (0,0,1), "First Order")
-    pyplot.legend(loc='center right')
 
-    filename = experiment + "_" + str(domainSizeKm) + "km.png" 
-
-    pyplot.savefig(filename)
+        #Modify the axes tick lables to have smaller fonts
+        for tick in axis.xaxis.get_major_ticks():
+            tick.label1.set_fontsize("xx-small")
+        for tick in axis.yaxis.get_major_ticks():
+            tick.label1.set_fontsize("xx-small")
+        
 
 if __name__ == "__main__":
-    for experiment in ["a","b","c","d"]:
-        for domainSize in [5, 10, 20, 40, 80, 160]:
-            createPlot(experiment, domainSize)
+    for experiment in ["a","b","c"]:
+        fig = pyplot.figure(subplotpars=matplotlib.figure.SubplotParams(top=.85,bottom=.15))
+        for i, domainSize in enumerate([5, 10, 20, 40, 80, 160]):
+            createPlot(experiment, domainSize, fig, i+1)
+        l = fig.legend([matplotlib.lines.Line2D([1,2],[1,2],color=(0,0,0))],
+                   ['Model Output'] ,
+                   loc=(.1, .05),prop=matplotlib.font_manager.FontProperties(size="x-small"))
+        l.draw_frame(False)
+        l = fig.legend([matplotlib.lines.Line2D([1,2],[1,2],ls=':',color=(1,0,0)),
+                    matplotlib.patches.Patch(edgecolor=None, facecolor=(1,0,0), alpha=.25)],
+                    ['Full Stokes Mean', 'Full Stokes Std. Dev.'], 
+                   loc=(.3, .02),prop=matplotlib.font_manager.FontProperties(size="x-small"))
+        l.draw_frame(False)
+        l = fig.legend([matplotlib.lines.Line2D([1,2],[1,2],ls=':',color=(0,0,1)),
+                    matplotlib.patches.Patch(edgecolor=None, facecolor=(0,0,1), alpha=.25)],
+                    ['First Order Mean', 'First Order Std. Dev.'],
+                   loc=(.55, .02),prop=matplotlib.font_manager.FontProperties(size="x-small"))
+        l.draw_frame(False)
+        #Add an overall title to the figure
+        fig.text(.5, .92, "ISMIP-HOM Experiment " + experiment.upper(), horizontalalignment='center', size='large')
+        #Add one axis label per side (the labels are the same because of the small multiple format,
+        #so we only want to repeat them once in the whole figure!)
+        fig.text(.5, .1, "Normalized X coordinate", horizontalalignment='center',size='small')
+        fig.text(.06, .5, "Ice Speed (m/a)", rotation="vertical", verticalalignment='center') 
+        #Save the figure
+        filename = "ISMIP-HOM-" + experiment.upper() + ".png" 
+        pyplot.savefig(filename)
+

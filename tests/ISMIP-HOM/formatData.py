@@ -96,7 +96,7 @@ if __name__ == "__main__":
                                     [True,     True,     True,  False,    False,    False,   False])
     elif experimentLetter == "d":
         rows = extractFlowline(ncdf, ["uvelhom", "wvel", "uvelhom", "tau_xz"],
-                                     [True,      True,   False,     false])
+                                     [True,      True,   False,     False])
 
     ncdf.close()
 

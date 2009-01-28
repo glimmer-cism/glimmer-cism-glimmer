@@ -26,7 +26,7 @@ for i in range(shape.nx):
         thick = 1000 - 500*sin(2*pi*float(i)/(shape.nx - 1)) * sin(2*pi*float(j)/(shape.ny - 1))
         bed = z - thick
         #Write this data point
-        topg.put_1((0,i,j), bed)
-        thk.put_1((0,i,j), thick)
+        topg.put_1((0,j,i), bed)
+        thk.put_1((0,j,i), thick)
 
 nc.close()

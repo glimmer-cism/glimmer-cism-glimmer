@@ -24,7 +24,7 @@ for i in range(shape.nx):
     bed = z - thick
     for j in range(shape.ny):
         #Write this data point
-        topg.put_1((0,i,j), bed)
-        thk.put_1((0,i,j), thick)
+        topg.put_1((0,j,i), bed)
+        thk.put_1((0,j,i), thick)
 
 nc.close()

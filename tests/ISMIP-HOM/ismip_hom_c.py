@@ -23,9 +23,9 @@ for i in range(shape.nx):
         b = 1000 + 1000*sin(2*pi*float(i)/(shape.nx - 1)) * sin(2*pi*float(j)/(shape.ny - 1))
         
         #Write this data point
-        topg.put_1((0,i,j), z - 1000)
-        thk.put_1((0,i,j), 1000)
-        if i < shape.nx - 1 and j < shape.ny - 1:
-           beta.put_1((0,i,j),b)
+        topg.put_1((0,j,i), z - 1000)
+        thk.put_1((0,j,i), 1000)
+        if i < shape.ny - 1 and j < shape.nx - 1:
+           beta.put_1((0,j,i),b)
 
 nc.close()
