@@ -833,6 +833,8 @@ end subroutine init_zeta
             !Compute viscosity
             call muterm(mu,uvel,vvel,arrh,h,dzdx,dzdy,ax,ay,delta_x,delta_y,zeta,FLOWN,ZIP,.true., &
                         dudx, dudy, dudz, dvdx, dvdy, dvdz)
+            !Apply periodic boundary conditions to the viscosity
+            call periodic_boundaries_3d_stag(mu,periodic_x,periodic_y)
             call write_xls_3d("mu.txt",mu)
             !Sparse matrix routine for determining velocities.  The new
             !velocities will get spit into ustar and vstar, while uvel and vvel
@@ -841,7 +843,11 @@ end subroutine init_zeta
                 uvel,vvel,ustar,vstar,tau,dhbdx,dhbdy,ijktot,MAXY,&
                 MAXX,NZETA,TOLER, delta_x, delta_y, zeta, mask, &
                 matrix, workspace, options)
-            
+           
+            !Apply periodic boundary conditions to the computed velocity
+            call periodic_boundaries_3d_stag(ustar,periodic_x,periodic_y)
+            call periodic_boundaries_3d_stag(vstar,periodic_x,periodic_y)
+
             !Apply unstable manifold correction.  This function returns
             !true if we need to keep iterating, false if we reached convergence
             cont = unstable_manifold_correction_hov(ustar, uvel, &
