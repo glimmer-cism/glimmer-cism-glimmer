@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import sys
 import os
 import os.path
 import math
@@ -8,21 +9,25 @@ import matplotlib.lines
 import matplotlib.patches
 import matplotlib.figure
 import matplotlib.font_manager
-
+import numpy
 #Lists of model classifications
 fullStokes = ["aas1", "aas2", "cma1", "fpa2", "ghg1", "jvj1", "mmr1", "oga1", "rhi1", "rhi3", "spr1", "ssu1", "yko1"]
+
+lmla = ["ahu1", "ahu2", "bds1", "fpa1", "mbr1", "rhi2", "tpa1"]
 
 #Prefix for data files that came from glimmer
 glimPrefix = "glm1"
 
-def getDataFiles(root, experiment, domainSizeKm, isFullStokes):    
+def getDataFiles(root, experiment, domainSizeKm, modelType):    
     fnameSuffix = experiment + "%03d"%domainSizeKm +".txt"
     files = []
     for root, ds, fs in os.walk(root):
         for file in fs:
             if file.endswith(fnameSuffix):
                 model = file[:4]
-                if isFullStokes and model in fullStokes or (not isFullStokes) and model not in fullStokes:
+                if modelType == "full-stokes"  and model in fullStokes or \
+                   modelType == "partial-stokes" and model not in fullStokes or \
+                   modelType == "lmla" and model in lmla:
                     files.append(os.path.join(root, file))
     return files
 
@@ -59,6 +64,9 @@ class Flowline(object):
             raise Exception("I don't know the size of the data yet!")
         else:
             return self.__size
+    
+    def length(self):
+        return len(self.__dataPoints)
 
     #A hack in case the endpoints are not exactly 0 or 1.  In this case,
     #we'll just extend the range out according to a constant extrapolation.
@@ -106,6 +114,17 @@ class Planview(object):
             self.__flowlines[y] = Flowline()
         self.__flowlines[y].addDataPoint(x, depVars)
 
+    def getPointLocations(self):
+        locations = []
+        for y,fl in self.__flowlines.iteritems():
+            for x in fl.getPointLocations():
+                locations.append((x,y))
+        return locations
+
+            #surface velocity.
+    def getDataPoint(self, x, y):
+        return self.__flowlines[y].getDataPoint(x)
+
     def extractFlowline(self, y):
         #If the requested y value is represented directly, grab it
         if y in self.__flowlines:
@@ -118,11 +137,10 @@ class Planview(object):
         belowFl = 0
         aboveFl = 1
         for fl in self.__flowlines.iterkeys():
-            if y - fl < y - belowFl:
+            if fl <= y and y - fl < y - belowFl:
                 belowFl = fl
-            if fl - y < aboveFl - y:
+            if fl >= y and fl - y < aboveFl - y:
                 aboveFl = fl
-
         flowline1 = self.__flowlines[belowFl]
         flowline2 = self.__flowlines[aboveFl]
 
@@ -137,6 +155,20 @@ class Planview(object):
             interp = [i*(1-alpha) + j*alpha for i,j in zip(values1, values2)]
             interpolatedFlowline.addDataPoint(x, interp)
         return interpolatedFlowline
+
+    def plot(self):
+        xes = self.__flowlines.values()[0].getPointLocations()
+        yes = sorted(list(self.__flowlines.keys()))
+        nx = len(xes)
+        ny = len(yes)
+        arr = numpy.zeros((nx, ny))
+        for i in range(nx):
+            for j in range(ny):
+                arr[i,j] = self.getDataPoint(xes[i], yes[j])[0]
+
+        pyplot.imshow(arr)
+        pyplot.show()
+
 
 #Given a list of flowlines and a set of x coordinates, interpolates the flowlines
 #onto the given x coordinates and returns a tuple of two flowlines with the means
@@ -173,7 +205,7 @@ def readFlowlineFile(filename):
     f.close()
     return flowline
 
-def readPlanviewFile(filename):
+def readPlanviewFile(filename, transpose=False):
     f = open(filename)
     plan = Planview()
     for line in f:
@@ -182,7 +214,10 @@ def readPlanviewFile(filename):
         x = data[0]
         y = data[1]
         data = data[2:]
-        plan.addDataPoint(x,y,data)
+        if not transpose:
+            plan.addDataPoint(x,y,data)
+        else:
+            plan.addDataPoint(y,x,data)
     f.close()
     return plan
 
@@ -204,6 +239,14 @@ def normSurfaceVelocity(flowline):
     for x in flowline.getPointLocations():
         data = flowline.getDataPoint(x)
         result.addDataPoint(x, [math.sqrt(data[0]**2 + data[1]**2)])
+    return result
+
+def normSurfaceVelocityPlan(planview):
+    result = Planview()
+    for x, y in planview.getPointLocations():
+        data = planview.getDataPoint(x,y)
+        #result.addDataPoint(x,y,[math.sqrt(data[0]**2 + data[1]**2)])
+        result.addDataPoint(x,y, [data[0]])
     return result
 
 def plotAggregatedFlowlines(axis, meanFlowline, stdevFlowline, dataMember, color, labelPrefix):
@@ -236,25 +279,35 @@ def plotAggregatedFlowlines(axis, meanFlowline, stdevFlowline, dataMember, color
 
 #Returns a tuple with two tuples suitable for creating a legend.  The first tuple contains
 #the lines and patches, the second contains the names
-def createPlot(experiment, domainSizeKm, fig, subplotNum):
+def createPlot(experiment, domainSizeKm, fig, subplotNum, notFullStokesModelType):
     isFlowlineExp = experiment in ["b","d","e"] 
     
     axis = fig.add_subplot(2,3,subplotNum)
     axis.set_title(str(domainSizeKm) + " km", size="medium")
     #Read the data that came from the Glimmer run
     glimFileName = glimPrefix + experiment + "%03d"%domainSizeKm + ".txt"
-    print glimFileName
     if isFlowlineExp:
         glimFlowline = readFlowlineFile(glimFileName)
     else:
-        glimPlan = readPlanviewFile(glimFileName)
+        glimPlan = readPlanviewFile(glimFileName, transpose=True)
+        glimPlan = normSurfaceVelocityPlan(glimPlan)
+        #glimPlan.plot()
         glimFlowline = glimPlan.extractFlowline(.25)
-        glimFlowline = normSurfaceVelocity(glimFlowline)
-    
+    #DEBUG!!
+    #m = -9999999999999999999
+    #for x in glimFlowline.getPointLocations():
+    #    m = max(m, glimFlowline.getDataPoint(x)[0])
+    #print m
+    #End debug
+
     axis.plot(glimFlowline.getPointLocations(), glimFlowline.getDependantVariable(0), color=(0,0,0))
 
     for isFullStokes in [True, False]:
-        models = getDataFiles("ismip_all", experiment, domainSizeKm, isFullStokes)
+        if isFullStokes:
+            modelType = "full-stokes"
+        else:
+            modelType = notFullStokesModelType
+        models = getDataFiles("ismip_all", experiment, domainSizeKm, modelType)
         
         #Certain ISMIP-HOM experiments are 3-D experiments that produce a plan view of the surface
         #velocity as their output.  If this is the case, we need to read in a plan view format 
@@ -275,11 +328,9 @@ def createPlot(experiment, domainSizeKm, fig, subplotNum):
                     plans.append(readPlanviewFile(f))
                 except Exception, e:
                     print f, "failed to load:",e
+            plans = [normSurfaceVelocityPlan(pv) for pv in plans]
             #Extract a flowline from the plan view at y=L/4
             flowlines = [pv.extractFlowline(.25) for pv in plans]
-            #For each flowline, create another flowline with the norm of the
-            #surface velocity.
-            flowlines = [normSurfaceVelocity(fl) for fl in flowlines]
         
         #Simple fix if a flowline has a range that is less than [0..1].  In this case,
         #we are at the moment simply extending the boundaries out.
@@ -303,10 +354,21 @@ def createPlot(experiment, domainSizeKm, fig, subplotNum):
         
 
 if __name__ == "__main__":
-    for experiment in ["a","b","c"]:
+    if "--lmla" in sys.argv:
+        notFullStokesModelType = "lmla"
+    else:
+        notFullStokesModelType = "partial-stokes"
+
+    for experiment in ["a","b","c","d"]:
         fig = pyplot.figure(subplotpars=matplotlib.figure.SubplotParams(top=.85,bottom=.15))
         for i, domainSize in enumerate([5, 10, 20, 40, 80, 160]):
-            createPlot(experiment, domainSize, fig, i+1)
+            createPlot(experiment, domainSize, fig, i+1, notFullStokesModelType)
+
+        #Create the legend!  This is overly complicated because I want the legend to be
+        #in multiple columns at the bottom of the visual, and that's impossible with my
+        #version of matplotlib (it's apparently coming though?)
+        #So, I am creating a different legend for each column
+        #l.draw_frame(False) turns off the borders.
         l = fig.legend([matplotlib.lines.Line2D([1,2],[1,2],color=(0,0,0))],
                    ['Model Output'] ,
                    loc=(.1, .05),prop=matplotlib.font_manager.FontProperties(size="x-small"))
@@ -321,6 +383,7 @@ if __name__ == "__main__":
                     ['First Order Mean', 'First Order Std. Dev.'],
                    loc=(.55, .02),prop=matplotlib.font_manager.FontProperties(size="x-small"))
         l.draw_frame(False)
+
         #Add an overall title to the figure
         fig.text(.5, .92, "ISMIP-HOM Experiment " + experiment.upper(), horizontalalignment='center', size='large')
         #Add one axis label per side (the labels are the same because of the small multiple format,

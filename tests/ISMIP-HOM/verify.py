@@ -26,14 +26,14 @@ for experiment in ['a', 'b', 'c', 'd']:
     #Name of the netcdf generation script for this experiment
     ncScript = "python ismip_hom_" + experiment + ".py"
     for domain in domain_sizes:
+        newConfigFile = changeDomainSize.changeDomainSize(filename, domain)
+        ncOutputFilename = newConfigFile.replace("config","out.nc")
+        intercompareOutputFilename = "glm1" + experiment + "%03d"%int(domain/1000) + ".txt"
         if not formatOnly:
             #Create the domain size-specific config file
-            newConfigFile = changeDomainSize.changeDomainSize(filename, domain)
             #Generate the netcdf file for this config file
             os.system(ncScript + " " + newConfigFile)
             #Run Glimmer
             os.system("echo " + newConfigFile + "|simple_glide")
             #Reformat the output as the ISMIP-HOM format
-            ncOutputFilename = newConfigFile.replace("config","out.nc")
-            intercompareOutputFilename = "glm1" + experiment + "%03d"%int(domain/1000) + ".txt"
-        os.system("./formatData.py " + experiment + " " + ncOutputFilename + " " + intercompareOutputFilename)
+            os.system("./formatData.py " + experiment + " " + ncOutputFilename + " " + intercompareOutputFilename)
