@@ -17,6 +17,7 @@ def changeDomainSize(cfgFileName, newDomainSize):
     cfg.read(cfgFileName)
 
     #Get the number of grid points in each dimension.  This value will remain constant
+    #Subtract by 2, 1 for the staggered grid and 1 for the ghost cells due to periodic bc's
     ewn = int(cfg.get("grid","ewn")) - 1
     nsn = int(cfg.get("grid","nsn")) - 1
 

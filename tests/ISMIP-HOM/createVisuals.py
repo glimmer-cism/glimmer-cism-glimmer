@@ -245,8 +245,7 @@ def normSurfaceVelocityPlan(planview):
     result = Planview()
     for x, y in planview.getPointLocations():
         data = planview.getDataPoint(x,y)
-        #result.addDataPoint(x,y,[math.sqrt(data[0]**2 + data[1]**2)])
-        result.addDataPoint(x,y, [data[0]])
+        result.addDataPoint(x,y,[math.sqrt(data[0]**2 + data[1]**2)])
     return result
 
 def plotAggregatedFlowlines(axis, meanFlowline, stdevFlowline, dataMember, color, labelPrefix):
@@ -359,7 +358,7 @@ if __name__ == "__main__":
     else:
         notFullStokesModelType = "partial-stokes"
 
-    for experiment in ["a","b","c","d"]:
+    for experiment in ["b"]:
         fig = pyplot.figure(subplotpars=matplotlib.figure.SubplotParams(top=.85,bottom=.15))
         for i, domainSize in enumerate([5, 10, 20, 40, 80, 160]):
             createPlot(experiment, domainSize, fig, i+1, notFullStokesModelType)

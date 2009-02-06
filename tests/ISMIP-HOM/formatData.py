@@ -20,10 +20,13 @@ def extractMapView(ncdf, fields, fromSurface):
     rows = []
     time = 0
 
-    for i in range(nx):
-        for j in range(ny):
-            xhat = float(i)/float(nx - 1)
-            yhat = float(j)/float(ny - 1)
+    #Account for periodic BCs by ignoring the ghost cells
+    #We also account for the fact that we are on a staggered grid by offsetting
+    #the outputted values
+    for i in range(nx-1):
+        for j in range(ny-1):
+            xhat = float(i+.5)/float(nx - 1)
+            yhat = float(j+.5)/float(ny - 1)
 
             row = [xhat, yhat]
             for var, s in zip(vars, fromSurface):
@@ -59,8 +62,8 @@ def extractFlowline(ncdf, fields, fromSurface, transpose=False):
     rows = []
     time = 0
 
-    for i in range(nPoints):
-        xhat = float(i)/float(nPoints - 1)
+    for i in range(nPoints-1):
+        xhat = float(i+.5)/float(nPoints - 1)
 
         row = [xhat]
         for var,s in zip(vars,fromSurface):

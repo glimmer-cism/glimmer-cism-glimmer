@@ -17,10 +17,9 @@ L = shape.nx*shape.dx
 
 for i in range(shape.nx):
     #Our surface is a uniform slope.
-    x = L*float(i)/(shape.nx - 1)
-    z = 2000 - x*tan(.1*pi/180)
+    z = 2000 - tan(.1*pi/180)*i*shape.dx
     for j in range(shape.ny):
-        b = 1000 + 1000*sin(2*pi*float(i)/(shape.nx - 1)) * sin(2*pi*float(j)/(shape.ny - 1))
+        b = 1000 + 1000*sin(2*pi*float(i)/(shape.nx - 2)) * sin(2*pi*float(j)/(shape.ny - 2))
         
         #Write this data point
         topg.put_1((0,j,i), z - 1000)

@@ -17,10 +17,9 @@ L = shape.nx*shape.dx
 
 for i in range(shape.nx):
     #Our surface is a uniform slope.
-    x = L*float(i)/(shape.nx - 1)
-    z = 2000 - x*tan(.5*pi/180)
+    z = 4000 - tan(.5*pi/180)*i*shape.dx
     #Rippled bed
-    thick = 1000 - 500*sin(2*pi*float(i)/(shape.nx - 1))
+    thick = 1000 - 500*sin(2*pi*float(i)/(shape.nx - 2))
     bed = z - thick
     for j in range(shape.ny):
         #Write this data point
