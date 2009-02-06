@@ -244,7 +244,7 @@ end subroutine init_zeta
         double precision, dimension(:,:), intent(in) :: d2zdx2,d2zdy2,d2hdx2,d2hdy2
         
         INTEGER :: i,j,k
-#if 0
+#if 1
         call write_xls("h.txt",h)
         call write_xls("hb.txt",hb)
         call write_xls("surf.txt",surf)
@@ -304,13 +304,12 @@ end subroutine init_zeta
                 endif
             end do
         end do
-#if 0
+#if 1
         call write_xls_3d("ax.txt",ax)
         call write_xls_3d("ay.txt",ay)
         call write_xls_3d("bx.txt",bx)
         call write_xls_3d("by.txt",by)
         call write_xls_3d("cxy.txt",cxy)
-        stop
 #endif
     end subroutine
 !
@@ -756,17 +755,17 @@ end subroutine init_zeta
         lacc=0
         em = 0
         correction_vec = 0
-
+        write(*,*)"ARRH",arrh(1,1,1)
         !Set up sparse matrix options
         call sparse_solver_default_options(options)
         options%tolerance=TOLER
 !If we've compiled with the SLAP solver, we want to configure to use the GMRES method instead of the BiCG method.
 !GMRES works much better for the HO solves
-#if SPARSE_SOLVER == slap
-        options%use_gmres = .true.
-        options%maxiters  = 10000
-#endif
 
+#if SPARSE_SOLVER == slap
+        !options%use_gmres = .true.
+        options%maxiters  = 100000
+#endif
         !Create the sparse matrix
         call new_sparse_matrix(ijktot, ijktot*22, matrix)
         call sparse_allocate_workspace(matrix, options, workspace, ijktot*22)
@@ -833,9 +832,12 @@ end subroutine init_zeta
             !Compute viscosity
             call muterm(mu,uvel,vvel,arrh,h,dzdx,dzdy,ax,ay,delta_x,delta_y,zeta,FLOWN,ZIP,.true., &
                         dudx, dudy, dudz, dvdx, dvdy, dvdz)
+            call write_xls_3d("mu.txt",mu)
+            !stop
             !Apply periodic boundary conditions to the viscosity
             call periodic_boundaries_3d_stag(mu,periodic_x,periodic_y)
-            call write_xls_3d("mu.txt",mu)
+            !call write_xls_3d("mu.txt",mu)
+            !stop
             !Sparse matrix routine for determining velocities.  The new
             !velocities will get spit into ustar and vstar, while uvel and vvel
             !will still hold the old velocities.
@@ -1269,7 +1271,6 @@ end subroutine init_zeta
                 end if
              end do
         end do
-
         call sparse_solver_preprocess(matrix, options, workspace)
         ierr = sparse_solve(matrix, d, x, options, workspace,  err, iter, verbose=sparverbose)
         call handle_sparse_error(matrix, ierr, __FILE__, __LINE__)        
@@ -2194,6 +2195,17 @@ end subroutine init_zeta
         end do
     
     end subroutine unstagger_field_2d_periodic
+
+    subroutine unstagger_field_3d_periodic(f, f_stag)
+        real(dp), dimension(:,:,:) :: f, f_stag
+
+        integer :: i
+
+        do i = 1,size(f,3)
+            call unstagger_field_2d_periodic(f(:,:,i), f_stag(:,:,i))
+        end do
+        
+    end subroutine unstagger_field_3d_periodic
 
     function isinf(n)
         double precision::n

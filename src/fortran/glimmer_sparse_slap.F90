@@ -162,7 +162,7 @@ contains
         integer :: iunit !Unit number to print verbose output to (6=stdout, 0=no output)
         integer :: isym !Whether matrix is symmetric
         
-        logical :: allzeros = .true.
+        logical :: allzeros
         integer :: i
 
         iunit = 0
@@ -178,7 +178,8 @@ contains
         else
             isym = 0
         end if
-
+       
+        allzeros = .true.
         !Check if the RHS is zero; if it is, don't iterate!  The biconjugate
         !gradient method doesn't work in this case
         zero_check: do i = 1, size(rhs)

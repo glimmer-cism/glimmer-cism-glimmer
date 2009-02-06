@@ -16,6 +16,20 @@ contains
 
     end subroutine
 
+    subroutine write_xls_int(fname, data)
+        character(len=*) :: fname
+        integer data(:,:)
+        integer :: i , j
+        open(11, file=fname)
+
+        do i = 1, size(data, 1)
+            write(11, *)(data(i,j),j=1,size(data,2))
+        end do
+
+        close(11)
+
+    end subroutine
+
 
 
     subroutine write_xls_3d(fname, data)

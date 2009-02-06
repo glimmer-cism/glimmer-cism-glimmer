@@ -176,25 +176,35 @@ contains
 
              call glide_maskthck(model%geomderv%stagthck, stagmassb, .true., model%geometry%dom, &
                                  model%velocity_hom%velmask, totpts, empty)
-             print *, "totpts=",totpts
+             print *, "totpts=",model%geometry%totpts
              !Compute the mask.  We do this in this step because otherwise it sucks...
-             call velo_hom_pattyn(model%general%ewn, model%general%nsn, model%general%upn, &
-                          model%numerics%dew, model%numerics%dns, model%numerics%sigma, &
-                          model%geometry%thck, model%geometry%usrf, &
-                          model%geomderv%dthckdew, model%geomderv%dthckdns, &
-                          model%geomderv%dusrfdew, model%geomderv%dusrfdns, &
-                          model%geomderv%dthckdew-model%geomderv%dusrfdew, & 
-                          model%geomderv%dthckdns-model%geomderv%dusrfdns, & 
-                          model%geomderv%stagthck, model%velocity_hom%velmask, totpts, &
-                          model%temper%flwa, model%paramets%flow_exponent, model%velocity_hom%beta, &
-                          model%options%which_ho_bstress,&
-                          model%options%periodic_ew .eq. 1, &
-                          model%options%periodic_ns .eq. 1,&
-                          model%velocity_hom%uvel, model%velocity_hom%vvel, &
-                          model%velocity_hom%is_velocity_valid, &
-                          model%velocity_hom%uflx, model%velocity_hom%vflx, &
-                          model%velocity_hom%efvs, model%velocity_hom%tau, &
-                          model%velocity_hom%gdsx, model%velocity_hom%gdsy)
+             !call velo_hom_pattyn(model%general%ewn, model%general%nsn, model%general%upn, &
+             !             model%numerics%dew, model%numerics%dns, model%numerics%sigma, &
+             !             model%geometry%thck, model%geometry%usrf, &
+             !             model%geomderv%dthckdew, model%geomderv%dthckdns, &
+             !             model%geomderv%dusrfdew, model%geomderv%dusrfdns, &
+             !             model%geomderv%dthckdew-model%geomderv%dusrfdew, & 
+             !             model%geomderv%dthckdns-model%geomderv%dusrfdns, & 
+             !             model%geomderv%stagthck, model%velocity_hom%velmask, totpts, &
+             !             model%temper%flwa, model%paramets%flow_exponent, model%velocity_hom%beta, &
+             !             model%options%which_ho_bstress,&
+             !             model%options%periodic_ew .eq. 1, &
+             !             model%options%periodic_ns .eq. 1,&
+             !             model%velocity_hom%uvel, model%velocity_hom%vvel, &
+             !             model%velocity_hom%is_velocity_valid, &
+             !             model%velocity_hom%uflx, model%velocity_hom%vflx, &
+             !             model%velocity_hom%efvs, model%velocity_hom%tau, &
+             !             model%velocity_hom%gdsx, model%velocity_hom%gdsy)
+             call velo_hom_pattyn_nonstag(model%general%ewn, model%general%nsn, model%general%upn, &
+                        model%numerics%dew, model%numerics%dns, model%numerics%sigma, &
+                        model%geometry%thck, model%geometry%usrf, model%geometry%lsrf, &
+                        model%geometry%mask, model%geometry%totpts, &
+                        model%temper%flwa, model%paramets%flow_exponent, &
+                        model%velocity_hom%beta, model%options%which_ho_bstress, &
+                        model%options%periodic_ew .eq. 1, &
+                        model%options%periodic_ns .eq. 1, &
+                        model%velocity_hom%uvel, model%velocity_hom%vvel, &
+                        model%velocity_hom%is_velocity_valid)
 
                           model%velocity_hom%is_velocity_valid = .true.
                           

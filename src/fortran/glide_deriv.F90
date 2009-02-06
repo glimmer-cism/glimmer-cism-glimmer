@@ -502,6 +502,50 @@ contains
         d2fdx2_2d = (f(i+1,j) + f(i-1,j) - 2 * f(i, j))/(delta*delta)
     end function d2fdx2_2d
     
+    function d2fdx2_2d_downwind(f,i,j,delta)
+        implicit none
+        real(dp), dimension(:,:), intent(in) :: f
+        integer, intent(in) :: i,j
+        real(dp), intent(in) :: delta
+        real(dp) :: d2fdx2_2d_downwind   
+
+        d2fdx2_2d_downwind = (3*f(i, j) - 7*f(i+1, j) + 5*f(i+2, j) - f(i+3, j)) / (2*delta**2)
+
+    end function d2fdx2_2d_downwind
+
+    function d2fdx2_2d_upwind(f,i,j,delta)
+        implicit none
+        real(dp), dimension(:,:), intent(in) :: f
+        integer, intent(in) :: i,j
+        real(dp), intent(in) :: delta
+        real(dp) :: d2fdx2_2d_upwind 
+
+        d2fdx2_2d_upwind = (3*f(i, j) - 7*f(i-1, j) + 5*f(i-2, j) - f(i-3, j)) / (2*delta**2)
+
+    end function d2fdx2_2d_upwind
+
+    function d2fdy2_2d_downwind(f,i,j,delta)
+        implicit none
+        real(dp), dimension(:,:), intent(in) :: f
+        integer, intent(in) :: i,j
+        real(dp), intent(in) :: delta
+        real(dp) :: d2fdy2_2d_downwind   
+
+        d2fdy2_2d_downwind = (3*f(i, j) - 7*f(i, j+1) + 5*f(i, j+2) - f(i, j+3)) / (2*delta**2)
+
+    end function d2fdy2_2d_downwind
+
+    function d2fdy2_2d_upwind(f,i,j,delta)
+        implicit none
+        real(dp), dimension(:,:), intent(in) :: f
+        integer, intent(in) :: i,j
+        real(dp), intent(in) :: delta
+        real(dp) :: d2fdy2_2d_upwind 
+
+        d2fdy2_2d_upwind = (3*f(i, j) - 7*f(i, j-1) + 5*f(i, j-2) - f(i, j-3)) / (2*delta**2)
+
+    end function d2fdy2_2d_upwind
+
     function d2fdx2_2d_stag(f, i, j, delta)
         implicit none
         real(dp), dimension(:,:), intent(in) :: f
@@ -579,7 +623,43 @@ contains
         
         d2fdy2_2d_stag_upwind = sum(-3*f(i:i+1, j+1) + 7*f(i:i+1, j) - 5*f(i:i+1, j-1) + f(i:i+1, j-2)) / (4*delta**2)
         end function d2fdy2_2d_stag_upwind
-    
+   
+
+    subroutine d2f_field(f, deltax, deltay, d2fdx2, d2fdy2, periodic_x, periodic_y)
+        implicit none 
+
+        real(dp), intent(out), dimension(:,:) :: d2fdx2, d2fdy2
+        real(dp), intent(in), dimension(:,:) :: f
+        real(dp), intent(in) :: deltax, deltay
+        logical :: periodic_x, periodic_y
+
+        integer :: i,j
+
+        do i = 1,size(f,1)
+            do j = 1,size(f,2)
+                !I'll use the staggered versions of upwinded derivatives for
+                !now... my experience is that a 2nd order derivative onto a
+                !staggered grid is the same as a 1st order derivative onto the
+                !non-staggered grid
+                if (i == 1) then
+                    d2fdx2(i,j) = d2fdx2_2d_downwind(f,i,j,deltax)
+                else if (i == size(f,1)) then
+                    d2fdx2(i,j) = d2fdx2_2d_upwind(f,i,j,deltax)
+                else
+                    d2fdx2(i,j) = d2fdx2_2d(f,i,j,deltax)
+                end if
+                
+                if (j == 1) then
+                    d2fdy2(i,j) = d2fdy2_2d_downwind(f,i,j,deltax)
+                else if (j == size(f,1)) then
+                    d2fdy2(i,j) = d2fdy2_2d_upwind(f,i,j,deltax)
+                else
+                    d2fdy2(i,j) = d2fdy2_2d(f,i,j,deltax)
+                end if
+            end do
+        end do
+    end subroutine d2f_field
+
     !TODO: Rewrite this using the existing derivative machinery
     subroutine d2f_field_stag(f, deltax, deltay, d2fdx2, d2fdy2, periodic_x, periodic_y)
     implicit none 

@@ -204,6 +204,7 @@ contains
 
     ! and calculate lower and upper ice surface
     call glide_calclsrf(model%geometry%thck, model%geometry%topg, model%climate%eus,model%geometry%lsrf)
+    
     model%geometry%usrf = model%geometry%thck + model%geometry%lsrf
 
     ! initialise profile
