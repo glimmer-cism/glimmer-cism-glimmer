@@ -898,6 +898,7 @@ contains
     !*FD Calculate the value of $B$ used for basal sliding calculations.
     use glimmer_global, only : dp 
     use glimmer_physcon, only : rhoo, rhoi
+    use glimmer_paramets, only : len0, thk0
     implicit none
 
     type(glide_global_type) :: model        !*FD model instance
@@ -914,7 +915,11 @@ contains
     real :: Z !accounts for reduced basal traction due to pressure of
               !subglacial water for case(5)
     real :: tau !basal shear stress
+    
+    !scaling
+    real :: tau_factor = 1e-3*thk0*thk0/len0
     !------------------------------------------------------------------------------------
+
 
     ewn=model%general%ewn
     nsn=model%general%nsn
@@ -970,23 +975,28 @@ contains
        
        do ns = 1, nsn-1
           do ew = 1, ewn-1
-             if(model%geometry%topg(ew,ns) > model%climate%eus) then
-               Z = model%geometry%thck(ew,ns)
+             if((model%geometry%topg(ew,ns)*thk0) > (model%climate%eus*thk0)) then
+               Z = model%geometry%thck(ew,ns)*thk0
              else  
-               Z = model%geometry%thck(ew,ns) + rhoi*((model%geometry%topg(ew,ns) &
-                   - model%climate%eus)/ rhoo)
+               Z = model%geometry%thck(ew,ns)*thk0 + &
+               rhoi*((model%geometry%topg(ew,ns) *thk0 &
+                   - model%climate%eus*thk0)/ rhoo)
              end if 
              if(Z <= 10d-4) then !avoid division by zero
                 Z = 10d-4
              end if 
              
-             tau = (model%velocity%tau_x(ew,ns)**2 + model%velocity%tau_y(ew,ns)**2)**(1.0/2.0)
-             btrc(ew,ns) = -(Asl*(tau)**2)/Z !assuming that that btrc is later
+             tau = ((tau_factor*model%velocity%tau_x(ew,ns))**2 +&
+             (model%velocity%tau_y(ew,ns)*tau_factor)**2)**(1.0/2.0)
+             
+             
+             btrc(ew,ns) = (Asl*(tau)**2)/Z !assuming that that btrc is later
                                              !multiplied again by the basal shear stress
+       
+             
           end do
+       
        end do
-       
-       
     
     case default
        ! zero everywhere
