@@ -358,7 +358,9 @@ if __name__ == "__main__":
     else:
         notFullStokesModelType = "partial-stokes"
 
-    for experiment in ["b"]:
+    
+
+    for experiment in ["c"]:
         fig = pyplot.figure(subplotpars=matplotlib.figure.SubplotParams(top=.85,bottom=.15))
         for i, domainSize in enumerate([5, 10, 20, 40, 80, 160]):
             createPlot(experiment, domainSize, fig, i+1, notFullStokesModelType)

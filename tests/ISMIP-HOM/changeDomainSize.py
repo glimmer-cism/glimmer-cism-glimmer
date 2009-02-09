@@ -12,14 +12,27 @@ import ConfigParser
 import sys
 
 #Returns the name of the new config file written
-def changeDomainSize(cfgFileName, newDomainSize):
+def changeDomainSize(cfgFileName, newDomainSize, numGridPointsOverride=None, numVerticalPointsOverride=None, verticalSpacingSchemeOverride=None):
     cfg = ConfigParser.SafeConfigParser()
     cfg.read(cfgFileName)
 
     #Get the number of grid points in each dimension.  This value will remain constant
     #Subtract by 2, 1 for the staggered grid and 1 for the ghost cells due to periodic bc's
-    ewn = int(cfg.get("grid","ewn")) - 1
-    nsn = int(cfg.get("grid","nsn")) - 1
+    if numGridPointsOverride == None:
+        ewn = int(cfg.get("grid","ewn")) - 1
+        nsn = int(cfg.get("grid","nsn")) - 1
+    else:
+        ewn = numGridPointsOverride
+        nsn = numGridPointsOverride
+        cfg.set("grid","ewn", str(ewn+1))
+        cfg.set("grid","nsn", str(nsn+1))
+
+    #Obey other overrides (currently related to vertical grid spacing)
+    if numVerticalPointsOverride != None:
+        cfg.set("grid","upn", str(numVerticalPointsOverride))
+    
+    if verticalSpacingSchemeOverride != None:
+        cfg.set("grid","sigma_builtin",str(verticalSpacingSchemeOverride))
 
     #Determine the new grid spacing for the specified domain size
     dew = newDomainSize/ewn
@@ -48,6 +61,7 @@ def changeDomainSize(cfgFileName, newDomainSize):
     return outFileName
 
 if __name__ == "__main__":
+    
     cfgFileName = sys.argv[1]
     newDomainSize = float(sys.argv[2])
     changeDomainSize(cfgFileName, newDomainSize)
