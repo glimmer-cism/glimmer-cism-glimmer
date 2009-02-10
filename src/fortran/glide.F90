@@ -345,8 +345,6 @@ contains
     else
        nw=.false.
     end if
-    write(*,*) shape(model%velocity_hom%uvel)
-    write(*,*) shape(model%velocity_hom%tau%xz)
     if (.not. nw) call glide_io_writeall(model,model)
 
     ! ------------------------------------------------------------------------ 
