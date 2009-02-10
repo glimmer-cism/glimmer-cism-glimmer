@@ -113,12 +113,6 @@ contains
     type(glide_global_type) :: model
     logical, intent(in) :: newtemps                     !*FD true when we should recalculate Glen's A
     
-    !For HO masking
-    logical :: empty
-    integer :: totpts
-    real(sp), dimension(model%general%ewn-1, model%general%nsn-1) :: stagmassb
-
-    stagmassb = 0
     if (model%geometry%empty) then
 
        model%geometry%thck = dmax1(0.0d0,model%geometry%thck + model%climate%acab * model%pcgdwk%fc2(2))
@@ -149,67 +143,11 @@ contains
             model%geomderv%dusrfdns,model%velocity%diffu)
 
        !Calculate higher-order velocities if the user asked for them
-       if (model%options%which_ho_diagnostic == HO_DIAG_PATTYN) then
-            call stagvarb(model%geometry% thck, &
-                         model%geomderv%stagthck,&
-                         model%general%ewn, &
-                         model%general%nsn)
-               
-             call df_field_2d_staggered(model%geometry%usrf, model%numerics%dew, model%numerics%dns,& 
-                    model%geomderv%dusrfdew, model%geomderv%dusrfdns, .false., .false.)
+       if (model%options%which_ho_diagnostic /= 0) then
+            call run_ho_diagnostic(model)                          
+       end if
 
-             call df_field_2d_staggered(model%geometry%thck, model%numerics%dew, model%numerics%dns, &
-                   model%geomderv%dthckdew, model%geomderv%dthckdns, .false., .false.)
-             
-
-             !Beta field computations that change in time
-             if (model%options%which_ho_beta_in == HO_BETA_USE_BTRC) then
-                where (model%velocity%btrc /= 0)
-                    model%velocity_hom%beta = 1/model%velocity%btrc
-                elsewhere
-                    model%velocity_hom%beta = NAN
-                end where
-             else if (model%options%which_ho_beta_in == HO_BETA_SLIP_RATIO) then
-                call calc_slip_ratio(model%temper%flwa(model%general%upn,:,:), model%geomderv%stagthck, &
-                                     model%paramets%slip_ratio, model%velocity_hom%beta)
-             end if
-
-             call glide_maskthck(model%geomderv%stagthck, stagmassb, .true., model%geometry%dom, &
-                                 model%velocity_hom%velmask, totpts, empty)
-             print *, "totpts=",model%geometry%totpts
-             !Compute the mask.  We do this in this step because otherwise it sucks...
-             !call velo_hom_pattyn(model%general%ewn, model%general%nsn, model%general%upn, &
-             !             model%numerics%dew, model%numerics%dns, model%numerics%sigma, &
-             !             model%geometry%thck, model%geometry%usrf, &
-             !             model%geomderv%dthckdew, model%geomderv%dthckdns, &
-             !             model%geomderv%dusrfdew, model%geomderv%dusrfdns, &
-             !             model%geomderv%dthckdew-model%geomderv%dusrfdew, & 
-             !             model%geomderv%dthckdns-model%geomderv%dusrfdns, & 
-             !             model%geomderv%stagthck, model%velocity_hom%velmask, totpts, &
-             !             model%temper%flwa, model%paramets%flow_exponent, model%velocity_hom%beta, &
-             !             model%options%which_ho_bstress,&
-             !             model%options%periodic_ew .eq. 1, &
-             !             model%options%periodic_ns .eq. 1,&
-             !             model%velocity_hom%uvel, model%velocity_hom%vvel, &
-             !             model%velocity_hom%is_velocity_valid, &
-             !             model%velocity_hom%uflx, model%velocity_hom%vflx, &
-             !             model%velocity_hom%efvs, model%velocity_hom%tau, &
-             !             model%velocity_hom%gdsx, model%velocity_hom%gdsy)
-             call velo_hom_pattyn_nonstag(model%general%ewn, model%general%nsn, model%general%upn, &
-                        model%numerics%dew, model%numerics%dns, model%numerics%sigma, &
-                        model%geometry%thck, model%geometry%usrf, model%geometry%lsrf, &
-                        model%geometry%mask, model%geometry%totpts, &
-                        model%temper%flwa, model%paramets%flow_exponent, &
-                        model%velocity_hom%beta, model%options%which_ho_bstress, &
-                        model%options%periodic_ew .eq. 1, &
-                        model%options%periodic_ns .eq. 1, &
-                        model%velocity_hom%uvel, model%velocity_hom%vvel, &
-                        model%velocity_hom%is_velocity_valid)
-
-                          model%velocity_hom%is_velocity_valid = .true.
-                          
-        end if
-              if (model%options%which_ho_prognostic == HO_PROG_SIAONLY) then
+       if (model%options%which_ho_prognostic == HO_PROG_SIAONLY) then
        ! get new thicknesses
             call thck_evolve(model,model%velocity%diffu, model%velocity%diffu, .true.,model%geometry%thck,model%geometry%thck)
        else if (model%options%which_ho_prognostic == HO_PROG_PATTYN) then
@@ -273,13 +211,6 @@ contains
     real(kind=dp), dimension(model%general%ewn*model%general%nsn) :: umc_correction_vec
     logical :: umc_continue_iteration
     integer :: linearize_start
-
-    !For HO masking
-    logical :: empty
-    integer :: totpts
-    real(sp), dimension(model%general%ewn-1, model%general%nsn-1) :: stagmassb
-
-    stagmassb = 0
 
     umc_correction_vec = 0
     umc_new_vec = 0
@@ -346,55 +277,11 @@ contains
                model%geomderv%dusrfdns,model%velocity%diffu)
 
        !Calculate higher-order velocities if the user asked for them
-       if (model%options%which_ho_diagnostic == HO_DIAG_PATTYN) then
-            call stagvarb(model%geometry% thck, &
-                         model%geomderv%stagthck,&
-                         model%general%ewn, &
-                         model%general%nsn)
-               
-             call df_field_2d_staggered(model%geometry%usrf, model%numerics%dew, model%numerics%dns,& 
-                    model%geomderv%dusrfdew, model%geomderv%dusrfdns, .false., .false.)
+       if (model%options%which_ho_diagnostic /= 0) then
+            call run_ho_diagnostic(model)                          
+       end if
 
-             call df_field_2d_staggered(model%geometry%thck, model%numerics%dew, model%numerics%dns, &
-                   model%geomderv%dthckdew, model%geomderv%dthckdns, .false., .false.)
-             
-             !Beta field computations that change in time
-             if (model%options%which_ho_beta_in == HO_BETA_USE_BTRC) then
-                where (model%velocity%btrc /= 0)
-                    model%velocity_hom%beta = 1/model%velocity%btrc
-                elsewhere
-                    model%velocity_hom%beta = NAN
-                end where
-             else if (model%options%which_ho_beta_in == HO_BETA_SLIP_RATIO) then
-                call calc_slip_ratio(model%temper%flwa(model%general%upn,:,:), model%geomderv%stagthck, &
-                                     model%paramets%slip_ratio, model%velocity_hom%beta)
-             end if
-
-             call glide_maskthck(model%geomderv%stagthck, stagmassb, .true., model%geometry%dom, &
-                                 model%velocity_hom%velmask, totpts, empty)
-             print *, "totpts=",totpts
-             !Compute the mask.  We do this in this step because otherwise it sucks...
-             call velo_hom_pattyn(model%general%ewn, model%general%nsn, model%general%upn, &
-                          model%numerics%dew, model%numerics%dns, model%numerics%sigma, &
-                          model%geometry%thck, model%geometry%usrf, &
-                          model%geomderv%dthckdew, model%geomderv%dthckdns, &
-                          model%geomderv%dusrfdew, model%geomderv%dusrfdns, &
-                          model%geomderv%dthckdew-model%geomderv%dusrfdew, & 
-                          model%geomderv%dthckdns-model%geomderv%dusrfdns, & 
-                          model%geomderv%stagthck, model%velocity_hom%velmask, totpts, &
-                          model%temper%flwa, model%paramets%flow_exponent, model%velocity_hom%beta, &
-                          model%options%which_ho_bstress,&
-                          model%options%periodic_ew .eq. 1, &
-                          model%options%periodic_ns .eq. 1,&
-                          model%velocity_hom%uvel, model%velocity_hom%vvel, &
-                          model%velocity_hom%is_velocity_valid, &
-                          model%velocity_hom%uflx, model%velocity_hom%vflx, &
-                          model%velocity_hom%efvs, model%velocity_hom%tau, &
-                          model%velocity_hom%gdsx, model%velocity_hom%gdsy)
-
-                          model%velocity_hom%is_velocity_valid = .true.
-        end if
-    
+ 
        if (model%options%which_ho_prognostic == HO_PROG_SIAONLY) then
        ! get new thicknesses
             call thck_evolve(model,model%velocity%diffu, model%velocity%diffu, .true.,model%geometry%thck,model%geometry%thck)

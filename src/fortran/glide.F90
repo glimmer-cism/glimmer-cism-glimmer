@@ -178,7 +178,8 @@ contains
        call init_lithot(model)
     end if
 
-    if (model%options%which_ho_diagnostic == HO_DIAG_PATTYN) then
+    if (model%options%which_ho_diagnostic == HO_DIAG_PATTYN_UNSTAGGERED .or. &
+        model%options%which_ho_diagnostic == HO_DIAG_PATTYN_STAGGERED) then
         call init_velo_hom_pattyn(model)
     end if
 

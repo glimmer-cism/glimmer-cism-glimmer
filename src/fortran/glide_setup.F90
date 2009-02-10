@@ -540,9 +540,10 @@ contains
     character(len=*), dimension(0:1), parameter :: vertical_integration = (/ &
          'standard     ', &
          'obey upper BC' /)
-    character(len=*), dimension(0:1), parameter :: ho_diagnostic = (/ &
+    character(len=*), dimension(0:2), parameter :: ho_diagnostic = (/ &
          'Do not compute higher-order velocities', &
-         'Pattyn 2003                           '/)
+         'Pattyn 2003 (on A-grid)               ', &
+         'Pattyn 2003 (on B-grid)               '/)
     character(len=*), dimension(0:3), parameter :: ho_prognostic = (/ &
          'Evolve ice with SIA only', &
          'Pattyn scheme           ', &

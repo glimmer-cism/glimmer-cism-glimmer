@@ -2190,7 +2190,7 @@ end subroutine init_zeta
                     j2 = 1
                 end if
     
-                f(i,j) = (f_stag(i1, j1) + f_stag(i2, j1) + f_stag(i1, j2) + f_stag(i2, j2))/2
+                f(i,j) = (f_stag(i1, j1) + f_stag(i2, j1) + f_stag(i1, j2) + f_stag(i2, j2))/4
             end do
         end do
     

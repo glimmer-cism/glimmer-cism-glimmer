@@ -112,7 +112,8 @@ module glide_types
   integer, parameter :: SIGMA_BUILTIN_PATTYN = 2 !Use Pattyn's sigma coordinates
 
   integer, parameter :: HO_DIAG_NONE = 0
-  integer, parameter :: HO_DIAG_PATTYN = 1
+  integer, parameter :: HO_DIAG_PATTYN_UNSTAGGERED = 1
+  integer, parameter :: HO_DIAG_PATTYN_STAGGERED = 2
 
   integer, parameter :: HO_PROG_SIAONLY = 0
   integer, parameter :: HO_PROG_PATTYN = 1

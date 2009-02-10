@@ -72,6 +72,81 @@ contains
         beta = 1.0D0/(slip_ratio_coef*flwa*thick)
     end subroutine  
 
+    !This is a temporary wrapper function to get all the HO setup and calling
+    !code out of glide_thck so it keeps the clutter down.  I'm just passing the
+    !model right now because the analysis on what needs to be passed has yet to
+    !be done.
+    subroutine run_ho_diagnostic(model)
+            use glide_thckmask
+             type(glide_global_type) :: model
+            !For HO masking
+            logical :: empty
+            integer :: totpts
+            real(sp), dimension(model%general%ewn-1, model%general%nsn-1) :: stagmassb
+
+            stagmassb = 0
+
+             call staggered_field_2d(model%geometry% thck, &
+                         model%geomderv%stagthck)
+               
+             call df_field_2d_staggered(model%geometry%usrf, model%numerics%dew, model%numerics%dns,& 
+                    model%geomderv%dusrfdew, model%geomderv%dusrfdns, .false., .false.)
+
+             call df_field_2d_staggered(model%geometry%thck, model%numerics%dew, model%numerics%dns, &
+                   model%geomderv%dthckdew, model%geomderv%dthckdns, .false., .false.)
+             
+
+             !Beta field computations that change in time
+             if (model%options%which_ho_beta_in == HO_BETA_USE_BTRC) then
+                where (model%velocity%btrc /= 0)
+                    model%velocity_hom%beta = 1/model%velocity%btrc
+                elsewhere
+                    model%velocity_hom%beta = NAN
+                end where
+             else if (model%options%which_ho_beta_in == HO_BETA_SLIP_RATIO) then
+                call calc_slip_ratio(model%temper%flwa(model%general%upn,:,:), model%geomderv%stagthck, &
+                                     model%paramets%slip_ratio, model%velocity_hom%beta)
+             end if
+
+             call glide_maskthck(model%geomderv%stagthck, stagmassb, .true., model%geometry%dom, &
+                                 model%velocity_hom%velmask, totpts, empty)
+             print *, "totpts=",model%geometry%totpts
+             !Compute the mask.  We do this in this step because otherwise it sucks...
+             if (model%options%which_ho_diagnostic == HO_DIAG_PATTYN_STAGGERED) then
+                call velo_hom_pattyn(model%general%ewn, model%general%nsn, model%general%upn, &
+                          model%numerics%dew, model%numerics%dns, model%numerics%sigma, &
+                          model%geometry%thck, model%geometry%usrf, &
+                          model%geomderv%dthckdew, model%geomderv%dthckdns, &
+                          model%geomderv%dusrfdew, model%geomderv%dusrfdns, &
+                          model%geomderv%dthckdew-model%geomderv%dusrfdew, & 
+                          model%geomderv%dthckdns-model%geomderv%dusrfdns, & 
+                          model%geomderv%stagthck, model%velocity_hom%velmask, totpts, &
+                          model%temper%flwa, model%paramets%flow_exponent, model%velocity_hom%beta, &
+                          model%options%which_ho_bstress,&
+                          model%options%periodic_ew .eq. 1, &
+                          model%options%periodic_ns .eq. 1,&
+                          model%velocity_hom%uvel, model%velocity_hom%vvel, &
+                          model%velocity_hom%is_velocity_valid, &
+                          model%velocity_hom%uflx, model%velocity_hom%vflx, &
+                          model%velocity_hom%efvs, model%velocity_hom%tau, &
+                          model%velocity_hom%gdsx, model%velocity_hom%gdsy)
+            else if (model%options%which_ho_diagnostic == HO_DIAG_PATTYN_UNSTAGGERED) then
+                call velo_hom_pattyn_nonstag(model%general%ewn, model%general%nsn, model%general%upn, &
+                          model%numerics%dew, model%numerics%dns, model%numerics%sigma, &
+                          model%geometry%thck, model%geometry%usrf, model%geometry%lsrf, &
+                          model%geometry%mask, model%geometry%totpts, &
+                          model%temper%flwa, model%paramets%flow_exponent, &
+                          model%velocity_hom%beta, model%options%which_ho_bstress, &
+                          model%options%periodic_ew .eq. 1, &
+                          model%options%periodic_ns .eq. 1, &
+                          model%velocity_hom%uvel, model%velocity_hom%vvel, &
+                          model%velocity_hom%is_velocity_valid)
+            end if
+
+            model%velocity_hom%is_velocity_valid = .true.
+        
+    end subroutine
+
     subroutine velo_hom_pattyn(ewn, nsn, upn, dew, dns, sigma, &
                                thck, usrf, dthckdew, dthckdns, dusrfdew, dusrfdns, &
                                dlsrfdew, dlsrfdns, stagthck, mask, totpts, flwa, flwn, btrc, which_sliding_law, &
@@ -362,6 +437,7 @@ contains
       
         call unstagger_field_3d_periodic(vvel_t, uvel_t_unstag)
         call unstagger_field_3d_periodic(vvel_t, uvel_t_unstag)
+        
         call unstagger_field_2d_periodic(btrc_t, btrc_t_unstag)
         write(*,*) ewn, dew, nsn, dns, upn
         write(*,*) shape(btrc)
