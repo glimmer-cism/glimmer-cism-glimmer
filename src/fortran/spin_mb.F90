@@ -226,13 +226,12 @@ contains
     select case(model_type)
     case(0)
       !precipitation calculation for Antarctica
-      prcp = 1.5 * 2**(artm/10)
+      acab = 1.5 * 2.0**(artm/10.0)
     
     case(1)
       !precipitation calculataion for Greenland
       prcp = presprcp * pfac**(artm - presartm)
-    
-    end select 
+     
     !send into the pdd calculation
     call glimmer_pdd_mbal(pdd_scheme, &
                           artm, &
@@ -241,6 +240,9 @@ contains
                           ablt, & 
                           acab, &
                           landsea) 
+    end select
+  
+  
   end subroutine spin_simple_massbalance
   
   subroutine spin_massbalance(pdd_scheme, model_type, usrf, landsea,          &
