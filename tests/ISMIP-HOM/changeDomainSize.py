@@ -12,7 +12,10 @@ import ConfigParser
 import sys
 
 #Returns the name of the new config file written
-def changeDomainSize(cfgFileName, newDomainSize, numGridPointsOverride=None, numVerticalPointsOverride=None, verticalSpacingSchemeOverride=None):
+def changeDomainSize(cfgFileName, newDomainSize, numGridPointsOverride=None, 
+                                                 numVerticalPointsOverride=None, 
+                                                 verticalSpacingSchemeOverride=None,
+                                                 diagnosticSchemeOverride=None):
     cfg = ConfigParser.SafeConfigParser()
     cfg.read(cfgFileName)
 
@@ -33,6 +36,9 @@ def changeDomainSize(cfgFileName, newDomainSize, numGridPointsOverride=None, num
     
     if verticalSpacingSchemeOverride != None:
         cfg.set("grid","sigma_builtin",str(verticalSpacingSchemeOverride))
+
+    if diagnosticSchemeOverride != None:
+        cfg.set("ho_options","diagnostic_scheme",str(diagnosticSchemeOverride))
 
     #Determine the new grid spacing for the specified domain size
     dew = newDomainSize/ewn

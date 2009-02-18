@@ -44,7 +44,7 @@ def getExperimentsToRun(optlist):
 #Parse command line arguments
 optlist, args = gnu_getopt(sys.argv, 'abcd', 
     ["5km","10km","20km","40km","80km","160km",
-     "format-only","horiz-grid-size=","vert-grid-size=","vert-grid-spacing=","ismip-hom-prefix="])
+     "format-only","horiz-grid-size=","vert-grid-size=","vert-grid-spacing=","ismip-hom-prefix=","diagnostic-type="])
 optdict = dict(optlist)
 
 #Determine whether to actually run Glimmer or just prepare the input files
@@ -71,6 +71,10 @@ if "--vert-grid-spacing" in optdict:
 else:
     verticalSpacingSchemeOverride = None
 
+if "--diagnostic-type" in optdict:
+    diagnosticSchemeOverride = optdict["--diagnostic-type"]
+else:
+    diagnosticSchemeOverride = None
 #Determine the prefix to use for the ISMIP-HOM format output files
 if "--ismip-hom-prefix" in optdict:
     ismipHomOutputPrefix = optdict["--ismip-hom-prefix"]
@@ -85,7 +89,8 @@ for experiment in experiments:
     for domain in domainSizes:
         #Create a new configuration file that reflects the new domain size and (possibly) grid spacing
         newConfigFile = changeDomainSize.changeDomainSize(filename, domain, 
-                                          horizontalGridOverride, verticalGridOverride, verticalSpacingSchemeOverride)
+                                          horizontalGridOverride, verticalGridOverride, 
+                                          verticalSpacingSchemeOverride, diagnosticSchemeOverride)
 
         #Figure out the name of the netCDF file that the output will be written to
         #(this is a heuristic hack, it should probably really read the config file!!!!)

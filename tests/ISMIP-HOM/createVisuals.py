@@ -10,13 +10,12 @@ import matplotlib.patches
 import matplotlib.figure
 import matplotlib.font_manager
 import numpy
+from getopt import gnu_getopt
+
 #Lists of model classifications
 fullStokes = ["aas1", "aas2", "cma1", "fpa2", "ghg1", "jvj1", "mmr1", "oga1", "rhi1", "rhi3", "spr1", "ssu1", "yko1"]
 
 lmla = ["ahu1", "ahu2", "bds1", "fpa1", "mbr1", "rhi2", "tpa1"]
-
-#Prefix for data files that came from glimmer
-glimPrefix = "glm1"
 
 def getDataFiles(root, experiment, domainSizeKm, modelType):    
     fnameSuffix = experiment + "%03d"%domainSizeKm +".txt"
@@ -353,14 +352,38 @@ def createPlot(experiment, domainSizeKm, fig, subplotNum, notFullStokesModelType
         
 
 if __name__ == "__main__":
-    if "--lmla" in sys.argv:
+    optlist, args = gnu_getopt(sys.argv[1:], "abcd", ["lmla", "prefix=", "subtitle="])
+    optdict = dict(optlist)
+    
+    if "--lmla" in optdict:
         notFullStokesModelType = "lmla"
     else:
         notFullStokesModelType = "partial-stokes"
 
-    
+    if "--prefix" in optdict:
+        glimPrefix = optdict["--prefix"]
+    else:
+        glimPrefix = "glm1"
 
-    for experiment in ["c"]:
+    if "--subtitle" in optdict:
+        subtitle = optdict["--subtitle"]
+    else:
+        subtitle = None
+
+    #Get the list of experiments
+    allTheExperiments = ['a','b','c','d']
+    experiments = []
+    
+    for opt in optdict.keys():
+        opt=opt.replace("-","")
+        if opt in allTheExperiments:
+            experiments.append(opt)
+    if not experiments:
+        experiments = allTheExperiments
+
+    for experiment in experiments:
+        print "ISMIP-HOM",experiment.upper()
+
         fig = pyplot.figure(subplotpars=matplotlib.figure.SubplotParams(top=.85,bottom=.15))
         for i, domainSize in enumerate([5, 10, 20, 40, 80, 160]):
             createPlot(experiment, domainSize, fig, i+1, notFullStokesModelType)
@@ -387,11 +410,14 @@ if __name__ == "__main__":
 
         #Add an overall title to the figure
         fig.text(.5, .92, "ISMIP-HOM Experiment " + experiment.upper(), horizontalalignment='center', size='large')
+        if subtitle:
+            fig.text(.5, .89, subtitle, horizontalalignment='center', size='small')
+        
         #Add one axis label per side (the labels are the same because of the small multiple format,
         #so we only want to repeat them once in the whole figure!)
         fig.text(.5, .1, "Normalized X coordinate", horizontalalignment='center',size='small')
         fig.text(.06, .5, "Ice Speed (m/a)", rotation="vertical", verticalalignment='center') 
         #Save the figure
-        filename = "ISMIP-HOM-" + experiment.upper() + ".png" 
+        filename = "ISMIP-HOM-" + experiment.upper() + "-" + glimPrefix + ".png" 
         pyplot.savefig(filename)
 
