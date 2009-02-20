@@ -49,12 +49,12 @@
 #define MASK model%geometry%thkmask
 
 module glide_mask
+    use glimmer_global, only : dp, NaN
   !*FD masking ice thicknesses
 
 contains
   subroutine glide_set_mask(model)
     use glide_types
-    use glimmer_global, only : dp
     use glimmer_physcon, only : rhoi, rhoo
     implicit none
     type(glide_global_type) :: model        !*FD model instance
@@ -127,5 +127,104 @@ contains
        end do
     end do
   end subroutine glide_set_mask
+
+    subroutine glide_marine_margin_normal(thck, mask, marine_bc_normal)
+        !*FD This subroutine derives from the given mask the normal to an ice shelf
+        !*FD each point on the marine margin.
+        real(dp), dimension(:,:), intent(in) :: thck
+        integer, dimension(:,:), intent(in) :: mask
+        real(dp), dimension(:,:), intent(out) :: marine_bc_normal
+
+        integer :: i, j
+
+        do i = 1, size(mask, 1)
+            do j = 1, size(mask, 2)
+                if (GLIDE_IS_MARINE_ICE_EDGE(mask(i,j))) then
+                    marine_bc_normal(i,j) = calc_normal_45deg(thck(i-1:i+1,j-1:j+1))
+                else
+                    marine_bc_normal(i,j) = NaN
+                end if
+            end do
+        end do
+
+    end subroutine
+
+    function calc_normal_45deg(thck3x3)
+        !*FD Computes the angle of the normal vector, in radians, for the given
+        !*FD 3x3 segment of ice geometry.
+        !*FD The normal is given in increments of 45 degrees (no nicer
+        !*FD interpolation is currently done)
+        !*FD This is based on the Payne and Price GLAM code, if/when this is
+        !*FD integrated into CISM it should probably be refactored to use this.
+        real(dp), dimension(3,3) :: thck3x3
+
+        real(dp) :: calc_normal_45deg
+         
+        real (kind = dp), dimension(3,3) :: mask, maskcorners
+        real (kind = dp), dimension(3,3) :: thckmask
+        real (kind = dp), dimension(3) :: testvect
+        real (kind = dp) :: phi, deg2rad
+
+        deg2rad = 3.141592654d0 / 180.0d0
+        loc_latbc = 0; phi = 0
+        mask(:,1) = (/ 0.0d0, 180.0d0, 0.0d0 /)
+        mask(:,2) = (/ 270.0d0, 0.0d0, 90.0d0 /)
+        mask(:,3) = (/ 0.0d0, 360.0d0, 0.0d0 /)
+        maskcorners(:,1) = (/ 225.0d0, 0.0d0, 135.0d0 /)
+        maskcorners(:,2) = (/ 0.0d0, 0.0d0, 0.0d0 /)
+        maskcorners(:,3) = (/ 315.0d0, 0.0d0, 45.0d0 /)
+
+        ! specify new value of 'loc' vector such that fwd/bwd diffs. are set up correctly in sparse matrix
+        ! when function 'fillsprsebndy' is called. Also, specify appropriate values for the vectors 'normal'
+        ! and 'fwdorbwd', which specify the orientation of the boundary normal and the direction of forward or
+        ! backward differencing to be done in the lateral boundary condition functions 'normhorizmainbc_lat'
+        ! and 'crosshorizmainbc_lat'
+
+        ! following is algorithm for calculating boundary normal at 45 deg. increments, based on arbitray
+        ! boundary shape
+
+        where( thck3x3 .ne. 0.0d0 )
+            thckmask = 0.0_dp
+        elsewhere( thck3x3 .eq. 0.0d0 )
+            thckmask = 1.0d0
+        endwhere
+
+        testvect = sum( thckmask * mask, 1 )
+
+        !if( up .eq. 3 )then ! temporary code for debugging
+        !  do i = 3,1,-1
+        !  print *, 'thck = ', thck(:,i)
+        !  end do
+        !  print *, ' '
+        !
+        !  do i = 3,1,-1
+        !      print *, 'thckmask = ', thckmask(:,i)
+        !  end do
+        !  print *, ' '
+        !
+        !  print *, 'testvect =  ', testvect
+        !  print *, ' '
+        !end if
+
+        ! calculate the angle of the normal in cart. (x,y) system w/ 0 deg. at 12 O'clock, 90 deg. at 3 O'clock, etc.
+        if( sum( sum( thckmask, 1 ) ) .eq. 1.0d0 )then
+            phi = sum( sum( thckmask * maskcorners, 1 ) )
+        else
+            if( any( testvect .eq. 360.0d0 ) )then
+                if( sum( testvect ) .eq. 450.0d0 )then
+                    phi = 45.0d0
+                elseif( sum( testvect ) .eq. 630.0d0 )then
+                    phi = 315.0d0
+                else
+                    phi = 0.0d0
+                end if
+            elseif( all( testvect .ne. 360 ) )then
+                phi = sum( testvect ) / sum( testvect/testvect, testvect .ne. 0.0d0 )
+            end if
+        end if
+        
+        calc_normal_45deg = deg2rad * phi
+
+    end function
 
 end module glide_mask
