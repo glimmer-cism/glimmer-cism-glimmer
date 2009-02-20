@@ -12,7 +12,7 @@ module glide_velo_higher
     implicit none
     
     !TODO: Parameterize the following globals
-    real(dp), parameter :: VEL2ERR  = 4e-3
+    real(dp), parameter :: VEL2ERR  = 1e-4
     real(dp), parameter :: TOLER    = 1e-6
     integer,  parameter :: CONVT    = 4
     real(dp), parameter :: SHTUNE   = 1.D-16
@@ -113,6 +113,7 @@ contains
              print *, "totpts=",model%geometry%totpts
              !Compute the mask.  We do this in this step because otherwise it sucks...
              if (model%options%which_ho_diagnostic == HO_DIAG_PATTYN_STAGGERED) then
+                write(*,*)"Running Pattyn staggered"
                 call velo_hom_pattyn(model%general%ewn, model%general%nsn, model%general%upn, &
                           model%numerics%dew, model%numerics%dns, model%numerics%sigma, &
                           model%geometry%thck, model%geometry%usrf, &
@@ -125,12 +126,15 @@ contains
                           model%options%which_ho_bstress,&
                           model%options%periodic_ew .eq. 1, &
                           model%options%periodic_ns .eq. 1,&
+                          model%velocity_hom%kinematic_bc_u, model%velocity_hom%kinematic_bc_v, &
+                          model%geometry%marine_bc_normal, &
                           model%velocity_hom%uvel, model%velocity_hom%vvel, &
                           model%velocity_hom%is_velocity_valid, &
                           model%velocity_hom%uflx, model%velocity_hom%vflx, &
                           model%velocity_hom%efvs, model%velocity_hom%tau, &
                           model%velocity_hom%gdsx, model%velocity_hom%gdsy)
             else if (model%options%which_ho_diagnostic == HO_DIAG_PATTYN_UNSTAGGERED) then
+                write(*,*)"Running Pattyn unstaggered"
                 call velo_hom_pattyn_nonstag(model%general%ewn, model%general%nsn, model%general%upn, &
                           model%numerics%dew, model%numerics%dns, model%numerics%sigma, &
                           model%geometry%thck, model%geometry%usrf, model%geometry%lsrf, &
@@ -139,6 +143,8 @@ contains
                           model%velocity_hom%beta, model%options%which_ho_bstress, &
                           model%options%periodic_ew .eq. 1, &
                           model%options%periodic_ns .eq. 1, &
+                          model%velocity_hom%kinematic_bc_u, model%velocity_hom%kinematic_bc_v, &
+                          model%geometry%marine_bc_normal, &
                           model%velocity_hom%uvel, model%velocity_hom%vvel, &
                           model%velocity_hom%is_velocity_valid)
             end if
@@ -150,7 +156,7 @@ contains
     subroutine velo_hom_pattyn(ewn, nsn, upn, dew, dns, sigma, &
                                thck, usrf, dthckdew, dthckdns, dusrfdew, dusrfdns, &
                                dlsrfdew, dlsrfdns, stagthck, mask, totpts, flwa, flwn, btrc, which_sliding_law, &
-                               periodic_ew, periodic_ns, &
+                               periodic_ew, periodic_ns, kinematic_bc_u, kinematic_bc_v, marine_bc_normal, &
                                uvel, vvel, valid_initial_guess, uflx, vflx, efvs, tau, gdsx, gdsy)
                             
         integer  :: ewn !*FD Number of cells X
@@ -172,6 +178,8 @@ contains
         integer :: totpts
 	real(dp), dimension(:,:,:) :: flwa !*FD Glen's A (rate factor) - Used for thermomechanical coupling
         real(dp), dimension(ewn-1,nsn-1)   :: btrc !*FD Basal Traction, either betasquared or tau0
+        real(dp), dimension(:,:,:)   :: kinematic_bc_u, kinematic_bc_v
+        real(dp), dimension(:,:)   :: marine_bc_normal
         real(dp) :: flwn !*FD Exponent in Glenn power law
         integer :: which_sliding_law
         logical :: periodic_ew !*Whether to use periodic boundary conditions
@@ -256,7 +264,6 @@ contains
         call staggered_field_3d(flwa_t, flwa_t_stag)
       
         !DEBUG!!!!
-        call setup_ismip_hom_a(stagusrf_t, staglsrf_t, stagthck_t,dns,dew)
         call df_field_2d(stagusrf_t, dns, dew, dusrfdns_t, dusrfdew_t, .false., .false.)
         call df_field_2d(staglsrf_t, dns, dew, dlsrfdns_t, dlsrfdew_t, .false., .false.)
         call df_field_2d(stagthck_t, dns, dew, dthckdns_t, dthckdew_t, .false., .false.)
@@ -278,7 +285,8 @@ contains
             if (which_sliding_law == 1) then
                 call veloc2(mu_t, uvel_t, vvel_t, flwa_t_stag, dusrfdew_t, dusrfdns_t, stagthck_t, ax, ay, &
                         sigma, bx, by, cxy, btrc_t/100, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, MANIFOLD,&
-                        TOLER, periodic_ew,periodic_ns, 0, dew, dns,mask_t,totpts)
+                        TOLER, periodic_ew,periodic_ns, 0, dew, dns,mask_t,totpts, &
+                        kinematic_bc_u, kinematic_bc_v, marine_bc_normal)
             end if
         end if
 
@@ -291,7 +299,7 @@ contains
         call veloc2(mu_t, uvel_t, vvel_t, flwa_t, dusrfdew_t, dusrfdns_t, stagthck_t, ax, ay, &
                     sigma, bx, by, cxy, btrc_t, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, MANIFOLD,&
                     TOLER, periodic_ew,periodic_ns, which_sliding_law, dew,&
-                    dns,mask_t,totpts)
+                    dns,mask_t,totpts, kinematic_bc_u, kinematic_bc_v, marine_bc_normal)
        
         !Final computation of stress field for output
         call stressf(mu_t, uvel_t, vvel_t, flwa_t, stagthck_t, ax, ay, dew, dns, sigma, & 
@@ -341,7 +349,7 @@ contains
     !there causes problems.
     subroutine velo_hom_pattyn_nonstag(ewn, nsn, upn, dew, dns, sigma, &
                                thck, usrf, lsrf, mask, totpts, flwa, flwn, btrc, which_sliding_law, &
-                               periodic_ew, periodic_ns, &
+                               periodic_ew, periodic_ns, kinematic_bc_u, kinematic_bc_v, marine_bc_normal,&
                                uvel, vvel, valid_initial_guess)
                             
         integer  :: ewn !*FD Number of cells X
@@ -357,6 +365,8 @@ contains
         integer :: totpts
 	real(dp), dimension(:,:,:) :: flwa !*FD Glen's A (rate factor) - Used for thermomechanical coupling
         real(dp), dimension(:,:)   :: btrc !*FD Basal Traction, either betasquared or tau0
+        real(dp), dimension(:,:,:)   :: kinematic_bc_u, kinematic_bc_v
+        real(dp), dimension(:,:)   :: marine_bc_normal
         real(dp) :: flwn !*FD Exponent in Glenn power law
         integer :: which_sliding_law
         logical :: periodic_ew !*Whether to use periodic boundary conditions
@@ -458,7 +468,8 @@ contains
             if (which_sliding_law == 1) then
                 call veloc2(mu_t, uvel_t, vvel_t, flwa_t, dusrfdew_t, dusrfdns_t, thck_t, ax, ay, &
                         sigma, bx, by, cxy, btrc_t_unstag, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, MANIFOLD,&
-                        TOLER, periodic_ew,periodic_ns, 0, dew, dns,mask_t,totpts)
+                        TOLER, periodic_ew,periodic_ns, 0, dew, dns,mask_t,totpts,&
+                        kinematic_bc_u, kinematic_bc_v, marine_bc_normal)
             end if
         end if
 
@@ -471,7 +482,7 @@ contains
         call veloc2(mu_t, uvel_t_unstag, vvel_t_unstag, flwa_t, dusrfdew_t, dusrfdns_t, thck_t, ax, ay, &
                     sigma, bx, by, cxy, btrc_t_unstag, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, MANIFOLD,&
                     TOLER, periodic_ew,periodic_ns, which_sliding_law, dew,&
-                    dns,mask_t,totpts)
+                    dns,mask_t,totpts,kinematic_bc_u, kinematic_bc_v, marine_bc_normal)
        
         !Final computation of stress field for output
         !call stressf(mu_t, uvel_t, vvel_t, flwa_t, stagthck_t, ax, ay, dew, dns, sigma, & 

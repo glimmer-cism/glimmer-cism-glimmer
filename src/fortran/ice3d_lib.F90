@@ -21,14 +21,12 @@ module ice3d_lib
     use glimmer_log
     use xls
     implicit none
-    double precision :: small, zip
+    double precision :: small, zip, toler_adjust_factor
     PARAMETER(SMALL=1.D-10,ZIP=1.D-30)
+    PARAMETER(toler_adjust_factor=1.0)
 
     double precision, parameter :: plastic_bed_regularization = 1e-2
 
-    integer,parameter :: dslucs_dbg_unit = 6
-
-    integer :: HACKY_DEBUG_CODE
     logical, parameter :: sparverbose = .false.
 
 !------------------------------------------------------
@@ -244,7 +242,7 @@ end subroutine init_zeta
         double precision, dimension(:,:), intent(in) :: d2zdx2,d2zdy2,d2hdx2,d2hdy2
         
         INTEGER :: i,j,k
-#if 1
+#if 0
         call write_xls("h.txt",h)
         call write_xls("hb.txt",hb)
         call write_xls("surf.txt",surf)
@@ -304,7 +302,7 @@ end subroutine init_zeta
                 endif
             end do
         end do
-#if 1
+#if 0
         call write_xls_3d("ax.txt",ax)
         call write_xls_3d("ay.txt",ay)
         call write_xls_3d("bx.txt",bx)
@@ -683,7 +681,8 @@ end subroutine init_zeta
                 zeta,bx,by,cxy,beta,&
                 dhbdx,dhbdy,FLOWN,ZIP,VEL2ERR,&
                 MANIFOLD,TOLER,PERIODIC_X, PERIODIC_Y, PLASTIC, delta_x, delta_y, &
-                mask, active_points)
+                mask, active_points, kinematic_bc_u, kinematic_bc_v, &
+                marine_bc_normal)
                 
 
         INTEGER MAXY,MAXX,NZETA,MANIFOLD,PLASTIC
@@ -704,7 +703,6 @@ end subroutine init_zeta
         double precision, dimension(:,:) :: dhbdx
         double precision, dimension(:,:) :: dhbdy
         double precision, dimension(:,:) :: beta
-
         double precision :: FLOWN,ZIP,VEL2ERR,TOLER,delta_x, delta_y
 
         integer, dimension(:,:), intent(in) :: mask 
@@ -712,6 +710,9 @@ end subroutine init_zeta
         !*FD ajdacent to a point that should be computed. Other numbers contain
         !*FD zeros
         integer, intent(in) :: active_points !*FD The number of points that should be computed.  This is equivalent to the number of nonzero entries in mask.
+
+        double precision, dimension(:,:,:) :: kinematic_bc_u, kinematic_bc_v
+        double precision, dimension(:,:)   :: marine_bc_normal
 
         INTEGER i,j,k,l,lacc,m,n,maxiter,iter,DU1,DU2,DV1,DV2,&
            ijktot
@@ -769,9 +770,9 @@ end subroutine init_zeta
         !Create the sparse matrix
         call new_sparse_matrix(ijktot, ijktot*22, matrix)
         call sparse_allocate_workspace(matrix, options, workspace, ijktot*22)
+        write(*,*)"NEW stuff added here"
 
-
-#if 1
+#if 0
         call write_xls_3d("arrh.txt",arrh)
         call write_xls("dzdx.txt",dzdx)
         call write_xls("dzdy.txt",dzdy)
@@ -813,7 +814,7 @@ end subroutine init_zeta
             !(TODO: This leads to exponential increase in the tolerance - can we
             !get by without it?  Is this too liberal of a relaxation?)
             if (l == m*10) then
-                error = error*1.5
+                error = error*toler_adjust_factor
 #if DEBUG
                 write(*,*) "Error tolerance is now", error
 #endif
@@ -1744,6 +1745,60 @@ end subroutine init_zeta
             !      dperp_dz2,d2fdz2_3d_irregular(vel_perp,i,j,k,dz)
         end if
     end subroutine sparse_setup
+
+#if 0
+    !Computes finite differences for the marine margin
+    subroutine sparse_marine_margin(.....)
+        
+        !Open issues: 
+        !1. When computing upwinded and downwinded derivatives (not finite
+        !differences), should I be using 1st order to remain consistent
+        !w/ the difference scheme or is 2nd order OK?  Or should I use
+        !2nd order upwind/downwind differences (will be very difficult,
+        !especially since it requires expanding the stencil!)
+        k = rhoi * grav * h(i,j) / (2*mu(i,j,k)*(1 - rhoi/rhow))
+        select case (normal_angle)
+            case (0) !East
+                !We need to discritize differently depending on which component
+                !we are discritizing
+                !WARNING: We transpose derivatives below because these
+                !derivatives are operating in Glimmer's coordinate system rather
+                !than Pattyns!!!!!!!!
+                if (component == "u")
+                    dvdy = dfdx_3d(vvel, i, j, delta_y) !This is really dfdy
+                    dudx = (k - 2*dvdy)/4
+                    coef(I_JM1_K) = -1
+                    coef(I_J_K) = 1
+                    rhs = delta_x * dudx
+                else if (component == "v")
+                    dudx = dfdy_3d_upwind(uvel, i, j, delta_x) !this is really dfdx
+                    dvdy = k/2 - 2*dudx
+                    coef(IP1_J_K) = 1
+                    coef(IM1_J_k) = -1
+                    rhs = dvdy * delta_y / 2
+                end if
+            case (4) !West
+                !We need to discritize differently depending on which component
+                !we are discritizing
+                !WARNING: We transpose derivatives below because these
+                !derivatives are operating in Glimmer's coordinate system rather
+                !than Pattyns!!!!!!!!
+                if (component == "u")
+                    dvdy = dfdx_3d(vvel, i, j, delta_y) !This is really dfdy
+                    dudx = (k - 2*dvdy)/4
+                    coef(I_JP1_K) = 1
+                    coef(I_J_K) = -1
+                    rhs = delta_x * dudx
+                else if (component == "v")
+                    dudx = dfdy_3d_downwind(uvel, i, j, delta_x) !this is really dfdx
+                    dvdy = k/2 - 2*dudx
+                    coef(IP1_J_K) = 1
+                    coef(IM1_J_k) = -1
+                    rhs = dvdy * delta_y / 2
+                end if
+        end select
+    end subroutine
+#endif
 
 !
 !

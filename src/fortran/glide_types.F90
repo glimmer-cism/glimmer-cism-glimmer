@@ -335,11 +335,17 @@ module glide_types
     integer, dimension(:,:),pointer :: thkmask => null()
     !*FD see glide_mask.f90 for possible values
 
+    real(dp),dimension(:,:),pointer :: marine_bc_normal => null()
+    !*FD NaN for all points except those that occur on the marine
+    !*FD margin of an ice shelf, in which case contains the angle
+    !*FD of the normal to the ice front. 
+
     integer :: totpts = 0
     !*FD The total number of points with non-zero thickness
 
     integer, dimension(4) :: dom   = 0      !*FD I have no idea what this is for.
-    logical               :: empty = .true. !*FD I have no idea what this is for.
+    logical               :: empty = .true.
+    !*FD True if there is no ice anywhere in the domain, false otherwise.
 
     real(dp) :: ivol, iarea !*FD ice volume and ice area
 
@@ -422,6 +428,17 @@ module glide_types
     !*FD A mask similar to glide_geometry%mask, but on the velocity grid instead of the
     !*FD ice grid.  This is to aid in converging higher-order velocities
     logical :: is_velocity_valid = .false. !*FD True if uvel, vvel contains a HOM-computed velocity (and thus is valid as initial guess)
+    
+    real(dp),dimension(:,:,:), pointer :: kinematic_bc_u => null()
+    !*FD Field that specifies the locations and magnitudes of kinematic
+    !*FD (velocity specified) boundary conditions.  Contains NaN everywhere
+    !*FD except where such a boundary condition exists.  This field contains
+    !*FD the u component, other fields contain the v components.
+
+    real(dp),dimension(:,:,:), pointer :: kinematic_bc_v => null()
+    
+    !TODO: Should there be a w field for the sake of full-Stokes models?
+
   end type glide_velocity_hom
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -848,6 +865,9 @@ contains
     call coordsystem_allocate(model%general%velo_grid, model%velocity_hom%gdsy)
     call coordsystem_allocate(model%general%velo_grid, upn, model%velocity_hom%efvs)
     call coordsystem_allocate(model%general%velo_grid, model%velocity_hom%velmask)
+    call coordsystem_allocate(model%general%velo_grid, upn, model%velocity_hom%kinematic_bc_u)
+    call coordsystem_allocate(model%general%velo_grid, upn, model%velocity_hom%kinematic_bc_v)
+
 
     call coordsystem_allocate(model%general%ice_grid, model%climate%acab)
     call coordsystem_allocate(model%general%ice_grid, model%climate%acab_tavg)
@@ -873,6 +893,7 @@ contains
     call coordsystem_allocate(model%general%ice_grid, upn, model%geometry%age)
     call coordsystem_allocate(model%general%ice_grid, model%geometry%mask)
     call coordsystem_allocate(model%general%ice_grid, model%geometry%thkmask)
+    call coordsystem_allocate(model%general%ice_grid, model%geometry%marine_bc_normal)
 
     allocate(model%thckwk%olds(ewn,nsn,model%thckwk%nwhich))
     model%thckwk%olds = 0.0d0
@@ -974,7 +995,8 @@ contains
     deallocate(model%velocity_hom%gdsy)
     deallocate(model%velocity_hom%efvs)
     deallocate(model%velocity_hom%velmask)
-
+    deallocate(model%velocity_hom%kinematic_bc_u)
+    deallocate(model%velocity_hom%kinematic_bc_v)
 
     deallocate(model%climate%acab)
     deallocate(model%climate%acab_tavg)
@@ -999,6 +1021,7 @@ contains
     deallocate(model%geometry%age)
     deallocate(model%geometry%mask)
     deallocate(model%geometry%thkmask)
+    deallocate(model%geometry%marine_bc_normal)
 
     deallocate(model%thckwk%olds)
     deallocate(model%thckwk%oldthck)
