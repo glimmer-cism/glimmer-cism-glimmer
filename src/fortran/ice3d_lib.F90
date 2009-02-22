@@ -13,7 +13,7 @@
 
 module ice3d_lib
     use glimmer_global
-    use glimmer_physcon, only: pi, grav, rhoi, scyr
+    use glimmer_physcon, only: pi, grav, rhoi, rhoo, scyr
     use glide_deriv
     use glimmer_sparse
     use glimmer_sparse_solver
@@ -1748,56 +1748,73 @@ end subroutine init_zeta
 
 #if 0
     !Computes finite differences for the marine margin
-    subroutine sparse_marine_margin(.....)
+    subroutine sparse_marine_margin(component,i,j,k,h,normals)
+        character(*) :: component !*FD Either "u" or "v"
+        integer :: i,j,k !*FD Point that the boundary condition is computed for
+        real(dp), dimension(:,:) :: h !*FD Ice thickness field
+        real(dp), dimension(:,:) :: normals !*FD Pre-computed angles that are normal to the marine margin
         
-        !Open issues: 
-        !1. When computing upwinded and downwinded derivatives (not finite
-        !differences), should I be using 1st order to remain consistent
-        !w/ the difference scheme or is 2nd order OK?  Or should I use
-        !2nd order upwind/downwind differences (will be very difficult,
-        !especially since it requires expanding the stencil!)
-        k = rhoi * grav * h(i,j) / (2*mu(i,j,k)*(1 - rhoi/rhow))
-        select case (normal_angle)
-            case (0) !East
-                !We need to discritize differently depending on which component
-                !we are discritizing
-                !WARNING: We transpose derivatives below because these
-                !derivatives are operating in Glimmer's coordinate system rather
-                !than Pattyns!!!!!!!!
-                if (component == "u")
-                    dvdy = dfdx_3d(vvel, i, j, delta_y) !This is really dfdy
-                    dudx = (k - 2*dvdy)/4
-                    coef(I_JM1_K) = -1
-                    coef(I_J_K) = 1
-                    rhs = delta_x * dudx
-                else if (component == "v")
-                    dudx = dfdy_3d_upwind(uvel, i, j, delta_x) !this is really dfdx
-                    dvdy = k/2 - 2*dudx
-                    coef(IP1_J_K) = 1
-                    coef(IM1_J_k) = -1
-                    rhs = dvdy * delta_y / 2
-                end if
-            case (4) !West
-                !We need to discritize differently depending on which component
-                !we are discritizing
-                !WARNING: We transpose derivatives below because these
-                !derivatives are operating in Glimmer's coordinate system rather
-                !than Pattyns!!!!!!!!
-                if (component == "u")
-                    dvdy = dfdx_3d(vvel, i, j, delta_y) !This is really dfdy
-                    dudx = (k - 2*dvdy)/4
-                    coef(I_JP1_K) = 1
-                    coef(I_J_K) = -1
-                    rhs = delta_x * dudx
-                else if (component == "v")
-                    dudx = dfdy_3d_downwind(uvel, i, j, delta_x) !this is really dfdx
-                    dvdy = k/2 - 2*dudx
-                    coef(IP1_J_K) = 1
-                    coef(IM1_J_k) = -1
-                    rhs = dvdy * delta_y / 2
-                end if
-        end select
+        !Get the normal unit vector
+        n_x = cos(normals(i,j))
+        n_y = sin(normals(i,j))
+
+        !Determine the hydrostatic pressure at the current location
+        !If we are at the part of the ice shelf above the water, 
+        !then we are at 1ATM pressure which we just assume to be 0 
+        !throughout the model anyway
+        if (zeta(k) > (1 - rhoi/rhoo)) then
+            pressure = rhoo * grav * h * (zeta(k) - 1 + rhoi/rhoo)
+        else
+            pressure = 0
+        end if
+
+        !Determine the right-hand side of the equation and the various
+        !coefficents
+        if (component == "u") then
+            rhs = pressure/(u*mu(i,j,k)) * n_x - n_y / 2 * (dvdx - ax(i,j,k)*dvdz)
+            dx_coeff = n_x
+            dy_coeff = n_y / 2
+            dz_coeff = n_x*a_x + (n_y*a_y)/2
+        else if (component == "v") then
+            rhs = pressure/(u*mu(i,j,k)) * n_y - n_x / 2 * (dudy - ay(i,j,k)*dudz)    
+            dy_coeff = n_y
+            dx_coeff = n_x / 2
+            dz_coeff = n_y*a_y + (n_x*a_x)/2
+        end if
+
+        !Enter the z component into the finite difference scheme.
+        !If we are on the top of bottom of the ice shelf, we will need
+        !to upwind or downwind respectively
+        if (k==1) then !Top of the ice shelf
+            !Finite difference coefficients for an irregular Z grid, downwinded
+            dz_down1=(2.*dz(k)-dz(k+1)-dz(k+2))/(dz(k+1)-dz(k))/(dz(k+2)-dz(k))
+            dz_down2=(dz(k+2)-dz(k))/(dz(k+2)-dz(k+1))/(dz(k+1)-dz(k))
+            dz_down3=(dz(k)-dz(k+1))/(dz(k+2)-dz(k+1))/(dz(k+2)-dz(k))
+        
+            coef(I_J_KP2) = coef(I_J_KP2) + dz_coeff*dz_down3
+            coef(I_J_KP1) = coef(I_J_KP1) + dz_coeff*dz_down2
+            coef(I_J_K)   = coef(I_J_K)   + dz_coeff*dz_down1
+        else if (k==size(zeta)) then !Bottom of the ice shelf
+            !Finite difference coefficients for an irregular Z grid, upwinded
+            dz_up1=(dz(k)-dz(k-1))/(dz(k-1)-dz(k-2))/(dz(k)-dz(k-2))
+            dz_up2=(dz(k-2)-dz(k))/(dz(k)-dz(k-1))/(dz(k-1)-dz(k-2))
+            dz_up3=(2.*dz(k)-dz(k-1)-dz(k-2))/(dz(k)-dz(k-1))/(dz(k)-dz(k-2))
+
+            coef(I_J_KM2) = coef(I_J_KM2) + dz_coeff*dz_up3
+            coef(I_J_KM1) = coef(I_J_KM1) + dz_coeff*dz_up2
+            coef(I_J_K)   = coef(I_J_K)   + dz_coeff*dz_up1
+        else !Middle of the ice shelf, use centered difference
+            dz_cen1 = (dz(k)-dz(k+1))/(dz(k)-dz(k-1))/(dz(k+1)-dz(k-1))
+            dz_cen2 = (dz(k+1)-2.*dz(k)+dz(k-1))/(dz(k)-dz(k-1))/(dz(k+1)-dz(k))
+            dz_cen3 = (dz(k)-dz(k-1))/(dz(k+1)-dz(k))/(dz(k+1)-dz(k-1))
+
+            coef(I_J_KM1) = coef(I_J_KM1) + dz_coeff*dz_cen1
+            coef(I_J_K)   = coef(I_J_K)   + dz_coeff*dz_cen2
+            coef(I_J_KP1) = coef(I_J_KP1) + dz_coeff*dz_cen3
+        end if
+
     end subroutine
+
 #endif
 
 !
