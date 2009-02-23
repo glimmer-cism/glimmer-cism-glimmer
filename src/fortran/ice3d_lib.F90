@@ -1754,6 +1754,11 @@ end subroutine init_zeta
         real(dp), dimension(:,:) :: h !*FD Ice thickness field
         real(dp), dimension(:,:) :: normals !*FD Pre-computed angles that are normal to the marine margin
         
+        !Whether or not we need to upwind or downwind lateral derivatives
+        !Upwind is for when there's no ice on positive side,
+        !downwind is for when there's no ice on negative side
+        logical :: upwind_x, upwind_y, downwind_x, downwind_y
+
         !Get the normal unit vector
         n_x = cos(normals(i,j))
         n_y = sin(normals(i,j))
@@ -1768,15 +1773,51 @@ end subroutine init_zeta
             pressure = 0
         end if
 
+        !Determine whether to use upwinded or downwinded derivatives for the
+        !horizontal directions.
+        if (h(i-1,j) == 0) then
+            downwind_x = .true.
+        else if (h(i+1,j) == 0) then
+            upwind_x = .true.
+        end if
+
+        if (h(i,j-1) == 0) then
+            downwind_y = .true.
+        else if (h(i,j+1) = 0) then
+            downwind_x = .true.
+        end if
+
+
+
         !Determine the right-hand side of the equation and the various
         !coefficents
         if (component == "u") then
-            rhs = pressure/(u*mu(i,j,k)) * n_x - n_y / 2 * (dvdx - ax(i,j,k)*dvdz)
+            !Beware of transposed derivatives ahead (because x and y are
+            !switched, dx and dy have to be as well)
+            if (upwind_y) then
+                dperp_dpara = dfdy_3d_upwind(vvel, i,j,k,dx)
+            else if (downwind_y) then
+                dperp_dpara = dfdy_3d_downwind(vvel,i,j,k,dx)
+            else
+                dperp_dpara = dfdy_3d(vvel,i,j,k,dx)
+            end if
+
+            rhs = pressure/(u*mu(i,j,k)) * n_x - n_y / 2 * (dperp_dpara - ax(i,j,k)*dperp_dz)
             dx_coeff = n_x
             dy_coeff = n_y / 2
             dz_coeff = n_x*a_x + (n_y*a_y)/2
         else if (component == "v") then
-            rhs = pressure/(u*mu(i,j,k)) * n_y - n_x / 2 * (dudy - ay(i,j,k)*dudz)    
+            !Beware of transposed derivatives ahead (because x and y are
+            !switched, dx and dy have to be as well)
+            if (upwind_x) then
+                dperp_dpara = dfdx_3d_upwind(uvel, i,j,k,dy)
+            else if (downwind_x) then
+                dperp_dpara = dfdx_3d_downwind(uvel,i,j,k,dy)
+            else
+                dperp_dpara = dfdx_3d(uvel,i,j,k,dy)
+            end if
+ 
+            rhs = pressure/(u*mu(i,j,k)) * n_y - n_x / 2 * (dperp_dpara - ay(i,j,k)*dperp_dz)    
             dy_coeff = n_y
             dx_coeff = n_x / 2
             dz_coeff = n_y*a_y + (n_x*a_x)/2
