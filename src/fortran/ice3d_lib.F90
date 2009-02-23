@@ -845,7 +845,8 @@ end subroutine init_zeta
             iter=sparuv(mu,dzdx,dzdy,ax,ay,bx,by,cxy,h,&
                 uvel,vvel,ustar,vstar,tau,dhbdx,dhbdy,ijktot,MAXY,&
                 MAXX,NZETA,TOLER, delta_x, delta_y, zeta, mask, &
-                matrix, workspace, options)
+                matrix, workspace, options, kinematic_bc_u, kinematic_bc_v, &
+                marine_bc_normal)
            
             !Apply periodic boundary conditions to the computed velocity
             call periodic_boundaries_3d_stag(ustar,periodic_x,periodic_y)
@@ -1102,7 +1103,7 @@ end subroutine init_zeta
 !
     function sparuv(mu,dzdx,dzdy,ax,ay,bx,by,cxy,h,uvel,vvel,ustar,vstar,beta,dhbdx,dhbdy,&
                     IJKTOT,MAXY,MAXX,NZETA,TOLER,GRIDX,GRIDY,zeta, mask, &
-                    matrix, workspace, options)
+                    matrix, workspace, options, kinematic_bc_u, kinematic_bc_v,latbc_normal)
         INTEGER IJKTOT,MAXY,MAXX,NZETA
         double precision, dimension(:,:,:) :: mu
         double precision, dimension(:,:) :: dzdx
@@ -1121,6 +1122,9 @@ end subroutine init_zeta
         double precision, dimension(:,:) :: dhbdy
         double precision, dimension(:,:) :: beta
         double precision, dimension(:) :: zeta
+        double precision, dimension(:,:,:) :: kinematic_bc_u
+        double precision, dimension(:,:,:) :: kinematic_bc_v
+        double precision, dimension(:,:)   :: latbc_normal !On the marine ice front, this is the angle of the normal to the ice front
         double precision :: toler
         double precision :: gridx
         double precision :: gridy
@@ -1167,8 +1171,8 @@ end subroutine init_zeta
                         else
 
                             call sparse_setup("u", i, j, k, mu, dzdx, dzdy, ax, ay, bx, by, cxy, &
-                                  h, gridx, gridy, zeta, uvel, vvel, dhbdx, dhbdy, beta, &
-                                  maxx, maxy, Nzeta, coef, rhs)
+                                  h, gridx, gridy, zeta, uvel, vvel, dhbdx, dhbdy, beta, kinematic_bc_u, &
+                                  latbc_normal, maxx, maxy, Nzeta, coef, rhs)
                         endif
                         d(stencil_center_idx)=rhs
                         !Preliminary benchmarks indicate the we actually reach
@@ -1243,8 +1247,8 @@ end subroutine init_zeta
                         else
 
                             call sparse_setup("v", i, j, k, mu, dzdx, dzdy, ax, ay, bx, by, cxy, &
-                                  h, gridx, gridy, zeta, uvel, vvel, dhbdx, dhbdy, beta, &
-                                  maxx, maxy, Nzeta, coef, rhs)
+                                  h, gridx, gridy, zeta, uvel, vvel, dhbdx, dhbdy, beta, kinematic_bc_v, &
+                                  latbc_normal, maxx, maxy, Nzeta, coef, rhs)
                         endif
                         d(stencil_center_idx)=rhs
                         !Preliminary benchmarks indicate the we actually reach
@@ -1434,7 +1438,7 @@ end subroutine init_zeta
     !DON'T PANIC, this works!  It's been tested!  Really!  The bug is somewhere
     !else!
     subroutine sparse_setup(component, i,j,k,mu,dzdx,dzdy,ax,ay,bx,by,cxy,&
-        h,dx,dy,dz,uvel,vvel,dhbdx,dhbdy,beta,MAXX,MAXY,Ndz,&
+        h,dx,dy,dz,uvel,vvel,dhbdx,dhbdy,beta,kinematic_bc,latbc_normal,MAXX,MAXY,Ndz,&
         coef, rhs)
 !
         integer :: i,j,k, MAXY, MAXX, Ndz
@@ -1469,6 +1473,13 @@ end subroutine init_zeta
 
         !Basal Traction
         double precision, dimension(:,:) :: beta
+
+        !Kinematic boundary condition for this velocity component
+        double precision, dimension(:,:,:) :: kinematic_bc
+
+        !Contains the angle of the normal to the marine margine, NaN
+        !everywhere not on the margin
+        double precision, dimension(:,:) :: latbc_normal
 
         character(1) :: component
 !
@@ -1592,9 +1603,12 @@ end subroutine init_zeta
         end if
 
          
-        !Set up a system of pointers
-
-        if (k.eq.1) then !Upper boundary condition (stress-free surface)
+        if (.not. IS_NAN(kinematic_bc(i,j,k))) then !Check whether the velocity has been specified directly at this point
+            rhs = kinematic_bc(i,j,k)
+            coef(I_J_K) = 1
+        else if (.not. IS_NAN(latbc_normal(i,j))) then !Marine margin dynamic (Neumann) boundary condition
+            call sparse_marine_margin(component,i,j,k,h,latbc_normal, vel_perp, mu, dx, dy, ax, ay, dz,coef, rhs)
+        else if (k.eq.1) then !Upper boundary condition (stress-free surface)
             !Finite difference coefficients for an irregular Z grid, downwinded
             dz_down1=(2.*dz(k)-dz(k+1)-dz(k+2))/(dz(k+1)-dz(k))/(dz(k+2)-dz(k))
             dz_down2=(dz(k+2)-dz(k))/(dz(k+2)-dz(k+1))/(dz(k+1)-dz(k))
@@ -1746,19 +1760,50 @@ end subroutine init_zeta
         end if
     end subroutine sparse_setup
 
-#if 0
     !Computes finite differences for the marine margin
-    subroutine sparse_marine_margin(component,i,j,k,h,normals)
-        character(*) :: component !*FD Either "u" or "v"
-        integer :: i,j,k !*FD Point that the boundary condition is computed for
-        real(dp), dimension(:,:) :: h !*FD Ice thickness field
-        real(dp), dimension(:,:) :: normals !*FD Pre-computed angles that are normal to the marine margin
+    subroutine sparse_marine_margin(component,i,j,k,h,normals, vel_perp, mu, dx, dy, ax, ay, zeta,coef, rhs)
+        character(*), intent(in) :: component !*FD Either "u" or "v"
+        integer, intent(in) :: i,j,k !*FD Point that the boundary condition is computed for
+        real(dp), dimension(:,:), intent(in) :: h !*FD Ice thickness field
+        real(dp), dimension(:,:), intent(in) :: normals !*FD Pre-computed angles that are normal to the marine margin
+        real(dp), dimension(:,:,:), intent(in) :: vel_perp !*FD Velocity component that is perpendicular to the one being computed
+        real(dp), dimension(:,:,:), intent(in) :: mu !*FD effective viscosity
+
+        real(dp), intent(in) :: dx, dy !*FD grid spacing in x and y directions
         
+        real(dp), intent(in), dimension(:,:,:) :: ax, ay !*FD coefficients introduced during vertical rescaling
+        
+        real(dp), dimension(:), intent(in) :: zeta !*FD Irregular grid levels in vertical coordinate
+        
+        real(dp), dimension(22), intent(inout) :: coef !*FD Output array of stencil coefficients
+        real(dp),                intent(out)   :: rhs !*FD Element of the right-hand side vector corresponding to this point
+
         !Whether or not we need to upwind or downwind lateral derivatives
         !Upwind is for when there's no ice on positive side,
         !downwind is for when there's no ice on negative side
         logical :: upwind_x, upwind_y, downwind_x, downwind_y
 
+        !x and y components of the normal vector with unit length
+        real(dp) :: n_x, n_y
+
+        !Hydrostatic pressure at this level
+        real(dp) :: pressure
+
+        !Derivative of the perpendicular component (v if computing u and vice
+        !versa) with respect to the parallel direction (x if computing u, y if
+        !computing v)
+        real(dp) :: dperp_dpara
+        real(dp) :: dperp_dz
+
+        !The derivatives of the velocity component being computed with respect
+        !to each dimension.  These end up as coefficients in the stencil
+        !definition
+        real(dp) :: dx_coeff, dy_coeff, dz_coeff
+
+        !Cached difference calculations for the nonstaggered Z grid
+        double precision dz_down1, dz_down2, dz_down3, dz_up1, dz_up2, dz_up3
+        double precision dz_cen1, dz_cen2, dz_cen3, dz_sec1, dz_sec2, dz_sec3
+ 
         !Get the normal unit vector
         n_x = cos(normals(i,j))
         n_y = sin(normals(i,j))
@@ -1768,7 +1813,7 @@ end subroutine init_zeta
         !then we are at 1ATM pressure which we just assume to be 0 
         !throughout the model anyway
         if (zeta(k) > (1 - rhoi/rhoo)) then
-            pressure = rhoo * grav * h * (zeta(k) - 1 + rhoi/rhoo)
+            pressure = rhoo * grav * h(i,j) * (zeta(k) - 1 + rhoi/rhoo)
         else
             pressure = 0
         end if
@@ -1783,10 +1828,19 @@ end subroutine init_zeta
 
         if (h(i,j-1) == 0) then
             downwind_y = .true.
-        else if (h(i,j+1) = 0) then
-            downwind_x = .true.
+        else if (h(i,j+1) == 0) then
+            upwind_y = .true.
         end if
-
+        
+        !Determine the derivative with respect to the vertical of the velocity
+        !component perpendicular to the one being computed
+        if (k == 1) then
+            dperp_dz = dfdz_3d_downwind_irregular(vel_perp,i,j,k,zeta)
+        else if (k == size(zeta)) then
+            dperp_dz = dfdz_3d_upwind_irregular(vel_perp,i,j,k,zeta)
+        else
+            dperp_dz = dfdz_3d_irregular(vel_perp,i,j,k,zeta)
+        end if
 
 
         !Determine the right-hand side of the equation and the various
@@ -1795,32 +1849,32 @@ end subroutine init_zeta
             !Beware of transposed derivatives ahead (because x and y are
             !switched, dx and dy have to be as well)
             if (upwind_y) then
-                dperp_dpara = dfdy_3d_upwind(vvel, i,j,k,dx)
+                dperp_dpara = dfdy_3d_upwind(vel_perp, i,j,k,dx)
             else if (downwind_y) then
-                dperp_dpara = dfdy_3d_downwind(vvel,i,j,k,dx)
+                dperp_dpara = dfdy_3d_downwind(vel_perp,i,j,k,dx)
             else
-                dperp_dpara = dfdy_3d(vvel,i,j,k,dx)
+                dperp_dpara = dfdy_3d(vel_perp,i,j,k,dx)
             end if
 
-            rhs = pressure/(u*mu(i,j,k)) * n_x - n_y / 2 * (dperp_dpara - ax(i,j,k)*dperp_dz)
+            rhs = pressure/(2*mu(i,j,k)) * n_x - n_y / 2 * (dperp_dpara - ax(i,j,k)*dperp_dz)
             dx_coeff = n_x
             dy_coeff = n_y / 2
-            dz_coeff = n_x*a_x + (n_y*a_y)/2
+            dz_coeff = n_x*ax(i,j,k) + (n_y*ay(i,j,k))/2
         else if (component == "v") then
             !Beware of transposed derivatives ahead (because x and y are
             !switched, dx and dy have to be as well)
             if (upwind_x) then
-                dperp_dpara = dfdx_3d_upwind(uvel, i,j,k,dy)
+                dperp_dpara = dfdx_3d_upwind(vel_perp, i,j,k,dy)
             else if (downwind_x) then
-                dperp_dpara = dfdx_3d_downwind(uvel,i,j,k,dy)
+                dperp_dpara = dfdx_3d_downwind(vel_perp,i,j,k,dy)
             else
-                dperp_dpara = dfdx_3d(uvel,i,j,k,dy)
+                dperp_dpara = dfdx_3d(vel_perp,i,j,k,dy)
             end if
  
-            rhs = pressure/(u*mu(i,j,k)) * n_y - n_x / 2 * (dperp_dpara - ay(i,j,k)*dperp_dz)    
+            rhs = pressure/(2*mu(i,j,k)) * n_y - n_x / 2 * (dperp_dpara - ay(i,j,k)*dperp_dz)    
             dy_coeff = n_y
             dx_coeff = n_x / 2
-            dz_coeff = n_y*a_y + (n_x*a_x)/2
+            dz_coeff = n_y*ay(i,j,k) + (n_x*ax(i,j,k))/2
         end if
 
         !Enter the z component into the finite difference scheme.
@@ -1828,35 +1882,60 @@ end subroutine init_zeta
         !to upwind or downwind respectively
         if (k==1) then !Top of the ice shelf
             !Finite difference coefficients for an irregular Z grid, downwinded
-            dz_down1=(2.*dz(k)-dz(k+1)-dz(k+2))/(dz(k+1)-dz(k))/(dz(k+2)-dz(k))
-            dz_down2=(dz(k+2)-dz(k))/(dz(k+2)-dz(k+1))/(dz(k+1)-dz(k))
-            dz_down3=(dz(k)-dz(k+1))/(dz(k+2)-dz(k+1))/(dz(k+2)-dz(k))
+            dz_down1=(2.*zeta(k)-zeta(k+1)-zeta(k+2))/(zeta(k+1)-zeta(k))/(zeta(k+2)-zeta(k))
+            dz_down2=(zeta(k+2)-zeta(k))/(zeta(k+2)-zeta(k+1))/(zeta(k+1)-zeta(k))
+            dz_down3=(zeta(k)-zeta(k+1))/(zeta(k+2)-zeta(k+1))/(zeta(k+2)-zeta(k))
         
             coef(I_J_KP2) = coef(I_J_KP2) + dz_coeff*dz_down3
             coef(I_J_KP1) = coef(I_J_KP1) + dz_coeff*dz_down2
             coef(I_J_K)   = coef(I_J_K)   + dz_coeff*dz_down1
         else if (k==size(zeta)) then !Bottom of the ice shelf
             !Finite difference coefficients for an irregular Z grid, upwinded
-            dz_up1=(dz(k)-dz(k-1))/(dz(k-1)-dz(k-2))/(dz(k)-dz(k-2))
-            dz_up2=(dz(k-2)-dz(k))/(dz(k)-dz(k-1))/(dz(k-1)-dz(k-2))
-            dz_up3=(2.*dz(k)-dz(k-1)-dz(k-2))/(dz(k)-dz(k-1))/(dz(k)-dz(k-2))
+            dz_up1=(zeta(k)-zeta(k-1))/(zeta(k-1)-zeta(k-2))/(zeta(k)-zeta(k-2))
+            dz_up2=(zeta(k-2)-zeta(k))/(zeta(k)-zeta(k-1))/(zeta(k-1)-zeta(k-2))
+            dz_up3=(2.*zeta(k)-zeta(k-1)-zeta(k-2))/(zeta(k)-zeta(k-1))/(zeta(k)-zeta(k-2))
 
             coef(I_J_KM2) = coef(I_J_KM2) + dz_coeff*dz_up3
             coef(I_J_KM1) = coef(I_J_KM1) + dz_coeff*dz_up2
             coef(I_J_K)   = coef(I_J_K)   + dz_coeff*dz_up1
         else !Middle of the ice shelf, use centered difference
-            dz_cen1 = (dz(k)-dz(k+1))/(dz(k)-dz(k-1))/(dz(k+1)-dz(k-1))
-            dz_cen2 = (dz(k+1)-2.*dz(k)+dz(k-1))/(dz(k)-dz(k-1))/(dz(k+1)-dz(k))
-            dz_cen3 = (dz(k)-dz(k-1))/(dz(k+1)-dz(k))/(dz(k+1)-dz(k-1))
+            dz_cen1 = (zeta(k)-zeta(k+1))/(zeta(k)-zeta(k-1))/(zeta(k+1)-zeta(k-1))
+            dz_cen2 = (zeta(k+1)-2.*zeta(k)+zeta(k-1))/(zeta(k)-zeta(k-1))/(zeta(k+1)-zeta(k))
+            dz_cen3 = (zeta(k)-zeta(k-1))/(zeta(k+1)-zeta(k))/(zeta(k+1)-zeta(k-1))
 
             coef(I_J_KM1) = coef(I_J_KM1) + dz_coeff*dz_cen1
             coef(I_J_K)   = coef(I_J_K)   + dz_coeff*dz_cen2
             coef(I_J_KP1) = coef(I_J_KP1) + dz_coeff*dz_cen3
         end if
 
+        !Apply finite difference approximations of the x and y derivatives.  The
+        !coefficients have already been computed above, so we just need to make
+        !sure to use the correct difference form (upwind or downwind, etc.)
+        if (downwind_y) then
+            coef(IP1_J_K) = coef(IP1_J_K) + dy_coeff/dy
+            coef(I_J_K) = coef(I_J_K) - dy_coeff/dy
+        else if (upwind_y) then
+            coef(I_J_K) = coef(I_J_K) + dy_coeff/dy
+            coef(IM1_J_K) = coef(IM1_J_K) - dy_coeff/dy 
+        else
+            coef(IP1_J_K) = coef(IP1_J_K) + .5*dy_coeff/dy
+            coef(IM1_J_K) = coef(IM1_J_K) - .5*dy_coeff/dy  
+        end if
+
+        if (downwind_x) then
+            coef(I_JP1_K) = coef(I_JP1_K) + dx_coeff/dx
+            coef(I_J_K) = coef(I_J_K) - dx_coeff/dx
+        else if (upwind_x) then
+            coef(I_J_K) = coef(I_J_K) + dx_coeff/dx
+            coef(I_JM1_K) = coef(I_JM1_K) - dx_coeff/dx 
+        else
+            coef(I_JP1_K) = coef(I_JP1_K) + .5*dx_coeff/dx
+            coef(I_JM1_K) = coef(I_JM1_K) - .5*dx_coeff/dx  
+        end if
+
+
     end subroutine
 
-#endif
 
 !
 !
@@ -2274,16 +2353,23 @@ end subroutine init_zeta
         real(dp), dimension(:,:), intent(in) :: f_stag
         real(dp), dimension(:,:), intent(out) :: f
 
-        integer :: i,j, i1, i2, j1, j2, ni, nj
+        real(dp), dimension(4) :: pts
+
+        real(dp) :: s,n
+
+        integer :: i,j, k,i1, i2, j1, j2, ni, nj
         
         ni = size(f, 1)
         nj = size(f, 2)
 
         do i = 1, size(f, 1)
             do j = 1, size(f, 2)
+                s = 0
+                n = 0
+                
                 i1 = i-1
                 i2 = i
-    
+
                 if (i1 == 0) then
                     i1 = ni - 1
                 end if
@@ -2302,8 +2388,22 @@ end subroutine init_zeta
                 if (j2 == nj) then
                     j2 = 1
                 end if
-    
-                f(i,j) = (f_stag(i1, j1) + f_stag(i2, j1) + f_stag(i1, j2) + f_stag(i2, j2))/4
+                
+                !Place the points into an array, loop over them, and average
+                !all the points that AREN'T NaN.
+                pts = (/f_stag(i1, j1), f_stag(i2, j1), f_stag(i1, j2), f_stag(i2, j2)/)
+
+                do k=1,4
+                    if (.not. (IS_NAN(pts(k)))) then
+                        s = s + k
+                        n = n + 1
+                    end if
+                end do
+                if (n /= 0) then
+                    f(i,j) = s/n
+                else
+                    f(i,j) = NaN
+                end if
             end do
         end do
     

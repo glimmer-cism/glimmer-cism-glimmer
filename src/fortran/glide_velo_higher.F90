@@ -374,7 +374,7 @@ contains
         real(dp), dimension(upn,ewn-1,nsn-1) :: uvel 
         real(dp), dimension(upn,ewn-1,nsn-1) :: vvel
         logical :: valid_initial_guess !*Whether or not the given uvel or vvel are appropriate initial guesses.  If not we'll have to roll our own.
-        integer :: i, k
+        integer :: i, j, k
 
         !Second derivative of surface
         real(dp), dimension(ewn,nsn) :: d2zdx2, d2zdy2, d2hdx2, d2hdy2
@@ -401,7 +401,14 @@ contains
         real(dp), dimension(nsn, ewn, upn) :: mu_t
         real(dp), dimension(nsn, ewn, upn) :: uvel_t_unstag, vvel_t_unstag
         integer, dimension(nsn, ewn) :: mask_t
-        
+       
+        real(dp), dimension(nsn-1, ewn-1, upn) :: kinematic_bc_u_t
+        real(dp), dimension(nsn-1, ewn-1, upn) :: kinematic_bc_v_t
+
+        real(dp), dimension(nsn-1, ewn-1, upn) :: kinematic_bc_u_t_unstag
+        real(dp), dimension(nsn-1, ewn-1, upn) :: kinematic_bc_v_t_unstag
+
+
         ijktot = (nsn)*(ewn)*upn
 
         !call fudge_mask(mask, totpts)
@@ -443,11 +450,29 @@ contains
         
         call glimToIce3d_3d(uvel,uvel_t,ewn-1,nsn-1,upn)
         call glimToIce3d_3d(vvel,vvel_t,ewn-1,nsn-1,upn)
+        
+        call glimToIce3d_3d(kinematic_bc_u,kinematic_bc_u_t,ewn-1,nsn-1,upn)
+        call glimToIce3d_3d(kinematic_bc_v,kinematic_bc_v_t,ewn-1,nsn-1,upn)
+
         call glimToIce3d_3d(flwa,flwa_t,ewn,nsn,upn)
       
         call unstagger_field_3d_periodic(vvel_t, uvel_t_unstag)
         call unstagger_field_3d_periodic(vvel_t, uvel_t_unstag)
-        
+       
+        call unstagger_field_3d_periodic(kinematic_bc_u_t,kinematic_bc_u_t_unstag)
+        call unstagger_field_3d_periodic(kinematic_bc_v_t,kinematic_bc_v_t_unstag)
+
+        !In unstaggering the boundary condition fields, we need to remove points
+        !that aren't on the boundary
+        do i = 1,nsn
+            do j = 1, ewn
+                if (thck(i+1, j) /= 0 .and. thck(i-1, j) /= 0 .and. thck(i, j+1) /= 0 .and. thck(i, j-1) /= 0) then
+                    kinematic_bc_u_t_unstag(i,j,:) = NaN
+                    kinematic_bc_v_t_unstag(i,j,:) = NaN
+                end if
+            end do
+        end do
+
         call unstagger_field_2d_periodic(btrc_t, btrc_t_unstag)
         write(*,*) ewn, dew, nsn, dns, upn
         write(*,*) shape(btrc)
