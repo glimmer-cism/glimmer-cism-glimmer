@@ -74,7 +74,7 @@ module glimmer_coordinates
 
   interface coordsystem_allocate
      module procedure coordsystem_allocate_d, coordsystem_allocate_s, coordsystem_allocate_i, coordsystem_allocate_l, &
-          coordsystem_allocate_d2, coordsystem_allocate_s2
+          coordsystem_allocate_d2, coordsystem_allocate_s2, coordsystem_allocate_i2
   end interface
 
 #ifdef DEBUG_COORDS
@@ -330,5 +330,16 @@ contains
     allocate(field(nup,coord%size%pt(1),coord%size%pt(2)))
     field = 0.d0
   end subroutine coordsystem_allocate_s2
+
+  subroutine coordsystem_allocate_i2(coord, nup, field)
+    !*FD allocate memory to pointer field
+    implicit none
+    type(coordsystem_type), intent(in) :: coord !*FD coordinate system
+    integer, intent(in) :: nup
+    integer, dimension(:,:,:), pointer :: field !*FD unallocated field
+
+    allocate(field(nup,coord%size%pt(1),coord%size%pt(2)))
+    field = 0.d0
+  end subroutine coordsystem_allocate_i2
 
 end module glimmer_coordinates
