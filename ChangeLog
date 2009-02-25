@@ -1,4 +1,10 @@
 2009-02-25 Ian Rutt
+ * configure.in: bump version to 1.9.0
+ * This is the first version on the Glimmer 2.0 development branch:
+   if intermediate releases are made, they will be 1.9.x (even values of
+   x), until the 2.0.0 release is ready.
+
+2009-02-25 Ian Rutt
  * configure.in: bump version to 1.0.16
  * This release is skipped (i.e. not on website) - it only exists to make
    a fork for the development of Glimmer 2.0 (This is the 1.9.x branch)
