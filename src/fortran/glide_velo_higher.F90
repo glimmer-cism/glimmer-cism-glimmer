@@ -122,6 +122,7 @@ contains
                           model%geomderv%dthckdew-model%geomderv%dusrfdew, & 
                           model%geomderv%dthckdns-model%geomderv%dusrfdns, & 
                           model%geomderv%stagthck, model%velocity_hom%velmask, totpts, &
+                          model%geometry%thkmask, &
                           model%temper%flwa, model%paramets%flow_exponent, model%velocity_hom%beta, &
                           model%options%which_ho_bstress,&
                           model%options%periodic_ew .eq. 1, &
@@ -139,6 +140,7 @@ contains
                           model%numerics%dew, model%numerics%dns, model%numerics%sigma, &
                           model%geometry%thck, model%geometry%usrf, model%geometry%lsrf, &
                           model%geometry%mask, model%geometry%totpts, &
+                          model%geometry%thkmask, &
                           model%temper%flwa, model%paramets%flow_exponent, &
                           model%velocity_hom%beta, model%options%which_ho_bstress, &
                           model%options%periodic_ew .eq. 1, &
@@ -155,7 +157,8 @@ contains
 
     subroutine velo_hom_pattyn(ewn, nsn, upn, dew, dns, sigma, &
                                thck, usrf, dthckdew, dthckdns, dusrfdew, dusrfdns, &
-                               dlsrfdew, dlsrfdns, stagthck, mask, totpts, flwa, flwn, btrc, which_sliding_law, &
+                               dlsrfdew, dlsrfdns, stagthck, point_mask, totpts, geometry_mask, flwa, flwn, btrc, &
+                               which_sliding_law, &
                                periodic_ew, periodic_ns, kinematic_bc_u, kinematic_bc_v, marine_bc_normal, &
                                uvel, vvel, valid_initial_guess, uflx, vflx, efvs, tau, gdsx, gdsy)
                             
@@ -174,8 +177,9 @@ contains
 	real(dp), dimension(ewn-1,nsn-1) :: dlsrfdew !*FD X bed gradient
 	real(dp), dimension(ewn-1,nsn-1) :: dlsrfdns !*FD Y bed gradient
 	real(dp), dimension(ewn-1,nsn-1) :: stagthck !*FD Staggered thickness
-        integer,  dimension(ewn-1,nsn-1) :: mask     !*FD Numbers points in the staggered grid that are included in computation
+        integer,  dimension(ewn-1,nsn-1) :: point_mask     !*FD Numbers points in the staggered grid that are included in computation
         integer :: totpts
+        integer, dimension(ewn-1,nsn-1) :: geometry_mask
 	real(dp), dimension(:,:,:) :: flwa !*FD Glen's A (rate factor) - Used for thermomechanical coupling
         real(dp), dimension(ewn-1,nsn-1)   :: btrc !*FD Basal Traction, either betasquared or tau0
         real(dp), dimension(:,:,:)   :: kinematic_bc_u, kinematic_bc_v
@@ -217,7 +221,8 @@ contains
         real(dp), dimension(nsn-1, ewn-1, upn) :: uvel_t, vvel_t, mu_t, flwa_t_stag, &
                                                   tau_xz_t, tau_yz_t, tau_xx_t, tau_yy_t, tau_xy_t
 
-        integer, dimension(nsn-1, ewn-1) :: mask_t
+        integer, dimension(nsn-1, ewn-1) :: point_mask_t
+        integer, dimension(nsn, ewn) :: geometry_mask_t
         
         ijktot = (nsn-1)*(ewn-1)*upn
 
@@ -253,7 +258,8 @@ contains
         d2hdx2_t = transpose(d2hdx2)
         d2hdy2_t = transpose(d2hdy2)
 
-        mask_t = transpose(mask)
+        point_mask_t = transpose(point_mask)
+        geometry_mask_t = transpose(geometry_mask)
 
         call glimToIce3d_3d(uvel,uvel_t,ewn-1,nsn-1,upn)
         call glimToIce3d_3d(vvel,vvel_t,ewn-1,nsn-1,upn)
@@ -285,7 +291,7 @@ contains
             if (which_sliding_law == 1) then
                 call veloc2(mu_t, uvel_t, vvel_t, flwa_t_stag, dusrfdew_t, dusrfdns_t, stagthck_t, ax, ay, &
                         sigma, bx, by, cxy, btrc_t/100, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, MANIFOLD,&
-                        TOLER, periodic_ew,periodic_ns, 0, dew, dns,mask_t,totpts, &
+                        TOLER, periodic_ew,periodic_ns, 0, dew, dns,point_mask_t,totpts,geometry_mask_t, &
                         kinematic_bc_u, kinematic_bc_v, marine_bc_normal)
             end if
         end if
@@ -299,7 +305,7 @@ contains
         call veloc2(mu_t, uvel_t, vvel_t, flwa_t, dusrfdew_t, dusrfdns_t, stagthck_t, ax, ay, &
                     sigma, bx, by, cxy, btrc_t, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, MANIFOLD,&
                     TOLER, periodic_ew,periodic_ns, which_sliding_law, dew,&
-                    dns,mask_t,totpts, kinematic_bc_u, kinematic_bc_v, marine_bc_normal)
+                    dns,point_mask_t,totpts, geometry_mask_t, kinematic_bc_u, kinematic_bc_v, marine_bc_normal)
        
         !Final computation of stress field for output
         call stressf(mu_t, uvel_t, vvel_t, flwa_t, stagthck_t, ax, ay, dew, dns, sigma, & 
@@ -348,7 +354,7 @@ contains
     !computing velocities on a staggered grid; it is thought that the averaging
     !there causes problems.
     subroutine velo_hom_pattyn_nonstag(ewn, nsn, upn, dew, dns, sigma, &
-                               thck, usrf, lsrf, mask, totpts, flwa, flwn, btrc, which_sliding_law, &
+                               thck, usrf, lsrf, point_mask, totpts, geometry_mask, flwa, flwn, btrc, which_sliding_law, &
                                periodic_ew, periodic_ns, kinematic_bc_u, kinematic_bc_v, marine_bc_normal,&
                                uvel, vvel, valid_initial_guess)
                             
@@ -361,9 +367,10 @@ contains
 	real(dp), dimension(ewn,nsn) :: thck !*FD Thickness, on non-staggered grid
 	real(dp), dimension(ewn,nsn) :: usrf !*FD Upper surface profile
         real(dp), dimension(ewn,nsn) :: lsrf !*FD Lower surface profile
-        integer,  dimension(ewn,nsn) :: mask     !*FD Numbers points in the staggered grid that are included in computation
+        integer,  dimension(ewn,nsn) :: point_mask     !*FD Numbers points in the staggered grid that are included in computation
         integer :: totpts
-	real(dp), dimension(:,:,:) :: flwa !*FD Glen's A (rate factor) - Used for thermomechanical coupling
+        integer, dimension(ewn,nsn) :: geometry_mask
+        real(dp), dimension(:,:,:) :: flwa !*FD Glen's A (rate factor) - Used for thermomechanical coupling
         real(dp), dimension(:,:)   :: btrc !*FD Basal Traction, either betasquared or tau0
         real(dp), dimension(:,:,:)   :: kinematic_bc_u, kinematic_bc_v
         real(dp), dimension(:,:)   :: marine_bc_normal
@@ -400,15 +407,18 @@ contains
         real(dp), dimension(nsn-1, ewn-1, upn) :: uvel_t, vvel_t, flwa_t_stag
         real(dp), dimension(nsn, ewn, upn) :: mu_t
         real(dp), dimension(nsn, ewn, upn) :: uvel_t_unstag, vvel_t_unstag
-        integer, dimension(nsn, ewn) :: mask_t
-       
+        integer, dimension(nsn, ewn) :: point_mask_t
+        integer, dimension(nsn, ewn) :: geometry_mask_t
+
         real(dp), dimension(nsn-1, ewn-1, upn) :: kinematic_bc_u_t
         real(dp), dimension(nsn-1, ewn-1, upn) :: kinematic_bc_v_t
 
         real(dp), dimension(nsn-1, ewn-1, upn) :: kinematic_bc_u_t_unstag
         real(dp), dimension(nsn-1, ewn-1, upn) :: kinematic_bc_v_t_unstag
 
+        real(dp), dimension(nsn,ewn) :: marine_bc_normal_t
 
+        write(*,*)"Unstaggered!"
         ijktot = (nsn)*(ewn)*upn
 
         !call fudge_mask(mask, totpts)
@@ -444,9 +454,13 @@ contains
         d2hdx2_t = transpose(d2hdx2)
         d2hdy2_t = transpose(d2hdy2)
 
-        mask_t = transpose(mask)
+        point_mask_t = transpose(point_mask)
+        geometry_mask_t = transpose(geometry_mask)
 
-        call write_xls_int("mask.txt",mask_t)
+        marine_bc_normal_t = transpose(marine_bc_normal)
+       
+        call write_xls("marinebcnorms.txt", marine_bc_normal_t)
+        write(*,*) "----------------",marine_bc_normal(2,25)
         
         call glimToIce3d_3d(uvel,uvel_t,ewn-1,nsn-1,upn)
         call glimToIce3d_3d(vvel,vvel_t,ewn-1,nsn-1,upn)
@@ -461,7 +475,7 @@ contains
        
         call unstagger_field_3d_periodic(kinematic_bc_u_t,kinematic_bc_u_t_unstag)
         call unstagger_field_3d_periodic(kinematic_bc_v_t,kinematic_bc_v_t_unstag)
-
+        
         !In unstaggering the boundary condition fields, we need to remove points
         !that aren't on the boundary
         do i = 1,nsn
@@ -493,11 +507,11 @@ contains
             if (which_sliding_law == 1) then
                 call veloc2(mu_t, uvel_t, vvel_t, flwa_t, dusrfdew_t, dusrfdns_t, thck_t, ax, ay, &
                         sigma, bx, by, cxy, btrc_t_unstag, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, MANIFOLD,&
-                        TOLER, periodic_ew,periodic_ns, 0, dew, dns,mask_t,totpts,&
-                        kinematic_bc_u, kinematic_bc_v, marine_bc_normal)
+                        TOLER, periodic_ew,periodic_ns, 0, dew, dns,point_mask_t,totpts,geometry_mask_t,&
+                        kinematic_bc_u, kinematic_bc_v, marine_bc_normal_t)
             end if
         end if
-
+        
         !Higher order velocity estimation
         !I am assuming that efvs (effective viscosity) is the same as mu
         !A NOTE ON COORDINATE TRANSPOSITION:
@@ -507,7 +521,7 @@ contains
         call veloc2(mu_t, uvel_t_unstag, vvel_t_unstag, flwa_t, dusrfdew_t, dusrfdns_t, thck_t, ax, ay, &
                     sigma, bx, by, cxy, btrc_t_unstag, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, MANIFOLD,&
                     TOLER, periodic_ew,periodic_ns, which_sliding_law, dew,&
-                    dns,mask_t,totpts,kinematic_bc_u, kinematic_bc_v, marine_bc_normal)
+                    dns,point_mask_t,totpts,geometry_mask_t,kinematic_bc_u, kinematic_bc_v, marine_bc_normal_t)
        
         !Final computation of stress field for output
         !call stressf(mu_t, uvel_t, vvel_t, flwa_t, stagthck_t, ax, ay, dew, dns, sigma, & 

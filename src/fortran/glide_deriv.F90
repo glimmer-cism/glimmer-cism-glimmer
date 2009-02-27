@@ -354,17 +354,21 @@ contains
     !*FD Computes derivative fields of the given function.
     !*FD The z axis is computed on an irregular grid.
     subroutine df_field_3d(f, deltax, deltay, deltaz, out_dfdx, out_dfdy, out_dfdz, &
-                           upwind_arg, upwind_grad_x, upwind_grad_y)
+                           direction_x, direction_y)
         implicit none
         real(dp), dimension(:, :, :), intent(in) :: f
         real(dp), intent(in) :: deltax, deltay
         real(dp), dimension(:), intent(in) :: deltaz
         real(dp), dimension(:, :, :), intent(out) :: out_dfdx, out_dfdy, out_dfdz
-        
-        logical, optional :: upwind_arg !Whether or not to use upwinded derivatives
-        !Gradients to use when deciding whether to upwind derivatives or not
-        real(dp), dimension(:,:), optional, intent(in) :: upwind_grad_x, upwind_grad_y
-        
+
+        !Field containing the direction that derivatives should be upwinded in.
+        !If 0, centered differences are used.  If negative, then upwinded
+        !derivatives (approaching from the negative side) are used.  If
+        !positive, then downwinded derivatives (approaching from the positive
+        !side) are used.
+        real(dp), dimension(:,:), optional :: direction_x, direction_y
+
+ 
         integer :: grad_x, grad_y !Sign of the gradient, used for determining upwinding
         integer :: nx, ny, nz, x, y, z
         logical :: upwind
@@ -374,11 +378,7 @@ contains
         ny = size(f, 2)
         nz = size(f, 3)
         
-        if (present(upwind_arg)) then
-            upwind = present(upwind_grad_x) .and. present(upwind_grad_y) .and. upwind_arg
-        else
-            upwind = .false.
-        end if
+        upwind = present(direction_x) .and. present(direction_y)
 
         !For now, we'll use the function calls defined above.
         !Later on we might want to refactor?
@@ -387,15 +387,15 @@ contains
                         grad_x = 0
                         grad_y = 0
                         if (upwind) then
-                            if (upwind_grad_x(x,y) < 0 .and. x > 2) then !Upstream case
+                            if (direction_x(x,y) < 0 .and. x > 2) then !Upstream case
                                 grad_x = -1
-                            else if(upwind_grad_x(x,y) > 0 .and. x < nx - 1) then !Downstream case
+                            else if(direction_x(x,y) > 0 .and. x < nx - 1) then !Downstream case
                                 grad_x = 1
                             end if
 
-                            if (upwind_grad_y(x,y) < 0 .and. y > 2) then !Upstream case
+                            if (direction_y(x,y) < 0 .and. y > 2) then !Upstream case
                                 grad_y = -1
-                            else if(upwind_grad_y(x,y) > 0 .and. y < ny - 1) then !Downstream case
+                            else if(direction_y(x,y) > 0 .and. y < ny - 1) then !Downstream case
                                 grad_y = 1
                             end if
                         end if

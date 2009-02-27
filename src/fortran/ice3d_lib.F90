@@ -10,6 +10,7 @@
 !----------------------------------------------------
 
 #include "glide_nan.inc"
+#include "glide_mask.inc"
 
 module ice3d_lib
     use glimmer_global
@@ -27,7 +28,7 @@ module ice3d_lib
 
     double precision, parameter :: plastic_bed_regularization = 1e-2
 
-    logical, parameter :: sparverbose = .false.
+    logical, parameter :: sparverbose = .true.
 
 !------------------------------------------------------
 !   lookup coordinates in sparse matrix
@@ -681,7 +682,7 @@ end subroutine init_zeta
                 zeta,bx,by,cxy,beta,&
                 dhbdx,dhbdy,FLOWN,ZIP,VEL2ERR,&
                 MANIFOLD,TOLER,PERIODIC_X, PERIODIC_Y, PLASTIC, delta_x, delta_y, &
-                mask, active_points, kinematic_bc_u, kinematic_bc_v, &
+                point_mask, active_points, geometry_mask, kinematic_bc_u, kinematic_bc_v, &
                 marine_bc_normal)
                 
 
@@ -705,13 +706,21 @@ end subroutine init_zeta
         double precision, dimension(:,:) :: beta
         double precision :: FLOWN,ZIP,VEL2ERR,TOLER,delta_x, delta_y
 
-        integer, dimension(:,:), intent(in) :: mask 
+        integer, dimension(:,:), intent(in) :: point_mask 
         !*FD Contains a unique nonzero number on each point of ice that should be computed or that is
         !*FD ajdacent to a point that should be computed. Other numbers contain
         !*FD zeros
-        integer, intent(in) :: active_points !*FD The number of points that should be computed.  This is equivalent to the number of nonzero entries in mask.
+        integer, intent(in) :: active_points !*FD The number of points that should be computed.  This is equivalent to the number of nonzero entries in point_mask.
 
+        integer, intent(in), dimension(:,:) :: geometry_mask !*FD point_mask field as described in glide_mask.inc
+
+        !Contains NaN everywhere except where a kinematic boundary is to be
+        !applied, in which case contains the value at the boundary
         double precision, dimension(:,:,:) :: kinematic_bc_u, kinematic_bc_v
+        
+        !Contains NaN everywhere except on the marine ice edge of an ice shelf,
+        !where this should contain the angle of the normal to the marine edge,
+        !in radians, with 0=12 o'clock, pi/2=3 o'clock, etc.
         double precision, dimension(:,:)   :: marine_bc_normal
 
         INTEGER i,j,k,l,lacc,m,n,maxiter,iter,DU1,DU2,DV1,DV2,&
@@ -734,6 +743,7 @@ end subroutine init_zeta
        
         double precision, dimension(size(mu,1),size(mu,2),size(mu,3)) :: dudx, dudy, dudz
         double precision, dimension(size(mu,1),size(mu,2),size(mu,3)) :: dvdx, dvdy, dvdz
+        double precision, dimension(size(mu,1),size(mu,2)) :: direction_x, direction_y
 
         double precision, dimension(size(mu,1),size(mu,2)) ::ubas, vbas
 
@@ -763,7 +773,7 @@ end subroutine init_zeta
 !If we've compiled with the SLAP solver, we want to configure to use the GMRES method instead of the BiCG method.
 !GMRES works much better for the HO solves
 
-#if SPARSE_SOLVER == slap
+#if SPARSE_SOLVER==slap
         !options%use_gmres = .true.
         options%maxiters  = 100000
 #endif
@@ -772,7 +782,7 @@ end subroutine init_zeta
         call sparse_allocate_workspace(matrix, options, workspace, ijktot*22)
         write(*,*)"NEW stuff added here"
 
-#if 0
+#if 1
         call write_xls_3d("arrh.txt",arrh)
         call write_xls("dzdx.txt",dzdx)
         call write_xls("dzdy.txt",dzdy)
@@ -787,6 +797,8 @@ end subroutine init_zeta
         call write_xls("beta.txt",beta)
         call write_xls("dhbdx.txt",dhbdx)
         call write_xls("dhbdy.txt",dhbdy)
+        call write_xls("latbc.txt",marine_bc_normal)
+        write(*,*),"ZETA=",zeta
 #endif
 
 
@@ -831,8 +843,9 @@ end subroutine init_zeta
             end if
 
             !Compute viscosity
-            call muterm(mu,uvel,vvel,arrh,h,dzdx,dzdy,ax,ay,delta_x,delta_y,zeta,FLOWN,ZIP,.true., &
-                        dudx, dudy, dudz, dvdx, dvdy, dvdz)
+            call muterm(mu,uvel,vvel,arrh,h,dzdx,dzdy,ax,ay,delta_x,delta_y,zeta,FLOWN,ZIP,.false., &
+                        geometry_mask,dudx, dudy, dudz, dvdx, dvdy, dvdz,&
+                        direction_x, direction_y)
             call write_xls_3d("mu.txt",mu)
             !stop
             !Apply periodic boundary conditions to the viscosity
@@ -844,8 +857,8 @@ end subroutine init_zeta
             !will still hold the old velocities.
             iter=sparuv(mu,dzdx,dzdy,ax,ay,bx,by,cxy,h,&
                 uvel,vvel,ustar,vstar,tau,dhbdx,dhbdy,ijktot,MAXY,&
-                MAXX,NZETA,TOLER, delta_x, delta_y, zeta, mask, &
-                matrix, workspace, options, kinematic_bc_u, kinematic_bc_v, &
+                MAXX,NZETA,TOLER, delta_x, delta_y, zeta, point_mask, &
+                geometry_mask,matrix, workspace, options, kinematic_bc_u, kinematic_bc_v, &
                 marine_bc_normal)
            
             !Apply periodic boundary conditions to the computed velocity
@@ -1025,6 +1038,44 @@ end subroutine init_zeta
         end do
     end subroutine plastic_bed
 
+    !Fills a field of differencing directions suitable to give a field
+    !derivative routine.  Uses centered differencing everywhere except for the
+    !marine ice margin, where upwinding and downwinding is used to avoid
+    !differencing across the boundary.
+    subroutine directions_from_mask(geometry_mask, direction_x, direction_y)
+        integer, dimension(:,:), intent(in) :: geometry_mask
+        double precision, dimension(:,:), intent(out) :: direction_x, direction_y
+
+        integer :: i,j
+
+        direction_x = 0
+        direction_y = 0
+
+        !Detect locations of the marine margin
+        do i = 1, size(geometry_mask,1)
+            do j = 1, size(geometry_mask,2)
+                if (GLIDE_IS_MARINE_ICE_EDGE(geometry_mask(i,j))) then
+                    !Detect whether we need to upwind or downwind in the Y
+                    !direction
+                    if (.not. GLIDE_HAS_ICE(geometry_mask(i-1,j))) then
+                        direction_y(i,j) = 1
+                    else if (.not. GLIDE_HAS_ICE(geometry_mask(i+1,j))) then
+                        direction_y(i,j) = -1
+                    end if
+
+                    !Detect whether we need to upwind or downwind in the X
+                    !direction
+                    if (.not. GLIDE_HAS_ICE(geometry_mask(i,j-1))) then
+                        direction_x(i,j) = 1
+                    else if (.not. GLIDE_HAS_ICE(geometry_mask(i,j+1))) then
+                        direction_x(i,j) = -1
+                    end if
+                end if
+            end do
+        end do
+
+    end subroutine
+
 !
 !
 !------------------------------------------------------
@@ -1032,7 +1083,7 @@ end subroutine init_zeta
 !------------------------------------------------------
 !
       subroutine muterm(mu,uvel,vvel,arrh,h,dzdx,dzdy,ax,ay,dx,dy,dz,FLOWN,ZIP,UPSTREAM, &
-                        dudx, dudy, dudz, dvdx, dvdy, dvdz)
+                        geometry_mask, dudx, dudy, dudz, dvdx, dvdy, dvdz, direction_x, direction_y)
 !
         double precision,                   intent(in)  :: FLOWN,ZIP
         logical,                            intent(in)  :: UPSTREAM
@@ -1048,9 +1099,13 @@ end subroutine init_zeta
         double precision,                   intent(in)  :: dx
         double precision,                   intent(in)  :: dy
         double precision, dimension(:),     intent(in)  :: dz
+        integer, dimension(:,:), intent(in) :: geometry_mask
+        
         !Pre-allocated variables, no info need be passed in these
         double precision, dimension(:,:,:), intent(inout) :: dudx, dudy, dudz
         double precision, dimension(:,:,:), intent(inout) :: dvdx, dvdy, dvdz
+        double precision, dimension(:,:),   intent(inout) :: direction_x, direction_y
+
 !
         INTEGER :: i,j,k, MAXX, MAXY, NZETA
         double precision :: macht
@@ -1063,9 +1118,18 @@ end subroutine init_zeta
         macht=(1.-FLOWN)/(2.*FLOWN)
       
         !TODO: Implement option for upstream differencing
-        call df_field_3d(uvel, dy, dx, dz, dudy, dudx, dudz, UPSTREAM, dzdx, dzdy)
-        call df_field_3d(vvel, dy, dx, dz, dvdy, dvdx, dvdz, UPSTREAM, dzdx, dzdy)
-      
+        if (UPSTREAM) then
+            !Upstream the number 
+            call df_field_3d(uvel, dy, dx, dz, dudy, dudx, dudz, dzdy, dzdx)
+            call df_field_3d(vvel, dy, dx, dz, dvdy, dvdx, dvdz, dzdy, dzdx)
+        else
+            call directions_from_mask(geometry_mask, direction_x, direction_y)
+            call write_xls("direction_x.txt",direction_x)
+            call write_xls("direction_y.txt",direction_y)
+            call df_field_3d(uvel, dy, dx, dz, dudy, dudx, dudz, direction_x, direction_y)
+            call df_field_3d(vvel, dy, dx, dz, dvdy, dvdx, dvdz, direction_x, direction_y)
+        end if
+
         !Compute mu term from the acceleration fields
         do i=1,MAXY
             do j=1,MAXX
@@ -1102,7 +1166,7 @@ end subroutine init_zeta
 !------------------------------------------------------
 !
     function sparuv(mu,dzdx,dzdy,ax,ay,bx,by,cxy,h,uvel,vvel,ustar,vstar,beta,dhbdx,dhbdy,&
-                    IJKTOT,MAXY,MAXX,NZETA,TOLER,GRIDX,GRIDY,zeta, mask, &
+                    IJKTOT,MAXY,MAXX,NZETA,TOLER,GRIDX,GRIDY,zeta, point_mask, geometry_mask,&
                     matrix, workspace, options, kinematic_bc_u, kinematic_bc_v,latbc_normal)
         INTEGER IJKTOT,MAXY,MAXX,NZETA
         double precision, dimension(:,:,:) :: mu
@@ -1122,6 +1186,7 @@ end subroutine init_zeta
         double precision, dimension(:,:) :: dhbdy
         double precision, dimension(:,:) :: beta
         double precision, dimension(:) :: zeta
+        integer, dimension(:,:) :: geometry_mask
         double precision, dimension(:,:,:) :: kinematic_bc_u
         double precision, dimension(:,:,:) :: kinematic_bc_v
         double precision, dimension(:,:)   :: latbc_normal !On the marine ice front, this is the angle of the normal to the ice front
@@ -1139,7 +1204,7 @@ end subroutine init_zeta
         type(sparse_solver_workspace) :: workspace
         type(sparse_solver_options) :: options
 
-        integer, dimension(:,:) :: mask
+        integer, dimension(:,:) :: point_mask
         
         integer :: stencil_center_idx
         integer :: si, sj, sk
@@ -1152,10 +1217,10 @@ end subroutine init_zeta
         call sparse_clear(matrix)
         do i=1,MAXY
             do j=1,MAXX
-                if (mask(i,j) /= 0) then
+                if (point_mask(i,j) /= 0) then
                     do k=1,NZETA 
                         coef = 0
-                        stencil_center_idx = csp_masked(I_J_K,i,j,k,mask,NZETA) 
+                        stencil_center_idx = csp_masked(I_J_K,i,j,k,point_mask,NZETA) 
                         if (h(i,j).lt.SMALL) then
                             !No ice - "pass through"
                             coef(I_J_K)=1.
@@ -1174,6 +1239,8 @@ end subroutine init_zeta
                                   h, gridx, gridy, zeta, uvel, vvel, dhbdx, dhbdy, beta, kinematic_bc_u, &
                                   latbc_normal, maxx, maxy, Nzeta, coef, rhs)
                         endif
+                        !write(*,*) i,j,k,IS_NAN(latbc_normal(i,j)), &
+                        !      minval(coef), maxval(coef)
                         d(stencil_center_idx)=rhs
                         !Preliminary benchmarks indicate the we actually reach
                         !convergance faster if we use a 0 initial guess rather than
@@ -1191,7 +1258,7 @@ end subroutine init_zeta
                                 sk > 0 .and. sk <= nzeta) then
                                     call sparse_insert_val(matrix, &
                                                     stencil_center_idx, &
-                                                    csp_stenciled(si,sj,sk,mask,NZETA), &
+                                                    csp_stenciled(si,sj,sk,point_mask,NZETA), &
                                                     coef(m)) 
                             end if
                         end do
@@ -1199,7 +1266,7 @@ end subroutine init_zeta
                 end if
              end do
         end do
-        call write_sparse_system('sparse.txt',matrix%row, matrix%col, matrix%val, matrix%nonzeros)
+        call write_sparse_system('sparse_u.txt',matrix%row, matrix%col, matrix%val, matrix%nonzeros)
         call sparse_solver_preprocess(matrix, options, workspace)
         ierr = sparse_solve(matrix, d, x, options, workspace,  err, iter, verbose=sparverbose)
         call handle_sparse_error(matrix, ierr, __FILE__, __LINE__)        
@@ -1209,9 +1276,9 @@ end subroutine init_zeta
         do i=1,MAXY
             do j=1,MAXX
                 do k=1,NZETA
-                    if (mask(i,j) /= 0) then
-                        !write(*,*)csp_masked(11,i,j,k,mask,nzeta)
-                        ustar(i,j,k)=x(csp_masked(11,i,j,k,mask,nzeta))
+                    if (point_mask(i,j) /= 0) then
+                        !write(*,*)csp_masked(11,i,j,k,point_mask,nzeta)
+                        ustar(i,j,k)=x(csp_masked(11,i,j,k,point_mask,nzeta))
                     else
                         ustar(i,j,k)=0
                     end if
@@ -1228,10 +1295,10 @@ end subroutine init_zeta
 
         do i=1,MAXY
             do j=1,MAXX
-                if (mask(i,j) /= 0) then
+                if (point_mask(i,j) /= 0) then
                     do k=1,NZETA 
                         coef = 0
-                        stencil_center_idx = csp_masked(I_J_K,i,j,k,mask,NZETA) 
+                        stencil_center_idx = csp_masked(I_J_K,i,j,k,point_mask,NZETA) 
                         if (h(i,j).lt.SMALL) then
                             !No ice - "pass through"
                             coef(I_J_K)=1.
@@ -1268,7 +1335,7 @@ end subroutine init_zeta
                                 sk > 0 .and. sk <= nzeta) then
                                     call sparse_insert_val(matrix, &
                                                     stencil_center_idx, &
-                                                    csp_stenciled(si,sj,sk,mask,NZETA), &
+                                                    csp_stenciled(si,sj,sk,point_mask,NZETA), &
                                                     coef(m)) 
                             end if
                         end do
@@ -1276,6 +1343,7 @@ end subroutine init_zeta
                 end if
              end do
         end do
+        call write_sparse_system('sparse_v.txt',matrix%row, matrix%col, matrix%val, matrix%nonzeros)
         call sparse_solver_preprocess(matrix, options, workspace)
         ierr = sparse_solve(matrix, d, x, options, workspace,  err, iter, verbose=sparverbose)
         call handle_sparse_error(matrix, ierr, __FILE__, __LINE__)        
@@ -1284,9 +1352,9 @@ end subroutine init_zeta
         do i=1,MAXY
             do j=1,MAXX
                 do k=1,NZETA
-                    if (mask(i,j) /= 0) then
-                        !write(*,*)csp_masked(11,i,j,k,mask,nzeta)
-                        vstar(i,j,k)=x(csp_masked(11,i,j,k,mask,nzeta))
+                    if (point_mask(i,j) /= 0) then
+                        !write(*,*)csp_masked(11,i,j,k,point_mask,nzeta)
+                        vstar(i,j,k)=x(csp_masked(11,i,j,k,point_mask,nzeta))
                     else
                         vstar(i,j,k)=0
                     end if
@@ -1390,28 +1458,28 @@ end subroutine init_zeta
         end select
       end function
  !
-      function csp_masked(pos, i, j, k, mask, nzeta)
+      function csp_masked(pos, i, j, k, point_mask, nzeta)
          integer :: pos
          integer :: i !Y coordinate
          integer :: j !X coordinate
          integer :: k !Z coordinate
-         integer, dimension(:,:) :: mask
+         integer, dimension(:,:) :: point_mask
          integer :: nzeta
          integer :: csp_masked
 
-         csp_masked = (mask(stencil_i(pos,i), stencil_j(pos,j)) - 1) * nzeta &
+         csp_masked = (point_mask(stencil_i(pos,i), stencil_j(pos,j)) - 1) * nzeta &
                       + stencil_k(pos, k)
       end function
 
       !Returns the coordinate without performing stencil lookups (this assumes
       !those have already been done)
-      function csp_stenciled(si, sj, sk, mask, nzeta)
+      function csp_stenciled(si, sj, sk, point_mask, nzeta)
             integer :: si, sj, sk
-            integer, dimension(:,:) :: mask
+            integer, dimension(:,:) :: point_mask
             integer :: nzeta
             integer :: csp_stenciled
 
-            csp_stenciled = (mask(si, sj) - 1)*nzeta + sk
+            csp_stenciled = (point_mask(si, sj) - 1)*nzeta + sk
       end function
 
 !
@@ -1793,6 +1861,7 @@ end subroutine init_zeta
         !versa) with respect to the parallel direction (x if computing u, y if
         !computing v)
         real(dp) :: dperp_dpara
+        real(dp) :: dperp_dperp
         real(dp) :: dperp_dz
 
         !The derivatives of the velocity component being computed with respect
@@ -1805,31 +1874,43 @@ end subroutine init_zeta
         double precision dz_cen1, dz_cen2, dz_cen3, dz_sec1, dz_sec2, dz_sec3
  
         !Get the normal unit vector
-        n_x = cos(normals(i,j))
-        n_y = sin(normals(i,j))
+        !The angles are defined in radians, with 0 = 12 o' clock, pi/2 = 3 o' clock,
+        !etc.
+        !We will need to convert this into an angle system with 0 = 3 o' clock,
+        !pi/2 = 12 o' clock, etc.
+        !At first I thought:
+        !theta = normals(i,j) + 2*(PI/4 - normals(i,j))
+        !But really this reduces to swapping sine and cosine (easy proof to work
+        !through).
+        n_x = abs(sin(normals(i,j))
+        n_y = abs(cos(normals(i,j)))
 
         !Determine the hydrostatic pressure at the current location
         !If we are at the part of the ice shelf above the water, 
         !then we are at 1ATM pressure which we just assume to be 0 
         !throughout the model anyway
+        pressure = rhoi * grav * h(i,j) * zeta(k)
         if (zeta(k) > (1 - rhoi/rhoo)) then
-            pressure = rhoo * grav * h(i,j) * (zeta(k) - 1 + rhoi/rhoo)
-        else
-            pressure = 0
+            pressure = pressure + rhoo * grav * h(i,j) * (zeta(k) - 1 + rhoi/rhoo)
         end if
+
+        !This line changes pressure to the vertically integrated hydrostatic
+        !pressure, and applies that throughout the ice column regardless even of
+        !whether the ice is underwater.
+        pressure = .5 * grav * h(i,j) * rhoi**2 / rhoo
 
         !Determine whether to use upwinded or downwinded derivatives for the
         !horizontal directions.
         if (h(i-1,j) == 0) then
-            downwind_x = .true.
+            downwind_y = .true.
         else if (h(i+1,j) == 0) then
-            upwind_x = .true.
+            upwind_y = .true.
         end if
 
         if (h(i,j-1) == 0) then
-            downwind_y = .true.
+            downwind_x = .true.
         else if (h(i,j+1) == 0) then
-            upwind_y = .true.
+            upwind_x = .true.
         end if
         
         !Determine the derivative with respect to the vertical of the velocity
@@ -1848,39 +1929,70 @@ end subroutine init_zeta
         if (component == "u") then
             !Beware of transposed derivatives ahead (because x and y are
             !switched, dx and dy have to be as well)
-            if (upwind_y) then
+
+            !X derivative of V component
+            if (upwind_x) then
                 dperp_dpara = dfdy_3d_upwind(vel_perp, i,j,k,dx)
-            else if (downwind_y) then
+            else if (downwind_x) then
                 dperp_dpara = dfdy_3d_downwind(vel_perp,i,j,k,dx)
             else
                 dperp_dpara = dfdy_3d(vel_perp,i,j,k,dx)
             end if
 
-            rhs = pressure/(2*mu(i,j,k)) * n_x - n_y / 2 * (dperp_dpara - ax(i,j,k)*dperp_dz)
-            dx_coeff = n_x
-            dy_coeff = n_y / 2
-            dz_coeff = n_x*ax(i,j,k) + (n_y*ay(i,j,k))/2
+            !Y derivative of V component
+            if (upwind_y) then
+                dperp_dperp = dfdx_3d_upwind(vel_perp, i,j,k,dy)
+            else if (downwind_y) then
+                dperp_dperp = dfdx_3d_downwind(vel_perp,i,j,k,dy)
+            else
+                dperp_dperp = dfdx_3d(vel_perp,i,j,k,dy)
+            end if
+
+
+            rhs = pressure*n_x - mu(i,j,k)*(2*n_x*dperp_dperp & 
+                                    - n_y * dperp_dpara &
+                                    - (2*ay(i,j,k)*n_x + ax(i,j,k)*n_y)*dperp_dz)
+
+            dx_coeff = n_x*4*mu(i,j,k)
+            dy_coeff = n_y*mu(i,j,k)
+            dz_coeff = mu(i,j,k)*(4*n_x*ax(i,j,k) + (n_y*ay(i,j,k)))
         else if (component == "v") then
             !Beware of transposed derivatives ahead (because x and y are
             !switched, dx and dy have to be as well)
-            if (upwind_x) then
+
+            !Y derivative of U component
+            if (upwind_y) then
                 dperp_dpara = dfdx_3d_upwind(vel_perp, i,j,k,dy)
-            else if (downwind_x) then
+            else if (downwind_y) then
                 dperp_dpara = dfdx_3d_downwind(vel_perp,i,j,k,dy)
             else
                 dperp_dpara = dfdx_3d(vel_perp,i,j,k,dy)
             end if
- 
-            rhs = pressure/(2*mu(i,j,k)) * n_y - n_x / 2 * (dperp_dpara - ay(i,j,k)*dperp_dz)    
-            dy_coeff = n_y
-            dx_coeff = n_x / 2
-            dz_coeff = n_y*ay(i,j,k) + (n_x*ax(i,j,k))/2
+
+            !X derivative of U component
+            if (upwind_x) then
+                dperp_dperp = dfdy_3d_upwind(vel_perp, i,j,k,dx)
+            else if (downwind_x) then
+                dperp_dperp = dfdy_3d_downwind(vel_perp,i,j,k,dx)
+            else
+                dperp_dperp = dfdy_3d(vel_perp,i,j,k,dx)
+            end if
+
+            rhs = pressure*n_y - mu(i,j,k)*(2*n_y*dperp_dperp & 
+                                    - n_x * dperp_dpara &
+                                    - (2*ax(i,j,k)*n_y + ay(i,j,k)*n_x)*dperp_dz)
+
+  
+            dy_coeff = n_y*4*mu(i,j,k)
+            dx_coeff = n_x*mu(i,j,k)
+            dz_coeff = mu(i,j,k)*(4*n_y*ay(i,j,k) + (n_x*ax(i,j,k)))
         end if
 
         !Enter the z component into the finite difference scheme.
         !If we are on the top of bottom of the ice shelf, we will need
         !to upwind or downwind respectively
         if (k==1) then !Top of the ice shelf
+            write(*,*)j,i,normals(i,j),dx_coeff, dy_coeff, dz_coeff
             !Finite difference coefficients for an irregular Z grid, downwinded
             dz_down1=(2.*zeta(k)-zeta(k+1)-zeta(k+2))/(zeta(k+1)-zeta(k))/(zeta(k+2)-zeta(k))
             dz_down2=(zeta(k+2)-zeta(k))/(zeta(k+2)-zeta(k+1))/(zeta(k+1)-zeta(k))
@@ -1895,9 +2007,9 @@ end subroutine init_zeta
             dz_up2=(zeta(k-2)-zeta(k))/(zeta(k)-zeta(k-1))/(zeta(k-1)-zeta(k-2))
             dz_up3=(2.*zeta(k)-zeta(k-1)-zeta(k-2))/(zeta(k)-zeta(k-1))/(zeta(k)-zeta(k-2))
 
-            coef(I_J_KM2) = coef(I_J_KM2) + dz_coeff*dz_up3
+            coef(I_J_KM2) = coef(I_J_KM2) + dz_coeff*dz_up1
             coef(I_J_KM1) = coef(I_J_KM1) + dz_coeff*dz_up2
-            coef(I_J_K)   = coef(I_J_K)   + dz_coeff*dz_up1
+            coef(I_J_K)   = coef(I_J_K)   + dz_coeff*dz_up3
         else !Middle of the ice shelf, use centered difference
             dz_cen1 = (zeta(k)-zeta(k+1))/(zeta(k)-zeta(k-1))/(zeta(k+1)-zeta(k-1))
             dz_cen2 = (zeta(k+1)-2.*zeta(k)+zeta(k-1))/(zeta(k)-zeta(k-1))/(zeta(k+1)-zeta(k))
@@ -2392,10 +2504,10 @@ end subroutine init_zeta
                 !Place the points into an array, loop over them, and average
                 !all the points that AREN'T NaN.
                 pts = (/f_stag(i1, j1), f_stag(i2, j1), f_stag(i1, j2), f_stag(i2, j2)/)
-
+            
                 do k=1,4
                     if (.not. (IS_NAN(pts(k)))) then
-                        s = s + k
+                        s = s + pts(k)
                         n = n + 1
                     end if
                 end do

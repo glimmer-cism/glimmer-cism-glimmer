@@ -136,7 +136,7 @@ contains
         real(dp), dimension(:,:), intent(out) :: marine_bc_normal
 
         integer :: i, j
-
+        write(*,*)"Computing marine margin"
         do i = 1, size(mask, 1)
             do j = 1, size(mask, 2)
                 if (GLIDE_IS_MARINE_ICE_EDGE(mask(i,j))) then
@@ -146,10 +146,16 @@ contains
                 end if
             end do
         end do
-
+        
+        write(*,*) "NORTH:", marine_bc_normal(25,2)
+        write(*,*) "EAST: ", marine_bc_normal(50, 25)
+        write(*,*) "SOUTH:", marine_bc_normal(25,50)
+        write(*,*) "WEST: ", marine_bc_normal(2, 25)
     end subroutine
 
     function calc_normal_45deg(thck3x3)
+        use glimmer_physcon, only: pi
+        
         !*FD Computes the angle of the normal vector, in radians, for the given
         !*FD 3x3 segment of ice geometry.
         !*FD The normal is given in increments of 45 degrees (no nicer
@@ -165,7 +171,7 @@ contains
         real (kind = dp), dimension(3) :: testvect
         real (kind = dp) :: phi, deg2rad
 
-        deg2rad = 3.141592654d0 / 180.0d0
+        deg2rad = pi / 180.0d0
         loc_latbc = 0; phi = 0
         mask(:,1) = (/ 0.0d0, 180.0d0, 0.0d0 /)
         mask(:,2) = (/ 270.0d0, 0.0d0, 90.0d0 /)
@@ -222,8 +228,16 @@ contains
                 phi = sum( testvect ) / sum( testvect/testvect, testvect .ne. 0.0d0 )
             end if
         end if
-        
+
         calc_normal_45deg = deg2rad * phi
+        
+        !Tim's Note: This appears to actually compute 0 at 6 O'clock according
+        !to Glimmer's coordinate system.  90 deg. is still 3 O'clock.
+        !I'm going to correct for this here rather than dig through the code
+        !above
+        !(TODO: correct it in the code above!)
+        calc_normal_45deg = pi - calc_normal_45deg 
+        if (calc_normal_45deg < 0) calc_normal_45deg = calc_normal_45deg + 2*pi
 
     end function
 
