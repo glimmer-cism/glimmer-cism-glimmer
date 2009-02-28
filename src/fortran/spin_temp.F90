@@ -115,8 +115,8 @@ contains
     type(spin_temp_type)     :: temp  !*FD mb data
     type(glide_global_type)  :: model !model data
     
-    call glimmer_read_ts(temp%temp_ts,temp%fname,temp%torder)
-    allocate(temp%tperturb(temp%torder))
+    call glimmer_read_ts(temp%temp_ts,temp%fname,1)
+    allocate(temp%tperturb(1))
     call coordsystem_allocate(model%general%ice_grid, temp%local_usrf) 
     call coordsystem_allocate(model%general%ice_grid, temp%presartm)
     call coordsystem_allocate(model%general%ice_grid, temp%arng)
@@ -226,7 +226,6 @@ contains
     
     select case(model_type)
     case(0) !Antarctica Temperature Model, model_type = 0
-    
       !calculate the artm for Antarctica following Huybrechts method
       where (usrf <= 1500.)
         artm = 34.46  - 0.005102*usrf + 0.68775*lati + tperturb
@@ -240,7 +239,6 @@ contains
       !summer temperature
       arng = 16.81 - 0.00692*usrf + 0.27937*lati + tperturb -  artm 
     case(1) !Greenland Temperature Model, model_type = 1
-    
     
       !create and calculate the inversion temperature elevation
 
