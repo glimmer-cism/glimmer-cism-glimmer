@@ -83,7 +83,14 @@ else
 if UMFPACK
 RESTART_CODE += glimmer_sparse_umfpack.F90
 libglimmer_a_SOURCES += glimmer_sparse_umfpack.F90
-endif UMFPACK
+else
+
+if PARDISO
+RESTART_CODE += glimmer_sparse_pardiso.F90
+libglimmer_a_SOURCES += glimmer_sparse_pardiso.F90
+endif PARDISO
+
+endif !UMFPACK
 
 endif !SLAP
 

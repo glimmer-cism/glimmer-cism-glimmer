@@ -90,9 +90,43 @@ if test "$ac_cv_blas" != ""; then
     AC_MSG_RESULT([yes])
   else
     AC_MSG_RESULT([no])
+    AC_MSG_ERROR([An external BLAS library was specified but could not be linked against])
   fi
 fi
 AM_CONDITIONAL(EXT_BLAS,test "$ac_cv_haveblas" == 1)
+
+# checking for LAPACK library(required for PARDISO)
+AC_ARG_WITH(lapack,AS_HELP_STRING([--with-lapack],[how to link external LAPACK library]),[ac_cv_lapack=$withval])
+ac_cv_havelapack=0
+if test "$ac_cv_lapack" != ""; then
+  LIBS="$LIBS $ac_cv_lapack"
+  AC_MSG_CHECKING([for external LAPACK lib])
+  AC_LINK_IFELSE([AC_LANG_PROGRAM([],[call sgesv])],ac_cv_havelapack=1,ac_cv_havelapack=0)
+  if test "$ac_cv_havelapack" == 1; then
+    AC_MSG_RESULT([yes])
+  else
+    AC_MSG_RESULT([no])
+    AC_MSG_ERROR([An external LAPACK library was specified but could not be linked against])
+  fi
+fi
+AM_CONDITIONAL(EXT_LAPACK,test "$ac_cv_havelapack" == 1)
+
+# checking for GOMP library(required for some builds of PARDISO)
+AC_ARG_WITH(gomp,AS_HELP_STRING([--with-gomp],[how to link external GOMP (OpenMP) library]),[ac_cv_gomp=$withval])
+ac_cv_havegomp=0
+if test "$ac_cv_gomp" != ""; then
+  LIBS="$LIBS $ac_cv_gomp"
+  AC_MSG_CHECKING([for GOMP])
+  AC_LINK_IFELSE([AC_LANG_PROGRAM([],[])],ac_cv_havegomp=1,ac_cv_havegomp=0)
+  if test "$ac_cv_havegomp" == 1; then
+    AC_MSG_RESULT([yes])
+  else
+    AC_MSG_RESULT([no])
+    AC_MSG_ERROR([A GOMP library was specified but could not be linked against])
+  fi
+fi
+AM_CONDITIONAL(EXT_GOMP,test "$ac_cv_havegomp" == 1)
+
 
 # checking for netCDF
 AC_ARG_WITH(netcdf,AS_HELP_STRING([--with-netcdf],[location where netCDF is installed]),[ac_cv_netcdf_prefix=$withval])
@@ -163,8 +197,32 @@ http://www.cise.ufl.edu/research/sparse/umfpack.])])
         sparsesolver=umfpack
     else
         if test "$ac_cv_pardiso_prefix" != ""; then
-            AC_MSG_RESULT(Using Pardiso, located at $ac_cv_pardiso_prefix)
+            AC_MSG_RESULT([Using Pardiso to solve sparse linear systems, (located at $ac_cv_pardiso_prefix)])
+            if test "$ac_cv_haveblas" == 0; then
+                AC_MSG_ERROR([
+Using Pardiso requires use of an external BLAS library.  
+Please use the --with-blas flag and try again.
+If you are not sure what to do here but have BLAS installed in a standard location, try --with-blas=-lblas])
+            fi
+
+            if test "$ac_cv_havelapack" == 0; then
+                AC_MSG_ERROR([
+Using Pardiso requires use of an external LAPACK library.  
+Please use the --with-blas flag and try again.
+If you are not sure what to do here but have LAPACK installed in a standard location, try --with-lapack=-llapack])
+            fi
+
+            if test "$ac_cv_havegomp" == 0; then
+                AC_MSG_WARN([
+Some parallel builds of Pardiso requires use of the GOMP library.  
+If the following Pardiso check fails, please use the --with-gomp flag and try again.])
+            fi
+
+
+            AC_MSG_CHECKING(for Pardiso)
             FCFLAGS="$FCFLAGS -DSPARSE_SOLVER=pardiso"
+            LDFLAGS="$LDFLAGS -lpardiso"
+            AC_CHECK_LIB([pardiso],[pardiso], , AC_MSG_ERROR([Libpardiso not found.]),[-lblas])
             sparsesolver=pardiso
         else
             AC_MSG_RESULT([Using default sparse linear solver (SLAP)])

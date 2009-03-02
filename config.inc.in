@@ -15,6 +15,9 @@
 /* Define to 1 if you have the `netcdf' library (-lnetcdf). */
 #undef HAVE_LIBNETCDF
 
+/* Define to 1 if you have the `pardiso' library (-lpardiso). */
+#undef HAVE_LIBPARDISO
+
 /* Define to 1 if you have the `umfpack' library (-lumfpack). */
 #undef HAVE_LIBUMFPACK
 
