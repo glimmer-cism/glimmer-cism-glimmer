@@ -58,7 +58,8 @@ module glide_thck
   use xls
   use glide_io
   private
-  public :: init_thck, thck_nonlin_evolve, thck_lin_evolve, stagvarb, timeders, stagleapthck
+  public :: init_thck, thck_nonlin_evolve, thck_lin_evolve, stagvarb, timeders, &
+            stagleapthck, fix_mass_conservation 
 
 #ifdef DEBUG_PICARD
   ! debugging Picard iteration
