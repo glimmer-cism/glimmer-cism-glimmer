@@ -245,7 +245,8 @@ contains
                model%geomderv% stagthck,&
                model%general%  ewn, &
                model%general%  nsn)
-
+          call fix_mass_conservation(model%geometry%thck, &
+                                     model%geomderv%stagthck)
           call df_field_2d_staggered(model%geometry%usrf, &
                                      model%numerics%dew, model%numerics%dns, &
                                      model%geomderv%dusrfdew, & 
@@ -554,6 +555,36 @@ contains
                              ipvr(2:ewn,2:nsn)   + ipvr(1:ewn-1,1:nsn-1)) / 4.0d0
 
   end subroutine stagvarb
+
+  subroutine fix_mass_conservation(thck, stagthck)
+    !*FD Fixes a problem where the thickness staggering introduces
+    !*FD non-conservation of mass around areas of zero mass.
+    !*FD The problem and its solution are discussed in the Glimmer
+    !*FD mailing list archive:
+    !*FD http://forge.nesc.ac.uk/pipermail/glimmer-discuss/2007-October/000280.html
+    !*FD (Message from Anne Le Brocq, October 22, 2007)
+    real(dp), dimension(:,:) ::thck, stagthck
+    integer :: ewn, nsn
+
+    ewn = size(thck,1)
+    nsn = size(thck,2)
+
+    where (thck(1:ewn-1,1:nsn-1) < 100)
+        stagthck = 0
+    endwhere
+
+    where (thck(1:ewn-1, 2:nsn) < 100)
+        stagthck = 0
+    endwhere
+
+    where (thck(2:ewn, 1:nsn-1) < 100)
+        stagthck = 0
+    endwhere
+
+    where (thck(2:ewn, 2:nsn) < 100)
+        stagthck = 0
+    endwhere
+  end subroutine
 
 !---------------------------------------------------------------------------------
 

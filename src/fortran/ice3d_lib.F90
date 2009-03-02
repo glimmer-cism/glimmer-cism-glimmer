@@ -1882,7 +1882,7 @@ end subroutine init_zeta
         !theta = normals(i,j) + 2*(PI/4 - normals(i,j))
         !But really this reduces to swapping sine and cosine (easy proof to work
         !through).
-        n_x = abs(sin(normals(i,j))
+        n_x = abs(sin(normals(i,j)))
         n_y = abs(cos(normals(i,j)))
 
         !Determine the hydrostatic pressure at the current location
