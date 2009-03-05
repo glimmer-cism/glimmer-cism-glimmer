@@ -154,10 +154,12 @@ contains
         end if
         
         !PARDISO arguments
-        call pardiso(workspace%pt, 1, 1, mtype, 33, matrix%order, matrix%val, &
-                     matrix%row, matrix%col, 0, matrix%order, workspace%iparam, &
+        write(*,*) "PARDISO Begin!"
+        call pardiso(workspace%pt, 1, 1, mtype, 13, matrix%order, matrix%val, &
+                     matrix%col, matrix%row, 0, matrix%order, workspace%iparam, &
                      iunit, rhs, solution, sparse_solve)
-        
+        write(*,*) "PARDISO End!"
+
         err = 0
         niters = 0
     end function sparse_solve

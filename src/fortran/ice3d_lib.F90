@@ -78,6 +78,13 @@ module ice3d_lib
     integer, parameter :: IP1_J_KP1 = 20
     integer, parameter :: IP1_JP1_K = 21
 
+    !Extra stencil locations introduced to allow for 2nd order upwinding and downwinding
+    !lateral derivs.
+    integer, parameter :: IM2_J_K = 22
+    integer, parameter :: IP2_J_K = 23
+    integer, parameter :: I_JM2_K = 24
+    integer, parameter :: I_JP2_k = 25
+
 contains
 !
 !
@@ -811,6 +818,10 @@ end subroutine init_zeta
         call periodic_boundaries_3d_stag(vvel,periodic_x,periodic_y)
         !Compute basal traction
 
+        !Force a radially symmetric initial guess
+        call fill_radial_symmetry(uvel, 1000.0_dp, 1)
+        call fill_radial_symmetry(vvel, 1000.0_dp, 2)
+
         !A zero in the flow law can be problematic, so where that happens we set
         !it to the "standard" small flow law coefficient
         where (arrh == 0)
@@ -997,24 +1008,41 @@ end subroutine init_zeta
         end do
     end subroutine vel_2d_from_3d
 
-    subroutine fill_radial_symmetry(field, maxv, falloff)
-        double precision, dimension(:,:) :: field
+    subroutine fill_radial_symmetry(field, maxv, component)
+        double precision, dimension(:,:,:) :: field
         double precision :: falloff
         double precision :: maxv
+        double precision :: r, dir
+        integer::component
 
-        integer :: maxx, maxy, centx, centy, i, j
-
+        integer :: maxx, maxy, i, j, k
+        double precision::centx,centy
         maxx = size(field, 1)
         maxy = size(field, 2)
+
         centx = maxx/2
         centy = maxy/2
-
+        
         do i=1,maxy
             do j=1,maxx
-                field(i,j) = maxv / (1 + falloff*(i-centy)**2 + falloff*(j-centx)**2)
+                !compute dist. from center
+                r = sqrt((i-centy)**2 + (j-centx)**2)
+                !compute component of unit direction vector
+                if (component == 2) then
+                    dir = i-centy
+                else
+                    dir = j-centx
+                end if
+                
+                if (r /= 0) dir = dir/r
+                
+                if (r <= min(centx, centy)) then
+                    field(i,j,:) = maxv * r * dir
+                else
+                    field(i,j,:) = 0
+                end if
             end do
         end do
-
     end subroutine fill_radial_symmetry
 
 !-----------------------------------------------------
@@ -1126,8 +1154,8 @@ end subroutine init_zeta
             call directions_from_mask(geometry_mask, direction_x, direction_y)
             call write_xls("direction_x.txt",direction_x)
             call write_xls("direction_y.txt",direction_y)
-            call df_field_3d(uvel, dy, dx, dz, dudy, dudx, dudz, direction_x, direction_y)
-            call df_field_3d(vvel, dy, dx, dz, dvdy, dvdx, dvdz, direction_x, direction_y)
+            call df_field_3d(uvel, dy, dx, dz, dudy, dudx, dudz, direction_y, direction_x)
+            call df_field_3d(vvel, dy, dx, dz, dvdy, dvdx, dvdz, direction_y, direction_x)
         end if
 
         !Compute mu term from the acceleration fields
@@ -1196,7 +1224,7 @@ end subroutine init_zeta
         double precision :: rhs
           
         INTEGER i,j,k,l,m,sparuv,iter, ierr
-        double precision :: d(IJKTOT),x(IJKTOT),coef(22),err
+        double precision :: d(IJKTOT),x(IJKTOT),coef(25),err
       
         !Sparse matrix variables.  These are passed in so that allocation can be
         !done once per velocity solve instead of once per iteration
@@ -1249,7 +1277,7 @@ end subroutine init_zeta
                         !line here and and in the Y velocity section of this
                         !function.
                         !x=csp(I_J_K,i,j,k,MAXX,NZETA))=uvel(i,j,k) !Use current velocity as guess of solution
-                        do m=1,21
+                        do m=1,25
                             si = stencil_i(m,i)
                             sj = stencil_j(m,j)
                             sk = stencil_k(m,k)
@@ -1325,7 +1353,7 @@ end subroutine init_zeta
                         !line here and and in the Y velocity section of this
                         !function.
                         !x=csp(I_J_K,i,j,k,MAXX,NZETA))=vvel(i,j,k) !Use current velocity as guess of solution
-                        do m=1,21
+                        do m=1,25
                             si = stencil_i(m,i)
                             sj = stencil_j(m,j)
                             sk = stencil_k(m,k)
@@ -1425,6 +1453,10 @@ end subroutine init_zeta
             stencil_i = i - 1
         else if (pos <= 16) then
             stencil_i = i
+        else if (pos == 22) then
+            stencil_i = i - 2
+        else if (pos == 23) then
+            stencil_i = i + 2
         else
             stencil_i = i + 1
         end if
@@ -1437,6 +1469,10 @@ end subroutine init_zeta
                 stencil_j = j - 1
             case(5, 14, 15, 16, 21)
                 stencil_j = j + 1
+            case(24)
+                stencil_j = j - 2
+            case(25)
+                stencil_j = j + 2
             case default
                 stencil_j = j
         end select
@@ -1512,7 +1548,7 @@ end subroutine init_zeta
         integer :: i,j,k, MAXY, MAXX, Ndz
 
         !Output array
-        double precision, dimension(22), intent(out) :: coef
+        double precision, dimension(25), intent(out) :: coef
 
         !Output RHS value
         double precision, intent(out) :: rhs
@@ -1843,7 +1879,7 @@ end subroutine init_zeta
         
         real(dp), dimension(:), intent(in) :: zeta !*FD Irregular grid levels in vertical coordinate
         
-        real(dp), dimension(22), intent(inout) :: coef !*FD Output array of stencil coefficients
+        real(dp), dimension(25), intent(inout) :: coef !*FD Output array of stencil coefficients
         real(dp),                intent(out)   :: rhs !*FD Element of the right-hand side vector corresponding to this point
 
         !Whether or not we need to upwind or downwind lateral derivatives
@@ -1882,22 +1918,25 @@ end subroutine init_zeta
         !theta = normals(i,j) + 2*(PI/4 - normals(i,j))
         !But really this reduces to swapping sine and cosine (easy proof to work
         !through).
-        n_x = abs(sin(normals(i,j)))
-        n_y = abs(cos(normals(i,j)))
+        n_x = (sin(normals(i,j)))
+        n_y = (cos(normals(i,j)))
 
         !Determine the hydrostatic pressure at the current location
         !If we are at the part of the ice shelf above the water, 
         !then we are at 1ATM pressure which we just assume to be 0 
         !throughout the model anyway
+
         pressure = rhoi * grav * h(i,j) * zeta(k)
         if (zeta(k) > (1 - rhoi/rhoo)) then
             pressure = pressure + rhoo * grav * h(i,j) * (zeta(k) - 1 + rhoi/rhoo)
         end if
 
+        pressure = pressure/mu(i,j,k)
+
         !This line changes pressure to the vertically integrated hydrostatic
         !pressure, and applies that throughout the ice column regardless even of
         !whether the ice is underwater.
-        pressure = .5 * grav * h(i,j) * rhoi**2 / rhoo
+        !pressure = .5 * grav * h(i,j) * rhoi**2 / rhoo
 
         !Determine whether to use upwinded or downwinded derivatives for the
         !horizontal directions.
@@ -1949,13 +1988,13 @@ end subroutine init_zeta
             end if
 
 
-            rhs = pressure*n_x - mu(i,j,k)*(2*n_x*dperp_dperp & 
-                                    - n_y * dperp_dpara &
-                                    - (2*ay(i,j,k)*n_x + ax(i,j,k)*n_y)*dperp_dz)
+            rhs = pressure*n_x - (2*n_x*dperp_dperp & 
+                                  - n_y * dperp_dpara &
+                                  - (2*ay(i,j,k)*n_x + ax(i,j,k)*n_y)*dperp_dz)!*mu(i,j,k)
 
-            dx_coeff = n_x*4*mu(i,j,k)
-            dy_coeff = n_y*mu(i,j,k)
-            dz_coeff = mu(i,j,k)*(4*n_x*ax(i,j,k) + (n_y*ay(i,j,k)))
+            dx_coeff = n_x*4!*mu(i,j,k)
+            dy_coeff = n_y!*mu(i,j,k)
+            dz_coeff = (4*n_x*ax(i,j,k) + (n_y*ay(i,j,k)))!*mu(i,j,k)
         else if (component == "v") then
             !Beware of transposed derivatives ahead (because x and y are
             !switched, dx and dy have to be as well)
@@ -1978,21 +2017,21 @@ end subroutine init_zeta
                 dperp_dperp = dfdy_3d(vel_perp,i,j,k,dx)
             end if
 
-            rhs = pressure*n_y - mu(i,j,k)*(2*n_y*dperp_dperp & 
-                                    - n_x * dperp_dpara &
-                                    - (2*ax(i,j,k)*n_y + ay(i,j,k)*n_x)*dperp_dz)
+            rhs = pressure*n_y - (2*n_y*dperp_dperp & 
+                                  - n_x * dperp_dpara &
+                                  - (2*ax(i,j,k)*n_y + ay(i,j,k)*n_x)*dperp_dz)!*mu(i,j,k)
 
   
-            dy_coeff = n_y*4*mu(i,j,k)
-            dx_coeff = n_x*mu(i,j,k)
-            dz_coeff = mu(i,j,k)*(4*n_y*ay(i,j,k) + (n_x*ax(i,j,k)))
+            dy_coeff = n_y*4!*mu(i,j,k)
+            dx_coeff = n_x!*mu(i,j,k)
+            dz_coeff = (4*n_y*ay(i,j,k) + (n_x*ax(i,j,k)))!*mu(i,j,k)
         end if
 
         !Enter the z component into the finite difference scheme.
         !If we are on the top of bottom of the ice shelf, we will need
         !to upwind or downwind respectively
         if (k==1) then !Top of the ice shelf
-            write(*,*)j,i,normals(i,j),dx_coeff, dy_coeff, dz_coeff
+            write(*,*)j,i,normals(i,j),n_x, n_y
             !Finite difference coefficients for an irregular Z grid, downwinded
             dz_down1=(2.*zeta(k)-zeta(k+1)-zeta(k+2))/(zeta(k+1)-zeta(k))/(zeta(k+2)-zeta(k))
             dz_down2=(zeta(k+2)-zeta(k))/(zeta(k+2)-zeta(k+1))/(zeta(k+1)-zeta(k))
@@ -2024,22 +2063,26 @@ end subroutine init_zeta
         !coefficients have already been computed above, so we just need to make
         !sure to use the correct difference form (upwind or downwind, etc.)
         if (downwind_y) then
-            coef(IP1_J_K) = coef(IP1_J_K) + dy_coeff/dy
-            coef(I_J_K) = coef(I_J_K) - dy_coeff/dy
+            coef(IP2_J_K) = coef(IP2_J_K) - 0.5 * dy_coeff/dy
+            coef(IP1_J_K) = coef(IP1_J_K) + 2.0 * dy_coeff/dy
+            coef(I_J_K)   = coef(I_J_K)   - 1.5 * dy_coeff/dy
         else if (upwind_y) then
-            coef(I_J_K) = coef(I_J_K) + dy_coeff/dy
-            coef(IM1_J_K) = coef(IM1_J_K) - dy_coeff/dy 
+            coef(I_J_K)   = coef(I_J_K)   + 1.5 * dy_coeff/dy
+            coef(IM1_J_K) = coef(IM1_J_K) - 2.0 * dy_coeff/dy 
+            coef(IM2_J_K) = coef(IM2_J_K) + 0.5 * dy_coeff/dy
         else
             coef(IP1_J_K) = coef(IP1_J_K) + .5*dy_coeff/dy
             coef(IM1_J_K) = coef(IM1_J_K) - .5*dy_coeff/dy  
         end if
 
         if (downwind_x) then
-            coef(I_JP1_K) = coef(I_JP1_K) + dx_coeff/dx
-            coef(I_J_K) = coef(I_J_K) - dx_coeff/dx
+            coef(I_JP2_K) = coef(I_JP2_K) - 0.5 * dx_coeff/dx
+            coef(I_JP1_K) = coef(I_JP1_K) + 2.0 * dx_coeff/dx
+            coef(I_J_K)   = coef(I_J_K)   - 1.5 * dx_coeff/dx 
         else if (upwind_x) then
-            coef(I_J_K) = coef(I_J_K) + dx_coeff/dx
-            coef(I_JM1_K) = coef(I_JM1_K) - dx_coeff/dx 
+            coef(I_J_K)   = coef(I_J_K)   + 1.5 * dx_coeff/dx
+            coef(I_JM1_K) = coef(I_JM1_K) - 2.0 * dx_coeff/dx 
+            coef(I_JM2_K) = coef(I_JM2_K) + 0.5 * dx_coeff/dx
         else
             coef(I_JP1_K) = coef(I_JP1_K) + .5*dx_coeff/dx
             coef(I_JM1_K) = coef(I_JM1_K) - .5*dx_coeff/dx  

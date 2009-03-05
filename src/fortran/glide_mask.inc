@@ -3,8 +3,13 @@
 #define GLIDE_MASK_OCEAN           -2
 #define GLIDE_MASK_LAND            -1
 #define GLIDE_MASK_BOUNDARY        0
+
+!Set if ice is below the ice dynamics thickness limit
 #define GLIDE_MASK_THIN_ICE        1
+
+!Grounded Ice
 #define GLIDE_MASK_INTERIOR        2
+
 #define GLIDE_MASK_SHELF           4
 #define GLIDE_MASK_STREAM          8
 #define GLIDE_MASK_GROUNDING_LINE  16
