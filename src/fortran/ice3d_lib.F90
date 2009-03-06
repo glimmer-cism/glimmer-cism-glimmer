@@ -789,7 +789,7 @@ end subroutine init_zeta
         call sparse_allocate_workspace(matrix, options, workspace, ijktot*22)
         write(*,*)"NEW stuff added here"
 
-#if 1
+#if 0
         call write_xls_3d("arrh.txt",arrh)
         call write_xls("dzdx.txt",dzdx)
         call write_xls("dzdy.txt",dzdy)

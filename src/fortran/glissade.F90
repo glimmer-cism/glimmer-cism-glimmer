@@ -39,6 +39,7 @@
 
     use glimmer_global, only: sp, dp
     use glissade_constants
+    use glide_deriv
 
     implicit none
     private
