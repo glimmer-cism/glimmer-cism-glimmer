@@ -136,7 +136,6 @@ contains
         real(dp), dimension(:,:), intent(out) :: marine_bc_normal
 
         integer :: i, j
-        write(*,*)"Computing marine margin"
         do i = 1, size(mask, 1)
             do j = 1, size(mask, 2)
                 if (GLIDE_IS_MARINE_ICE_EDGE(mask(i,j))) then
@@ -147,10 +146,6 @@ contains
             end do
         end do
         
-        write(*,*) "NORTH:", marine_bc_normal(25,2)
-        write(*,*) "EAST: ", marine_bc_normal(50, 25)
-        write(*,*) "SOUTH:", marine_bc_normal(25,50)
-        write(*,*) "WEST: ", marine_bc_normal(2, 25)
     end subroutine
 
     function calc_normal_45deg(thck3x3)
