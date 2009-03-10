@@ -449,8 +449,10 @@ contains
           do ew = 1,model%general%ewn
              if (GLIDE_IS_THIN(model%geometry%thkmask(ew,ns))) then
                 model%temper%temp(:,ew,ns) = min(0.0d0,dble(model%climate%artm(ew,ns)))
-             else if (model%geometry%thkmask(ew,ns)<0) then
-                model%temper%temp(:,ew,ns) = 0.0d0
+             else if (model%geometry%thkmask(ew,ns) < 0) then
+                model%temper%temp(:,ew,ns) = min(0.0d0,dble(model%climate%artm(ew,ns)))
+             !else if (model%geometry%thkmask(ew,ns)<-1) then
+             !   model%temper%temp(:,ew,ns) = 0.0d0
              end if
           end do
        end do
@@ -1144,7 +1146,7 @@ contains
     upn=size(flwa,1) ; ewn=size(flwa,2) ; nsn=size(flwa,3)
 
     !------------------------------------------------------------------------------------
-    write(*,*)"Default flwa = ",default_flwa
+    !write(*,*)"Default flwa = ",default_flwa
     arrfact = (/ flow_factor * arrmlh / vis0, &   ! Value of a when T* is above -263K
                  flow_factor * arrmll / vis0, &   ! Value of a when T* is below -263K
                  -actenh / gascon,        &       ! Value of -Q/R when T* is above -263K
