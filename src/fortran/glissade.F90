@@ -278,7 +278,10 @@
           call stagvarb(workh,                         &
                         model%geomderv%stagthck,       &
                         ewn,                           &
-                        nsn) 
+                        nsn,                           & 
+                        0,                             &
+                        model%geometry%usrf,           &
+                        model%numerics%thklim) 
  
           !call geomders(model%numerics,                &
           !              model%geometry%usrf,           &
