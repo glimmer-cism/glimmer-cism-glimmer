@@ -85,7 +85,10 @@ contains
     call stagvarb(model%temper%bwat, &
          model%temper%stagbwat ,&
          model%general%  ewn, &
-         model%general%  nsn)
+         model%general%  nsn, &
+         0, &
+         model%geometry%usrf, &
+         model%numerics%thklim)
 
   contains
 

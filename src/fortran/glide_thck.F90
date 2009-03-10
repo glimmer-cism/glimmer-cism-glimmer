@@ -245,9 +245,12 @@ contains
           call stagvarb(model%geometry% thck, &
                model%geomderv% stagthck,&
                model%general%  ewn, &
-               model%general%  nsn)
-          call fix_mass_conservation(model%geometry%thck, &
-                                     model%geomderv%stagthck)
+               model%general%  nsn, &
+               1, &
+               model%geometry%usrf, &
+               model%numerics%thklim)
+          !call fix_mass_conservation(model%geometry%thck, &
+          !                          model%geomderv%stagthck)
           call df_field_2d_staggered(model%geometry%usrf, &
                                      model%numerics%dew, model%numerics%dns, &
                                      model%geomderv%dusrfdew, & 
@@ -542,19 +545,64 @@ contains
 
 !---------------------------------------------------------------------------------
 
-  subroutine stagvarb(ipvr,opvr,ewn,nsn)
+  subroutine stagvarb(ipvr,opvr,ewn,nsn,choice,usrf,thklim)
 
     use glimmer_global, only : dp ! ewn, nsn
- 
+    use paramets, only: thk0
     implicit none 
 
     real(dp), intent(out), dimension(:,:) :: opvr 
-    real(dp), intent(in), dimension(:,:) :: ipvr
-    integer :: ewn,nsn
+    real(dp), intent(in), dimension(:,:) :: ipvr, usrf
+    integer :: ewn,nsn,ew,ns
+    real(dp) :: thklim
+    !ALB added choice
+    integer, intent(in) :: choice
+    
+        
+    if (choice == 1) then !when the input var is thk
+	!ALBnew fix:
+	!If given cell has less than 100m thickness, check to see whether 
+	!it is upstream of a cell that does have thickness greater than 100m,
+	!then we can set stagthck to be 0.
+	!we have to have this extra check (to make sure the downstream cell has > 100m of ice) -
+	!because at margin cells (where only one cell out of the four is ice free), there will be 
+	!two ice free neighbours, and one must be upstream of the other, so it will set 
+	!stagthck to be zero at the margins if we don't check the amount of ice in the downstream cell...
+	    
+    do ns = 1,nsn-1
+          do ew = 1,ewn-1
+    	
+	!ew,ns cell is ice free:
+    	if (ipvr(ew,ns) <= thklim/thk0 .and. ((usrf(ew,ns) >= usrf(ew+1,ns) .and. ipvr(ew+1,ns) >= thklim/thk0) &
+	.or. (usrf(ew,ns) >= usrf(ew,ns+1) .and. ipvr(ew,ns+1) >= thklim/thk0))) then
+		opvr(ew,ns) = 0.0
 
-    opvr(1:ewn-1,1:nsn-1) = (ipvr(2:ewn,1:nsn-1) + ipvr(1:ewn-1,2:nsn) + &
-                             ipvr(2:ewn,2:nsn)   + ipvr(1:ewn-1,1:nsn-1)) / 4.0d0
-
+	!ew+1,ns cell is ice free:
+	else if (ipvr(ew+1,ns) <= thklim/thk0 .and. ((usrf(ew+1,ns) >= usrf(ew,ns) .and. ipvr(ew,ns) >= thklim/thk0) &
+	.or. (usrf(ew+1,ns) >= usrf(ew+1,ns+1) .and. ipvr(ew+1,ns+1) >= thklim/thk0))) then
+		opvr(ew,ns) = 0.0
+	
+	!ew,ns+1 cell is ice free:
+	else if (ipvr(ew,ns+1) <= thklim/thk0 .and. ((usrf(ew,ns+1) >= usrf(ew,ns) .and. ipvr(ew,ns) >= thklim/thk0) &
+	.or. (usrf(ew,ns+1) >= usrf(ew+1,ns+1) .and. ipvr(ew+1,ns+1) >= thklim/thk0))) then
+		opvr(ew,ns) = 0.0
+	
+	!ew+1,ns+1 cell is ice free:
+	else if (ipvr(ew+1,ns+1) <= thklim/thk0 .and. ((usrf(ew+1,ns+1) >= usrf(ew+1,ns) .and. ipvr(ew+1,ns) >=thklim/thk0) &
+	 .or. (usrf(ew+1,ns+1) >= usrf(ew,ns+1) .and. ipvr(ew,ns+1) >=thklim/thk0))) then
+     		opvr(ew,ns) = 0.0	
+    	else	
+    		opvr(ew,ns) = (ipvr(ew+1,ns) + ipvr(ew,ns+1) + &
+    	                             ipvr(ew+1,ns+1) + ipvr(ew,ns)) / 4.0d0
+    	end if
+  
+    	end do
+    end do
+	
+    else
+	opvr(1:ewn-1,1:nsn-1) = (ipvr(2:ewn,1:nsn-1) + ipvr(1:ewn-1,2:nsn) + &
+                                 ipvr(2:ewn,2:nsn)   + ipvr(1:ewn-1,1:nsn-1)) / 4.0d0
+    end if
   end subroutine stagvarb
 
   subroutine fix_mass_conservation(thck, stagthck)
@@ -564,25 +612,27 @@ contains
     !*FD mailing list archive:
     !*FD http://forge.nesc.ac.uk/pipermail/glimmer-discuss/2007-October/000280.html
     !*FD (Message from Anne Le Brocq, October 22, 2007)
+    use glimmer_paramets, only: thk0
     real(dp), dimension(:,:) ::thck, stagthck
     integer :: ewn, nsn
-
+      
     ewn = size(thck,1)
     nsn = size(thck,2)
 
-    where (thck(1:ewn-1,1:nsn-1) < 100)
+
+    where (thck(1:ewn-1,1:nsn-1)*thk0 < 100)
         stagthck = 0
     endwhere
 
-    where (thck(1:ewn-1, 2:nsn) < 100)
+    where (thck(1:ewn-1, 2:nsn)*thk0 < 100)
         stagthck = 0
     endwhere
 
-    where (thck(2:ewn, 1:nsn-1) < 100)
+    where (thck(2:ewn, 1:nsn-1)*thk0 < 100)
         stagthck = 0
     endwhere
 
-    where (thck(2:ewn, 2:nsn) < 100)
+    where (thck(2:ewn, 2:nsn)*thk0 < 100)
         stagthck = 0
     endwhere
   end subroutine

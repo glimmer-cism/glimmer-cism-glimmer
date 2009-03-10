@@ -982,8 +982,8 @@ contains
                rhoi*((model%geometry%topg(ew,ns) *thk0 &
                    - model%climate%eus*thk0)/ rhoo)
              end if 
-             if(Z <= 10d-4) then !avoid division by zero
-                Z = 10d-4
+             if(Z <= 1.0) then !avoid division by zero
+                Z = 1.0
              end if 
              
              tau = ((tau_factor*model%velocity%tau_x(ew,ns))**2 +&

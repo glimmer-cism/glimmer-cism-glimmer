@@ -255,9 +255,12 @@ contains
     call stagvarb(model%geometry% thck, &
          model%geomderv% stagthck,&
          model%general%  ewn, &
-         model%general%  nsn)
-    call fix_mass_conservation(model%geometry%thck, &
-                               model%geomderv%stagthck)
+         model%general%  nsn, &
+         1, &
+         model%geometry%usrf,&
+         model%numerics%thklim)
+    !call fix_mass_conservation(model%geometry%thck, &
+    !                           model%geomderv%stagthck)
  
     call df_field_2d_staggered(model%geometry%usrf, &
                                model%numerics%dew, model%numerics%dns, &
