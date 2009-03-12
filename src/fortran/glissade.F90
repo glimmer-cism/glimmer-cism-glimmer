@@ -40,6 +40,7 @@
     use glimmer_global, only: sp, dp
     use glissade_constants
     use glide_deriv
+    use glide_grids, only: stagvarb
 
     implicit none
     private
@@ -90,7 +91,6 @@
 !lipscomb - Later, may want to write glissade_velo module
     use glide_types
     use glide_velo
-    use glide_thck, only: stagvarb
  
     implicit none
  
@@ -278,10 +278,7 @@
           call stagvarb(workh,                         &
                         model%geomderv%stagthck,       &
                         ewn,                           &
-                        nsn,                           & 
-                        0,                             &
-                        model%geometry%usrf,           &
-                        model%numerics%thklim) 
+                        nsn                            ) 
  
           !call geomders(model%numerics,                &
           !              model%geometry%usrf,           &

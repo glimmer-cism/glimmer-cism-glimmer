@@ -9,6 +9,7 @@ module glide_velo_higher
     use glimmer_global, only : dp
     use glide_types
     use glide_vertint
+    use glide_grids, only: stagvarb
     implicit none
     
     !TODO: Parameterize the following globals
@@ -86,8 +87,8 @@ contains
 
             stagmassb = 0
 
-             call staggered_field_2d(model%geometry% thck, &
-                         model%geomderv%stagthck)
+             call stagvarb(model%geometry% thck, model%geomderv%stagthck, &
+                            model%general%ewn, model%general%nsn)
                
              call df_field_2d_staggered(model%geometry%usrf, model%numerics%dew, model%numerics%dns,& 
                     model%geomderv%dusrfdew, model%geomderv%dusrfdns, .false., .false.)
@@ -229,7 +230,7 @@ contains
         !Put the surface, bed, and thickness onto staggered grids
         !We do this because Ice3d is by nature unstaggered.
         !Note that we are already passed the staggered thickness
-        call staggered_field_2d(usrf, stagusrf)
+        call stagvarb(usrf, stagusrf,ewn,nsn)
         staglsrf = stagusrf - stagthck
 
         !Compute second derivatives of thickness and surface, these are needed
@@ -470,11 +471,11 @@ contains
 
         call glimToIce3d_3d(flwa,flwa_t,ewn,nsn,upn)
       
-        call unstagger_field_3d_periodic(vvel_t, uvel_t_unstag)
-        call unstagger_field_3d_periodic(vvel_t, uvel_t_unstag)
+        call unstagger_field_3d(vvel_t, uvel_t_unstag, periodic_ew, periodic_ns)
+        call unstagger_field_3d(vvel_t, uvel_t_unstag, periodic_ew, periodic_ns)
        
-        call unstagger_field_3d_periodic(kinematic_bc_u_t,kinematic_bc_u_t_unstag)
-        call unstagger_field_3d_periodic(kinematic_bc_v_t,kinematic_bc_v_t_unstag)
+        call unstagger_field_3d(kinematic_bc_u_t,kinematic_bc_u_t_unstag, periodic_ew, periodic_ns)
+        call unstagger_field_3d(kinematic_bc_v_t,kinematic_bc_v_t_unstag, periodic_ew, periodic_ns)
         
         !In unstaggering the boundary condition fields, we need to remove points
         !that aren't on the boundary
@@ -487,7 +488,7 @@ contains
             end do
         end do
 
-        call unstagger_field_2d_periodic(btrc_t, btrc_t_unstag)
+        call unstagger_field_2d(btrc_t, btrc_t_unstag, periodic_ew, periodic_ns)
         write(*,*) ewn, dew, nsn, dns, upn
         write(*,*) shape(btrc)
         !Compute rescaled coordinate parameters (needed because Pattyn uses an

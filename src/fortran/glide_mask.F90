@@ -63,6 +63,10 @@ contains
     integer ew,ns
     real(dp), parameter :: con = - rhoi / rhoo
 
+    !Create an array to "fake" the boundaries of the mask so that boundary
+    !finding can work even on the boundaries of the real mask.
+    integer, dimension(0:model%general%ewn+1,0:model%general%nsn+1) :: maskWithBounds;
+
     MASK = 0
     model%geometry%iarea = 0.
     model%geometry%ivol = 0.
@@ -94,26 +98,28 @@ contains
     model%geometry%iarea = model%geometry%iarea * model%numerics%dew * model%numerics%dns
     model%geometry%ivol = model%geometry%ivol * model%numerics%dew * model%numerics%dns
 
+    maskWithBounds(1:model%general%ewn, 1:model%general%nsn) = MASK
+
     ! finding boundaries
-    do ns=2,model%general%nsn-1
-       do ew = 2,model%general%ewn-1
+    do ns=1,model%general%nsn
+       do ew = 1,model%general%ewn
           if (GLIDE_IS_FLOAT(MASK(ew,ns))) then
              ! shelf front
-             if (GLIDE_IS_OCEAN(MASK(ew-1,ns)) .or. GLIDE_IS_OCEAN(MASK(ew+1,ns)) .or. &
-                  GLIDE_IS_OCEAN(MASK(ew,ns-1)) .or. GLIDE_IS_OCEAN(MASK(ew,ns+1))) then
+             if (GLIDE_IS_OCEAN(maskWithBounds(ew-1,ns)) .or. GLIDE_IS_OCEAN(maskWithBounds(ew+1,ns)) .or. &
+                  GLIDE_IS_OCEAN(maskWithBounds(ew,ns-1)) .or. GLIDE_IS_OCEAN(maskWithBounds(ew,ns+1))) then
                 MASK(ew,ns) = ior(MASK(ew,ns),GLIDE_MASK_SHELF_FRONT)
              end if
           else if (GLIDE_IS_GROUND(MASK(ew,ns))) then
              ! land margin
-             if (GLIDE_IS_LAND(MASK(ew-1,ns)) .or. GLIDE_IS_LAND(MASK(ew+1,ns)) .or. &
-                  GLIDE_IS_LAND(MASK(ew,ns-1)) .or. GLIDE_IS_LAND(MASK(ew,ns+1))) then
+             if (GLIDE_IS_LAND(maskWithBounds(ew-1,ns)) .or. GLIDE_IS_LAND(maskWithBounds(ew+1,ns)) .or. &
+                  GLIDE_IS_LAND(maskWithBounds(ew,ns-1)) .or. GLIDE_IS_LAND(maskWithBounds(ew,ns+1))) then
                 MASK(ew,ns) = ior(MASK(ew,ns),GLIDE_MASK_LAND_MARGIN)
              end if
              ! grounding line
-             if (GLIDE_IS_FLOAT(MASK(ew-1,ns)) .or. &
-                  GLIDE_IS_FLOAT(MASK(ew+1,ns)) .or. &
-                  GLIDE_IS_FLOAT(MASK(ew,ns-1)) .or. & 
-                  GLIDE_IS_FLOAT(MASK(ew,ns+1))) then
+             if (GLIDE_IS_FLOAT(maskWithBounds(ew-1,ns)) .or. &
+                  GLIDE_IS_FLOAT(maskWithBounds(ew+1,ns)) .or. &
+                  GLIDE_IS_FLOAT(maskWithBounds(ew,ns-1)) .or. & 
+                  GLIDE_IS_FLOAT(maskWithBounds(ew,ns+1))) then
                 MASK(ew,ns) = ior(MASK(ew,ns),GLIDE_MASK_GROUNDING_LINE)
              end if
           end if

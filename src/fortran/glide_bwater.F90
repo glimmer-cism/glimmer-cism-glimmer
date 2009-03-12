@@ -8,6 +8,7 @@ contains
     use glimmer_global, only : dp 
     use glimmer_paramets, only : thk0
     use glide_thck
+    use glide_grids, only: stagvarb
     implicit none
 
     type(glide_global_type),intent(inout) :: model
@@ -85,10 +86,7 @@ contains
     call stagvarb(model%temper%bwat, &
          model%temper%stagbwat ,&
          model%general%  ewn, &
-         model%general%  nsn, &
-         0, &
-         model%geometry%usrf, &
-         model%numerics%thklim)
+         model%general%  nsn)
 
   contains
 

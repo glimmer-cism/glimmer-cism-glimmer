@@ -56,6 +56,7 @@ module glide
   use glide_deriv
   use glimmer_config
   use glimmer_global
+  use glide_grids, only: stagvarb
   integer, private, parameter :: dummyunit=99
 
 contains

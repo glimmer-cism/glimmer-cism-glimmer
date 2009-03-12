@@ -53,12 +53,14 @@ module glide_thck
   use glimmer_sparse
   use glimmer_sparse_solver
   use glimmer_sparse_util
+  use glide_grids, only: stagvarb
+
   !DEBUG ONLY, these should be deleted eventually
   use glide_stop
   use xls
   use glide_io
   private
-  public :: init_thck, thck_nonlin_evolve, thck_lin_evolve, stagvarb, timeders, &
+  public :: init_thck, thck_nonlin_evolve, thck_lin_evolve, timeders, &
             stagleapthck, fix_mass_conservation 
 
 #ifdef DEBUG_PICARD
@@ -544,66 +546,6 @@ contains
 
 
 !---------------------------------------------------------------------------------
-
-  subroutine stagvarb(ipvr,opvr,ewn,nsn,choice,usrf,thklim)
-
-    use glimmer_global, only : dp ! ewn, nsn
-    use glimmer_paramets, only: thk0
-    implicit none 
-
-    real(dp), intent(out), dimension(:,:) :: opvr 
-    real(dp), intent(in), dimension(:,:) :: ipvr, usrf
-    integer :: ewn,nsn,ew,ns
-    real(dp) :: thklim
-    !ALB added choice
-    integer, intent(in) :: choice
-    
-        
-    if (choice == 1) then !when the input var is thk
-	!ALBnew fix:
-	!If given cell has less than 100m thickness, check to see whether 
-	!it is upstream of a cell that does have thickness greater than 100m,
-	!then we can set stagthck to be 0.
-	!we have to have this extra check (to make sure the downstream cell has > 100m of ice) -
-	!because at margin cells (where only one cell out of the four is ice free), there will be 
-	!two ice free neighbours, and one must be upstream of the other, so it will set 
-	!stagthck to be zero at the margins if we don't check the amount of ice in the downstream cell...
-	    
-    do ns = 1,nsn-1
-          do ew = 1,ewn-1
-    	
-	!ew,ns cell is ice free:
-    	if (ipvr(ew,ns) <= thklim/thk0 .and. ((usrf(ew,ns) >= usrf(ew+1,ns) .and. ipvr(ew+1,ns) >= thklim/thk0) &
-	.or. (usrf(ew,ns) >= usrf(ew,ns+1) .and. ipvr(ew,ns+1) >= thklim/thk0))) then
-		opvr(ew,ns) = 0.0
-
-	!ew+1,ns cell is ice free:
-	else if (ipvr(ew+1,ns) <= thklim/thk0 .and. ((usrf(ew+1,ns) >= usrf(ew,ns) .and. ipvr(ew,ns) >= thklim/thk0) &
-	.or. (usrf(ew+1,ns) >= usrf(ew+1,ns+1) .and. ipvr(ew+1,ns+1) >= thklim/thk0))) then
-		opvr(ew,ns) = 0.0
-	
-	!ew,ns+1 cell is ice free:
-	else if (ipvr(ew,ns+1) <= thklim/thk0 .and. ((usrf(ew,ns+1) >= usrf(ew,ns) .and. ipvr(ew,ns) >= thklim/thk0) &
-	.or. (usrf(ew,ns+1) >= usrf(ew+1,ns+1) .and. ipvr(ew+1,ns+1) >= thklim/thk0))) then
-		opvr(ew,ns) = 0.0
-	
-	!ew+1,ns+1 cell is ice free:
-	else if (ipvr(ew+1,ns+1) <= thklim/thk0 .and. ((usrf(ew+1,ns+1) >= usrf(ew+1,ns) .and. ipvr(ew+1,ns) >=thklim/thk0) &
-	 .or. (usrf(ew+1,ns+1) >= usrf(ew,ns+1) .and. ipvr(ew,ns+1) >=thklim/thk0))) then
-     		opvr(ew,ns) = 0.0	
-    	else	
-    		opvr(ew,ns) = (ipvr(ew+1,ns) + ipvr(ew,ns+1) + &
-    	                             ipvr(ew+1,ns+1) + ipvr(ew,ns)) / 4.0d0
-    	end if
-  
-    	end do
-    end do
-	
-    else
-	opvr(1:ewn-1,1:nsn-1) = (ipvr(2:ewn,1:nsn-1) + ipvr(1:ewn-1,2:nsn) + &
-                                 ipvr(2:ewn,2:nsn)   + ipvr(1:ewn-1,1:nsn-1)) / 4.0d0
-    end if
-  end subroutine stagvarb
 
   subroutine fix_mass_conservation(thck, stagthck)
     !*FD Fixes a problem where the thickness staggering introduces
