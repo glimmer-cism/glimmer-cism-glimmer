@@ -548,7 +548,7 @@ contains
   subroutine stagvarb(ipvr,opvr,ewn,nsn,choice,usrf,thklim)
 
     use glimmer_global, only : dp ! ewn, nsn
-    use paramets, only: thk0
+    use glimmer_paramets, only: thk0
     implicit none 
 
     real(dp), intent(out), dimension(:,:) :: opvr 
