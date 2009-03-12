@@ -24,11 +24,11 @@ module ice3d_lib
     implicit none
     double precision :: small, zip, toler_adjust_factor
     PARAMETER(SMALL=1.D-10,ZIP=1.D-30)
-    PARAMETER(toler_adjust_factor=1.0)
+    PARAMETER(toler_adjust_factor=1.1)
 
     double precision, parameter :: plastic_bed_regularization = 1e-2
 
-    logical, parameter :: sparverbose = .true.
+    logical, parameter :: sparverbose = .false.
 
 !------------------------------------------------------
 !   lookup coordinates in sparse matrix
@@ -94,88 +94,6 @@ contains
 !     *                                       *
 !     *****************************************
 !
-!
-!------------------------------------------------------
-!   Copying matrices. This subroutine copies the newly
-!   calculated ice thickness on the old ones
-!------------------------------------------------------
-!
-      SUBROUTINE mapmatrix(h,hnew,MAXY,MAXX)
-!
-        INTEGER MAXX,MAXY
-        double precision :: h(MAXY,MAXX),hnew(MAXY,MAXX)
-!
-      INTEGER i,j
-!
-      do 10 i=1,MAXY
-        do 20 j=1,MAXX
-          h(i,j)=hnew(i,j)
-   20   CONTINUE
-   10 CONTINUE
-      return
-      END subroutine
-!
-!
-!------------------------------------------------------
-!   Surface mass balance parameterization. This routine
-!   should be altered by the user
-!------------------------------------------------------
-!
-      SUBROUTINE environment(massb,MAXY,MAXX)
-!
-        INTEGER MAXX,MAXY
-        double precision :: massb(MAXY,MAXX)
-!
-      INTEGER i,j
-!
-      do 10 i=1,MAXY
-        do 20 j=1,MAXX
-          massb(i,j)=0.3
-   20   CONTINUE
-   10 CONTINUE
-      return
-      END subroutine
-!
-!
-!------------------------------------------------------
-!   Thermomechanical coupling: determination of 'arrh'.
-!   In this example this factor is kept constant as
-!   temperature coupling is not considered
-!------------------------------------------------------
-!
-      SUBROUTINE tcoupling(arrh,MAXY,MAXX,NZETA,SHTUNE)
-!
-        INTEGER MAXX,MAXY,NZETA
-        double precision :: arrh(MAXY,MAXX,NZETA),SHTUNE
-!
-      INTEGER i,j,k
-!
-      do 10 i=1,MAXY
-        do 20 j=1,MAXX
-          do 30 k=1,NZETA
-            arrh(i,j,k)=SHTUNE
-   30     CONTINUE
-   20   CONTINUE
-   10 CONTINUE
-      return
-      END subroutine
-      
-subroutine init_zeta(zeta)
-    double precision, dimension(:), intent(out) :: zeta
-    integer :: nzeta, k
-
-    nzeta = size(zeta,1)
-
-    do k=1,NZETA
-        !kprime = 41D0*k / nzeta
-        !zeta(k)=(-2.5641025641D-4)*(kprime-1.)**2+3.5256410256D-2*(kprime-1.)-&
-        !  8.0047080075D-13
-        zeta(K) = (k-1D0)/(nzeta-1D0)
-    end do
-    zeta(1)=0.
-    zeta(NZETA)=1
-end subroutine init_zeta
- 
 !
 !
 !------------------------------------------------------
@@ -317,214 +235,6 @@ end subroutine init_zeta
         call write_xls_3d("by.txt",by)
         call write_xls_3d("cxy.txt",cxy)
 #endif
-    end subroutine
-!
-!
-!------------------------------------------------------
-!   ice-sheet equation
-!------------------------------------------------------
-!
-    SUBROUTINE spice2d(h,hnew,hb,diffus,u,v,massb,MAXY,MAXX,&
-        IJTOT,GRIDX,GRIDY,TSTEP,SMALL,PERIODIC,DIFTYPE)
-!
-        INTEGER MAXX,MAXY,IJTOT,PERIODIC,DIFTYPE
-        double precision :: h(MAXY,MAXX),hnew(MAXY,MAXX),hb(MAXY,MAXX)
-        double precision :: diffus(MAXY,MAXX),massb(MAXY,MAXX)
-        double precision :: u(MAXY,MAXX),v(MAXY,MAXX)
-        double precision :: GRIDX,GRIDY,TSTEP,SMALL
-!
-        INTEGER i,j,k,m,iter
-        double precision :: d(IJTOT),coef(6),x(IJTOT),hmean
-        double precision :: err,dipx,dipy,dimx,dimy,dtdx,dtdy,tol
-        double precision :: alfa,beta,gamma,delta,admx,adpx,admy,adpy
-        double precision :: dtdx2,dtdy2
-      
-      
-        double precision, dimension(:), allocatable :: sa
-        integer, dimension(:), allocatable :: ija
-
-        !Allocate sparse matrix storage
-        allocate(sa(ijtot*22))
-        allocate(ija(ijtot*22))
-!
-   
-        ija = 0
-        sa  = 0
-        d   = 0
-        x   = 0
-   
-        tol=1.e-5
-        k=IJTOT+2;
-        dtdx=TSTEP/(2.*GRIDX*GRIDX)
-        dtdy=TSTEP/(2.*GRIDY*GRIDY)
-        dtdx2=TSTEP/(4.*GRIDX)
-        dtdy2=TSTEP/(4.*GRIDY)
-        if (DIFTYPE.eq.1) then
-            alfa=1.
-            beta=1.
-            gamma=1.
-            delta=1.
-        else
-            alfa=0.
-            beta=0.
-            gamma=0.
-            delta=0.
-        endif
-        
-        do 10 i=1,MAXY
-            do 20 j=1,MAXX
-                coef = 0
-          
-                if (i.eq.1.or.i.eq.MAXY.or.j.eq.1.or.j.eq.MAXX) then
-                    coef(3)=1.
-                    coef(6)=h(i,j)
-                else
-                    dipx=dtdx*(diffus(i,j+1)+diffus(i,j))
-                    dimx=dtdx*(diffus(i,j)+diffus(i,j-1))
-                    dipy=dtdy*(diffus(i+1,j)+diffus(i,j))
-                    dimy=dtdy*(diffus(i,j)+diffus(i-1,j))
-                    adpx=dtdx2*(u(i,j)+u(i,j+1))
-                    admx=dtdx2*(u(i,j)+u(i,j-1))
-                    adpy=dtdy2*(v(i,j)+v(i+1,j))
-                    admy=dtdy2*(v(i,j)+v(i-1,j))
-                    coef(1)=(-delta*dimy)+(delta-1.)*admy
-                    coef(2)=(-beta*dimx)+(beta-1.)*admx
-                    coef(3)=1.+alfa*dipx+beta*dimx+gamma*dipy+delta*dimy-&
-                        (alfa-1.)*adpx+(beta-1.)*admx-(gamma-1.)*adpy+&
-                        (delta-1.)*admy
-                    coef(IM1_J_KP1)=(-alfa*dipx)-(alfa-1.)*adpx
-                    coef(5)=(-gamma*dipy)-(gamma-1.)*adpy
-                    coef(6)=h(i,j)+alfa*dipx*(hb(i,j+1)-hb(i,j))-beta*&
-                        dimx*(hb(i,j)-hb(i,j-1))+gamma*dipy*(hb(i+1,j)-&
-                        hb(i,j))-delta*dimy*(hb(i,j)-hb(i-1,j))+&
-                        massb(i,j)*TSTEP
-                endif
-                sa(cspice(3,i,j,MAXX))=coef(3)
-                d(cspice(3,i,j,MAXX))=coef(6)
-                x(cspice(3,i,j,MAXX))=h(i,j)
-                ija(cspice(3,i,j,MAXX))=k
-                do 40 m=1,5
-                    if (m.ne.3.and.abs(coef(m)).gt.SMALL) then
-                        sa(k)=coef(m)
-                        ija(k)=cspice(m,i,j,MAXX)
-                        k=k+1
-                    endif
-   40           continue
-   20       continue
-   10   continue
-        ija(MAXX*MAXY+1)=k
-        !CALL linbcg(IJTOT,d,x,1,tol,200,iter,err,sa,ija)
-        k=0
-        hmean=0.
-        do 50 i=1,MAXY
-            do 60 j=1,MAXX
-                k=k+1
-                hnew(i,j)=x(k)
-                if (hnew(i,j).lt.0.)hnew(i,j)=0.
-                hmean=hmean+hnew(i,j)
-   60       continue
-   50   continue
-        if (PERIODIC.eq.1) then
-            do 100 i=1,MAXY
-                hnew(i,1)=hnew(i,MAXX-1)
-                hnew(i,MAXX)=hnew(i,2)
-  100       CONTINUE
-            do 110 j=1,MAXX
-                hnew(1,j)=hnew(MAXY-1,j)
-                hnew(MAXY,j)=hnew(2,j)
-  110       CONTINUE
-        endif
-        write(*,*)iter,hmean/IJTOT,massb(10,10)
-      
-        deallocate(sa)
-        deallocate(ija)
-      
-        return
-    end subroutine
-!
-!
-!------------------------------------------------------
-!   Diffusivities according to 0th order model (SIA)
-!------------------------------------------------------
-!
-    SUBROUTINE diffus1(dzdx,dzdy,h,diff1,zeta,arrh,diffus,&
-        MAXY,MAXX,NZETA,FLOWN,PERIODIC_X, PERIODIC_Y)
-
-        INTEGER MAXX,MAXY,NZETA
-        double precision :: dzdx(MAXY,MAXX),dzdy(MAXY,MAXX)
-        double precision :: h(MAXY,MAXX),diff1(MAXY,MAXX,NZETA)
-        double precision :: zeta(NZETA),arrh(MAXY,MAXX,NZETA)
-        double precision :: diffus(MAXY,MAXX),FLOWN
-
-        logical :: periodic_x, periodic_y
-        INTEGER i,j,k
-        double precision :: grad,d,z
-   
-        diff1 = 0
-
-        do 10 i=2,MAXY-1
-            do 20 j=2,MAXX-1
-                grad=dzdx(i,j)*dzdx(i,j)+dzdy(i,j)*dzdy(i,j)
-                if (h(i,j).gt.0.) then
-                    d=(RHOI*GRAV*h(i,j))**FLOWN
-                else
-                    d=0.
-                endif
-                do 30 k=(NZETA-1),1,-1
-                    z=(0.5*(zeta(k+1)+zeta(k)))**FLOWN
-                    diff1(i,j,k)=d*h(i,j)*grad*(arrh(i,j,k+1)+arrh(i,j,k))*&
-                        z*(zeta(k+1)-zeta(k))+diff1(i,j,k+1)
-   30           CONTINUE
-                diffus(i,j)=0.
-                do 40 k=2,NZETA
-                    diffus(i,j)=diffus(i,j)+0.5*(diff1(i,j,k)+&
-                        diff1(i,j,k-1))*(zeta(k)-zeta(k-1))
-   40           CONTINUE
-                diffus(i,j)=diffus(i,j)*h(i,j)
-   20       CONTINUE
-   10   CONTINUE
-
-        if (PERIODIC_X) then
-            do 100 i=1,MAXY
-                diffus(i,MAXX)=diffus(i,2)
-                diffus(i,1)=diffus(i,MAXX-1)
-                do 110 k=1,NZETA
-                    diff1(i,MAXX,k)=diff1(i,2,k)
-                    diff1(i,1,k)=diff1(i,MAXX-1,k)
-  110           CONTINUE
-  100       CONTINUE
-        else
-            do 140 i=1,MAXY
-                diffus(i,MAXX)=0.
-                diffus(i,1)=0.
-                do 150 k=1,NZETA
-                    diff1(i,MAXX,k)=0.
-                    diff1(i,1,k)=0.
-  150           CONTINUE
-  140       CONTINUE
-        endif
-
-        if (PERIODIC_Y) then
-            do 120 j=1,MAXX
-                diffus(MAXY,j)=diffus(2,j)
-                diffus(1,j)=diffus(MAXY-1,j)
-                do 130 k=1,NZETA
-                    diff1(MAXY,j,k)=diff1(2,j,k)
-                    diff1(1,j,k)=diff1(MAXY-1,j,k)
-  130           CONTINUE
-  120       CONTINUE
-        else
-            do 160 j=1,MAXX
-                diffus(MAXY,j)=0.
-                diffus(1,j)=0.
-                do 170 k=1,NZETA
-                    diff1(MAXY,j,k)=0.
-                    diff1(1,j,k)=0.
-  170           CONTINUE
-  160       CONTINUE
-        endif
- 
-        return
     end subroutine
 !
 !
@@ -805,6 +515,7 @@ end subroutine init_zeta
         call write_xls("dhbdx.txt",dhbdx)
         call write_xls("dhbdy.txt",dhbdy)
         call write_xls("latbc.txt",marine_bc_normal)
+        call write_xls_int("geometry_mask.txt",geometry_mask)
         write(*,*),"ZETA=",zeta
 #endif
 
@@ -819,9 +530,9 @@ end subroutine init_zeta
         !Compute basal traction
 
         !Force a radially symmetric initial guess
-        call fill_radial_symmetry(uvel, 1000.0_dp, 1)
-        call fill_radial_symmetry(vvel, 1000.0_dp, 2)
-
+        !call fill_radial_symmetry(uvel, 1000.0_dp, 1)
+        !call fill_radial_symmetry(vvel, 1000.0_dp, 2)
+        
         !A zero in the flow law can be problematic, so where that happens we set
         !it to the "standard" small flow law coefficient
         where (arrh == 0)
@@ -858,7 +569,6 @@ end subroutine init_zeta
                         geometry_mask,dudx, dudy, dudz, dvdx, dvdy, dvdz,&
                         direction_x, direction_y)
             call write_xls_3d("mu.txt",mu)
-            !stop
             !Apply periodic boundary conditions to the viscosity
             call periodic_boundaries_3d_stag(mu,periodic_x,periodic_y)
             !call write_xls_3d("mu.txt",mu)
@@ -1133,7 +843,7 @@ end subroutine init_zeta
         double precision, dimension(:,:,:), intent(inout) :: dudx, dudy, dudz
         double precision, dimension(:,:,:), intent(inout) :: dvdx, dvdy, dvdz
         double precision, dimension(:,:),   intent(inout) :: direction_x, direction_y
-
+        double precision, dimension(size(uvel,1),size(uvel,2),size(uvel,3)) :: uvel_test, vvel_test
 !
         INTEGER :: i,j,k, MAXX, MAXY, NZETA
         double precision :: macht
@@ -1144,7 +854,20 @@ end subroutine init_zeta
         NZETA = size(dz)
 
         macht=(1.-FLOWN)/(2.*FLOWN)
-      
+     
+        !TEST of upwinding shelf boundary derivatives:
+        !Everywhere where there's no ice, we set the velocity
+        !to NaN.  If a location with no ice is ever used, this should
+        !propegate
+        uvel_test = uvel
+        vvel_test = vvel
+        !do k=1,NZETA
+        !    where(.not. GLIDE_HAS_ICE(geometry_mask))
+        !        uvel_test(:,:,k) = NaN
+        !        vvel_test(:,:,k) = NaN
+        !    endwhere
+        !end do
+
         !TODO: Implement option for upstream differencing
         if (UPSTREAM) then
             !Upstream the number 
@@ -1154,8 +877,8 @@ end subroutine init_zeta
             call directions_from_mask(geometry_mask, direction_x, direction_y)
             call write_xls("direction_x.txt",direction_x)
             call write_xls("direction_y.txt",direction_y)
-            call df_field_3d(uvel, dy, dx, dz, dudy, dudx, dudz, direction_y, direction_x)
-            call df_field_3d(vvel, dy, dx, dz, dvdy, dvdx, dvdz, direction_y, direction_x)
+            call df_field_3d(uvel_test, dy, dx, dz, dudy, dudx, dudz, direction_y, direction_x)
+            call df_field_3d(vvel_test, dy, dx, dz, dvdy, dvdx, dvdz, direction_y, direction_x)
         end if
 
         !Compute mu term from the acceleration fields
@@ -1182,7 +905,6 @@ end subroutine init_zeta
                 end do
             end do
         end do
-
         return
     end subroutine
 
@@ -1264,8 +986,8 @@ end subroutine init_zeta
                         else
 
                             call sparse_setup("u", i, j, k, mu, dzdx, dzdy, ax, ay, bx, by, cxy, &
-                                  h, gridx, gridy, zeta, uvel, vvel, dhbdx, dhbdy, beta, kinematic_bc_u, &
-                                  latbc_normal, maxx, maxy, Nzeta, coef, rhs)
+                                  h, gridx, gridy, zeta, uvel, vvel, dhbdx, dhbdy, beta, geometry_mask, &
+                                  kinematic_bc_u, latbc_normal, maxx, maxy, Nzeta, coef, rhs)
                         endif
                         !write(*,*) i,j,k,IS_NAN(latbc_normal(i,j)), &
                         !      minval(coef), maxval(coef)
@@ -1342,8 +1064,8 @@ end subroutine init_zeta
                         else
 
                             call sparse_setup("v", i, j, k, mu, dzdx, dzdy, ax, ay, bx, by, cxy, &
-                                  h, gridx, gridy, zeta, uvel, vvel, dhbdx, dhbdy, beta, kinematic_bc_v, &
-                                  latbc_normal, maxx, maxy, Nzeta, coef, rhs)
+                                  h, gridx, gridy, zeta, uvel, vvel, dhbdx, dhbdy, beta, geometry_mask, &
+                                  kinematic_bc_v, latbc_normal, maxx, maxy, Nzeta, coef, rhs)
                         endif
                         d(stencil_center_idx)=rhs
                         !Preliminary benchmarks indicate the we actually reach
@@ -1394,28 +1116,6 @@ end subroutine init_zeta
     end function sparuv
 
 !
-!------------------------------------------------------
-!   lookup coordinates in sparse matrix for 2D matrix
-!
-!   Reference:
-!     1   ->   i - 1, j
-!     2   ->   i, j - 1
-!     3   ->   i, j
-!     4   ->   i, j + 1
-!     5   ->   i + 1, j
-!------------------------------------------------------
-!
-      FUNCTION cspice(pos,i,j,MAXX)
-!
-        INTEGER pos,i,j,cspice,MAXX
-!Ho
-      if (pos.eq.1) cspice=(i-2)*MAXX+j
-      if (pos.eq.2) cspice=(i-1)*MAXX+j-1
-      if (pos.eq.3) cspice=(i-1)*MAXX+j
-      if (pos.eq.4) cspice=(i-1)*MAXX+j+1
-      if (pos.eq.5) cspice=i*MAXX+j
-      return
-      END function
 !
 !
 !------------------------------------------------------
@@ -1542,7 +1242,7 @@ end subroutine init_zeta
     !DON'T PANIC, this works!  It's been tested!  Really!  The bug is somewhere
     !else!
     subroutine sparse_setup(component, i,j,k,mu,dzdx,dzdy,ax,ay,bx,by,cxy,&
-        h,dx,dy,dz,uvel,vvel,dhbdx,dhbdy,beta,kinematic_bc,latbc_normal,MAXX,MAXY,Ndz,&
+        h,dx,dy,dz,uvel,vvel,dhbdx,dhbdy,beta,geometry_mask,kinematic_bc,latbc_normal,MAXX,MAXY,Ndz,&
         coef, rhs)
 !
         integer :: i,j,k, MAXY, MAXX, Ndz
@@ -1577,6 +1277,8 @@ end subroutine init_zeta
 
         !Basal Traction
         double precision, dimension(:,:) :: beta
+
+        integer, dimension(:,:) :: geometry_mask
 
         !Kinematic boundary condition for this velocity component
         double precision, dimension(:,:,:) :: kinematic_bc
@@ -1710,8 +1412,8 @@ end subroutine init_zeta
         if (.not. IS_NAN(kinematic_bc(i,j,k))) then !Check whether the velocity has been specified directly at this point
             rhs = kinematic_bc(i,j,k)
             coef(I_J_K) = 1
-        else if (.not. IS_NAN(latbc_normal(i,j))) then !Marine margin dynamic (Neumann) boundary condition
-            call sparse_marine_margin(component,i,j,k,h,latbc_normal, vel_perp, mu, dx, dy, ax, ay, dz,coef, rhs)
+        !else if (.not. IS_NAN(latbc_normal(i,j))) then !Marine margin dynamic (Neumann) boundary condition
+        !    call sparse_marine_margin(component,i,j,k,h,latbc_normal, vel_perp, mu, dx, dy, ax, ay, dz,coef, rhs)
         else if (k.eq.1) then !Upper boundary condition (stress-free surface)
             !Finite difference coefficients for an irregular Z grid, downwinded
             dz_down1=(2.*dz(k)-dz(k+1)-dz(k+2))/(dz(k+1)-dz(k))/(dz(k+2)-dz(k))
@@ -1756,10 +1458,9 @@ end subroutine init_zeta
                 dperp_dperp = 2.*dhb_dpara(i,j)
                 dperp_dz = 2.*a_perp(i,j,k)*dhb_dpara(i,j) + a_para(i,j,k)*dhb_dperp(i,j)
 
-                !If we have a non-zero friction, then apply that friction
-                !parameter
-                !Otherwise, we have a spot of zero traction or an ice shelf\
-                !and we leave everything unscaled
+                !If we have a non-zero friction, then we need to scale the
+                !strain rates by the viscosity.  If there is no friction, then
+                !we have a stress-free base and these coefficients disappear.
                 if (beta(i,j) >= SMALL) then
                    dpara_dpara = dpara_dpara*mu(i,j,k)
                    dpara_dperp = dpara_dperp*mu(i,j,k)
@@ -1781,12 +1482,17 @@ end subroutine init_zeta
                     -  dperp_dy * dfdx_3d(vel_perp, i, j, k, dy) &
                     -  dperp_dz * dfdz_3d_upwind_irregular(vel_perp, i, j, k, dz)
 
-                !Adjust center of stencil for the basal traction if it is
-                !relevant
-                if (beta(i,j) >= SMALL) then
-                    coef(11) = coef(11) + beta(i,j)
+                !Adjust center of stencil for the basal friction parameter (this
+                !occurs in all cases b/c the ice shelf case necessarily has beta = 0
+                !CORRECTION: Adding in normalization term that Pattyn has
+                !neglected.
+                coef(11) = coef(11) + beta(i,j)! * sqrt(1 + dhbdx(i,j)**2 + dhbdy(i,j)**2)
+
+                !If this is a point on an ice shelf, the stresses should
+                !additionally be balanced by hydrostatic pressure.
+                if (GLIDE_IS_FLOAT(geometry_mask(i,j))) then
+                    rhs = rhs - rhoi*grav*h(i,j)
                 end if
-            
             endif
 
         else !Interior of the ice (e.g. not a boundary condition)
@@ -1896,8 +1602,8 @@ end subroutine init_zeta
         !Derivative of the perpendicular component (v if computing u and vice
         !versa) with respect to the parallel direction (x if computing u, y if
         !computing v)
-        real(dp) :: dperp_dpara
-        real(dp) :: dperp_dperp
+        real(dp) :: dperp_dx
+        real(dp) :: dperp_dy
         real(dp) :: dperp_dz
 
         !The derivatives of the velocity component being computed with respect
@@ -1918,25 +1624,30 @@ end subroutine init_zeta
         !theta = normals(i,j) + 2*(PI/4 - normals(i,j))
         !But really this reduces to swapping sine and cosine (easy proof to work
         !through).
-        n_x = (sin(normals(i,j)))
-        n_y = (cos(normals(i,j)))
+        n_x =  (sin(normals(i,j)))
+        n_y = -(cos(normals(i,j)))
+
 
         !Determine the hydrostatic pressure at the current location
         !If we are at the part of the ice shelf above the water, 
         !then we are at 1ATM pressure which we just assume to be 0 
         !throughout the model anyway
 
+        !Cryostatic component
         pressure = rhoi * grav * h(i,j) * zeta(k)
+        !Hydrostatic component, only if we're below the surface
         if (zeta(k) > (1 - rhoi/rhoo)) then
             pressure = pressure + rhoo * grav * h(i,j) * (zeta(k) - 1 + rhoi/rhoo)
         end if
 
-        pressure = pressure/mu(i,j,k)
 
         !This line changes pressure to the vertically integrated hydrostatic
         !pressure, and applies that throughout the ice column regardless even of
         !whether the ice is underwater.
-        !pressure = .5 * grav * h(i,j) * rhoi**2 / rhoo
+        !pressure = .5 * rhoi * grav * h(i,j) * (1 - rhoi/rhoo)
+
+        !Apply viscosity to the RHS
+        !pressure = pressure/mu(i,j,k)
 
         !Determine whether to use upwinded or downwinded derivatives for the
         !horizontal directions.
@@ -1971,67 +1682,66 @@ end subroutine init_zeta
 
             !X derivative of V component
             if (upwind_x) then
-                dperp_dpara = dfdy_3d_upwind(vel_perp, i,j,k,dx)
+                dperp_dx = dfdy_3d_upwind(vel_perp, i,j,k,dx)
             else if (downwind_x) then
-                dperp_dpara = dfdy_3d_downwind(vel_perp,i,j,k,dx)
+                dperp_dx = dfdy_3d_downwind(vel_perp,i,j,k,dx)
             else
-                dperp_dpara = dfdy_3d(vel_perp,i,j,k,dx)
+                dperp_dx = dfdy_3d(vel_perp,i,j,k,dx)
             end if
 
             !Y derivative of V component
             if (upwind_y) then
-                dperp_dperp = dfdx_3d_upwind(vel_perp, i,j,k,dy)
+                dperp_dy = dfdx_3d_upwind(vel_perp, i,j,k,dy)
             else if (downwind_y) then
-                dperp_dperp = dfdx_3d_downwind(vel_perp,i,j,k,dy)
+                dperp_dy = dfdx_3d_downwind(vel_perp,i,j,k,dy)
             else
-                dperp_dperp = dfdx_3d(vel_perp,i,j,k,dy)
+                dperp_dy = dfdx_3d(vel_perp,i,j,k,dy)
             end if
 
 
-            rhs = pressure*n_x - (2*n_x*dperp_dperp & 
-                                  - n_y * dperp_dpara &
-                                  - (2*ay(i,j,k)*n_x + ax(i,j,k)*n_y)*dperp_dz)!*mu(i,j,k)
+            rhs = pressure*n_x - (2*n_x*dperp_dy & 
+                                  - n_y * dperp_dx &
+                                  - (2*ay(i,j,k)*n_x + ax(i,j,k)*n_y)*dperp_dz)*mu(i,j,k)
 
-            dx_coeff = n_x*4!*mu(i,j,k)
-            dy_coeff = n_y!*mu(i,j,k)
-            dz_coeff = (4*n_x*ax(i,j,k) + (n_y*ay(i,j,k)))!*mu(i,j,k)
+            dx_coeff = n_x*4*mu(i,j,k)
+            dy_coeff = n_y*mu(i,j,k)
+            dz_coeff = (4*n_x*ax(i,j,k) + (n_y*ay(i,j,k)))*mu(i,j,k)
         else if (component == "v") then
             !Beware of transposed derivatives ahead (because x and y are
             !switched, dx and dy have to be as well)
 
             !Y derivative of U component
             if (upwind_y) then
-                dperp_dpara = dfdx_3d_upwind(vel_perp, i,j,k,dy)
+                dperp_dy = dfdx_3d_upwind(vel_perp, i,j,k,dy)
             else if (downwind_y) then
-                dperp_dpara = dfdx_3d_downwind(vel_perp,i,j,k,dy)
+                dperp_dy = dfdx_3d_downwind(vel_perp,i,j,k,dy)
             else
-                dperp_dpara = dfdx_3d(vel_perp,i,j,k,dy)
+                dperp_dy = dfdx_3d(vel_perp,i,j,k,dy)
             end if
 
             !X derivative of U component
             if (upwind_x) then
-                dperp_dperp = dfdy_3d_upwind(vel_perp, i,j,k,dx)
+                dperp_dx = dfdy_3d_upwind(vel_perp, i,j,k,dx)
             else if (downwind_x) then
-                dperp_dperp = dfdy_3d_downwind(vel_perp,i,j,k,dx)
+                dperp_dx = dfdy_3d_downwind(vel_perp,i,j,k,dx)
             else
-                dperp_dperp = dfdy_3d(vel_perp,i,j,k,dx)
+                dperp_dx = dfdy_3d(vel_perp,i,j,k,dx)
             end if
 
-            rhs = pressure*n_y - (2*n_y*dperp_dperp & 
-                                  - n_x * dperp_dpara &
-                                  - (2*ax(i,j,k)*n_y + ay(i,j,k)*n_x)*dperp_dz)!*mu(i,j,k)
+            rhs = pressure*n_y - (2*n_y*dperp_dx & 
+                                  - n_x * dperp_dy &
+                                  - (2*ax(i,j,k)*n_y + ay(i,j,k)*n_x)*dperp_dz)*mu(i,j,k)
 
   
-            dy_coeff = n_y*4!*mu(i,j,k)
-            dx_coeff = n_x!*mu(i,j,k)
-            dz_coeff = (4*n_y*ay(i,j,k) + (n_x*ax(i,j,k)))!*mu(i,j,k)
+            dy_coeff = n_y*4*mu(i,j,k)
+            dx_coeff = n_x*mu(i,j,k)
+            dz_coeff = (4*n_y*ay(i,j,k) + (n_x*ax(i,j,k)))*mu(i,j,k)
         end if
 
         !Enter the z component into the finite difference scheme.
         !If we are on the top of bottom of the ice shelf, we will need
         !to upwind or downwind respectively
         if (k==1) then !Top of the ice shelf
-            write(*,*)j,i,normals(i,j),n_x, n_y
             !Finite difference coefficients for an irregular Z grid, downwinded
             dz_down1=(2.*zeta(k)-zeta(k+1)-zeta(k+2))/(zeta(k+1)-zeta(k))/(zeta(k+2)-zeta(k))
             dz_down2=(zeta(k+2)-zeta(k))/(zeta(k+2)-zeta(k+1))/(zeta(k+1)-zeta(k))
@@ -2091,86 +1801,6 @@ end subroutine init_zeta
 
     end subroutine
 
-
-!
-!
-!------------------------------------------------------
-!   Diffusive equation for higher-order model
-!   (EISMINT TYPE II)
-!------------------------------------------------------
-!
-      SUBROUTINE diffus2(h,u,v,uvel,vvel,dzdx,dzdy,diff1,&
-        diffus,arrh,zeta,MAXY,MAXX,NZETA,SMALL,FLOWN,&
-        PERIODIC_X, PERIODIC_Y)
-!
-        double precision :: h(MAXY,MAXX),u(MAXY,MAXX),v(MAXY,MAXX),&
-          uvel(MAXY,MAXX,NZETA),&
-          vvel(MAXY,MAXX,NZETA),dzdx(MAXY,MAXX),dzdy(MAXY,MAXX),&
-          diff1(MAXY,MAXX,NZETA),diffus(MAXY,MAXX),zeta(NZETA),&
-          arrh(MAXY,MAXX,NZETA),SMALL,FLOWN
-        INTEGER MAXY,MAXX,NZETA
-        logical :: PERIODIC_X,PERIODIC_Y
-      INTEGER i,j,k
-      double precision :: grad,vel,d,z
-!
-      do 10 i=1,MAXY
-        do 20 j=1,MAXX
-          if (h(i,j).le.0.) then
-            u(i,j)=0.
-            v(i,j)=0.
-            do 30 k=1,NZETA
-              uvel(i,j,k)=0.
-              vvel(i,j,k)=0.
-   30       CONTINUE
-          endif
-   20   CONTINUE
-   10 CONTINUE
-!
-      do 40 i=2,MAXY-1
-        do 50 j=2,MAXX-1
-          grad=dzdx(i,j)*dzdx(i,j)+dzdy(i,j)*dzdy(i,j)
-          if (sqrt(grad).gt.SMALL) then
-            do 60 k=1,NZETA
-              vel=sqrt(uvel(i,j,k)*uvel(i,j,k)+vvel(i,j,k)*&
-                vvel(i,j,k))
-              diff1(i,j,k)=vel/sqrt(grad)
-   60       CONTINUE
-          else
-            d=(RHOI*GRAV*h(i,j))**FLOWN
-            diff1(i,j,k)=0.
-            do 61 k=(NZETA-1),1,-1
-              z=(0.5*(zeta(k+1)+zeta(k)))**FLOWN
-              diff1(i,j,k)=d*grad*h(i,j)*(arrh(i,j,k+1)+arrh(i,j,k))*&
-                z*(zeta(k+1)-zeta(k))+diff1(i,j,k+1)
-   61       CONTINUE
-          endif
-          diffus(i,j)=0.
-          do 62 k=2,NZETA
-            diffus(i,j)=diffus(i,j)+0.5*(diff1(i,j,k)+&
-              diff1(i,j,k-1))*(zeta(k)-zeta(k-1))
-   62     CONTINUE
-          diffus(i,j)=diffus(i,j)*h(i,j)
-   50   CONTINUE
-   40 CONTINUE
-   
-        call periodic_boundaries_stag(diffus,periodic_x,periodic_y)
-        call periodic_boundaries_3d_stag(diff1,periodic_x,periodic_y)
-        if (.not. PERIODIC_X) then
-            diffus(:,1) = 0
-            diffus(:,maxx) = 0
-            diff1(:,1,:) = 0
-            diff1(:,maxx,:) = 0
-        end if
-
-        if (.not. PERIODIC_Y) then
-            diffus(1,:) = 0
-            diffus(maxy,:) = 0
-            diff1(1,:,:) = 0
-            diff1(maxy,:,:) = 0
-        end if
- 
-      return
-      END subroutine
 !
 !
 !------------------------------------------------------
@@ -2277,143 +1907,6 @@ end subroutine init_zeta
       
       return
       END subroutine
-!
-!
-!------------------------------------------------------
-!   U-velocity estimation from diffusivities (TYPE II)
-!------------------------------------------------------
-!
-      SUBROUTINE ufield(h,hb,uflux,diff1,uvel,u,zeta,MAXY,MAXX,&
-        NZETA,SMALL,GRIDX,PERIODIC_X, PERIODIC_Y,DIFTYPE)
-!
-        INTEGER MAXY,MAXX,NZETA,DIFTYPE
-        double precision :: h(MAXY,MAXX),uflux(MAXY,MAXX,NZETA)
-        double precision :: diff1(MAXY,MAXX,NZETA),u(MAXY,MAXX)
-        double precision :: uvel(MAXY,MAXX,NZETA), zeta(NZETA)
-        double precision :: hb(MAXY,MAXX),SMALL,GRIDX
-!
-        logical :: periodic_x, periodic_y
-      INTEGER i,j,k
-      double precision :: grad
-!
-      do 10 i=1,MAXY-1
-        do 20 j=1,MAXX-1
-          if ((h(i,j).gt.SMALL).or.(h(i,j+1).gt.SMALL)) then
-            grad=(h(i,j+1)+hb(i,j+1)-h(i,j)-hb(i,j))/&
-              (GRIDX*(h(i,j)+h(i,j+1)))
-          else
-            grad=0.
-          endif
-          do 30 k=1,NZETA
-            if (DIFTYPE.eq.1) then
-              uflux(i,j,k)=-(h(i,j)*diff1(i,j,k)+h(i,j+1)*&
-                diff1(i,j+1,k))*grad
-            else
-              uflux(i,j,k)=(uvel(i,j,k)+uvel(i,j+1,k))/2.
-            endif
-   30     CONTINUE
-   20   CONTINUE
-   10 CONTINUE
-      do 11 i=1,MAXY-1
-        do 21 j=2,MAXX-1
-          do 31 k=1,NZETA
-            uvel(i,j,k)=0.5*(uflux(i,j,k)+uflux(i,j-1,k))
-   31     CONTINUE
-          u(i,j)=0.
-          do 40 k=2,NZETA
-            u(i,j)=u(i,j)+(uvel(i,j,k)+uvel(i,j,k-1))*&
-              (zeta(k)-zeta(k-1))*0.5
-   40     CONTINUE
-   21   CONTINUE
-   11 CONTINUE
-   
-        call periodic_boundaries_stag(u,PERIODIC_X,PERIODIC_Y)
-        call periodic_boundaries_3d_stag(uvel,PERIODIC_X,PERIODIC_Y)
-        if (.not. PERIODIC_X) then
-            u(:,1) = 0
-            u(:,maxx) = 0
-            uvel(:,1,:) = 0
-            uvel(:,maxx,:) = 0
-        end if
-
-        if (.not. PERIODIC_Y) then
-            u(1,:) = 0
-            u(maxy,:) = 0
-            uvel(1,:,:) = 0
-            uvel(maxy,:,:) = 0
-        end if
-      
-      return
-      END subroutine
-!
-!
-!------------------------------------------------------
-!   V-velocity estimation from diffusivities (TYPE II)
-!------------------------------------------------------
-!
-      SUBROUTINE vfield(h,hb,vflux,diff1,vvel,v,zeta,MAXY,MAXX,&
-        NZETA,SMALL,GRIDY,PERIODIC_X,PERIODIC_Y,DIFTYPE)
-!
-        INTEGER MAXY,MAXX,NZETA,DIFTYPE
-        double precision :: h(MAXY,MAXX),vflux(MAXY,MAXX,NZETA)
-        double precision :: diff1(MAXY,MAXX,NZETA),v(MAXY,MAXX)
-        double precision :: vvel(MAXY,MAXX,NZETA), zeta(NZETA)
-        double precision :: hb(MAXY,MAXX),SMALL,GRIDY
-!
-        logical :: PERIODIC_X, PERIODIC_Y
-      INTEGER i,j,k
-      double precision :: grad
-!
-      do 10 i=1,MAXY-1
-        do 20 j=1,MAXX-1
-          if ((h(i,j).gt.SMALL).or.(h(i+1,j).gt.SMALL)) then
-            grad=(h(i+1,j)+hb(i+1,j)-h(i,j)-hb(i,j))/&
-              (GRIDY*(h(i,j)+h(i+1,j)))
-          else
-            grad=0.
-          endif
-          do 30 k=1,NZETA
-            if (DIFTYPE.eq.1) then
-              vflux(i,j,k)=-(h(i,j)*diff1(i,j,k)+h(i+1,j)*&
-                diff1(i+1,j,k))*grad
-            else
-              vflux(i,j,k)=(vvel(i,j,k)+vvel(i+1,j,k))/2.
-            endif
-   30     CONTINUE
-   20   CONTINUE
-   10 CONTINUE
-      do 11 i=2,MAXY-1
-        do 21 j=1,MAXX-1
-          do 31 k=1,NZETA
-            vvel(i,j,k)=0.5*(vflux(i,j,k)+vflux(i-1,j,k))
-   31     CONTINUE
-          v(i,j)=0.
-          do 40 k=2,NZETA
-            v(i,j)=v(i,j)+(vvel(i,j,k)+vvel(i,j,k-1))*&
-              (zeta(k)-zeta(k-1))*0.5
-   40     CONTINUE
-   21   CONTINUE
-   11 CONTINUE
-   
-        call periodic_boundaries_stag(v,PERIODIC_X,PERIODIC_Y)
-        call periodic_boundaries_3d_stag(vvel,PERIODIC_X,PERIODIC_Y)
-        if (.not. PERIODIC_X) then
-            v(:,1) = 0
-            v(:,maxx) = 0
-            vvel(:,1,:) = 0
-            vvel(:,maxx,:) = 0
-        end if
-
-        if (.not. PERIODIC_Y) then
-            v(1,:) = 0
-            v(maxy,:) = 0
-            vvel(1,:,:) = 0
-            vvel(maxy,:,:) = 0
-        end if
-    
-      return
-      END subroutine 
-
       
     function staggered_point_2d(f, i, j)
         real(dp), dimension(:,:), intent(in) :: f
@@ -2504,9 +1997,10 @@ end subroutine init_zeta
     
     !*FD Copies a staggered grid onto a nonstaggered grid.  This verion
     !*FD assumes periodic boundary conditions.
-    subroutine unstagger_field_2d_periodic(f_stag, f)
+    subroutine unstagger_field_2d(f_stag, f, periodic_x, periodic_y)
         real(dp), dimension(:,:), intent(in) :: f_stag
         real(dp), dimension(:,:), intent(out) :: f
+        logical, intent(in) :: periodic_x, periodic_y
 
         real(dp), dimension(4) :: pts
 
@@ -2526,22 +2020,38 @@ end subroutine init_zeta
                 i2 = i
 
                 if (i1 == 0) then
-                    i1 = ni - 1
+                    if (periodic_y) then
+                        i1 = ni - 1
+                    else
+                        i1 = 1
+                    end if
                 end if
     
                 if (i2 == ni) then
-                    i2 = 1
+                    if (periodic_y) then
+                        i2 = 1
+                    else
+                        i2 = ni - 1
+                    end if
                 end if
     
                 j1 = j-1
                 j2 = j
     
                 if (j1 == 0) then
-                    j1 = nj - 1
+                    if (periodic_x) then
+                        j1 = nj - 1
+                    else
+                        j1 = 1
+                    end if
                 end if
     
                 if (j2 == nj) then
-                    j2 = 1
+                    if (periodic_x) then
+                        j2 = 1
+                    else
+                        j2 = nj - 1
+                    end if
                 end if
                 
                 !Place the points into an array, loop over them, and average
@@ -2562,45 +2072,19 @@ end subroutine init_zeta
             end do
         end do
     
-    end subroutine unstagger_field_2d_periodic
+    end subroutine unstagger_field_2d
 
-    subroutine unstagger_field_3d_periodic(f, f_stag)
+    subroutine unstagger_field_3d(f, f_stag, periodic_x, periodic_y)
         real(dp), dimension(:,:,:) :: f, f_stag
+        logical, intent(in) :: periodic_x, periodic_y
 
         integer :: i
 
         do i = 1,size(f,3)
-            call unstagger_field_2d_periodic(f(:,:,i), f_stag(:,:,i))
+            call unstagger_field_2d(f(:,:,i), f_stag(:,:,i), periodic_x, periodic_y)
         end do
         
-    end subroutine unstagger_field_3d_periodic
-
-    function isinf(n)
-        double precision::n
-        logical :: isinf
-        
-        isinf = isnan(0*n)
-    end function isinf
-    
-    function isnan(n)
-        double precision ::n
-        logical :: isnan
-        
-        isnan = (n /= n)
-    end function isnan
-    
-    function checkrow(row)
-        double precision, dimension(:) :: row
-        integer :: i
-        logical :: checkrow
-        checkrow=.false.
-        do i = 1,size(row,1)
-            if (row(i) /= 0) then
-                checkrow=.true.
-            end if
-        end do
-    end function checkrow
-
+    end subroutine unstagger_field_3d
 !
 !
 !---------------------------------------------------
