@@ -477,6 +477,10 @@ contains
         nzeta = size(mu,3)
         ijktot = active_points*nzeta
 
+        write(*,*)"uvel shape:", shape(uvel)
+        write(*,*)"kinematic u shape:", shape(kinematic_bc_u)
+        write(*,*)"kinematic v shape:", shape(kinematic_bc_v)
+
         maxiter=100000
         error=VEL2ERR
         m=1
@@ -499,7 +503,7 @@ contains
         call sparse_allocate_workspace(matrix, options, workspace, ijktot*22)
         write(*,*)"NEW stuff added here"
 
-#if 0
+#if 1
         call write_xls_3d("arrh.txt",arrh)
         call write_xls("dzdx.txt",dzdx)
         call write_xls("dzdy.txt",dzdy)
@@ -516,6 +520,8 @@ contains
         call write_xls("dhbdy.txt",dhbdy)
         call write_xls("latbc.txt",marine_bc_normal)
         call write_xls_int("geometry_mask.txt",geometry_mask)
+        call write_xls_3d("kinematic_bc_u.txt",kinematic_bc_u)
+        call write_xls_3d("kinematic_bc_v.txt",kinematic_bc_v)
         write(*,*),"ZETA=",zeta
 #endif
 
@@ -1407,13 +1413,12 @@ contains
         else
             write(*,*)"FATAL ERROR: sparse_setup called with invalid component"
         end if
-
-         
+        
         if (.not. IS_NAN(kinematic_bc(i,j,k))) then !Check whether the velocity has been specified directly at this point
             rhs = kinematic_bc(i,j,k)
             coef(I_J_K) = 1
-        !else if (.not. IS_NAN(latbc_normal(i,j))) then !Marine margin dynamic (Neumann) boundary condition
-        !    call sparse_marine_margin(component,i,j,k,h,latbc_normal, vel_perp, mu, dx, dy, ax, ay, dz,coef, rhs)
+        else if (.not. IS_NAN(latbc_normal(i,j))) then !Marine margin dynamic (Neumann) boundary condition
+            call sparse_marine_margin(component,i,j,k,h,latbc_normal, vel_perp, mu, dx, dy, ax, ay, dz,coef, rhs)
         else if (k.eq.1) then !Upper boundary condition (stress-free surface)
             !Finite difference coefficients for an irregular Z grid, downwinded
             dz_down1=(2.*dz(k)-dz(k+1)-dz(k+2))/(dz(k+1)-dz(k))/(dz(k+2)-dz(k))
@@ -1488,11 +1493,6 @@ contains
                 !neglected.
                 coef(11) = coef(11) + beta(i,j)! * sqrt(1 + dhbdx(i,j)**2 + dhbdy(i,j)**2)
 
-                !If this is a point on an ice shelf, the stresses should
-                !additionally be balanced by hydrostatic pressure.
-                if (GLIDE_IS_FLOAT(geometry_mask(i,j))) then
-                    rhs = rhs - rhoi*grav*h(i,j)
-                end if
             endif
 
         else !Interior of the ice (e.g. not a boundary condition)

@@ -208,6 +208,8 @@ contains
         !Arrays for staggered versions of quantities that were passed unstaggered
         real(dp), dimension(ewn-1, nsn-1) :: stagusrf, staglsrf
         
+        real(dp), dimension(nsn-1, ewn-1, upn) :: kinematic_bc_u_t, kinematic_bc_v_t
+
         real(dp), dimension(nsn, ewn)::u,v
 
         !Total number of grid points in 3 dimensions
@@ -265,12 +267,14 @@ contains
         call glimToIce3d_3d(uvel,uvel_t,ewn-1,nsn-1,upn)
         call glimToIce3d_3d(vvel,vvel_t,ewn-1,nsn-1,upn)
 
+        call glimToIce3d_3d(kinematic_bc_u, kinematic_bc_u_t, ewn-1, nsn-1, upn)
+        call glimToIce3d_3d(kinematic_bc_v, kinematic_bc_v_t, ewn-1, nsn-1, upn)
+
         !The flow law field needs to be transposed AND staggered, which is a lot
         !of fun!!!
         call glimToIce3d_3d(flwa,flwa_t,ewn,nsn,upn)
         call staggered_field_3d(flwa_t, flwa_t_stag)
       
-        !DEBUG!!!!
         call df_field_2d(stagusrf_t, dns, dew, dusrfdns_t, dusrfdew_t, .false., .false.)
         call df_field_2d(staglsrf_t, dns, dew, dlsrfdns_t, dlsrfdew_t, .false., .false.)
         call df_field_2d(stagthck_t, dns, dew, dthckdns_t, dthckdew_t, .false., .false.)
@@ -293,7 +297,7 @@ contains
                 call veloc2(mu_t, uvel_t, vvel_t, flwa_t_stag, dusrfdew_t, dusrfdns_t, stagthck_t, ax, ay, &
                         sigma, bx, by, cxy, btrc_t/100, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, MANIFOLD,&
                         TOLER, periodic_ew,periodic_ns, 0, dew, dns,point_mask_t,totpts,geometry_mask_t, &
-                        kinematic_bc_u, kinematic_bc_v, marine_bc_normal)
+                        kinematic_bc_u_t, kinematic_bc_v_t, marine_bc_normal)
             end if
         end if
 
@@ -306,7 +310,7 @@ contains
         call veloc2(mu_t, uvel_t, vvel_t, flwa_t, dusrfdew_t, dusrfdns_t, stagthck_t, ax, ay, &
                     sigma, bx, by, cxy, btrc_t, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, MANIFOLD,&
                     TOLER, periodic_ew,periodic_ns, which_sliding_law, dew,&
-                    dns,point_mask_t,totpts, geometry_mask_t, kinematic_bc_u, kinematic_bc_v, marine_bc_normal)
+                    dns,point_mask_t,totpts, geometry_mask_t, kinematic_bc_u_t, kinematic_bc_v_t, marine_bc_normal)
        
         !Final computation of stress field for output
         call stressf(mu_t, uvel_t, vvel_t, flwa_t, stagthck_t, ax, ay, dew, dns, sigma, & 
@@ -509,7 +513,7 @@ contains
                 call veloc2(mu_t, uvel_t, vvel_t, flwa_t, dusrfdew_t, dusrfdns_t, thck_t, ax, ay, &
                         sigma, bx, by, cxy, btrc_t_unstag, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, MANIFOLD,&
                         TOLER, periodic_ew,periodic_ns, 0, dew, dns,point_mask_t,totpts,geometry_mask_t,&
-                        kinematic_bc_u, kinematic_bc_v, marine_bc_normal_t)
+                        kinematic_bc_u_t_unstag, kinematic_bc_v_t_unstag, marine_bc_normal_t)
             end if
         end if
         
@@ -522,7 +526,7 @@ contains
         call veloc2(mu_t, uvel_t_unstag, vvel_t_unstag, flwa_t, dusrfdew_t, dusrfdns_t, thck_t, ax, ay, &
                     sigma, bx, by, cxy, btrc_t_unstag, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, MANIFOLD,&
                     TOLER, periodic_ew,periodic_ns, which_sliding_law, dew,&
-                    dns,point_mask_t,totpts,geometry_mask_t,kinematic_bc_u, kinematic_bc_v, marine_bc_normal_t)
+                    dns,point_mask_t,totpts,geometry_mask_t,kinematic_bc_u_t_unstag, kinematic_bc_v_t_unstag, marine_bc_normal_t)
        
         !Final computation of stress field for output
         !call stressf(mu_t, uvel_t, vvel_t, flwa_t, stagthck_t, ax, ay, dew, dns, sigma, & 
