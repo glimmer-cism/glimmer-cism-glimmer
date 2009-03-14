@@ -12,6 +12,8 @@
 #include "glide_nan.inc"
 #include "glide_mask.inc"
 
+!#define OUTPUT_SPARSE_MATRIX
+
 module ice3d_lib
     use glimmer_global
     use glimmer_physcon, only: pi, grav, rhoi, rhoo, scyr
@@ -28,7 +30,7 @@ module ice3d_lib
 
     double precision, parameter :: plastic_bed_regularization = 1e-2
 
-    logical, parameter :: sparverbose = .false.
+    logical, parameter :: sparverbose = .true.
 
 !------------------------------------------------------
 !   lookup coordinates in sparse matrix
@@ -587,7 +589,7 @@ contains
                 MAXX,NZETA,TOLER, delta_x, delta_y, zeta, point_mask, &
                 geometry_mask,matrix, workspace, options, kinematic_bc_u, kinematic_bc_v, &
                 marine_bc_normal)
-           
+                      
             !Apply periodic boundary conditions to the computed velocity
             call periodic_boundaries_3d_stag(ustar,periodic_x,periodic_y)
             call periodic_boundaries_3d_stag(vstar,periodic_x,periodic_y)
@@ -604,7 +606,6 @@ contains
 #endif
             !Check whether we have reached convergance
             if (.not. cont) exit nonlinear_iteration
-
      end do nonlinear_iteration
 
       call write_xls_3d("uvel.txt",uvel)
@@ -967,6 +968,13 @@ contains
 !
 !-------  velocity u
 !
+#ifdef OUTPUT_SPARSE_MATRIX
+        write(*,*) " Component Y X Z normal_x normal_y ax ay H mu ", &
+                   "im1jm1 im1km1 im1 im1kp1 im1jp1 jm1km1 jm1 jm1kp1 ", &
+                   "km2 km1 center kp1 kp2 jp1km1 jp1 jp1kp1 ", &
+                   "ip1jm1 ip1km1 ip1 ip1kp1 ip1jp1 im2 ip2 jm2 jp2"
+#endif
+
         !Initialize sparse matrix & vectors
         d=0
         x=0
@@ -1099,6 +1107,9 @@ contains
                 end if
              end do
         end do
+#ifdef OUTPUT_SPARSE_MATRIX
+        stop
+#endif
         call write_sparse_system('sparse_v.txt',matrix%row, matrix%col, matrix%val, matrix%nonzeros)
         call sparse_solver_preprocess(matrix, options, workspace)
         ierr = sparse_solve(matrix, d, x, options, workspace,  err, iter, verbose=sparverbose)
@@ -1627,6 +1638,14 @@ contains
         n_x =  (sin(normals(i,j)))
         n_y = -(cos(normals(i,j)))
 
+        !Clamp n_x and n_y so that small values register as zero
+        !if (abs(n_x) < 1d-10) then
+        !    n_x = 0
+        !end if
+
+        !if (abs(n_y) < 1d-10) then
+        !    n_y = 0
+        !end if
 
         !Determine the hydrostatic pressure at the current location
         !If we are at the part of the ice shelf above the water, 
@@ -1651,6 +1670,11 @@ contains
 
         !Determine whether to use upwinded or downwinded derivatives for the
         !horizontal directions.
+        upwind_x = .false.
+        upwind_y = .false.
+        downwind_x = .false.
+        downwind_y = .false.
+
         if (h(i-1,j) == 0) then
             downwind_y = .true.
         else if (h(i+1,j) == 0) then
@@ -1797,8 +1821,9 @@ contains
             coef(I_JP1_K) = coef(I_JP1_K) + .5*dx_coeff/dx
             coef(I_JM1_K) = coef(I_JM1_K) - .5*dx_coeff/dx  
         end if
-
-
+#ifdef OUTPUT_SPARSE_MATRIX
+        write(*,*)component,i,j,k,n_x,n_y,ax(i,j,k),ay(i,j,k),h(i,j),mu(i,j,k),coef
+#endif
     end subroutine
 
 !
