@@ -12,7 +12,14 @@
 #include "glide_nan.inc"
 #include "glide_mask.inc"
 
+!The following defines contain debug options that aid in examining the sparse
+!matrix.  They should be disabled unless the higher-order code needs debugging.
+
+!Define to write the rows of the sparse matrix for each vel. component then stop.
 !#define OUTPUT_SPARSE_MATRIX
+
+!Define to output a NetCDF file of the partial iterations
+#define OUTPUT_PARTIAL_ITERATIONS
 
 module ice3d_lib
     use glimmer_global
@@ -471,7 +478,11 @@ contains
         type(sparse_matrix_type) :: matrix
         type(sparse_solver_workspace) :: workspace
         type(sparse_solver_options) :: options
-        
+
+#ifdef OUTPUT_PARTIAL_ITERATIONS 
+        integer :: ncid_debug
+#endif
+
         !Get the sizes from the mu field.  Calling code must make sure that
         !these all agree.
         maxy = size(mu,1)
@@ -483,7 +494,7 @@ contains
         write(*,*)"kinematic u shape:", shape(kinematic_bc_u)
         write(*,*)"kinematic v shape:", shape(kinematic_bc_v)
 
-        maxiter=100000
+        maxiter=100
         error=VEL2ERR
         m=1
         lacc=0
@@ -546,7 +557,10 @@ contains
         where (arrh == 0)
             arrh = 1d-17
         end where
-
+#ifdef OUTPUT_PARTIAL_ITERATIONS        
+        ncid_debug = begin_iteration_debug(maxx, maxy, nzeta)
+        call iteration_debug_step(ncid_debug, 0, mu, uvel, vvel)
+#endif
         nonlinear_iteration: do l=1,maxiter !Loop until we have reached the number of iterations allowed
             lacc=lacc+1
             
@@ -594,6 +608,10 @@ contains
             call periodic_boundaries_3d_stag(ustar,periodic_x,periodic_y)
             call periodic_boundaries_3d_stag(vstar,periodic_x,periodic_y)
 
+#ifdef OUTPUT_PARTIAL_ITERATIONS
+            call iteration_debug_step(ncid_debug, l, mu, uvel, vvel)
+#endif
+
             !Apply unstable manifold correction.  This function returns
             !true if we need to keep iterating, false if we reached convergence
             cont = unstable_manifold_correction_hov(ustar, uvel, &
@@ -607,6 +625,10 @@ contains
             !Check whether we have reached convergance
             if (.not. cont) exit nonlinear_iteration
      end do nonlinear_iteration
+
+#ifdef OUTPUT_PARTIAL_ITERATIONS
+      call end_debug_iteration(ncid_debug)
+#endif
 
       call write_xls_3d("uvel.txt",uvel)
       call write_xls_3d("vvel.txt",vvel)
@@ -2110,7 +2132,109 @@ contains
         end do
         
     end subroutine unstagger_field_3d
-!
+
+#ifdef OUTPUT_PARTIAL_ITERATIONS
+!------------------------------------------------------------------------------
+!The following are methods to write iterations to a NetCDF file.  
+!The NetCDF file used is not managed through Glimmer's NetCDF interface
+!I know this is code duplication, it is for DEBUG PURPOSES ONLY
+!------------------------------------------------------------------------------
+function begin_iteration_debug(nx, ny, nz)
+    use netcdf
+    use glimmer_ncdf, only: nc_errorhandle
+    integer :: nx, ny, nz
+    integer :: err
+    integer :: ncid
+
+    integer :: xdim, ydim, zdim, iterdim, dims(4), varid
+    integer :: begin_iteration_debug
+
+    ncid = 0
+    err = nf90_create("iterdebug.nc", NF90_CLOBBER, ncid)
+    call nc_errorhandle(__FILE__, __LINE__, err)
+    err = nf90_def_dim(ncid, "x", nx, xdim)
+    call nc_errorhandle(__FILE__, __LINE__, err)
+    err = nf90_def_dim(ncid, "y", ny, ydim)
+    call nc_errorhandle(__FILE__, __LINE__, err)
+    err = nf90_def_dim(ncid, "z", nz, zdim)
+    call nc_errorhandle(__FILE__, __LINE__, err)
+    err = nf90_def_dim(ncid, "iter", NF90_UNLIMITED, iterdim)
+    call nc_errorhandle(__FILE__, __LINE__, err)
+
+    dims = (/xdim, ydim, zdim, iterdim/)
+
+    err = nf90_def_var(ncid, "mu", NF90_DOUBLE, dims, varid)
+    call nc_errorhandle(__FILE__, __LINE__, err)
+    err = nf90_def_var(ncid, "uvel", NF90_DOUBLE, dims, varid)
+    call nc_errorhandle(__FILE__, __LINE__, err)
+    err = nf90_def_var(ncid, "vvel", NF90_DOUBLE, dims, varid)
+    call nc_errorhandle(__FILE__, __LINE__, err) 
+
+    err = nf90_enddef(ncid)
+    call nc_errorhandle(__FILE__, __LINE__, err)
+
+    begin_iteration_debug=ncid
+
+
+end function
+
+subroutine iteration_debug_step(ncid, iter, mu, uvel, vvel)
+    use netcdf
+    use glimmer_ncdf, only: nc_errorhandle
+
+    integer :: ncid, iter
+    real(dp), dimension(:,:,:) :: mu, uvel, vvel
+    
+    integer :: varid, err
+
+    integer :: nx, ny, nz
+    integer :: i,j,k, start(4), count(4)
+    
+    nx = size(mu, 2)
+    ny = size(mu, 1)
+    nz = size(mu, 3)
+
+    count = (/1,1,1,1/)
+    do i = 1,ny
+        do j = 1,nx
+            do k = 1,nz
+                start=(/j,i,k,iter+1/)
+       err = nf90_inq_varid(ncid, "mu", varid)
+       call nc_errorhandle(__FILE__, __LINE__, err)
+       
+       err = nf90_put_var(ncid, varid, mu(i,j,k), start)
+       call nc_errorhandle(__FILE__, __LINE__, err)
+       
+       err = nf90_inq_varid(ncid, "uvel", varid)
+       call nc_errorhandle(__FILE__, __LINE__, err) 
+       
+       err = nf90_put_var(ncid, varid, uvel(i,j,k), start)
+       
+       err = nf90_inq_varid(ncid, "vvel", varid)
+       call nc_errorhandle(__FILE__, __LINE__, err)
+       
+       err = nf90_put_var(ncid, varid, vvel(i,j,k), start)
+       call nc_errorhandle(__FILE__, __LINE__, err)
+
+            end do
+        end do
+    end do
+    
+
+end subroutine
+
+subroutine end_debug_iteration(ncid)
+    use netcdf
+    use glimmer_ncdf, only: nc_errorhandle
+
+    integer :: ncid
+
+    integer :: err
+
+    err = nf90_close(ncid)
+    call nc_errorhandle(__FILE__, __LINE__, err)
+end subroutine
+#endif
 !
 !---------------------------------------------------
 !
