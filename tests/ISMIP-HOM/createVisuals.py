@@ -13,63 +13,8 @@ import matplotlib.font_manager
 import numpy
 from getopt import gnu_getopt
 
-from intercomparison import *
+import intercomparison
 
-
-def readFlowlineFile(filename):
-    f = open(filename)
-    flowline = Flowline()
-    for line in f:
-        data = [float(i) for i in line.strip().split()]
-        fixNan(data)
-        x = data[0]
-        data = data[1:]
-        flowline.addDataPoint(x,data)
-    f.close()
-    return flowline
-
-def readPlanviewFile(filename, transpose=False):
-    f = open(filename)
-    plan = Planview()
-    for line in f:
-        data = [float(i) for i in line.strip().split()]
-        fixNan(data)
-        x = data[0]
-        y = data[1]
-        data = data[2:]
-        if not transpose:
-            plan.addDataPoint(x,y,data)
-        else:
-            plan.addDataPoint(y,x,data)
-    f.close()
-    return plan
-
-def checkForNan(numberList):
-    for n in numberList:
-        if not n == n:
-            return True
-    return False
-    
-def fixNan(data):
-    for i,n in enumerate(data):
-        if not n == n:
-            data[i] = 0
-
-#Returns a new flowline with one data member: the norm of the surface velocity.
-#Assumes that surface velocity components are the first two data members
-def normSurfaceVelocity(flowline):
-    result = Flowline()
-    for x in flowline.getPointLocations():
-        data = flowline.getDataPoint(x)
-        result.addDataPoint(x, [math.sqrt(data[0]**2 + data[1]**2)])
-    return result
-
-def normSurfaceVelocityPlan(planview):
-    result = Planview()
-    for x, y in planview.getPointLocations():
-        data = planview.getDataPoint(x,y)
-        result.addDataPoint(x,y,[math.sqrt(data[0]**2 + data[1]**2)])
-    return result
 
 def plotAggregatedFlowlines(axis, meanFlowline, stdevFlowline, dataMember, color, labelPrefix):
     xs = meanFlowline.getPointLocations()
@@ -102,25 +47,11 @@ def plotAggregatedFlowlines(axis, meanFlowline, stdevFlowline, dataMember, color
 #Returns a tuple with two tuples suitable for creating a legend.  The first tuple contains
 #the lines and patches, the second contains the names
 def createPlot(experiment, domainSizeKm, fig, subplotNum, notFullStokesModelType):
-    isFlowlineExp = experiment in ["b","d","e"] 
-    
     axis = fig.add_subplot(2,3,subplotNum)
     axis.set_title(str(domainSizeKm) + " km", size="medium")
     #Read the data that came from the Glimmer run
     glimFileName = glimPrefix + experiment + "%03d"%domainSizeKm + ".txt"
-    if isFlowlineExp:
-        glimFlowline = readFlowlineFile(glimFileName)
-    else:
-        glimPlan = readPlanviewFile(glimFileName, transpose=True)
-        glimPlan = normSurfaceVelocityPlan(glimPlan)
-        #glimPlan.plot()
-        glimFlowline = glimPlan.extractFlowline(.25)
-    #DEBUG!!
-    #m = -9999999999999999999
-    #for x in glimFlowline.getPointLocations():
-    #    m = max(m, glimFlowline.getDataPoint(x)[0])
-    #print m
-    #End debug
+    glimFlowline = intercomparison.grabFlowline(glimFileName)
 
     axis.plot(glimFlowline.getPointLocations(), glimFlowline.getDependantVariable(0), color=(0,0,0))
 
@@ -129,38 +60,19 @@ def createPlot(experiment, domainSizeKm, fig, subplotNum, notFullStokesModelType
             modelType = "full-stokes"
         else:
             modelType = notFullStokesModelType
-        models = getDataFiles("ismip_all", experiment, domainSizeKm, modelType)
+        models = intercomparison.getDataFiles("ismip_all", experiment, domainSizeKm, modelType)
         
-        #Certain ISMIP-HOM experiments are 3-D experiments that produce a plan view of the surface
-        #velocity as their output.  If this is the case, we need to read in a plan view format 
-        #file, extract a flowline at a standard location (y=L/4), and find the norm of the surface
-        #velocity.  Other experiments are flowline experiments; that is, they only occur in the x and
-        #z axis.  If this is the case, we can just read in the flowline file and use it as-is
-        if isFlowlineExp: #Experiment has flowline output already
-            flowlines = []
-            for f in models:
-                try:
-                    flowlines.append(readFlowlineFile(f))
-                except Exception, e:
-                    print f, "failed to load:",e
-        else:
-            plans = []
-            for f in models:
-                try:
-                    plans.append(readPlanviewFile(f))
-                except Exception, e:
-                    print f, "failed to load:",e
-            plans = [normSurfaceVelocityPlan(pv) for pv in plans]
-            #Extract a flowline from the plan view at y=L/4
-            flowlines = [pv.extractFlowline(.25) for pv in plans]
-        
-        #Simple fix if a flowline has a range that is less than [0..1].  In this case,
-        #we are at the moment simply extending the boundaries out.
-        for fl in flowlines:
-            fl.fixRange()
+        flowlines = []
+        for f in models:
+            try:
+                fl = intercomparison.grabFlowline(f)
+                fl.fixRange()
+                flowlines.append(fl)
+            except Exception, e:
+                print f, "failed to load:", e
 
         #Compute the mean and standard deviations of the experiments
-        mean, stdev = aggregateExperimentFlowlines(flowlines, glimFlowline.getPointLocations())
+        mean, stdev = intercomparison.aggregateExperimentFlowlines(flowlines, glimFlowline.getPointLocations())
         
         #Plot the mean and std. dev.
         if isFullStokes:
@@ -176,9 +88,16 @@ def createPlot(experiment, domainSizeKm, fig, subplotNum, notFullStokesModelType
         
 
 if __name__ == "__main__":
-    optlist, args = gnu_getopt(sys.argv[1:], "abcd", ["lmla", "prefix=", "subtitle="])
+    optlist, args = gnu_getopt(sys.argv[1:], 
+                               intercomparison.ExperimentOptionsShort, 
+                               intercomparison.ExperimentOptionsLong + ["lmla", "prefix=", "subtitle="])
     optdict = dict(optlist)
-    
+   
+    experiments, domainSizes = intercomparison.getExperimentsToRun(optlist)
+
+    #Convert domain sizes from meters to km
+    domainSizes = [d/1000 for d in domainSizes]
+
     if "--lmla" in optdict:
         notFullStokesModelType = "lmla"
     else:
@@ -194,22 +113,11 @@ if __name__ == "__main__":
     else:
         subtitle = None
 
-    #Get the list of experiments
-    allTheExperiments = ['a','b','c','d']
-    experiments = []
-    
-    for opt in optdict.keys():
-        opt=opt.replace("-","")
-        if opt in allTheExperiments:
-            experiments.append(opt)
-    if not experiments:
-        experiments = allTheExperiments
-
     for experiment in experiments:
         print "ISMIP-HOM",experiment.upper()
 
         fig = pyplot.figure(subplotpars=matplotlib.figure.SubplotParams(top=.85,bottom=.15))
-        for i, domainSize in enumerate([5, 10, 20, 40, 80, 160]):
+        for i, domainSize in enumerate(domainSizes):
             createPlot(experiment, domainSize, fig, i+1, notFullStokesModelType)
 
         #Create the legend!  This is overly complicated because I want the legend to be

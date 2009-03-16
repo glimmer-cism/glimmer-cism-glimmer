@@ -10,48 +10,20 @@ from getopt import gnu_getopt
 
 import changeDomainSize
 
-#Parses a list of arguments extracted by getopt.  The user may specify specific experiments and/or domain
-#sizes to run on the command line.  For example, -ab --5km --10km runs only experiments a and b for 5km and
-#10km domains.  If nothing is specified for one of the lists, everything is run.  For example, -ac runs
-#experiments a and c for all domain sizes, and --40km runs all experiments for a 40 km domain.
-#Returns an (experimentList, domainSizes) tuple
-def getExperimentsToRun(optlist):
-    domainSizesDict = {"5km":5000, "10km":10000, "20km":20000, "40km":40000, "80km":80000, "160km":160000}
-    experimentList = ['a','b','c','d']
-    
-    experimentDefaults = True
-    experiments = []
-    domainSizeDefaults = True
-    domainSizes = []
-
-    for option, arg in optlist:
-        option = option.replace("-","")
-        if option in experimentList:
-            experimentDefaults = False
-            experiments.append(option)
-        elif option in domainSizesDict:
-            domainSizeDefaults = False
-            domainSizes.append(domainSizesDict[option])
-
-    if experimentDefaults:
-        experiments = experimentList
-    if domainSizeDefaults:
-        domainSizes = sorted(domainSizesDict.values())
-    
-    return experiments, domainSizes
-
+import intercomparison
 
 #Parse command line arguments
-optlist, args = gnu_getopt(sys.argv, 'abcd', 
-    ["5km","10km","20km","40km","80km","160km",
-     "format-only","horiz-grid-size=","vert-grid-size=","vert-grid-spacing=","ismip-hom-prefix=","diagnostic-type="])
+optlist, args = gnu_getopt(sys.argv, intercomparison.ExperimentOptionsShort, 
+         intercomparison.ExperimentOptionsLong + 
+         ["format-only","horiz-grid-size=","vert-grid-size=","vert-grid-spacing=","ismip-hom-prefix=","diagnostic-type="])
+
 optdict = dict(optlist)
 
 #Determine whether to actually run Glimmer or just prepare the input files
 formatOnly = ("--format-only",'') in optlist
 
 #Determine which experiments and domain sizes to run
-experiments, domainSizes = getExperimentsToRun(optlist)
+experiments, domainSizes = intercomparison.getExperimentsToRun(optlist)
 
 #Determine whether the grid sizes specified in the input config files have been overridden by a command line argument
 if "--horiz-grid-size" in optdict:

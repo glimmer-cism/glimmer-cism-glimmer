@@ -9,6 +9,45 @@ fullStokes = ["aas1", "aas2", "cma1", "fpa2", "ghg1", "jvj1", "mmr1", "oga1", "r
 
 lmla = ["ahu1", "ahu2", "bds1", "fpa1", "mbr1", "rhi2", "tpa1"]
 
+def readFlowlineFile(filename):
+    f = open(filename)
+    flowline = Flowline()
+    for line in f:
+        data = [float(i) for i in line.strip().split()]
+        fixNan(data)
+        x = data[0]
+        data = data[1:]
+        flowline.addDataPoint(x,data)
+    f.close()
+    return flowline
+
+def readPlanviewFile(filename, transpose=False):
+    f = open(filename)
+    plan = Planview()
+    for line in f:
+        data = [float(i) for i in line.strip().split()]
+        fixNan(data)
+        x = data[0]
+        y = data[1]
+        data = data[2:]
+        if not transpose:
+            plan.addDataPoint(x,y,data)
+        else:
+            plan.addDataPoint(y,x,data)
+    f.close()
+    return plan
+
+def checkForNan(numberList):
+    for n in numberList:
+        if not n == n:
+            return True
+    return False
+    
+def fixNan(data):
+    for i,n in enumerate(data):
+        if not n == n:
+            data[i] = 0
+
 def getDataFiles(root, experiment, domainSizeKm, modelType):    
     fnameSuffix = experiment + "%03d"%domainSizeKm +".txt"
     files = []
@@ -183,23 +222,75 @@ def aggregateExperimentFlowlines(flowlines, xPoints):
         stdevFlowline.addDataPoint(x, stdev)
     return avgFlowline, stdevFlowline
 
-#Given a flowline of values and the average and standard dev. flowlines returned from
-#aggregateExperimentFlowlines, returns a tuple containing:
-#1. The maximum observed error from the average.
-#2. The maximum observed percent error from the average.
-#3. Boolean that's true if the value was ever outside one standard deviation
-def verifyFlowlineNumerically(flowline, avgFlowline, stdevFlowline, varPositionNumber):
-    maxError = float("-inf")
-    maxPercentError = float("-inf")
-    outsideStdev = False
-    for val, avg, stdev in zip(flowline.getDependantVariable(varPositionNumber), 
-                               avgFlowline.getDependantVariable(varPositionNumber), 
-                               stdevFlowline.getDependantVariable(varPositionNumber)):
-        error = abs(val-avg)
-        percentError = 100 * error/(avg)
-        maxError = max(maxError, error + 1e-10) #Regularization
-        maxPercentError = max(maxPercentError, percentError)
-        if val > avg + stdev or val < avg - stdev:
-            outsideStdev = True
+#Returns a new flowline with one data member: the norm of the surface velocity.
+#Assumes that surface velocity components are the first two data members
+def normSurfaceVelocity(flowline):
+    result = Flowline()
+    for x in flowline.getPointLocations():
+        data = flowline.getDataPoint(x)
+        result.addDataPoint(x, [math.sqrt(data[0]**2 + data[1]**2)])
+    return result
+
+def normSurfaceVelocityPlan(planview):
+    result = Planview()
+    for x, y in planview.getPointLocations():
+        data = planview.getDataPoint(x,y)
+        result.addDataPoint(x,y,[math.sqrt(data[0]**2 + data[1]**2)])
+    return result
+
+
+
+#Certain ISMIP-HOM experiments are 3-D experiments that produce a plan view of the surface
+#velocity as their output.  If this is the case, we need to read in a plan view format 
+#file, extract a flowline at a standard location (y=L/4), and find the norm of the surface
+#velocity.  Other experiments are flowline experiments; that is, they only occur in the x and
+#z axis.  If this is the case, we can just read in the flowline file and use it as-is
+def grabFlowline(filename):
+    experiment = filename[4]
+    isFlowlineExp = experiment in ["b","d","e"]
+    if isFlowlineExp:
+        return readFlowlineFile(filename)
+    else:
+        plan = readPlanviewFile(filename, transpose=True)
+        plan = normSurfaceVelocityPlan(plan)
+        return plan.extractFlowline(.25)
+
+#STANDARD OPTION PARSING
+
+#Lists of options to use with getopt.  Append these to whatever other options you want
+#or use them straight out.
+ExperimentOptionsShort = "abcd"
+ExperimentOptionsLong  = ["5km","10km","20km","40km","80km","160km"]
+
+#Parses a list of arguments extracted by getopt.  The user may specify specific experiments and/or domain
+#sizes to run on the command line.  For example, -ab --5km --10km runs only experiments a and b for 5km and
+#10km domains.  If nothing is specified for one of the lists, everything is run.  For example, -ac runs
+#experiments a and c for all domain sizes, and --40km runs all experiments for a 40 km domain.
+#Returns an (experimentList, domainSizes) tuple
+def getExperimentsToRun(optlist):
+    domainSizesDict = {"5km":5000, "10km":10000, "20km":20000, "40km":40000, "80km":80000, "160km":160000}
+    experimentList = ['a','b','c','d']
     
-    return maxError, maxPercentError, outsideStdev
+    experimentDefaults = True
+    experiments = []
+    domainSizeDefaults = True
+    domainSizes = []
+
+    for option, arg in optlist:
+        option = option.replace("-","")
+        if option in experimentList:
+            experimentDefaults = False
+            experiments.append(option)
+        elif option in domainSizesDict:
+            domainSizeDefaults = False
+            domainSizes.append(domainSizesDict[option])
+
+    if experimentDefaults:
+        experiments = experimentList
+    if domainSizeDefaults:
+        domainSizes = sorted(domainSizesDict.values())
+    
+    return experiments, domainSizes
+
+
+
