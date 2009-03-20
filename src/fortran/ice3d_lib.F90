@@ -21,6 +21,20 @@
 !Define to output a NetCDF file of the partial iterations
 #define OUTPUT_PARTIAL_ITERATIONS
 
+!Experimental feature that enforces plug flow in the interior of an ice shelf.
+!#define ENABLE_VERTAVG_SHELF
+
+!If defined, a vertically averaged pressure will be used across the ice front.
+!Otherwise, a vertically explicit pressure will be used.
+#define AVERAGED_PRESSURE
+
+!The maximum number of iterations to use in the unstable manifold loop
+#define NUMBER_OF_ITERATIONS 100
+
+!If defined, the model uses 2nd order upwinded and downwinded finite
+!differences.
+#define USE_ORD2_HORIZ_UPDOWN
+
 module ice3d_lib
     use glimmer_global
     use glimmer_physcon, only: pi, grav, rhoi, rhoo, scyr
@@ -92,8 +106,9 @@ module ice3d_lib
     integer, parameter :: IM2_J_K = 22
     integer, parameter :: IP2_J_K = 23
     integer, parameter :: I_JM2_K = 24
-    integer, parameter :: I_JP2_k = 25
+    integer, parameter :: I_JP2_K = 25
 
+    integer, parameter :: STENCIL_SIZE = 26
 contains
 !
 !
@@ -140,12 +155,9 @@ contains
       
 
         !Compute surface, derivatives of surface
-        !Because of transpose issues, dzdy has to be the derivatives
-        !w.r.t x added, and vice versa.
-        !I won't pretend to understand why!
         surf = h+hb
         dzdx = dhdx+dhbdx
-        dzdy = dhdy+dhbdy !TODO: Still getting ~25% error here!!  Looks like floating point roundoff 
+        dzdy = dhdy+dhbdy 
         write(*,*) "END init_geometry_vectors" 
     END subroutine
       
@@ -177,7 +189,7 @@ contains
         double precision, dimension(:,:), intent(in) :: d2zdx2,d2zdy2,d2hdx2,d2hdy2
         
         INTEGER :: i,j,k
-#if 0
+#if 1
         call write_xls("h.txt",h)
         call write_xls("hb.txt",hb)
         call write_xls("surf.txt",surf)
@@ -494,7 +506,7 @@ contains
         write(*,*)"kinematic u shape:", shape(kinematic_bc_u)
         write(*,*)"kinematic v shape:", shape(kinematic_bc_v)
 
-        maxiter=100
+        maxiter=NUMBER_OF_ITERATIONS
         error=VEL2ERR
         m=1
         lacc=0
@@ -512,8 +524,8 @@ contains
         options%maxiters  = 100000
 #endif
         !Create the sparse matrix
-        call new_sparse_matrix(ijktot, ijktot*22, matrix)
-        call sparse_allocate_workspace(matrix, options, workspace, ijktot*22)
+        call new_sparse_matrix(ijktot, ijktot*STENCIL_SIZE, matrix)
+        call sparse_allocate_workspace(matrix, options, workspace, ijktot*STENCIL_SIZE)
         write(*,*)"NEW stuff added here"
 
 #if 1
@@ -535,6 +547,8 @@ contains
         call write_xls_int("geometry_mask.txt",geometry_mask)
         call write_xls_3d("kinematic_bc_u.txt",kinematic_bc_u)
         call write_xls_3d("kinematic_bc_v.txt",kinematic_bc_v)
+        call write_xls("normal_x.txt",sin(marine_bc_normal))
+        call write_xls("normal_y.txt",-cos(marine_bc_normal))
         write(*,*),"ZETA=",zeta
 #endif
 
@@ -821,7 +835,7 @@ contains
         !Detect locations of the marine margin
         do i = 1, size(geometry_mask,1)
             do j = 1, size(geometry_mask,2)
-                if (GLIDE_IS_MARINE_ICE_EDGE(geometry_mask(i,j))) then
+                if (GLIDE_IS_SHELF_FRONT(geometry_mask(i,j))) then
                     !Detect whether we need to upwind or downwind in the Y
                     !direction
                     if (.not. GLIDE_HAS_ICE(geometry_mask(i-1,j))) then
@@ -906,9 +920,11 @@ contains
             call directions_from_mask(geometry_mask, direction_x, direction_y)
             call write_xls("direction_x.txt",direction_x)
             call write_xls("direction_y.txt",direction_y)
-            call df_field_3d(uvel_test, dy, dx, dz, dudy, dudx, dudz, direction_y, direction_x)
-            call df_field_3d(vvel_test, dy, dx, dz, dvdy, dvdx, dvdz, direction_y, direction_x)
-        end if
+            call df_field_3d(uvel_test, dy, dx, dz, dudy, dudx, dudz, direction_x, direction_y)
+            call df_field_3d(vvel_test, dy, dx, dz, dvdy, dvdx, dvdz, direction_x, direction_y)
+            !call df_field_3d(uvel_test, dy, dx, dz, dudy, dudx, dudz)
+            !call df_field_3d(vvel_test, dy, dx, dz, dvdy, dvdx, dvdz)
+         end if
 
         !Compute mu term from the acceleration fields
         do i=1,MAXY
@@ -975,7 +991,7 @@ contains
         double precision :: rhs
           
         INTEGER i,j,k,l,m,sparuv,iter, ierr
-        double precision :: d(IJKTOT),x(IJKTOT),coef(25),err
+        double precision :: d(IJKTOT),x(IJKTOT),coef(STENCIL_SIZE),err
       
         !Sparse matrix variables.  These are passed in so that allocation can be
         !done once per velocity solve instead of once per iteration
@@ -994,7 +1010,8 @@ contains
         write(*,*) " Component Y X Z normal_x normal_y ax ay H mu ", &
                    "im1jm1 im1km1 im1 im1kp1 im1jp1 jm1km1 jm1 jm1kp1 ", &
                    "km2 km1 center kp1 kp2 jp1km1 jp1 jp1kp1 ", &
-                   "ip1jm1 ip1km1 ip1 ip1kp1 ip1jp1 im2 ip2 jm2 jp2"
+                   "ip1jm1 ip1km1 ip1 ip1kp1 ip1jp1 im2 ip2 jm2 jp2 rhs ", &
+                   "upwind_x downwind_x upwind_y downwind_y"
 #endif
 
         !Initialize sparse matrix & vectors
@@ -1035,7 +1052,7 @@ contains
                         !line here and and in the Y velocity section of this
                         !function.
                         !x=csp(I_J_K,i,j,k,MAXX,NZETA))=uvel(i,j,k) !Use current velocity as guess of solution
-                        do m=1,25
+                        do m=1,STENCIL_SIZE
                             si = stencil_i(m,i)
                             sj = stencil_j(m,j)
                             sk = stencil_k(m,k)
@@ -1053,10 +1070,11 @@ contains
              end do
         end do
         call write_sparse_system('sparse_u.txt',matrix%row, matrix%col, matrix%val, matrix%nonzeros)
-        call sparse_solver_preprocess(matrix, options, workspace)
+#ifndef OUTPUT_SPARSE_MATRIX
+        call sparse_solver_preprocess(matrix, options, workspace)        
         ierr = sparse_solve(matrix, d, x, options, workspace,  err, iter, verbose=sparverbose)
         call handle_sparse_error(matrix, ierr, __FILE__, __LINE__)        
-
+#endif
  
         !Delinearize the solution
         do i=1,MAXY
@@ -1111,7 +1129,7 @@ contains
                         !line here and and in the Y velocity section of this
                         !function.
                         !x=csp(I_J_K,i,j,k,MAXX,NZETA))=vvel(i,j,k) !Use current velocity as guess of solution
-                        do m=1,25
+                        do m=1,STENCIL_SIZE
                             si = stencil_i(m,i)
                             sj = stencil_j(m,j)
                             sk = stencil_k(m,k)
@@ -1287,7 +1305,7 @@ contains
         integer :: i,j,k, MAXY, MAXX, Ndz
 
         !Output array
-        double precision, dimension(25), intent(out) :: coef
+        double precision, dimension(STENCIL_SIZE), intent(out) :: coef
 
         !Output RHS value
         double precision, intent(out) :: rhs
@@ -1452,6 +1470,14 @@ contains
             coef(I_J_K) = 1
         else if (.not. IS_NAN(latbc_normal(i,j))) then !Marine margin dynamic (Neumann) boundary condition
             call sparse_marine_margin(component,i,j,k,h,latbc_normal, vel_perp, mu, dx, dy, ax, ay, dz,coef, rhs)
+#ifdef ENABLE_VERTAVG_SHELF
+        else if (GLIDE_IS_FLOAT(geometry_mask(i,j)) .and. k > 1) then
+            !Interior of ice shelf and not the surface.  In this case, we
+            !just enforce plug flow
+            coef(I_J_K) = 1
+            coef(I_J_KM1) = -1
+            rhs = 0
+#endif
         else if (k.eq.1) then !Upper boundary condition (stress-free surface)
             !Finite difference coefficients for an irregular Z grid, downwinded
             dz_down1=(2.*dz(k)-dz(k+1)-dz(k+2))/(dz(k+1)-dz(k))/(dz(k+2)-dz(k))
@@ -1618,7 +1644,7 @@ contains
         
         real(dp), dimension(:), intent(in) :: zeta !*FD Irregular grid levels in vertical coordinate
         
-        real(dp), dimension(25), intent(inout) :: coef !*FD Output array of stencil coefficients
+        real(dp), dimension(STENCIL_SIZE), intent(inout) :: coef !*FD Output array of stencil coefficients
         real(dp),                intent(out)   :: rhs !*FD Element of the right-hand side vector corresponding to this point
 
         !Whether or not we need to upwind or downwind lateral derivatives
@@ -1661,13 +1687,13 @@ contains
         n_y = -(cos(normals(i,j)))
 
         !Clamp n_x and n_y so that small values register as zero
-        !if (abs(n_x) < 1d-10) then
-        !    n_x = 0
-        !end if
+        if (abs(n_x) < 1d-10) then
+            n_x = 0
+        end if
 
-        !if (abs(n_y) < 1d-10) then
-        !    n_y = 0
-        !end if
+        if (abs(n_y) < 1d-10) then
+            n_y = 0
+        end if
 
         !Determine the hydrostatic pressure at the current location
         !If we are at the part of the ice shelf above the water, 
@@ -1685,8 +1711,9 @@ contains
         !This line changes pressure to the vertically integrated hydrostatic
         !pressure, and applies that throughout the ice column regardless even of
         !whether the ice is underwater.
-        !pressure = .5 * rhoi * grav * h(i,j) * (1 - rhoi/rhoo)
-
+#ifdef AVERAGED_PRESSURE
+        pressure = .5 * rhoi * grav * h(i,j) * (1 - rhoi/rhoo)
+#endif
         !Apply viscosity to the RHS
         !pressure = pressure/mu(i,j,k)
 
@@ -1746,8 +1773,8 @@ contains
 
 
             rhs = pressure*n_x - (2*n_x*dperp_dy & 
-                                  - n_y * dperp_dx &
-                                  - (2*ay(i,j,k)*n_x + ax(i,j,k)*n_y)*dperp_dz)*mu(i,j,k)
+                                  + n_y * dperp_dx &
+                                  + (2*ay(i,j,k)*n_x + ax(i,j,k)*n_y)*dperp_dz)*mu(i,j,k)
 
             dx_coeff = n_x*4*mu(i,j,k)
             dy_coeff = n_y*mu(i,j,k)
@@ -1775,8 +1802,8 @@ contains
             end if
 
             rhs = pressure*n_y - (2*n_y*dperp_dx & 
-                                  - n_x * dperp_dy &
-                                  - (2*ax(i,j,k)*n_y + ay(i,j,k)*n_x)*dperp_dz)*mu(i,j,k)
+                                  + n_x * dperp_dy &
+                                  + (2*ax(i,j,k)*n_y + ay(i,j,k)*n_x)*dperp_dz)*mu(i,j,k)
 
   
             dy_coeff = n_y*4*mu(i,j,k)
@@ -1819,32 +1846,61 @@ contains
         !coefficients have already been computed above, so we just need to make
         !sure to use the correct difference form (upwind or downwind, etc.)
         if (downwind_y) then
+
+#ifdef USE_ORD2_HORIZ_UPDOWN 
             coef(IP2_J_K) = coef(IP2_J_K) - 0.5 * dy_coeff/dy
             coef(IP1_J_K) = coef(IP1_J_K) + 2.0 * dy_coeff/dy
             coef(I_J_K)   = coef(I_J_K)   - 1.5 * dy_coeff/dy
+#else
+            coef(IP1_J_K) = coef(IP1_J_K) + dy_coeff/dy
+            coef(I_J_K)   = coef(I_J_K)   - dy_coeff/dy
+#endif
+
         else if (upwind_y) then
+
+#ifdef USE_ORD2_HORIZ_UPDOWN 
             coef(I_J_K)   = coef(I_J_K)   + 1.5 * dy_coeff/dy
             coef(IM1_J_K) = coef(IM1_J_K) - 2.0 * dy_coeff/dy 
             coef(IM2_J_K) = coef(IM2_J_K) + 0.5 * dy_coeff/dy
+#else
+            coef(I_J_K)   = coef(I_J_K)   + dy_coeff/dy
+            coef(IM1_J_K) = coef(IM1_J_K) - dy_coeff/dy
+#endif
+
         else
             coef(IP1_J_K) = coef(IP1_J_K) + .5*dy_coeff/dy
             coef(IM1_J_K) = coef(IM1_J_K) - .5*dy_coeff/dy  
         end if
 
         if (downwind_x) then
+
+#ifdef USE_ORD2_HORIZ_UPDOWN 
             coef(I_JP2_K) = coef(I_JP2_K) - 0.5 * dx_coeff/dx
             coef(I_JP1_K) = coef(I_JP1_K) + 2.0 * dx_coeff/dx
             coef(I_J_K)   = coef(I_J_K)   - 1.5 * dx_coeff/dx 
+#else
+            coef(I_JP1_K) = coef(I_JP1_K) + dx_coeff/dx
+            coef(I_J_K)   = coef(I_J_K)   - dx_coeff/dx
+#endif
+
         else if (upwind_x) then
+
+#ifdef USE_ORD2_HORIZ_UPDOWN 
             coef(I_J_K)   = coef(I_J_K)   + 1.5 * dx_coeff/dx
             coef(I_JM1_K) = coef(I_JM1_K) - 2.0 * dx_coeff/dx 
             coef(I_JM2_K) = coef(I_JM2_K) + 0.5 * dx_coeff/dx
+#else
+            coef(I_J_K)   = coef(I_J_K)   + dx_coeff/dx
+            coef(I_JM1_K) = coef(I_JM1_K) - dx_coeff/dx
+#endif
+
         else
-            coef(I_JP1_K) = coef(I_JP1_K) + .5*dx_coeff/dx
-            coef(I_JM1_K) = coef(I_JM1_K) - .5*dx_coeff/dx  
+            coef(I_JP1_K) = coef(I_JP1_K) + 0.5 * dx_coeff/dx
+            coef(I_JM1_K) = coef(I_JM1_K) - 0.5 * dx_coeff/dx  
         end if
 #ifdef OUTPUT_SPARSE_MATRIX
-        write(*,*)component,i,j,k,n_x,n_y,ax(i,j,k),ay(i,j,k),h(i,j),mu(i,j,k),coef
+        write(*,*)component,i,j,k,n_x,n_y,ax(i,j,k),ay(i,j,k),h(i,j),mu(i,j,k),coef,rhs, &
+                  upwind_x, downwind_x, upwind_y, downwind_y
 #endif
     end subroutine
 

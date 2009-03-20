@@ -97,7 +97,8 @@ contains
     end do
     model%geometry%iarea = model%geometry%iarea * model%numerics%dew * model%numerics%dns
     model%geometry%ivol = model%geometry%ivol * model%numerics%dew * model%numerics%dns
-
+    
+    maskWithBounds = 0
     maskWithBounds(1:model%general%ewn, 1:model%general%nsn) = MASK
 
     ! finding boundaries
@@ -144,7 +145,7 @@ contains
         integer :: i, j
         do i = 1, size(mask, 1)
             do j = 1, size(mask, 2)
-                if (GLIDE_IS_MARINE_ICE_EDGE(mask(i,j))) then
+                if (GLIDE_IS_SHELF_FRONT(mask(i,j))) then
                     marine_bc_normal(i,j) = calc_normal_45deg(thck(i-1:i+1,j-1:j+1))
                 else
                     marine_bc_normal(i,j) = NaN

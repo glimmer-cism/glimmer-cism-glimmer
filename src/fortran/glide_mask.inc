@@ -26,6 +26,6 @@
 #define GLIDE_IS_GROUND(mask)      (iand(mask,GLIDE_MASK_INTERIOR) .gt. 0 .and. GLIDE_HAS_ICE(mask))
 #define GLIDE_IS_CALVING(mask)     (iand(mask,GLIDE_MASK_SHELF_FRONT) .gt. 0 .and. GLIDE_HAS_ICE(mask))
 #define GLIDE_IS_MARINE_ICE_EDGE(mask) (iand(mask,GLIDE_MASK_MARINE_EDGE) .gt. 0 .and. GLIDE_HAS_ICE(mask))
-
+#define GLIDE_IS_SHELF_FRONT(mask) (iand(mask,GLIDE_MASK_SHELF_FRONT) .gt. 0 .and. GLIDE_HAS_ICE(mask))
 #endif
 

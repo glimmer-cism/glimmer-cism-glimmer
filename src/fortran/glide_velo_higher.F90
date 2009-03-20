@@ -495,6 +495,7 @@ contains
         call unstagger_field_2d(btrc_t, btrc_t_unstag, periodic_ew, periodic_ns)
         write(*,*) ewn, dew, nsn, dns, upn
         write(*,*) shape(btrc)
+
         !Compute rescaled coordinate parameters (needed because Pattyn uses an
         !irregular Z grid and scales so that 0 is the surface, 1 is the bed)
         call init_rescaled_coordinates(dthckdew_t,dlsrfdew_t,dthckdns_t,dlsrfdns_t,usrf_t,thck_t,lsrf_t,&
