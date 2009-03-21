@@ -229,6 +229,7 @@ contains
     use glide_temp
     use glide_mask
     use glide_thckmask
+    use glide_grids
     implicit none
 
     type(glide_global_type) :: model        !*FD model instance
@@ -247,8 +248,10 @@ contains
     call stagvarb(model%geometry% thck, &
          model%geomderv% stagthck,&
          model%general%  ewn, &
-         model%general%  nsn)
-
+         model%general%  nsn, &
+         1, &
+         model%geometry%usrf, &
+         model%numerics%thklim)
     call df_field_2d_staggered(model%geometry%usrf, &
                                model%numerics%dew, model%numerics%dns, &
                                model%geomderv%dusrfdew, & 
