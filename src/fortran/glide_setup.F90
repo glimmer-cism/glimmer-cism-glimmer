@@ -196,14 +196,15 @@ contains
 
 !-------------------------------------------------------------------------
 
-  subroutine glide_marinlim(which,thck,relx,topg,mask,mlimit,calving_fraction,eus,ablation_field)
+  subroutine glide_marinlim(which,thck,relx,topg,flwa,levels,mask,mlimit,calving_fraction,eus,ablation_field)
 
     !*FD Removes non-grounded ice, according to one of two altenative
     !*FD criteria, and sets upper surface of non-ice-covered points 
     !*FD equal to the topographic height, or sea-level, whichever is higher.
 
     use glimmer_global, only : dp, sp
-    use glimmer_physcon, only : rhoi, rhoo
+    use glimmer_physcon, only : rhoi, rhoo, grav, gn
+    use glide_vertint, only : vertint_output2d
     use glide_mask
     implicit none
 
@@ -221,6 +222,8 @@ contains
     real(dp),dimension(:,:),intent(inout) :: thck    !*FD Ice thickness (scaled)
     real(dp),dimension(:,:),intent(in)    :: relx    !*FD Relaxed topography (scaled)
     real(dp),dimension(:,:),intent(in)    :: topg    !*FD Present bedrock topography (scaled)
+    real(dp),dimension(:,:,:),intent(in)  :: flwa    !*FD Vertically averaged ice hardness
+    real(dp),dimension(:)    ,intent(in)  :: levels    !*FD Vertically averaged ice hardness
     integer, dimension(:,:),pointer       :: mask    !*FD grid type mask
     real(dp)                              :: mlimit  !*FD Lower limit on topography elevation for
                                                      !*FD ice to be present (scaled). Used with 
@@ -228,11 +231,19 @@ contains
     real(dp), intent(in) :: calving_fraction         !*FD fraction of ice lost when calving Used with 
                                                      !*FD $\mathtt{which}=3$.
     real, intent(inout) :: eus                       !*FD eustatic sea level
-    real(sp),dimension(:,:),intent(inout) :: ablation_field 
+    real(sp),dimension(:,:),intent(inout) :: ablation_field !*FD this is passed as climate%calving
+
+    real(dp), parameter :: con = - rhoi / rhoo
+    real(dp), parameter :: sigmaxx = 0.5 * rhoi * grav * (1.0 - rhoi / rhoo)
+    real(dp), parameter :: theta = 2.0
+    real(dp), dimension(2,2) :: A
+
 
     integer ew,ns
-    real(dp), parameter :: con = - rhoi / rhoo
+    real(dp) :: sigmab
     !---------------------------------------------------------------------
+
+    sigmab = 0.2
 
     ablation_field=0.0
 
@@ -268,6 +279,18 @@ contains
           ablation_field=thck
           thck = 0.0d0
        end where
+    case(5) ! Relation based on computing the horizontal stretching
+            ! of the unconfined ice shelf (\dot \epsilon_{xx}) and multiplying by H.
+            ! 
+       do ns = 2,size(thck,2)-1
+          do ew = 2,size(thck,1)-1
+             if (GLIDE_IS_CALVING(mask(ew,ns))) then
+                call vertint_output2d(flwa(:,ew-1:ew,ns-1:ns),A, levels * thck(ew,ns))
+                ablation_field(ew,ns)=  theta * A(2,2) * (sigmaxx * thck(ew,ns) * (1 - sigmab)) ** gn * thck(ew,ns)
+             end if
+          end do
+       end do
+
 
     end select
 

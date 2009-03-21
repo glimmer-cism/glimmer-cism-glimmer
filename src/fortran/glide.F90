@@ -56,7 +56,6 @@ module glide
   use glide_deriv
   use glimmer_config
   use glimmer_global
-  use glide_grids, only: stagvarb
   integer, private, parameter :: dummyunit=99
 
 contains
@@ -142,12 +141,7 @@ contains
 
     ! initialise bed softness to uniform parameter
     model%velocity%bed_softness = model%velowk%btrac_const
-   
-    !Initialize boundary condition fields to be NaN everywhere
-    model%velocity_hom%kinematic_bc_u = NaN
-    model%velocity_hom%kinematic_bc_v = NaN
-    model%geometry%marine_bc_normal = NaN
-
+    
     ! load sigma file
     call glide_load_sigma(model,dummyunit)
 
@@ -209,9 +203,6 @@ contains
     ! calculate mask
     call glide_set_mask(model)
 
-    !calculate the normal at the marine margin
-    call glide_marine_margin_normal(model%geometry%thck, model%geometry%thkmask, model%geometry%marine_bc_normal)
-
     ! and calculate lower and upper ice surface
     call glide_calclsrf(model%geometry%thck, model%geometry%topg, model%climate%eus,model%geometry%lsrf)
     
@@ -256,13 +247,8 @@ contains
     call stagvarb(model%geometry% thck, &
          model%geomderv% stagthck,&
          model%general%  ewn, &
-         model%general%  nsn, &
-         1, &
-         model%geometry%usrf,&
-         model%numerics%thklim)
-    !call fix_mass_conservation(model%geometry%thck, &
-    !                           model%geomderv%stagthck)
- 
+         model%general%  nsn)
+
     call df_field_2d_staggered(model%geometry%usrf, &
                                model%numerics%dew, model%numerics%dns, &
                                model%geomderv%dusrfdew, & 
@@ -406,10 +392,6 @@ contains
     call glide_prof_stop(model,model%glide_prof%ice_mask2)
 #endif
 
-    !calculate the normal at the marine margin
-    call glide_marine_margin_normal(model%geometry%thck, model%geometry%thkmask, model%geometry%marine_bc_normal)
-
-
     ! ------------------------------------------------------------------------ 
     ! Remove ice which is either floating, or is present below prescribed
     ! depth, depending on value of whichmarn
@@ -418,6 +400,8 @@ contains
          model%geometry% thck,      &
          model%isos% relx,      &
          model%geometry%topg,   &
+         model%temper%flwa,   &
+         model%numerics%sigma,   &
          model%geometry%thkmask,    &
          model%numerics%mlimit,     &
          model%numerics%calving_fraction, &
