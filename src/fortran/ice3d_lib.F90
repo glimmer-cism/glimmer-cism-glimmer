@@ -953,13 +953,6 @@ contains
         return
     end subroutine
 
-!
-!------------------------------------------------------
-!   determination of velocity u and v
-!   with higher order model using sparse
-!   matrices
-!------------------------------------------------------
-!
     function sparuv(mu,dzdx,dzdy,ax,ay,bx,by,cxy,h,uvel,vvel,ustar,vstar,beta,dhbdx,dhbdy,&
                     IJKTOT,MAXY,MAXX,NZETA,TOLER,GRIDX,GRIDY,zeta, point_mask, geometry_mask,&
                     matrix, workspace, options, kinematic_bc_u, kinematic_bc_v,latbc_normal)
@@ -1027,11 +1020,13 @@ contains
                 velperp => vvel
                 velpara_star => ustar
                 componentstr = "u"
+                kinematic_bc_para => kinematic_bc_u
             else !Compute v component
                 velpara => vvel
                 velperp => uvel
                 velpara_star => vstar
                 componentstr = "v"
+                kinematic_bc_para => kinematic_bc_v
             end if
             !Initialize sparse matrix & vectors
             d=0
@@ -1122,7 +1117,6 @@ contains
         end do !END whichcomponent loop
 
     end function sparuv
-
 !
 !
 !
