@@ -39,7 +39,9 @@ contains
         call sparse_solver_preprocess(matrix, opt, wk)
 
         ierr = sparse_solve(matrix, rhs, answer, opt, wk, err, iter, .false.)
-        
+       
+        call sparse_solver_postprocess(matrix, opt, wk)
+
         if (ierr /= 0) then
             if (present(calling_file) .and. present(calling_line)) then
                 call handle_sparse_error(matrix, ierr, calling_file, calling_line)

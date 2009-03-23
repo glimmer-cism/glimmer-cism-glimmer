@@ -29,11 +29,11 @@
 #define AVERAGED_PRESSURE
 
 !The maximum number of iterations to use in the unstable manifold loop
-#define NUMBER_OF_ITERATIONS 100
+#define NUMBER_OF_ITERATIONS 10000
 
 !If defined, the model uses 2nd order upwinded and downwinded finite
 !differences.
-#define USE_ORD2_HORIZ_UPDOWN
+!#define USE_ORD2_HORIZ_UPDOWN
 
 module ice3d_lib
     use glimmer_global
@@ -973,17 +973,17 @@ contains
         double precision, dimension(:,:,:) :: by
         double precision, dimension(:,:,:) :: cxy
         double precision, dimension(:,:) :: h
-        double precision, dimension(:,:,:) :: uvel
-        double precision, dimension(:,:,:) :: vvel
-        double precision, dimension(:,:,:) :: ustar
-        double precision, dimension(:,:,:) :: vstar
+        double precision, dimension(:,:,:), target :: uvel
+        double precision, dimension(:,:,:), target :: vvel
+        double precision, dimension(:,:,:), target :: ustar
+        double precision, dimension(:,:,:), target :: vstar
         double precision, dimension(:,:) :: dhbdx
         double precision, dimension(:,:) :: dhbdy
         double precision, dimension(:,:) :: beta
         double precision, dimension(:) :: zeta
         integer, dimension(:,:) :: geometry_mask
-        double precision, dimension(:,:,:) :: kinematic_bc_u
-        double precision, dimension(:,:,:) :: kinematic_bc_v
+        double precision, dimension(:,:,:), target :: kinematic_bc_u
+        double precision, dimension(:,:,:), target :: kinematic_bc_v
         double precision, dimension(:,:)   :: latbc_normal !On the marine ice front, this is the angle of the normal to the ice front
         double precision :: toler
         double precision :: gridx
@@ -1003,6 +1003,9 @@ contains
         
         integer :: stencil_center_idx
         integer :: si, sj, sk
+        double precision, dimension(:,:,:), pointer :: velpara, velperp, velpara_star, kinematic_bc_para
+        integer :: whichcomponent
+        character(1) :: componentstr
 !
 !-------  velocity u
 !
@@ -1014,162 +1017,110 @@ contains
                    "upwind_x downwind_x upwind_y downwind_y"
 #endif
 
-        !Initialize sparse matrix & vectors
-        d=0
-        x=0
-        call sparse_clear(matrix)
-        do i=1,MAXY
-            do j=1,MAXX
-                if (point_mask(i,j) /= 0) then
-                    do k=1,NZETA 
-                        coef = 0
-                        stencil_center_idx = csp_masked(I_J_K,i,j,k,point_mask,NZETA) 
-                        if (h(i,j).lt.SMALL) then
-                            !No ice - "pass through"
-                            coef(I_J_K)=1.
-                            !Normally, we use uvel(i,j,k) as our initial guess.
-                            !However, in this case, we know the velocity
-                            !should be 0, so we'll replace our uvel with that
-                            uvel(i,j,k) = 0
-                            rhs = 0
-                        else if ((i.eq.1).or.(i.eq.MAXY).or.(j.eq.1).or.(j.eq.MAXX)) then
-                            !Boundary condition
-                            coef(I_J_K)=1.
-                            rhs=uvel(i,j,k)
-                        else
 
-                            call sparse_setup("u", i, j, k, mu, dzdx, dzdy, ax, ay, bx, by, cxy, &
-                                  h, gridx, gridy, zeta, uvel, vvel, dhbdx, dhbdy, beta, geometry_mask, &
-                                  kinematic_bc_u, latbc_normal, maxx, maxy, Nzeta, coef, rhs)
-                        endif
-                        !write(*,*) i,j,k,IS_NAN(latbc_normal(i,j)), &
-                        !      minval(coef), maxval(coef)
-                        d(stencil_center_idx)=rhs
-                        !Preliminary benchmarks indicate the we actually reach
-                        !convergance faster if we use a 0 initial guess rather than
-                        !the previous velocity.  More testing is needed.
-                        !To use the current velocity as the guess, uncomment this
-                        !line here and and in the Y velocity section of this
-                        !function.
-                        !x=csp(I_J_K,i,j,k,MAXX,NZETA))=uvel(i,j,k) !Use current velocity as guess of solution
-                        do m=1,STENCIL_SIZE
-                            si = stencil_i(m,i)
-                            sj = stencil_j(m,j)
-                            sk = stencil_k(m,k)
-                            if (si > 0 .and. si <= maxy .and. &
-                                sj > 0 .and. sj <= maxx .and. &
-                                sk > 0 .and. sk <= nzeta) then
-                                    call sparse_insert_val(matrix, &
+
+        sparuv = 0
+
+        do whichcomponent = 1,2
+            if (whichcomponent == 1) then !Set up to compute u component
+                velpara => uvel
+                velperp => vvel
+                velpara_star => ustar
+                componentstr = "u"
+            else !Compute v component
+                velpara => vvel
+                velperp => uvel
+                velpara_star => vstar
+                componentstr = "v"
+            end if
+            !Initialize sparse matrix & vectors
+            d=0
+            x=0
+            call sparse_clear(matrix)
+            do i=1,MAXY
+                do j=1,MAXX
+                    if (point_mask(i,j) /= 0) then
+                        do k=1,NZETA 
+                            coef = 0
+                            stencil_center_idx = csp_masked(I_J_K,i,j,k,point_mask,NZETA) 
+                            if (h(i,j).lt.SMALL) then
+                                !No ice - "pass through"
+                                coef(I_J_K)=1.
+                                !Normally, we use uvel(i,j,k) as our initial guess.
+                                !However, in this case, we know the velocity
+                                !should be 0, so we'll replace our uvel with that
+                                velpara(i,j,k) = 0
+                                rhs = 0
+                            else if (.not. IS_NAN(kinematic_bc_para(i,j,k))) then
+                                !If a kinematic boundary condition was specified
+                                !for this location, hold the location at the
+                                !specified value.
+                                coef(I_J_K)=1.
+                                rhs = kinematic_bc_para(i,j,k)
+                            else if ((i.eq.1).or.(i.eq.MAXY).or.(j.eq.1).or.(j.eq.MAXX)) then
+
+                                !Boundary condition at the edges of the domain.
+                                !If we don't have a kinematic boundary already
+                                !specified, we just "pass through" the initial
+                                !guess.  If a kinematic b.c. is specified, we
+                                !handle it in sparse_setup rather than here.
+                                coef(I_J_K)=1.
+                                rhs=velpara(i,j,k)
+                            else
+
+                                call sparse_setup(componentstr, i, j, k, mu, dzdx, dzdy, ax, ay, bx, by, cxy, &
+                                     h, gridx, gridy, zeta, uvel, vvel, dhbdx, dhbdy, beta, geometry_mask, &
+                                     latbc_normal, maxx, maxy, Nzeta, coef, rhs)
+                            endif
+                            d(stencil_center_idx)=rhs
+                            !Preliminary benchmarks indicate the we actually reach
+                            !convergance faster if we use a 0 initial guess rather than
+                            !the previous velocity.  More testing is needed.
+                            !To use the current velocity as the guess, uncomment this
+                            !line here and and in the Y velocity section of this
+                            !function.
+                            !x=csp(I_J_K,i,j,k,MAXX,NZETA))=uvel(i,j,k) !Use current velocity as guess of solution
+                            do m=1,STENCIL_SIZE
+                                si = stencil_i(m,i)
+                                sj = stencil_j(m,j)
+                                sk = stencil_k(m,k)
+                                if (si > 0 .and. si <= maxy .and. &
+                                    sj > 0 .and. sj <= maxx .and. &
+                                    sk > 0 .and. sk <= nzeta) then
+                                        call sparse_insert_val(matrix, &
                                                     stencil_center_idx, &
                                                     csp_stenciled(si,sj,sk,point_mask,NZETA), &
                                                     coef(m)) 
-                            end if
-                        end do
-                    end do
-                end if
-             end do
-        end do
-        call write_sparse_system('sparse_u.txt',matrix%row, matrix%col, matrix%val, matrix%nonzeros)
+                                end if
+                            end do !End loop through stencil
+                        end do !END k loop
+                    end if !End mask check
+                end do !End j loop
+            end do !End i loop
 #ifndef OUTPUT_SPARSE_MATRIX
-        call sparse_solver_preprocess(matrix, options, workspace)        
-        ierr = sparse_solve(matrix, d, x, options, workspace,  err, iter, verbose=sparverbose)
-        call handle_sparse_error(matrix, ierr, __FILE__, __LINE__)        
+            call sparse_solver_preprocess(matrix, options, workspace)        
+            ierr = sparse_solve(matrix, d, x, options, workspace,  err, iter, verbose=sparverbose)
+            sparuv = sparuv + iter
+        
+            call handle_sparse_error(matrix, ierr, __FILE__, __LINE__)      
+            call sparse_solver_postprocess(matrix, options, workspace)
 #endif
  
-        !Delinearize the solution
-        do i=1,MAXY
-            do j=1,MAXX
-                do k=1,NZETA
-                    if (point_mask(i,j) /= 0) then
-                        !write(*,*)csp_masked(11,i,j,k,point_mask,nzeta)
-                        ustar(i,j,k)=x(csp_masked(11,i,j,k,point_mask,nzeta))
-                    else
-                        ustar(i,j,k)=0
-                    end if
-                end do
-            end do
-        end do
-!
-!-------  velocity v
-!
-        !Initialize sparse matrix & vectors
-        d=0
-        x=0
-        call sparse_clear(matrix)
-
-        do i=1,MAXY
-            do j=1,MAXX
-                if (point_mask(i,j) /= 0) then
-                    do k=1,NZETA 
-                        coef = 0
-                        stencil_center_idx = csp_masked(I_J_K,i,j,k,point_mask,NZETA) 
-                        if (h(i,j).lt.SMALL) then
-                            !No ice - "pass through"
-                            coef(I_J_K)=1.
-                            !Normally, we use uvel(i,j,k) as our initial guess.
-                            !However, in this case, we know the velocity
-                            !should be 0, so we'll replace our uvel with that
-                            vvel(i,j,k) = 0
-                            rhs = 0
-                        else if ((i.eq.1).or.(i.eq.MAXY).or.(j.eq.1).or.(j.eq.MAXX)) then
-                            !Boundary condition
-                            coef(I_J_K)=1.
-                            rhs=vvel(i,j,k)
+            !Delinearize the solution
+            do i=1,MAXY
+                do j=1,MAXX
+                    do k=1,NZETA
+                        if (point_mask(i,j) /= 0) then
+                            !write(*,*)csp_masked(11,i,j,k,point_mask,nzeta)
+                            velpara_star(i,j,k)=x(csp_masked(11,i,j,k,point_mask,nzeta))
                         else
-
-                            call sparse_setup("v", i, j, k, mu, dzdx, dzdy, ax, ay, bx, by, cxy, &
-                                  h, gridx, gridy, zeta, uvel, vvel, dhbdx, dhbdy, beta, geometry_mask, &
-                                  kinematic_bc_v, latbc_normal, maxx, maxy, Nzeta, coef, rhs)
-                        endif
-                        d(stencil_center_idx)=rhs
-                        !Preliminary benchmarks indicate the we actually reach
-                        !convergance faster if we use a 0 initial guess rather than
-                        !the previous velocity.  More testing is needed.
-                        !To use the current velocity as the guess, uncomment this
-                        !line here and and in the Y velocity section of this
-                        !function.
-                        !x=csp(I_J_K,i,j,k,MAXX,NZETA))=vvel(i,j,k) !Use current velocity as guess of solution
-                        do m=1,STENCIL_SIZE
-                            si = stencil_i(m,i)
-                            sj = stencil_j(m,j)
-                            sk = stencil_k(m,k)
-
-                            if (si > 0 .and. si <= maxy .and. &
-                                sj > 0 .and. sj <= maxx .and. &
-                                sk > 0 .and. sk <= nzeta) then
-                                    call sparse_insert_val(matrix, &
-                                                    stencil_center_idx, &
-                                                    csp_stenciled(si,sj,sk,point_mask,NZETA), &
-                                                    coef(m)) 
-                            end if
-                        end do
+                            velpara_star(i,j,k)=0
+                        end if
                     end do
-                end if
-             end do
-        end do
-#ifdef OUTPUT_SPARSE_MATRIX
-        stop
-#endif
-        call write_sparse_system('sparse_v.txt',matrix%row, matrix%col, matrix%val, matrix%nonzeros)
-        call sparse_solver_preprocess(matrix, options, workspace)
-        ierr = sparse_solve(matrix, d, x, options, workspace,  err, iter, verbose=sparverbose)
-        call handle_sparse_error(matrix, ierr, __FILE__, __LINE__)        
-        
-        !Delinearize the solution
-        do i=1,MAXY
-            do j=1,MAXX
-                do k=1,NZETA
-                    if (point_mask(i,j) /= 0) then
-                        !write(*,*)csp_masked(11,i,j,k,point_mask,nzeta)
-                        vstar(i,j,k)=x(csp_masked(11,i,j,k,point_mask,nzeta))
-                    else
-                        vstar(i,j,k)=0
-                    end if
                 end do
             end do
-        end do
-        sparuv=iter
-        
+        end do !END whichcomponent loop
+
     end function sparuv
 
 !
@@ -1299,7 +1250,7 @@ contains
     !DON'T PANIC, this works!  It's been tested!  Really!  The bug is somewhere
     !else!
     subroutine sparse_setup(component, i,j,k,mu,dzdx,dzdy,ax,ay,bx,by,cxy,&
-        h,dx,dy,dz,uvel,vvel,dhbdx,dhbdy,beta,geometry_mask,kinematic_bc,latbc_normal,MAXX,MAXY,Ndz,&
+        h,dx,dy,dz,uvel,vvel,dhbdx,dhbdy,beta,geometry_mask,latbc_normal,MAXX,MAXY,Ndz,&
         coef, rhs)
 !
         integer :: i,j,k, MAXY, MAXX, Ndz
@@ -1336,9 +1287,6 @@ contains
         double precision, dimension(:,:) :: beta
 
         integer, dimension(:,:) :: geometry_mask
-
-        !Kinematic boundary condition for this velocity component
-        double precision, dimension(:,:,:) :: kinematic_bc
 
         !Contains the angle of the normal to the marine margine, NaN
         !everywhere not on the margin
@@ -1465,10 +1413,7 @@ contains
             write(*,*)"FATAL ERROR: sparse_setup called with invalid component"
         end if
         
-        if (.not. IS_NAN(kinematic_bc(i,j,k))) then !Check whether the velocity has been specified directly at this point
-            rhs = kinematic_bc(i,j,k)
-            coef(I_J_K) = 1
-        else if (.not. IS_NAN(latbc_normal(i,j))) then !Marine margin dynamic (Neumann) boundary condition
+        if (.not. IS_NAN(latbc_normal(i,j))) then !Marine margin dynamic (Neumann) boundary condition
             call sparse_marine_margin(component,i,j,k,h,latbc_normal, vel_perp, mu, dx, dy, ax, ay, dz,coef, rhs)
 #ifdef ENABLE_VERTAVG_SHELF
         else if (GLIDE_IS_FLOAT(geometry_mask(i,j)) .and. k > 1) then

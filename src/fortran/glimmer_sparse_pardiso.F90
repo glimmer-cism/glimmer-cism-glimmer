@@ -164,6 +164,12 @@ contains
         niters = 0
     end function sparse_solve
 
+    subroutine sparse_solver_postprocess(matrix, options, workspace)
+        type(sparse_matrix_type) :: matrix
+        type(sparse_solver_options) :: options
+        type(sparse_solver_workspace) :: workspace
+    end subroutine
+
     subroutine sparse_destroy_workspace(matrix, options, workspace)
         !*FD Deallocates all working memory for the sparse linear solver.
         !*FD This need *not* be safe to call of an unallocated workspace
