@@ -97,7 +97,7 @@ contains
 
         write(lunit,*) '***Sparse matrix structure ends.  Value listing begins'
         do i=1,matrix%nonzeros
-            write(lunit,*),matrix%val(i)
+            write(lunit,*) matrix%val(i)
         end do
 
         !Close unit and finish off

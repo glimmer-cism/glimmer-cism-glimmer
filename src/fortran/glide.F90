@@ -115,7 +115,12 @@ contains
     use glide_mask
     use isostasy
     use glimmer_map_init
+
     use glissade, only: init_glissade
+
+    ! *sp* added
+    use glam_strs2, only : glam_velo_fordsiapstr_init
+    use remap_glamutils, only : horizontal_remap_init
 
     implicit none
     type(glide_global_type) :: model        !*FD model instance
@@ -185,7 +190,16 @@ contains
 
     if (model%options%which_ho_diagnostic == HO_DIAG_PATTYN_UNSTAGGERED .or. &
         model%options%which_ho_diagnostic == HO_DIAG_PATTYN_STAGGERED) then
+
         call init_velo_hom_pattyn(model)
+
+    end if
+
+    ! *sp* added; initialization of Payne/Price HO dynamics subroutine ... name can change once agreed on
+    if (model%options%which_ho_diagnostic == HO_DIAG_PP ) then
+
+        call glam_velo_fordsiapstr_init( )
+
     end if
 
     ! initialisations for remapping, ice age
@@ -193,6 +207,13 @@ contains
     ! initialise grid-related arrays for remap transport
     if (model%options%whichevol==EVOL_INC_REMAP .or. model%options%whichevol==EVOL_INC_REMAP_WITHTEMP) then
        call init_glissade(model)
+    endif 
+
+    ! *sp* added; initialization of LANL incremental remapping subroutine for thickness evolution
+    if (model%options%whichevol== EVOL_INC_REMAP_PP ) then
+
+        call horizontal_remap_init( )
+
     endif 
 
     ! initialise ice age
@@ -341,6 +362,10 @@ contains
     use isostasy
     use glissade, only: thck_remap_evolve
 
+    ! *sp* driver module/subroutines for Payne/Price HO dynamics and LANL inc. remapping for dH/dt 
+    ! Modeled after similar routines in "glide_thck"
+    use glam, only: glam_driver
+
     implicit none
 
     type(glide_global_type) :: model        !*FD model instance
@@ -355,7 +380,8 @@ contains
        nw=no_write
     else
        nw=.false.
-    end if
+    end if 
+
     if (.not. nw) call glide_io_writeall(model,model)
 
     ! ------------------------------------------------------------------------ 
@@ -379,13 +405,18 @@ contains
 
     case(EVOL_INC_REMAP) ! Use incremental remapping scheme for advecting ice thickness ---
             ! (Temperature is advected by glide_temp)
- 
+
        call thck_remap_evolve(model, model%temper%newtemps, 6, .false.)
  
     case(EVOL_INC_REMAP_WITHTEMP) ! Use incremental remapping scheme for advecting thickness
             ! and temperature, as well as tracers such as ice age. 
  
        call thck_remap_evolve(model, model%temper%newtemps, 6, .true.)
+
+    case(EVOL_INC_REMAP_PP) ! *sp* added option for Payne/Price HO dynamics + LANL inc. remapping for dH/dt
+                            ! Note that we are bypassing "glide_thick" altogether here.
+
+       call glam_driver( model )  
 
     end select
 #ifdef PROFILING

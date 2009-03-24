@@ -641,24 +641,24 @@ contains
     if (model%options%which_ho_diagnostic < 0 .or. model%options%which_ho_diagnostic >= size(ho_diagnostic)) then
         call write_log('Error, diagnostic_scheme out of range', GM_FATAL)
     end if
-    write(message,*), 'ho_diagnostic           :',model%options%which_ho_diagnostic, &
+    write(message,*) 'ho_diagnostic           :',model%options%which_ho_diagnostic, &
                        ho_diagnostic(model%options%which_ho_diagnostic)
     call write_log(message)
     if (model%options%which_ho_prognostic < 0 .or. model%options%which_ho_prognostic >= size(ho_prognostic)) then
         call write_log('Error, prognostic_scheme out of range', GM_FATAL)
     end if
-    write(message,*), 'ho_prognostic           :',model%options%which_ho_prognostic, &
+    write(message,*) 'ho_prognostic           :',model%options%which_ho_prognostic, &
                        ho_prognostic(model%options%which_ho_prognostic)
     call write_log(message)
     if (model%options%which_ho_beta_in < 0 .or. model%options%which_ho_beta_in >= size(ho_beta_in)) then
         call write_log('Error, basal_stress_input out of range', GM_FATAL)
     end if
-    write(message,*), 'basal_stress_input      :',model%options%which_ho_beta_in, &
+    write(message,*) 'basal_stress_input      :',model%options%which_ho_beta_in, &
                        ho_beta_in(model%options%which_ho_beta_in)
     if (model%options%which_ho_bstress < 0 .or. model%options%which_ho_bstress >= size(ho_bstress)) then
         call write_log('Error, basal_stress_input out of range', GM_FATAL)
     end if
-    write(message,*), 'basal_stress_type       :',model%options%which_ho_bstress, &
+    write(message,*) 'basal_stress_type       :',model%options%which_ho_bstress, &
                        ho_bstress(model%options%which_ho_bstress)
 
     !TODO: which_ho_bstress

@@ -549,7 +549,7 @@ contains
         call write_xls_3d("kinematic_bc_v.txt",kinematic_bc_v)
         call write_xls("normal_x.txt",sin(marine_bc_normal))
         call write_xls("normal_y.txt",-cos(marine_bc_normal))
-        write(*,*),"ZETA=",zeta
+        write(*,*) "ZETA=",zeta
 #endif
 
 

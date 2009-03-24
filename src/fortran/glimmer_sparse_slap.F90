@@ -169,7 +169,7 @@ contains
         if (present(verbose)) then
             if(verbose) then
                 iunit=6
-                write(*,*),"Tolerance=",options%tolerance
+                write(*,*) 'Tolerance=',options%tolerance
             end if
         end if
 

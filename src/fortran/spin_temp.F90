@@ -197,14 +197,14 @@ contains
       !calculate the mean annual temperature
       where (usrf >= glandhinv)
     
-        artm = 49.13 + -0.007992 * usrf - 0.7576 * lati + tperturb
+        artm = 49.13 - 0.007992 * usrf - 0.7576 * lati + tperturb
 
       elsewhere
-        artm = 49.13 + -0.007992 * glandhinv - 0.7576 * lati + tperturb
+        artm = 49.13 - 0.007992 * glandhinv - 0.7576 * lati + tperturb
       end where 
     
       !calculate the temperature half-range
-      arng = 30.38 + -0.006277 * glandhinv - 0.3262 * lati - artm + tperturb 
+      arng = 30.38 - 0.006277 * glandhinv - 0.3262 * lati - artm + tperturb 
     end select 
   
   
@@ -249,14 +249,14 @@ contains
       !calculate the mean annual temperature
       where (usrf >= glandhinv)
     
-        artm = 49.13 + -0.007992 * usrf - 0.7576 * lati + tperturb
+        artm = 49.13 - 0.007992 * usrf - 0.7576 * lati + tperturb
 
       elsewhere
-        artm = 49.13 + -0.007992 * glandhinv - 0.7576 * lati + tperturb
+        artm = 49.13 - 0.007992 * glandhinv - 0.7576 * lati + tperturb
       end where 
       
       !calculate the temperature half-range
-      arng = 30.78 + -0.006277 * glandhinv - 0.3262 * lati - artm + tperturb 
+      arng = 30.78  - 0.006277 * glandhinv - 0.3262 * lati - artm + tperturb 
     end select
   end subroutine spin_surftemp
 end module spin_temp
