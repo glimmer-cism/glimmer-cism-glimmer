@@ -212,7 +212,7 @@ contains
     ! *sp* added; initialization of LANL incremental remapping subroutine for thickness evolution
     if (model%options%whichevol== EVOL_INC_REMAP_PP ) then
 
-        call horizontal_remap_init( )
+        call horizontal_remap_init( model%general%ewn, model%general%nsn )
 
     endif 
 
