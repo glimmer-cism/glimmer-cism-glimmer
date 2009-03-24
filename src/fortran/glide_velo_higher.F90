@@ -132,7 +132,7 @@ contains
                           model%geometry%marine_bc_normal, &
                           model%velocity_hom%uvel, model%velocity_hom%vvel, &
                           model%velocity_hom%is_velocity_valid, &
-                          model%velocity_hom%uflx, model%velocity_hom%vflx, &
+                          model%velocity_hom%uflx(:,:,1), model%velocity_hom%vflx(:,:,1), &
                           model%velocity_hom%efvs, model%velocity_hom%tau, &
                           model%velocity_hom%gdsx, model%velocity_hom%gdsy)
             else if (model%options%which_ho_diagnostic == HO_DIAG_PATTYN_UNSTAGGERED) then
@@ -163,41 +163,41 @@ contains
                                periodic_ew, periodic_ns, kinematic_bc_u, kinematic_bc_v, marine_bc_normal, &
                                uvel, vvel, valid_initial_guess, uflx, vflx, efvs, tau, gdsx, gdsy)
                             
-        integer  :: ewn !*FD Number of cells X
-        integer  :: nsn !*FD Number of cells Y
-        integer  :: upn !*FD Number of cells Z
-        real(dp) :: dew !*FD Grid spacing X
-	real(dp) :: dns !*FD Grid spacing Y
-	real(dp), dimension(upn) :: sigma !*FD Sigma coord for rescaled Z dimension
-	real(dp), dimension(ewn,nsn) :: thck !*FD Thickness, on non-staggered grid
-	real(dp), dimension(ewn,nsn) :: usrf !*FD Upper surface profile
-	real(dp), dimension(ewn-1,nsn-1) :: dthckdew !*FD X thickness gradient
-	real(dp), dimension(ewn-1,nsn-1) :: dthckdns !*FD Y thickness gradient
-	real(dp), dimension(ewn-1,nsn-1) :: dusrfdew !*FD X surface gradient
-	real(dp), dimension(ewn-1,nsn-1) :: dusrfdns !*FD Y surface gradient
-	real(dp), dimension(ewn-1,nsn-1) :: dlsrfdew !*FD X bed gradient
-	real(dp), dimension(ewn-1,nsn-1) :: dlsrfdns !*FD Y bed gradient
-	real(dp), dimension(ewn-1,nsn-1) :: stagthck !*FD Staggered thickness
-        integer,  dimension(ewn-1,nsn-1) :: point_mask     !*FD Numbers points in the staggered grid that are included in computation
-        integer :: totpts
-        integer, dimension(ewn-1,nsn-1) :: geometry_mask
-	real(dp), dimension(:,:,:) :: flwa !*FD Glen's A (rate factor) - Used for thermomechanical coupling
-        real(dp), dimension(ewn-1,nsn-1)   :: btrc !*FD Basal Traction, either betasquared or tau0
-        real(dp), dimension(:,:,:)   :: kinematic_bc_u, kinematic_bc_v
-        real(dp), dimension(:,:)   :: marine_bc_normal
-        real(dp) :: flwn !*FD Exponent in Glenn power law
-        integer :: which_sliding_law
-        logical :: periodic_ew !*Whether to use periodic boundary conditions
-        logical :: periodic_ns
-        real(dp), dimension(upn,ewn-1,nsn-1) :: uvel 
-        real(dp), dimension(upn,ewn-1,nsn-1) :: vvel
-        logical :: valid_initial_guess !*Whether or not the given uvel or vvel are appropriate initial guesses.  If not we'll have to roll our own.
-        real(dp), dimension(:,:,:) :: uflx
-        real(dp), dimension(:,:,:) :: vflx
-        real(dp), dimension(:,:,:) :: efvs !*FD Effective viscosity
-        type(glide_tensor)         :: tau
-        real(dp), dimension(:,:) :: gdsx !*FD X driving stress
-        real(dp), dimension(:,:) :: gdsy !*FD Y driving stress
+        integer, intent(in)  :: ewn !*FD Number of cells X
+        integer, intent(in)  :: nsn !*FD Number of cells Y
+        integer, intent(in)  :: upn !*FD Number of cells Z
+        real(dp), intent(in) :: dew !*FD Grid spacing X
+	real(dp), intent(in) :: dns !*FD Grid spacing Y
+	real(dp), dimension(:), intent(in) :: sigma !*FD Sigma coord for rescaled Z dimension
+	real(dp), dimension(:,:), intent(in) :: thck !*FD Thickness, on non-staggered grid
+	real(dp), dimension(:,:), intent(in) :: usrf !*FD Upper surface profile
+	real(dp), dimension(:,:), intent(in) :: dthckdew !*FD X thickness gradient
+	real(dp), dimension(:,:), intent(in) :: dthckdns !*FD Y thickness gradient
+	real(dp), dimension(:,:), intent(in) :: dusrfdew !*FD X surface gradient
+	real(dp), dimension(:,:), intent(in) :: dusrfdns !*FD Y surface gradient
+	real(dp), dimension(:,:), intent(in) :: dlsrfdew !*FD X bed gradient
+	real(dp), dimension(:,:), intent(in) :: dlsrfdns !*FD Y bed gradient
+	real(dp), dimension(:,:), intent(in) :: stagthck !*FD Staggered thickness
+        integer,  dimension(:,:), intent(in) :: point_mask     !*FD Numbers points in the staggered grid that are included in computation
+        integer, intent(in) :: totpts
+        integer, dimension(:,:), intent(in) :: geometry_mask
+	real(dp), dimension(:,:,:), intent(in) :: flwa !*FD Glen's A (rate factor) - Used for thermomechanical coupling
+        real(dp), dimension(:,:), intent(in)   :: btrc !*FD Basal Traction, either betasquared or tau0
+        real(dp), dimension(:,:,:), intent(in)   :: kinematic_bc_u, kinematic_bc_v
+        real(dp), dimension(:,:), intent(in)   :: marine_bc_normal
+        real(dp), intent(in) :: flwn !*FD Exponent in Glenn power law
+        integer, intent(in) :: which_sliding_law
+        logical, intent(in) :: periodic_ew !*Whether to use periodic boundary conditions
+        logical, intent(in) :: periodic_ns
+        real(dp), dimension(:,:,:), intent(inout) :: uvel 
+        real(dp), dimension(:,:,:), intent(inout) :: vvel
+        logical, intent(in) :: valid_initial_guess !*Whether or not the given uvel or vvel are appropriate initial guesses.  If not we'll have to roll our own.
+        real(dp), dimension(:,:), intent(out) :: uflx
+        real(dp), dimension(:,:), intent(out) :: vflx
+        real(dp), dimension(:,:,:), intent(out) :: efvs !*FD Effective viscosity
+        type(glide_tensor), intent(out)         :: tau
+        real(dp), dimension(:,:), intent(out) :: gdsx !*FD X driving stress
+        real(dp), dimension(:,:), intent(out) :: gdsy !*FD Y driving stress
         integer :: i, k
 
         !Second derivative of surface
@@ -363,29 +363,30 @@ contains
                                periodic_ew, periodic_ns, kinematic_bc_u, kinematic_bc_v, marine_bc_normal,&
                                uvel, vvel, valid_initial_guess)
                             
-        integer  :: ewn !*FD Number of cells X
-        integer  :: nsn !*FD Number of cells Y
-        integer  :: upn !*FD Number of cells Z
-        real(dp) :: dew !*FD Grid spacing X
-	real(dp) :: dns !*FD Grid spacing Y
-	real(dp), dimension(upn) :: sigma !*FD Sigma coord for rescaled Z dimension
-	real(dp), dimension(ewn,nsn) :: thck !*FD Thickness, on non-staggered grid
-	real(dp), dimension(ewn,nsn) :: usrf !*FD Upper surface profile
-        real(dp), dimension(ewn,nsn) :: lsrf !*FD Lower surface profile
-        integer,  dimension(ewn,nsn) :: point_mask     !*FD Numbers points in the staggered grid that are included in computation
-        integer :: totpts
-        integer, dimension(ewn,nsn) :: geometry_mask
-        real(dp), dimension(:,:,:) :: flwa !*FD Glen's A (rate factor) - Used for thermomechanical coupling
-        real(dp), dimension(:,:)   :: btrc !*FD Basal Traction, either betasquared or tau0
-        real(dp), dimension(:,:,:)   :: kinematic_bc_u, kinematic_bc_v
-        real(dp), dimension(:,:)   :: marine_bc_normal
-        real(dp) :: flwn !*FD Exponent in Glenn power law
-        integer :: which_sliding_law
-        logical :: periodic_ew !*Whether to use periodic boundary conditions
+        integer, intent(in)  :: ewn !*FD Number of cells X
+        integer, intent(in)  :: nsn !*FD Number of cells Y
+        integer, intent(in)  :: upn !*FD Number of cells Z
+        real(dp), intent(in) :: dew !*FD Grid spacing X
+	real(dp), intent(in) :: dns !*FD Grid spacing Y
+	real(dp), dimension(:), intent(in) :: sigma !*FD Sigma coord for rescaled Z dimension
+	real(dp), dimension(:,:), intent(in) :: thck !*FD Thickness, on non-staggered grid
+	real(dp), dimension(:,:), intent(in) :: usrf !*FD Upper surface profile
+        real(dp), dimension(:,:), intent(in) :: lsrf !*FD Lower surface profile
+        integer,  dimension(:,:), intent(in) :: point_mask     !*FD Numbers points in the staggered grid that are included in computation
+        integer, intent(in) :: totpts
+        integer, dimension(:,:), intent(in) :: geometry_mask
+        real(dp), dimension(:,:,:), intent(in) :: flwa !*FD Glen's A (rate factor) - Used for thermomechanical coupling
+        real(dp), dimension(:,:), intent(in)   :: btrc !*FD Basal Traction, either betasquared or tau0
+        real(dp), dimension(:,:,:), intent(in)   :: kinematic_bc_u, kinematic_bc_v
+        real(dp), dimension(:,:), intent(in)   :: marine_bc_normal
+        real(dp), intent(in) :: flwn !*FD Exponent in Glenn power law
+        integer, intent(in) :: which_sliding_law
+        logical, intent(in) :: periodic_ew !*Whether to use periodic boundary conditions
         logical :: periodic_ns
-        real(dp), dimension(upn,ewn-1,nsn-1) :: uvel 
-        real(dp), dimension(upn,ewn-1,nsn-1) :: vvel
-        logical :: valid_initial_guess !*Whether or not the given uvel or vvel are appropriate initial guesses.  If not we'll have to roll our own.
+        real(dp), dimension(:,:,:), intent(out) :: uvel 
+        real(dp), dimension(:,:,:), intent(out) :: vvel
+        logical, intent(in) :: valid_initial_guess !*Whether or not the given uvel or vvel are appropriate initial guesses.  If not we'll have to roll our own.
+        
         integer :: i, j, k
 
         !Second derivative of surface
