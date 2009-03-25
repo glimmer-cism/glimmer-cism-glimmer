@@ -416,8 +416,8 @@ module glide_types
     real(dp),dimension(:,:,:),pointer :: wvel  => null() !*FD 3D $z$-velocity.
     real(dp),dimension(:,:,:),pointer :: wgrd  => null() !*FD 3D grid vertical velocity.
     
-    real(dp),dimension(:,:,:),pointer :: uflx  => null() !*FD 
-    real(dp),dimension(:,:,:),pointer :: vflx  => null() !*FD 
+    real(dp),dimension(:,:),pointer :: uflx  => null() !*FD     ! *sp* changed this from 3d to 2d array 
+    real(dp),dimension(:,:),pointer :: vflx  => null() !*FD     ! *sp* changed this from 3d to 2d array 
     real(dp),dimension(:,:)  ,pointer :: diffu_x => null() !*FD 
     real(dp),dimension(:,:)  ,pointer :: diffu_y => null()
     real(dp),dimension(:,:)  ,pointer :: total_diffu => null() !*FD total diffusivity
@@ -851,8 +851,9 @@ contains
     call coordsystem_allocate(model%general%velo_grid, upn, model%velocity_hom%vvel)
     call coordsystem_allocate(model%general%ice_grid, upn, model%velocity_hom%wvel)
     call coordsystem_allocate(model%general%ice_grid, upn, model%velocity_hom%wgrd)
-    call coordsystem_allocate(model%general%velo_grid, upn, model%velocity_hom%uflx)
-    call coordsystem_allocate(model%general%velo_grid, upn, model%velocity_hom%vflx)
+    !*sp* changed the next two (uflx, vflx) from 3d to 2d arrays
+    call coordsystem_allocate(model%general%velo_grid, model%velocity_hom%uflx)
+    call coordsystem_allocate(model%general%velo_grid, model%velocity_hom%vflx)
     call coordsystem_allocate(model%general%velo_grid, model%velocity_hom%diffu_x)
     call coordsystem_allocate(model%general%velo_grid, model%velocity_hom%diffu_y)
     call coordsystem_allocate(model%general%velo_grid, model%velocity_hom%total_diffu)

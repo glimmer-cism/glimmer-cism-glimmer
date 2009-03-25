@@ -58,7 +58,6 @@ module glam
                                     model%geomderv%stagthck,                                    &
                                     model%temper%flwa,                                          &
                                     whichbabc, whichefvs, whichresid,                           &
-!                                    model%velocity_hom%uvel, model%velocity_hom%vvel )                                      
                                     model%velocity_hom%uvel, model%velocity_hom%vvel,           &                                    
                                     model%velocity_hom%uflx, model%velocity_hom%vflx,           &                                                        
                                     model%velocity_hom%efvs, model%velocity_hom%tau,            &                                    

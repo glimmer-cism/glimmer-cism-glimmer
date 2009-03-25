@@ -132,7 +132,7 @@ contains
                           model%geometry%marine_bc_normal, &
                           model%velocity_hom%uvel, model%velocity_hom%vvel, &
                           model%velocity_hom%is_velocity_valid, &
-                          model%velocity_hom%uflx(:,:,1), model%velocity_hom%vflx(:,:,1), &
+                          model%velocity_hom%uflx, model%velocity_hom%vflx, &
                           model%velocity_hom%efvs, model%velocity_hom%tau, &
                           model%velocity_hom%gdsx, model%velocity_hom%gdsy)
             else if (model%options%which_ho_diagnostic == HO_DIAG_PATTYN_UNSTAGGERED) then

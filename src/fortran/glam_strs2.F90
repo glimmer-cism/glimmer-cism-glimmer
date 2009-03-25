@@ -35,7 +35,6 @@ module glam_strs2
                                          whichbabc,              &
                                          whichefvs,              &
                                          whichresid,             &
-!                                         uvel,      vvel )
                                          uvel,     vvel,         &
                                          uflx,     vflx,         &
                                          efvs,     tau,          &
@@ -74,26 +73,8 @@ module glam_strs2
         integer, intent(in) :: whichefvs
         integer, intent(in) :: whichresid
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! *sp*
-!
-! NOTE that all of the following vars should have the intent(out) 
-! attribute, but that this is not currently working due to them also
-! having the pointer attribute. In lieu of a proper fix to this, I'm
-! leaving the intent statements off for now, just so we can get the 
-! stubs compiling properly and committed. Will have to come back to 
-! this and figure out a fix later on.
-!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-!        real (kind = dp), dimension(:,:,:), intent(out) :: uvel, vvel
         real (kind = dp), dimension(:,:,:), intent(out) :: uvel, vvel
-
-        ! *sp* NOTE that these are currently delcared elsewhere as 3d arrays, but they 
-        ! SHOULD be 2d arrays (Tim will fix at some point)
-!        real (kind = dp), dimension(:,:),   intent(out) :: uflx, vflx 
-!        real (kind = dp), dimension(:,:,:),   intent(out) :: uflx, vflx 
-        real (kind = dp), dimension(:,:,:), intent(out) :: uflx, vflx 
+        real (kind = dp), dimension(:,:),   intent(out) :: uflx, vflx 
 
         ! *sp* I think these relate to old code and don't need passing out anymore 
 !        real (kind = dp), dimension(:,:),   intent(out) :: ubas, vbas
