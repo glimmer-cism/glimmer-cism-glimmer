@@ -521,6 +521,7 @@ contains
     call GetValue(section, 'prognostic_scheme', model%options%which_ho_prognostic)
     call GetValue(section, 'basal_stress_input', model%options%which_ho_beta_in)
     call GetValue(section, 'basal_stress_type',  model%options%which_ho_bstress)
+    call GetValue(section, 'guess_specified', model%velocity_hom%is_velocity_valid)
   end subroutine handle_ho_options
 
   subroutine print_options(model)

@@ -29,11 +29,14 @@
 #define AVERAGED_PRESSURE
 
 !The maximum number of iterations to use in the unstable manifold loop
-#define NUMBER_OF_ITERATIONS 50
+#define NUMBER_OF_ITERATIONS 100000
 
 !If defined, the model uses 2nd order upwinded and downwinded finite
 !differences.
 !#define USE_ORD2_HORIZ_UPDOWN
+
+!If defined, then sigma gradients will be ignored in the lateral b.c.
+!#define IGNORE_LAT_SIGMA
 
 module ice3d_lib
     use glimmer_global
@@ -494,6 +497,10 @@ contains
 #ifdef OUTPUT_PARTIAL_ITERATIONS 
         integer :: ncid_debug
 #endif
+        !For timing the algorithm
+        real(dp) :: solve_start_time, solve_end_time, iter_start_time, iter_end_time
+
+        call cpu_time(solve_start_time)
 
         !Get the sizes from the mu field.  Calling code must make sure that
         !these all agree.
@@ -576,6 +583,8 @@ contains
         call iteration_debug_step(ncid_debug, 0, mu, uvel, vvel)
 #endif
         nonlinear_iteration: do l=1,maxiter !Loop until we have reached the number of iterations allowed
+            call cpu_time(iter_start_time)
+            
             lacc=lacc+1
             
             !Every 10 iterations, we relax the error requirement somewhat (1/2
@@ -632,9 +641,9 @@ contains
                                                 vstar, vvel, correction_vec, &
                                                 maxy, maxx, nzeta, error, &
                                                 tot, teta)    
-
+            call cpu_time(iter_end_time)
 #if DEBUG 
-            write(*,*) l, iter, tot, teta
+            write(*,*) l, iter, tot, teta, iter_end_time - iter_start_time
 #endif
             !Check whether we have reached convergance
             if (.not. cont) exit nonlinear_iteration
@@ -652,6 +661,9 @@ contains
       call sparse_destroy_workspace(matrix, options, workspace)
       call del_sparse_matrix(matrix) 
 
+      call cpu_time(solve_end_time)
+
+      write(*,*) "Pattyn higher-order solve took",solve_end_time - solve_start_time
       return
       END subroutine
    
@@ -1752,7 +1764,7 @@ contains
             dx_coeff = n_x*mu(i,j,k)
             dz_coeff = (4*n_y*ay(i,j,k) + (n_x*ax(i,j,k)))*mu(i,j,k)
         end if
-
+#ifndef IGNORE_LAT_SIGMA
         !Enter the z component into the finite difference scheme.
         !If we are on the top of bottom of the ice shelf, we will need
         !to upwind or downwind respectively
@@ -1783,7 +1795,7 @@ contains
             coef(I_J_K)   = coef(I_J_K)   + dz_coeff*dz_cen2
             coef(I_J_KP1) = coef(I_J_KP1) + dz_coeff*dz_cen3
         end if
-
+#endif
         !Apply finite difference approximations of the x and y derivatives.  The
         !coefficients have already been computed above, so we just need to make
         !sure to use the correct difference form (upwind or downwind, etc.)
