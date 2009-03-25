@@ -76,8 +76,7 @@ module glam_strs2
 
         ! *sp* Note that we need these as 3d, not 2d arrays (that is, they need to
         ! include the driving stress at various levels, not just at the sfc)
-!        real (kind = dp), dimension(:,:,:), intent(out) :: gdsx, gdsy
-        real (kind = dp), dimension(:,:), intent(out) :: gdsx, gdsy
+        real (kind = dp), dimension(:,:,:), intent(out) :: gdsx, gdsy
 
         ! *sp* this will need to be fixed throughout, as we assume that 'tau' is a 3d array 
 !        real (kind = dp), dimension(:,:,:), intent(out) :: tau

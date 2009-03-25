@@ -79,7 +79,7 @@ contains
     !be done.
     subroutine run_ho_diagnostic(model)
             use glide_thckmask
-             type(glide_global_type) :: model
+             type(glide_global_type),intent(inout) :: model
             !For HO masking
             logical :: empty
             integer :: totpts
@@ -196,8 +196,8 @@ contains
         real(dp), dimension(:,:), intent(out) :: vflx
         real(dp), dimension(:,:,:), intent(out) :: efvs !*FD Effective viscosity
         type(glide_tensor), intent(out)         :: tau
-        real(dp), dimension(:,:), intent(out) :: gdsx !*FD X driving stress
-        real(dp), dimension(:,:), intent(out) :: gdsy !*FD Y driving stress
+        real(dp), dimension(:,:,:), intent(out) :: gdsx !*FD X driving stress
+        real(dp), dimension(:,:,:), intent(out) :: gdsy !*FD Y driving stress
         integer :: i, k
 
         !Second derivative of surface

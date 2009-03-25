@@ -423,8 +423,8 @@ module glide_types
     real(dp),dimension(:,:)  ,pointer :: total_diffu => null() !*FD total diffusivity
     real(dp),dimension(:,:)  ,pointer :: beta  => null() !*FD basal shear coefficient
     type(glide_tensor)                :: tau
-    real(dp),dimension(:,:)  ,pointer :: gdsx => null() !*FD basal shear stress, x-dir
-    real(dp),dimension(:,:)  ,pointer :: gdsy => null() !*FD basal shear stress, y-dir
+    real(dp),dimension(:,:,:)  ,pointer :: gdsx => null() !*FD basal shear stress, x-dir
+    real(dp),dimension(:,:,:)  ,pointer :: gdsy => null() !*FD basal shear stress, y-dir
     real(dp),dimension(:,:,:),pointer :: efvs => null()
     integer, dimension(:,:)  ,pointer :: velmask => null()
     !*FD A mask similar to glide_geometry%mask, but on the velocity grid instead of the
@@ -864,8 +864,8 @@ contains
     call coordsystem_allocate(model%general%velo_grid, upn, model%velocity_hom%tau%xx)
     call coordsystem_allocate(model%general%velo_grid, upn, model%velocity_hom%tau%yy)
     call coordsystem_allocate(model%general%velo_grid, upn, model%velocity_hom%tau%xy)
-    call coordsystem_allocate(model%general%velo_grid, model%velocity_hom%gdsx)
-    call coordsystem_allocate(model%general%velo_grid, model%velocity_hom%gdsy)
+    call coordsystem_allocate(model%general%velo_grid, upn, model%velocity_hom%gdsx)
+    call coordsystem_allocate(model%general%velo_grid, upn, model%velocity_hom%gdsy)
     call coordsystem_allocate(model%general%velo_grid, upn, model%velocity_hom%efvs)
     call coordsystem_allocate(model%general%velo_grid, model%velocity_hom%velmask)
     call coordsystem_allocate(model%general%velo_grid, upn, model%velocity_hom%kinematic_bc_u)

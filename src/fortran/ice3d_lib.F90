@@ -29,7 +29,7 @@
 #define AVERAGED_PRESSURE
 
 !The maximum number of iterations to use in the unstable manifold loop
-#define NUMBER_OF_ITERATIONS 10000
+#define NUMBER_OF_ITERATIONS 50
 
 !If defined, the model uses 2nd order upwinded and downwinded finite
 !differences.
@@ -1622,8 +1622,11 @@ contains
         !theta = normals(i,j) + 2*(PI/4 - normals(i,j))
         !But really this reduces to swapping sine and cosine (easy proof to work
         !through).
-        n_x =  (sin(normals(i,j)))
-        n_y = -(cos(normals(i,j)))
+        !n_x =  (sin(normals(i,j)))
+        !n_y = -(cos(normals(i,j)))
+
+        n_x = sin(normals(i,j))
+        n_y = -cos(normals(i,j))
 
         !Clamp n_x and n_y so that small values register as zero
         if (abs(n_x) < 1d-10) then
