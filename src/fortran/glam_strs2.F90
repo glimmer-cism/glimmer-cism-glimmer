@@ -47,6 +47,7 @@ module glam_strs2
 !                                         ubas,     vbas,         &
 !
 !   *sp* I think these are now redundant
+!        They are, I collapsed tau into a tensor structure -Tim
 !                                         tauxz,    tauyz,        & 
 !                                         tauxx,    tauyy,        & 
 !                                         tauxy,                  & 
@@ -86,13 +87,13 @@ module glam_strs2
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 !        real (kind = dp), dimension(:,:,:), intent(out) :: uvel, vvel
-        real (kind = dp), dimension(:,:,:) :: uvel, vvel
+        real (kind = dp), dimension(:,:,:), intent(out) :: uvel, vvel
 
         ! *sp* NOTE that these are currently delcared elsewhere as 3d arrays, but they 
         ! SHOULD be 2d arrays (Tim will fix at some point)
 !        real (kind = dp), dimension(:,:),   intent(out) :: uflx, vflx 
 !        real (kind = dp), dimension(:,:,:),   intent(out) :: uflx, vflx 
-        real (kind = dp), dimension(:,:,:) :: uflx, vflx 
+        real (kind = dp), dimension(:,:,:), intent(out) :: uflx, vflx 
 
         ! *sp* I think these relate to old code and don't need passing out anymore 
 !        real (kind = dp), dimension(:,:),   intent(out) :: ubas, vbas
@@ -100,16 +101,13 @@ module glam_strs2
         ! *sp* Note that we need these as 3d, not 2d arrays (that is, they need to
         ! include the driving stress at various levels, not just at the sfc)
 !        real (kind = dp), dimension(:,:,:), intent(out) :: gdsx, gdsy
-!        real (kind = dp), dimension(:,:), intent(out) :: gdsx, gdsy
-        real (kind = dp), dimension(:,:) :: gdsx, gdsy
+        real (kind = dp), dimension(:,:), intent(out) :: gdsx, gdsy
 
-!        real (kind = dp), dimension(:,:,:), intent(out) :: efvs
-        real (kind = dp), dimension(:,:,:) :: efvs
+        real (kind = dp), dimension(:,:,:), intent(out) :: efvs
 
         ! *sp* this will need to be fixed throughout, as we assume that 'tau' is a 3d array 
 !        real (kind = dp), dimension(:,:,:), intent(out) :: tau
-!        type(glide_tensor), intent(out) :: tau
-        type(glide_tensor) :: tau
+        type(glide_tensor), intent(out) :: tau
 
         ! *sp* These are calculated and passed out of the current version of the 1st order solver,
         ! but I'm guessing there is something analagous in existing CISM code, making these redundant

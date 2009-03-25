@@ -29,7 +29,7 @@ module glam
     ! ... called from 'glide'
     subroutine glam_driver( model )
 
-        type(glide_global_type), intent(in) :: model
+        type(glide_global_type), intent(inout) :: model
 
 
         ! *sp* specify a few subroutine arguments here that are not already in the 
