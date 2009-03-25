@@ -33,9 +33,15 @@ module glam
 
 
         ! *sp* specify a few subroutine arguments here that are not already in the 
-        ! model derived type (e.g. 'which*" flags). 
+        ! model derived type (e.g. 'which*" flags). These are just dummy values for now
+        ! to get things compiling ... 
         integer :: whichbabc, whichefvs, whichresid
+        real (kind=dp), dimension(model%general%upn) :: sigma
+        real (kind=dp), dimension(model%general%upn-1) :: stagsigma
+        real (kind=dp), dimension(model%general%ewn-1,model%general%nsn-1) :: minTauf
         whichbabc = 9; whichefvs = 9; whichresid = 9
+        sigma = 0.0d0; stagsigma = 0.0d0
+        minTauf = 0.0d0
 
         ! *sp* also not consistent amoung the two models at present is "sigma" and "stagsigam". For now
         ! these will not be passed in. 'minTauf' avoided for now as well. 
@@ -49,6 +55,7 @@ module glam
         ! *sp* stub to 1st order solution 
         call glam_velo_fordsiapstr( model%general%ewn, model%general%nsn, model%general%upn,    &
                                     model%numerics%dew, model%numerics%dns,                     &
+                                    sigma, stagsigma,                                           &                                    
                                     model%geometry%thck, model%geometry%usrf,                   &                                    
                                     model%geometry%lsrf, model%geometry%topg,                   &
                                     model%geomderv%dthckdew, model%geomderv%dthckdns,           &
@@ -56,6 +63,7 @@ module glam
                                     model%geomderv%dthckdew-model%geomderv%dusrfdew,            &
                                     model%geomderv%dthckdns-model%geomderv%dusrfdns,            & 
                                     model%geomderv%stagthck,                                    &
+                                    minTauf,                                                    &
                                     model%temper%flwa,                                          &
                                     whichbabc, whichefvs, whichresid,                           &
                                     model%velocity_hom%uvel, model%velocity_hom%vvel,           &                                    
@@ -63,12 +71,8 @@ module glam
                                     model%velocity_hom%efvs, model%velocity_hom%tau,            &                                    
                                     model%velocity_hom%gdsx, model%velocity_hom%gdsy )
 
-!   *sp* these need to be dealt w/ still
-!                                    sigma,     stagsigma,                                       & 
-!                                    minTauf,                                                    &
-!                                    model%velocity%ubas, model%velocity%vbas,                   & 
-!
 !   *sp* I think these are now redunant
+!                                    ubas, vbas,                                                 &
 !                                    tauxz, tauyz,                                               &
 !                                    tauxx, tauyy,                                               &
 !                                    tauxy,                                                      &
