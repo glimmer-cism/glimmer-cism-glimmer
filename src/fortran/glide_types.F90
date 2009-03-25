@@ -551,9 +551,9 @@ module glide_types
     
     ! Vertical coordinate ---------------------------------------------------
                                                                
-    real(dp),dimension(:),pointer :: sigma => null() !*FD Sigma values for 
-                                                     !*FD vertical spacing of 
+    real(dp),dimension(:),pointer :: sigma => null() !*FD Sigma values for vertical spacing of 
                                                      !*FD model levels
+    real(dp),dimension(:),pointer :: stagsigma => null() !*FD Staggered values of sigma (layer midpts)
     integer :: profile_period = 100            !*FD profile frequency
     integer :: ndiag = 1000                    !*FD diagnostic frequency
   end type glide_numerics
@@ -798,6 +798,11 @@ contains
     !*FD \item \texttt{sigma(upn))}
     !*FD \end{itemize}
 
+    !*FD In \texttt{model\%numerics}:
+    !*FD \begin{itemize}
+    !*FD \item \texttt{stagsigma(upn-1))}
+    !*FD \end{itemize}
+
     use glimmer_log
 
     implicit none
@@ -912,6 +917,8 @@ contains
     else
        allocate(model%numerics%sigma(upn))
     endif
+
+    allocate(model%numerics%stagsigma(upn-1))
 
     ! allocate memory for sparse matrix
     allocate (model%pcgdwk%rhsd(ewn*nsn))
@@ -1031,6 +1038,7 @@ contains
     deallocate(model%thckwk%oldthck2)
     deallocate(model%thckwk%float)
     deallocate(model%numerics%sigma)
+    deallocate(model%numerics%stagsigma)
     
     deallocate(model%pcgdwk%rhsd,model%pcgdwk%answ)
     call del_sparse_matrix(model%pcgdwk%matrix)

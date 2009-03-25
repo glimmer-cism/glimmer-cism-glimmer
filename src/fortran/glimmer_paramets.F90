@@ -72,6 +72,11 @@ module glimmer_paramets
                                           ! parameters with noninteger powers in - look
                                           ! in initial in blah.f90 (not sure this applies now...)
 
+  real(dp) :: evs0                        ! effective viscosity scale (Pa s)
+                                          ! defined later as tau0 * (len0/vel0) 
+!whl - to do - remove lambda0
+  real(dp), parameter :: lambda0 = 4      ! basal topo/friction parameter for ismip-hom tests 
+                             
   real(sp), parameter :: conv = tim0 / scyr
 
   !MAKE_RESTART

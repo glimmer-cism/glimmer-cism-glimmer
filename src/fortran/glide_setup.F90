@@ -122,11 +122,12 @@ contains
     !*FD scale parameters
     use glide_types
     use glimmer_physcon,  only: scyr, gn
-    use glimmer_paramets, only: thk0,tim0,len0, tau0, vel0, vis0, acc0
+    use glimmer_paramets, only: thk0,tim0,len0, tau0, vel0, vis0, acc0, evs0
     implicit none
     type(glide_global_type)  :: model !*FD model instance
 
     tau0 = (vel0/(vis0*len0))**(1.0/gn)
+    evs0 = tau0 * (len0/vel0)
 
     model%numerics%ntem = model%numerics%ntem * model%numerics%tinc
     model%numerics%nvel = model%numerics%nvel * model%numerics%tinc

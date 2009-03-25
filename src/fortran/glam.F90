@@ -11,7 +11,7 @@ module glam
 
     use glide_types
 
-    use glam_strs2
+    use glam_strs2, only: glam_velo_fordsiapstr
     use remap_advection
     use remap_glamutils
 
@@ -40,10 +40,9 @@ module glam
         real (kind=dp), dimension(model%general%upn-1) :: stagsigma
         real (kind=dp), dimension(model%general%ewn-1,model%general%nsn-1) :: minTauf
         whichbabc = 9; whichefvs = 9; whichresid = 9
-        sigma = 0.0d0; stagsigma = 0.0d0
         minTauf = 0.0d0
 
-        ! *sp* also not consistent amoung the two models at present is "sigma" and "stagsigam". For now
+        ! *sp* also not consistent amoung the two models at present is "sigma" and "stagsigma". For now
         ! these will not be passed in. 'minTauf' avoided for now as well. 
 
         ! Note that the argument 'eta' was removed from the call, as it is not used. 
@@ -53,11 +52,12 @@ module glam
         ! e.g. 'dlsrfdew  = dusrfdew - dthckdew' rather than 'dlsrfdew = dthckdew - dusrfdew' ???   
 
         ! *sp* stub to 1st order solution 
-        call glam_velo_fordsiapstr( model%general%ewn, model%general%nsn, model%general%upn,    &
-                                    model%numerics%dew, model%numerics%dns,                     &
-                                    sigma, stagsigma,                                           &                                    
-                                    model%geometry%thck, model%geometry%usrf,                   &                                    
-                                    model%geometry%lsrf, model%geometry%topg,                   &
+        call glam_velo_fordsiapstr( model%general%ewn,       model%general%nsn,                 &
+                                    model%general%upn,                                          &
+                                    model%numerics%dew,      model%numerics%dns,                &
+                                    model%numerics%sigma,    model%numerics%stagsigma,          &
+                                    model%geometry%thck,     model%geometry%usrf,               &
+                                    model%geometry%lsrf,     model%geometry%topg,               &
                                     model%geomderv%dthckdew, model%geomderv%dthckdns,           &
                                     model%geomderv%dusrfdew, model%geomderv%dusrfdns,           &
                                     model%geomderv%dthckdew-model%geomderv%dusrfdew,            &
@@ -66,12 +66,12 @@ module glam
                                     minTauf,                                                    &
                                     model%temper%flwa,                                          &
                                     whichbabc, whichefvs, whichresid,                           &
-                                    model%velocity_hom%uvel, model%velocity_hom%vvel,           &                                    
-                                    model%velocity_hom%uflx, model%velocity_hom%vflx,           &                                                        
-                                    model%velocity_hom%efvs, model%velocity_hom%tau,            &                                    
+                                    model%velocity_hom%uvel, model%velocity_hom%vvel,           &
+                                    model%velocity_hom%uflx, model%velocity_hom%vflx,           &
+                                    model%velocity_hom%efvs,                                    &
                                     model%velocity_hom%gdsx, model%velocity_hom%gdsy )
 
-!   *sp* I think these are now redunant
+!   *sp* I think these are now redundant
 !                                    ubas, vbas,                                                 &
 !                                    tauxz, tauyz,                                               &
 !                                    tauxx, tauyy,                                               &

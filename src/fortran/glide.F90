@@ -198,7 +198,10 @@ contains
     ! *sp* added; initialization of Payne/Price HO dynamics subroutine ... name can change once agreed on
     if (model%options%which_ho_diagnostic == HO_DIAG_PP ) then
 
-        call glam_velo_fordsiapstr_init( )
+        call glam_velo_fordsiapstr_init(model%general%ewn,    model%general%nsn,  &
+                                        model%general%upn,                        &
+                                        model%numerics%dew,   model%numerics%dns, &
+                                        model%numerics%sigma, model%numerics%stagsigma)
 
     end if
 
