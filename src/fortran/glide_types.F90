@@ -262,6 +262,37 @@ module glide_types
     !*FD \item[1] Plastic till sliding law, 
     !*FD $\tau_{b,i} = -\tau_c \frac{v_i}{\lVert v \rVert}
 
+!whlmod - added the following three options for Price-Payne higher-order (glam)
+    integer :: which_ho_babc = 4
+    !*FD Flag that describes basal boundary condition (betasquared) for glam: 
+    !*FD \begin{description}
+    !*FD \item[0] constant value
+    !*FD \item[1] simple pattern (e.g., ice stream)
+    !*FD \item[2] read map from file
+    !*FD \item[3] proxy for till yield stress
+    !*FD \item[4] yield stress from basal processes model
+    !*FD \item[5] simple 2D ice shelf
+    !*FD \item[6] spatially periodic (ISMIP-HOM expt C)
+    !*FD \item[7] circular ice shelf
+    !*FD \item[8] frozen bed
+    !*FD \end{description}
+
+    integer :: which_ho_efvs = 0
+    !*FD Flag that indicates how effective viscosity is computed
+    !*FD \begin{description}
+    !*FD \item[0] compute from effective strain rate
+    !*FD \item[1] constant value
+    !*FD \item[2] minimum value
+
+    integer :: which_ho_resid = 0
+    !*FD Flag that indicates method for computing residual in glam iteration
+    !*FD \begin{description}
+    !*FD \item[0] maxval 
+    !*FD \item[1] maxval ignoring basal velocity 
+    !*FD \item[2] mean value
+
+!end whlmod
+
     integer :: periodic_ew = 0
     !*FD \begin{description}
     !*FD \item[0] no periodic EW boundary conditions
@@ -293,12 +324,6 @@ module glide_types
     !*FD \end{description}
 
     integer :: diagnostic_run = 0
-
-    !These options are added for higher order velocity computation
-    !Currently they are unused
-    integer :: whichbabc = 0
-    integer :: whichefvs = 0
-    integer :: whichresid = 0
 
   end type glide_options
 

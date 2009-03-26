@@ -1,21 +1,15 @@
 module glam_strs2
 
-!whl - Turned this file (glam_strs2.f90) into a module
-!whl - The goal is to restructure the module so it can be readily added to glimmer.
-!      To this end, some subroutines and functions in glam_modu.f90
-!       (modules strswk, strscalcs, pcgdwk) have been moved to this module.
-!      Some variables declared in glam_modu.f90 (modules geometry, geomderv,
-!       options, velocity, stress, temper, numerics) are passed in as arguments.
-!      The remaining used variables are in glam_general, glam_physcon, glam_paramets,
-!       and glam_funits, which are easy to add to glimmer.
-
-!whl - These are the only use statements in the module.
-!whl - modified for glimmer
+!whl - Use statements modified for glimmer
 !whl - NOTES:
 !    - Do not need in, sprs2_dp, or sa
 !    - rhoi = 917 in glam_physcon, 910 in glimmer_physcon
 !    - Added evs0 and lambda0 to glimmer_paramets
 !      Glimmer defines tau0 in terms of vis0; glam defines vis0 in terms of tau0 = rho*h*thk0
+
+!whl - to do - Make sure that any hardwired constants in the code do not assume
+!              a different scaling than what is used in glimmer.
+
 !!use glam_general, only : dp, in, sprs2_dp
 !!use glam_physcon, only : gn, rhoi, rhoo, grav, pi, scyr
 !!use glam_paramets, only : thk0, len0, vel0, vis0, tim0, tau0, lambda0, evs0
@@ -30,7 +24,7 @@ implicit none
 
 !whl - The following were moved up from glam_strs2 subroutines
   integer, save :: locplusup
-  logical, save :: first = .true., lateralboundry = .false.
+  logical, save :: lateralboundry = .false.
   integer, dimension(6), save :: loc_latbc
 
   real (kind = dp), allocatable, dimension(:,:,:),     save :: flwafact
@@ -42,8 +36,6 @@ implicit none
   real (kind = dp), allocatable, dimension(:,:,:),     save :: tvel
   real (kind = dp), allocatable, dimension(:,:),       save :: valubbc
   real (kind = dp), allocatable, dimension(:),         save :: dup, dupm
-!whl - etafactor is currently not used
-!  real (kind = dp), allocatable, dimension(:,:),       save :: etafactor
 
   integer, dimension(:,:), allocatable :: typebbc
   integer, dimension(:,:), allocatable :: uindx, umask
@@ -91,11 +83,9 @@ implicit none
   integer, dimension(:), allocatable :: pcgcol, pcgrow
   integer, dimension(2) :: pcgsize
   integer :: ct
-!!  type(sprs2_dp) :: sa
 
 !whl - The following is from glam_funits
   integer, parameter :: unin = 90
-
 
 !***********************************************************************
 
@@ -121,10 +111,14 @@ subroutine glam_velo_fordsiapstr_init (ewn,   nsn,   upn,    &
     integer :: up
 
 !whl - to do - Many tasks currently done in glam.F90 should be done here or elsewhere.
+! - Read in namelist values from glam.nml
+! - Read in restart values?
+! - Allocate arrays if not already done in glimmer
+! - Define initial thickness
+! - Mask the thickness
+! - Initialize the horizontal remapping
+! - Add ppm thickness routines
 
-
-!whl - etafactor currently not used
-!    allocate( etafactor(upn,3) )
     allocate( dupm(upn) )
     allocate( cvert(upn,2) )
     allocate( cdsdx(upn,2) )
@@ -143,10 +137,6 @@ subroutine glam_velo_fordsiapstr_init (ewn,   nsn,   upn,    &
 !whl - to do - Make sure sigma levels are evenly spaced
 
     stagsigma = (sigma(1:upn-1) + sigma(2:upn)) / 2.0_dp
-
-    ! *sp* 'etafactor' = 'g' in write-up (p.11)?
-    !whl - etafactor currently not used
-!    etafactor = 1.0_dp ! test with linear etatransform(sigma,etaorder)  
 
     ! *sp*  p1 = -1/n   - used with rate factor in eff. visc. def.
     ! *sp*  p2 = (1-n)/2n   - used with eff. strain rate in eff. visc. def. 
@@ -182,7 +172,6 @@ subroutine glam_velo_fordsiapstr_init (ewn,   nsn,   upn,    &
 end subroutine glam_velo_fordsiapstr_init
 
 !***********************************************************************
-!whl - added input and output arguments to this subroutine
 
 subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
                                  dew,      dns,          &
@@ -192,8 +181,8 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
                                  dthckdew, dthckdns,     &
                                  dusrfdew, dusrfdns,     & 
                                  dlsrfdew, dlsrfdns,     &
-                                 stagthck, minTauf,      & 
-                                 flwa,                   & 
+                                 stagthck, flwa,         & 
+                                 mintauf,                & 
                                  whichbabc,              &
                                  whichefvs,              &
                                  whichresid,             &
@@ -225,6 +214,7 @@ implicit none
   real (kind = dp), dimension(:,:),   intent(in)  :: minTauf
   real (kind = dp), dimension(:,:,:), intent(in)  :: flwa
 
+!whl - to do - Merge whichbabc with whichbtrc?
   integer, intent(in) :: whichbabc
   integer, intent(in) :: whichefvs
   integer, intent(in) :: whichresid
@@ -272,7 +262,7 @@ implicit none
 
   allocate(uindx(ewn-1,nsn-1))
 
-  ! *sp* if a point from the 2d array 'mask' is assoicated with non-zero ice thickness,
+  ! *sp* if a point from the 2d array 'mask' is associated with non-zero ice thickness,
   !      either a boundary or interior point, give it a unique number. If not, give it a zero			 
   uindx = indxvelostr(ewn, nsn, upn,  &
                       umask,pcgsize(1))
@@ -298,10 +288,7 @@ implicit none
   allocate (pcgrow(pcgsize(2)),pcgcol(pcgsize(2)),rhsd(pcgsize(1)), &
             answ(pcgsize(1)),pcgval(pcgsize(2)))
 
-  ! *sp* specifies the type of basal bc to use based on the value of 'whichbabc' flag  
-  ! call findbtrcstr(whichbabc,typebbc,valubbc)
-  ! ... not used currently (since new bcs have been implemented) 
-  ! but might be useful to store bc flag info here later ...
+  !whl - Removed subroutine findbtrcstr; superseded by calcbetasquared
   
   resid = 1.0_dp
   count = 1
@@ -441,10 +428,6 @@ implicit none
   deallocate(tvel)
   deallocate(uindx,corr,usav)
   deallocate(pcgval,pcgrow,pcgcol,rhsd,answ)
-
-  first = .false.
-
-  return
 
 end subroutine glam_velo_fordsiapstr
 
@@ -646,7 +629,8 @@ subroutine findefvsstr(ewn,  nsn, upn,       &
 	
     efvs = 1 / 100.0_dp    	
 
-  case default
+!whl - changed default to case 2
+  case (2)
 
     efvs = effstrminsq
   
@@ -1026,16 +1010,22 @@ function mindcrshstr(pt,whichresid,vel,count,resid)
   select case (whichresid)
 
 ! *sp* residual calculation method; 
-!      maxval (default); maxval ignoring basal vel (0); mean value (1)
+
+!whl - to do - changed from default to case(0) and renumbered other cases
+!      maxval (0); maxval ignoring basal vel (1); mean value (2)
 
    case(0)
+    resid = maxval( abs((usav(:,:,:,pt) - vel ) / vel ), MASK = vel .ne. 0.0_dp)  
+    locat = maxloc( abs((usav(:,:,:,pt) - vel ) / vel ), MASK = vel .ne. 0.0_dp)
+
+   case(1)
     nr = size( vel, dim=1 ) ! number of grid points in vertical ...
     resid = maxval( abs((usav(1:nr-1,:,:,pt) - vel(1:nr-1,:,:) ) / vel(1:nr-1,:,:) ),  &
                         MASK = vel .ne. 0.0_dp)
     locat = maxloc( abs((usav(1:nr-1,:,:,pt) - vel(1:nr-1,:,:) ) / vel(1:nr-1,:,:) ),  &
             MASK = vel .ne. 0.0_dp)
 
-   case(1)
+   case(2)
     nr = size( vel, dim=1 )
     vel_ne_0 = 0
     where ( vel .ne. 0.0_dp ) vel_ne_0 = 1
@@ -1052,10 +1042,6 @@ function mindcrshstr(pt,whichresid,vel,count,resid)
     !      since we are using the mean resid for convergence testing
     locat = maxloc( abs((usav(:,:,:,pt) - vel ) / vel ), MASK = vel .ne. 0.0_dp)
 
-   case default
-    resid = maxval( abs((usav(:,:,:,pt) - vel ) / vel ), MASK = vel .ne. 0.0_dp)  
-    locat = maxloc( abs((usav(:,:,:,pt) - vel ) / vel ), MASK = vel .ne. 0.0_dp)
-
   end select
 
     usav(:,:,:,pt) = vel
@@ -1065,55 +1051,6 @@ function mindcrshstr(pt,whichresid,vel,count,resid)
   return
 
 end function mindcrshstr
-
-!***********************************************************************
-
-subroutine findbtrcstr(flag,typebbc,valubbc)
-
-! *sp* specifies the type of basal bc to use based on the value of 'flag'
-! *sp* CURRENTLY NOT CALLED ... REMOVE?
-
-  implicit none 
-
-  integer, intent(in) :: flag 
-  integer, dimension(:,:), intent(inout) :: typebbc
-  real (kind = dp), dimension(:,:), intent(inout) :: valubbc
-   
-  select case(flag)
-
-  case(0)
-
-! ** ice shelf. throughout
-
-    valubbc = 0.0d0
-    typebbc = 1
-
-  case(2)
-
-! ** applied traction
-
-    valubbc = 0.0_dp / tau0
-    typebbc = 1
-
-  case(3)
-
-! ** viscous flow law
-
-    valubbc = 0.0_dp * vel0 / tau0
-    typebbc = 2
-
-  case(4)
-
-! ** frozen bed throughout
-
-    valubbc = 0.0d0
-    typebbc = 0
-
-  end select
-
-  return
-
-end subroutine findbtrcstr
 
 !***********************************************************************
 
@@ -1185,15 +1122,15 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
 !      close(unin)
 
   ! *sp* calculate/specify value of 'betasquared', to be input to subroutine 'bodyset', below
-  call calcbetasquared( whichbabc,                   & 
-                             dew,        dns,        &
-                             ewn,        nsn,        &
-                             lsrf,       topg,       &
-                             thck,                   &
-                             thisvel(upn,:,:),       &   
-                             othervel(upn,:,:),      &
-                             minTauf,                &
-                             betasquared )
+  call calcbetasquared (whichbabc,              &
+                        dew,        dns,        &
+                        ewn,        nsn,        &
+                        lsrf,       topg,       &
+                        thck,                   &
+                        thisvel(upn,:,:),       &   
+                        othervel(upn,:,:),      &
+                        minTauf,                &
+                        betasquared )
 
   do ns = 1,nsn-1
     do ew = 1,ewn-1 
@@ -2952,7 +2889,7 @@ function siabccalc(upn,      sigma,    &
 end function siabccalc
 
 ! *sp* function to specify map of betasquared
-subroutine calcbetasquared(which,                    & 
+subroutine calcbetasquared (whichbabc,               & 
                             dew,         dns,        &
                             ewn,         nsn,        &
                             lsrf,        topg,       &
@@ -2961,7 +2898,7 @@ subroutine calcbetasquared(which,                    &
                             minTauf,                 &
                             betasquared, betafile) 
 
-  integer, intent(in) :: which
+  integer, intent(in) :: whichbabc
   integer, intent(in) :: ewn, nsn
 
   real (kind = dp), intent(in) :: dew, dns
@@ -2976,7 +2913,7 @@ subroutine calcbetasquared(which,                    &
   real (kind = dp) :: alpha, beta, dx, thck_gl, betalow, betahigh, roughness
   integer :: ew, ns
 
-  select case(which)
+  select case(whichbabc)
 
     case(0)     ! constant value
 
@@ -3071,7 +3008,8 @@ subroutine calcbetasquared(which,                    &
       betasquared = 1.0d-5
       betasquared( (ewn-1)/2:(ewn-1)/2+1, (nsn-1)/2:(nsn-1)/2+1 ) = 1.0d10
 
-    case default    ! frozen (u=v=0) ice-bed interface
+!whl - change default to case 8
+    case(8)    ! frozen (u=v=0) ice-bed interface
 
       betasquared = 1.0d10
 

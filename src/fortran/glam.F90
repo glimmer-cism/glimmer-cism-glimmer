@@ -31,19 +31,13 @@ module glam
 
         type(glide_global_type), intent(inout) :: model
 
-
-        ! *sp* specify a few subroutine arguments here that are not already in the 
-        ! model derived type (e.g. 'which*" flags). These are just dummy values for now
+        ! *sp* specify subroutine arguments here that are not already in the 
+        ! model derived type. These are just dummy values for now
         ! to get things compiling ... 
-        integer :: whichbabc, whichefvs, whichresid
-        real (kind=dp), dimension(model%general%upn) :: sigma
-        real (kind=dp), dimension(model%general%upn-1) :: stagsigma
         real (kind=dp), dimension(model%general%ewn-1,model%general%nsn-1) :: minTauf
-        whichbabc = 9; whichefvs = 9; whichresid = 9
         minTauf = 0.0d0
 
-        ! *sp* also not consistent amoung the two models at present is "sigma" and "stagsigma". For now
-        ! these will not be passed in. 'minTauf' avoided for now as well. 
+        !whl - to do - Make sure that the sigma field passed to glam is consistent with glam numerics.
 
         ! Note that the argument 'eta' was removed from the call, as it is not used. 
 
@@ -62,46 +56,15 @@ module glam
                                     model%geomderv%dusrfdew, model%geomderv%dusrfdns,           &
                                     model%geomderv%dthckdew-model%geomderv%dusrfdew,            &
                                     model%geomderv%dthckdns-model%geomderv%dusrfdns,            & 
-                                    model%geomderv%stagthck,                                    &
+                                    model%geomderv%stagthck, model%temper%flwa,                 &
                                     minTauf,                                                    &
-                                    model%temper%flwa,                                          &
-                                    whichbabc, whichefvs, whichresid,                           &
+                                    model%options%which_ho_babc,                                &
+                                    model%options%which_ho_efvs,                                &
+                                    model%options%which_ho_resid,                               &
                                     model%velocity_hom%uvel, model%velocity_hom%vvel,           &
                                     model%velocity_hom%uflx, model%velocity_hom%vflx,           &
                                     model%velocity_hom%efvs,                                    &
                                     model%velocity_hom%gdsx, model%velocity_hom%gdsy )
-
-!   *sp* I think these are now redundant
-!                                    ubas, vbas,                                                 &
-!                                    tauxz, tauyz,                                               &
-!                                    tauxx, tauyy,                                               &
-!                                    tauxy,                                                      &
-
-
-    ! *sp* This is the original subroutine signature from 'glam' code 
-    !
-    !    call glam_velo_fordsiapstr (ewn,      nsn,    upn,  &
-    !                                dew,      dns,    &
-    !                               sigma,    stagsigma,    &
-    !                               thck,     usrf,         &
-    !                               lsrf,     topg,         &
-    !                               dthckdew, dthckdns,     &
-    !                               dusrfdew, dusrfdns,     &
-    !                               dlsrfdew, dlsrfdns,     &
-    !                               stagthck, minTauf,      &
-    !                               flwa,                   &
-    !                               whichbabc,              &
-    !                               whichefvs,              &
-    !                               whichresid,             &
-    !                               uvel,     vvel,         &
-    !                               uflx,     vflx,         &
-    !                               ubas,     vbas,         &
-    !                               efvs,     tau,          &
-    !                               tauxz,    tauyz,        &
-    !                               tauxx,    tauyy,        &
-    !                               tauxy,                  &
-    !                               gdsx,     gdsy)
-
 
         ! *sp* stubs to remapping code (eventually replace w/ full calls below)
 
@@ -113,7 +76,6 @@ module glam
 
         ! *sp* put variables back into format to be used by glam
         call horizontal_remap_out( )
-
 
     !    call horizontal_remap_in( dt, thck(1:ewn-1,1:nsn-1), dew, dns, uflx, vflx, stagthck, &
     !              thck_ir, dew_ir, dns_ir, dewt_ir, dnst_ir, dewu_ir, dnsu_ir, hm_ir, tarea_ir, &

@@ -328,7 +328,7 @@ contains
        call write_log('Calculating sigma levels')
        do up=1,upn
           level = real(up-1)/real(upn-1)
-          model%numerics%sigma(up) = glide_find_level(level, model%options%which_sigma_builtin)
+          model%numerics%sigma(up) = glide_find_level(level, model%options%which_sigma_builtin, up, upn)
        end do
     case(1)
        inquire (exist=there,file=process_path(model%funits%sigfile))
@@ -350,12 +350,14 @@ contains
     
   end subroutine glide_load_sigma
 
+  function glide_find_level(level, scheme, up, upn)
+
   !Returns the sigma coordinate of one level using a specific builtin scheme
-  function glide_find_level(level, scheme)
+
     use glide_types
     use glimmer_global, only: dp
     real(dp) :: level
-    integer  :: scheme
+    integer  :: scheme, up, upn
     real(dp) :: glide_find_level
 
     select case(scheme)
@@ -517,11 +519,16 @@ contains
     type(ConfigSection), pointer :: section
     type(glide_global_type) :: model
     
-    call GetValue(section, 'diagnostic_scheme', model%options%which_ho_diagnostic)
-    call GetValue(section, 'prognostic_scheme', model%options%which_ho_prognostic)
+    call GetValue(section, 'diagnostic_scheme',  model%options%which_ho_diagnostic)
+    call GetValue(section, 'prognostic_scheme',  model%options%which_ho_prognostic)
     call GetValue(section, 'basal_stress_input', model%options%which_ho_beta_in)
     call GetValue(section, 'basal_stress_type',  model%options%which_ho_bstress)
     call GetValue(section, 'guess_specified', model%velocity_hom%is_velocity_valid)
+
+!whl - added Price-Payne higher-order (glam) options
+    call GetValue(section, 'which_ho_babc',  model%options%which_ho_babc)
+    call GetValue(section, 'which_ho_efvs',  model%options%which_ho_efvs)
+    call GetValue(section, 'which_ho_resid', model%options%which_ho_resid)
   end subroutine handle_ho_options
 
   subroutine print_options(model)
@@ -549,14 +556,14 @@ contains
          'threshold         ', &
          'const calving rate', &
          'edge threshold    ', &
-         'van der Veen'/)
+         'van der Veen      '/)
     character(len=*), dimension(0:5), parameter :: slip_coeff = (/ &
          'zero        ', &
          'const       ', &
          'const if T>0', &
          '~basal water', &
          '~basal melt ', &
-         'third power of the basal shear stress'/)
+         'taub^3      ' /)
     character(len=*), dimension(0:4), parameter :: evolution = (/ &
          'pseudo-diffusion               ', &
          'ADI scheme                     ', &
@@ -584,6 +591,26 @@ contains
     character(len=*), dimension(0:1), parameter :: ho_bstress = (/ &
          'Linear bed (betasquared)', &
          'Plastic bed (tau0)      ' /)
+
+!whl - added Price-Payne higher-order (glam) options
+    character(len=*), dimension(0:8), parameter :: ho_whichbabc = (/ &
+         'constant betasquared    ', &
+         'simple pattern          ', &
+         'read map from file      ', &
+         'simple till yield stress', &
+         'yield stress from model ', &
+         'simple 2D ice shelf     ', &
+         'spatially periodic      ', &
+         'circular ice shelf      ', &
+         'frozen bed              ' /)
+    character(len=*), dimension(0:2), parameter :: ho_whichefvs = (/ &
+         'from eff strain rate    ', &
+         'constant value          ', &
+         'minimum value           ' /)
+    character(len=*), dimension(0:2), parameter :: ho_whichresid = (/ &
+         'max value               ', &
+         'max value ignoring ubas ', &
+         'mean value              ' /)
 
     call write_log('GLIDE options')
     call write_log('-------------')
@@ -664,6 +691,26 @@ contains
                        ho_bstress(model%options%which_ho_bstress)
 
     !TODO: which_ho_bstress
+
+!whl - added Payne-Price higher-order (glam) options
+    write(message,*) 'ho_whichbabc          :',model%options%which_ho_babc,  &
+                      ho_whichbabc(model%options%which_ho_babc)
+    call write_log(message)
+    if (model%options%which_ho_babc < 0 .or. model%options%which_ho_babc >= size(ho_whichbabc)) then
+        call write_log('Error, HO basal BC input out of range', GM_FATAL)
+    end if
+    write(message,*) 'ho_whichefvs          :',model%options%which_ho_efvs,  &
+                      ho_whichefvs(model%options%which_ho_efvs)
+    call write_log(message)
+    if (model%options%which_ho_efvs < 0 .or. model%options%which_ho_efvs >= size(ho_whichefvs)) then
+        call write_log('Error, HO effective viscosity input out of range', GM_FATAL)
+    end if
+    write(message,*) 'ho_whichresid         :',model%options%which_ho_resid,  &
+                      ho_whichresid(model%options%which_ho_resid)
+    call write_log(message)
+    if (model%options%which_ho_resid < 0 .or. model%options%which_ho_resid >= size(ho_whichresid)) then
+        call write_log('Error, HO residual input out of range', GM_FATAL)
+    end if
 
     call write_log('')
   end subroutine print_options
