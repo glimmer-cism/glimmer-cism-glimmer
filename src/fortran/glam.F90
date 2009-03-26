@@ -27,25 +27,43 @@ module glam
 
     ! *sp* driver subroutine for Payne/Price HO dynamics and LANL inc. remapping for dH/dt
     ! ... called from 'glide'
+
     subroutine glam_driver( model )
 
         type(glide_global_type), intent(inout) :: model
 
+        ! arrays passed in and out of remapping routine
+        real (kind = dp), allocatable, dimension(:,:,:) ::   &
+          thck_ir,            &
+          dew_ir,   dns_ir,   &
+          dewt_ir,  dnst_ir,  &
+          dewu_ir,  dnsu_ir,  &
+          hm_ir,    tarea_ir, &
+          ubar_ir,  vbar_ir
+
+        real (kind = dp), allocatable, dimension(:,:,:,:) :: trace_ir
+        real (kind = dp) :: dt_ir
+        integer :: ewn, nsn
+
         ! *sp* specify subroutine arguments here that are not already in the 
         ! model derived type. These are just dummy values for now
         ! to get things compiling ... 
+
         real (kind=dp), dimension(model%general%ewn-1,model%general%nsn-1) :: minTauf
         minTauf = 0.0d0
 
-        !whl - to do - Make sure that the sigma field passed to glam is consistent with glam numerics.
+        ewn = model%general%ewn
+        nsn = model%general%nsn
 
+        ! Compute the higher-order velocities using the method of Payne and Price
+
+        !whl - to do - Make sure that the sigma field passed to glam is consistent with glam numerics.
         ! Note that the argument 'eta' was removed from the call, as it is not used. 
 
         ! *sp* note that the variables 'dlsrfdew', 'dlsrfdns' appear to be derived from their related
         ! usrf and thck derivs. rather than specified directly as in 'glam'. However, shouldn't they be
         ! e.g. 'dlsrfdew  = dusrfdew - dthckdew' rather than 'dlsrfdew = dthckdew - dusrfdew' ???   
 
-        ! *sp* stub to 1st order solution 
         call glam_velo_fordsiapstr( model%general%ewn,       model%general%nsn,                 &
                                     model%general%upn,                                          &
                                     model%numerics%dew,      model%numerics%dns,                &
@@ -66,24 +84,35 @@ module glam
                                     model%velocity_hom%efvs,                                    &
                                     model%velocity_hom%gdsx, model%velocity_hom%gdsy )
 
-        ! *sp* stubs to remapping code (eventually replace w/ full calls below)
-
         ! *sp* put necessary variables in format for inc. remapping
-        call horizontal_remap_in( ) 
+
+         call horizontal_remap_in(model%numerics%dt,       model%geometry%thck(1:ewn-1,1:nsn-1),  &
+                                  model%numerics%dew,      model%numerics%dns,                    &
+                                  model%velocity_hom%uflx, model%velocity_hom%vflx,               &
+                                  model%geomderv%stagthck, thck_ir,                      &
+                                  dew_ir,                  dns_ir,                       &
+                                  dewt_ir,                 dnst_ir,                      &
+                                  dewu_ir,                 dnsu_ir,                      &
+                                  hm_ir,                   tarea_ir,                     &
+                                  ubar_ir,                 vbar_ir,                      &
+                                  trace_ir,                dt_ir )
 
         ! *sp* call remapping code
-        call horizontal_remap( ) 
+
+         call horizontal_remap  ( dt_ir,               2,                 & 
+                                  ewn-1,               nsn-1,             &
+                                  ubar_ir,             vbar_ir,           &
+                                  thck_ir,             trace_ir,          &
+                                  dew_ir,              dns_ir,            &
+                                  dewt_ir,             dnst_ir,           &
+                                  dewu_ir,             dnsu_ir,           &
+                                  hm_ir,               tarea_ir )
+
 
         ! *sp* put variables back into format to be used by glam
-        call horizontal_remap_out( )
 
-    !    call horizontal_remap_in( dt, thck(1:ewn-1,1:nsn-1), dew, dns, uflx, vflx, stagthck, &
-    !              thck_ir, dew_ir, dns_ir, dewt_ir, dnst_ir, dewu_ir, dnsu_ir, hm_ir, tarea_ir, &
-    !              ubar_ir, vbar_ir, trace_ir, dt_ir )
-    !    call horizontal_remap( dt_ir, 2, ewn-1, nsn-1, ubar_ir, vbar_ir, thck_ir, trace_ir, dew_ir, &
-    !              dns_ir, dewt_ir, dnst_ir, dewu_ir, dnsu_ir, hm_ir, tarea_ir )
-    !    call horizontal_remap_out( thck_ir, thck, acab, dt )
-
+         call horizontal_remap_out (thck_ir,            model%geometry%thck,    &
+                                    model%climate%acab, model%numerics%dt )
 
 !       These to be moved elsewhere ... somewhere in "glide_stop.F90"?
 !

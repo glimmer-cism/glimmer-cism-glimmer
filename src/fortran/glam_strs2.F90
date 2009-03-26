@@ -8,7 +8,7 @@ module glam_strs2
 !      Glimmer defines tau0 in terms of vis0; glam defines vis0 in terms of tau0 = rho*h*thk0
 
 !whl - to do - Make sure that any hardwired constants in the code do not assume
-!              a different scaling than what is used in glimmer.
+!              a scaling different from the glimmer scaling.
 
 !!use glam_general, only : dp, in, sprs2_dp
 !!use glam_physcon, only : gn, rhoi, rhoo, grav, pi, scyr
@@ -191,16 +191,7 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
                                  efvs,                   &
                                  gdsx,     gdsy)
 
-implicit none
-
-!***********************************************************************
-
-!lipscomb - removed the interface stuff here
-
-!interface
-!end interface
-
-!***********************************************************************
+  implicit none
 
   integer, intent(in) :: ewn, nsn, upn
   real (kind = dp), intent(in) :: dew, dns
