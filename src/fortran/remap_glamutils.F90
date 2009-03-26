@@ -1,12 +1,12 @@
 
 module remap_glamutils      
 
-  ! *sp* contains various subroutines needed when using LANL incremental remapping code
+  ! *sfp** contains various subroutines needed when using LANL incremental remapping code
   ! for thickness evolution in glam/glimmer codes
 
     use glimmer_paramets, only: sp, dp, len0, thk0, tim0, vel0
 
-    ! *sp* arrays needed to pass GLAM variables to/from inc. remapping solver
+    ! *sfp** arrays needed to pass GLAM variables to/from inc. remapping solver
     real (kind = dp), allocatable, dimension(:,:,:) ::   &
           thck_ir,            &
           dew_ir,   dns_ir,   &
@@ -17,7 +17,7 @@ module remap_glamutils
     real (kind = dp), allocatable, dimension(:,:,:,:) :: trace_ir
     real (kind = dp) :: dt_ir
 
-    ! *sp* mask to apply for domains where initial ice thickness limits are equivalent
+    ! *sfp** mask to apply for domains where initial ice thickness limits are equivalent
     ! to the domain edge (e.g. the locations where bcs are applied)
 
     real (kind = dp), allocatable, dimension(:,:) :: mask_ir
@@ -28,7 +28,7 @@ module remap_glamutils
 
     subroutine horizontal_remap_init( ewn, nsn )
 
-    ! *sp* initialize variables for use in inc. remapping code   
+    ! *sfp** initialize variables for use in inc. remapping code   
 
       implicit none
 
@@ -57,7 +57,7 @@ module remap_glamutils
 
     subroutine horizontal_remap_final( )
 
-    ! *sp* deallocate variables for use in inc. remapping code   
+    ! *sfp** deallocate variables for use in inc. remapping code   
 
       implicit none
 
@@ -87,7 +87,7 @@ module remap_glamutils
                                     ubar_ir,  vbar_ir, &
                                     trace_ir, dt_ir )
 
-    ! *sp* get GLAM variables in order for use in inc. remapping code   
+    ! *sfp** get GLAM variables in order for use in inc. remapping code   
 
     implicit none
 
@@ -133,7 +133,7 @@ module remap_glamutils
 
     subroutine horizontal_remap_out( thck_ir, thck, acab, dt )
 
-    ! *sp* take output from inc. remapping and put back in GLAM format
+    ! *sfp** take output from inc. remapping and put back in GLAM format
 
     implicit none
 

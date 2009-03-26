@@ -118,7 +118,7 @@ contains
 
     use glissade, only: init_glissade
 
-    ! *sp* added
+    ! *sfp** added
     use glam_strs2, only : glam_velo_fordsiapstr_init
     use remap_glamutils, only : horizontal_remap_init
 
@@ -195,7 +195,7 @@ contains
 
     end if
 
-    ! *sp* added; initialization of Payne/Price HO dynamics subroutine ... name can change once agreed on
+    ! *sfp** added; initialization of Payne/Price HO dynamics subroutine ... name can change once agreed on
     if (model%options%which_ho_diagnostic == HO_DIAG_PP ) then
 
         call glam_velo_fordsiapstr_init(model%general%ewn,    model%general%nsn,  &
@@ -212,7 +212,7 @@ contains
        call init_glissade(model)
     endif 
 
-    ! *sp* added; initialization of LANL incremental remapping subroutine for thickness evolution
+    ! *sfp** added; initialization of LANL incremental remapping subroutine for thickness evolution
     if (model%options%whichevol== EVOL_INC_REMAP_PP ) then
 
         call horizontal_remap_init( model%general%ewn, model%general%nsn )
@@ -365,7 +365,7 @@ contains
     use isostasy
     use glissade, only: thck_remap_evolve
 
-    ! *sp* driver module/subroutines for Payne/Price HO dynamics and LANL inc. remapping for dH/dt 
+    ! *sfp** driver module/subroutines for Payne/Price HO dynamics and LANL inc. remapping for dH/dt 
     ! Modeled after similar routines in "glide_thck"
     use glam, only: glam_driver
 
@@ -416,7 +416,7 @@ contains
  
        call thck_remap_evolve(model, model%temper%newtemps, 6, .true.)
 
-    case(EVOL_INC_REMAP_PP) ! *sp* added option for Payne/Price HO dynamics + LANL inc. remapping for dH/dt
+    case(EVOL_INC_REMAP_PP) ! *sfp** added option for Payne/Price HO dynamics + LANL inc. remapping for dH/dt
                             ! Note that we are bypassing "glide_thick" altogether here.
 
        call glam_driver( model )  

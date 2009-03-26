@@ -41,7 +41,7 @@
 !     use io_types, only: stdout
       use exit_mod
 
-      ! *sp* remove this eventually by passing important vars to driver as args
+      ! *sfp** remove this eventually by passing important vars to driver as args
       use params_mod
 !
 !EOP
@@ -341,7 +341,7 @@
       real (kind=dp), intent(in) ::     &
          dt      ! time step
 
-      ! *sp* these 3 now passed as args rather than from 'use params' 
+      ! *sfp** these 3 now passed as args rather than from 'use params' 
       integer, intent(in) ::     &
          nghost,    &     ! number of ghost cells
          nx_block,  &     ! number of cells in x direction
@@ -402,7 +402,7 @@
       ! local variables
 
       integer ::     &
-         nx, ny                     ! *sp* this declaration moved from 'params_mod'
+         nx, ny                     ! *sfp** this declaration moved from 'params_mod'
 
       real (kind=dp), dimension (nx_block,ny_block,max_blocks) ::  &
          xav,   yav              ,&! mean T-cell values of x, y
@@ -512,7 +512,7 @@
 ! Set nblocks = 1 since remapping is called inside a block loop
       nblocks = 1
 
-! *sp* moved this statement, prev. in 'params_mod'
+! *sfp** moved this statement, prev. in 'params_mod'
       nx = nx_block; ny = ny_block
 
 ! istep1 not correct

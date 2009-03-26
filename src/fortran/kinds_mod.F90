@@ -1,6 +1,6 @@
 !|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 
- module kinds_mod     ! *sp* used by LANL incremental remapping code, 'remap_advection'
+ module kinds_mod     ! *sfp** used by LANL incremental remapping code, 'remap_advection'
 
 !BOP
 ! !MODULE: kinds_mod
