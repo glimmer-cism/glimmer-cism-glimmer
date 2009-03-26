@@ -206,6 +206,7 @@ contains
     use glimmer_global, only : dp, sp
     use glimmer_physcon, only : rhoi, rhoo, grav, gn
     use glide_vertint, only : vertint_output2d
+    use glimmer_paramets, only: thk0
     use glide_mask
     implicit none
 
@@ -236,7 +237,7 @@ contains
 
     real(dp), parameter :: con = - rhoi / rhoo
     real(dp), parameter :: sigmaxx = 0.5 * rhoi * grav * (1.0 - rhoi / rhoo)
-    real(dp), parameter :: theta = 2.0
+    real(dp), parameter :: theta = 0.5
     real(dp), dimension(2,2) :: A
 
 
@@ -244,7 +245,7 @@ contains
     real(dp) :: sigmab
     !---------------------------------------------------------------------
 
-    sigmab = 0.2
+    sigmab = 0.95
 
     ablation_field=0.0
 
@@ -285,13 +286,18 @@ contains
             ! 
        do ns = 2,size(thck,2)-1
           do ew = 2,size(thck,1)-1
-             if (GLIDE_IS_CALVING(mask(ew,ns))) then
+             if (GLIDE_IS_GROUNDING_LINE(mask(ew,ns))) then
                 call vertint_output2d(flwa(:,ew-1:ew,ns-1:ns),A, levels * thck(ew,ns))
-                ablation_field(ew,ns)=  theta * A(2,2) * (sigmaxx * thck(ew,ns) * (1 - sigmab)) ** gn * thck(ew,ns)
-             end if
+                ablation_field(ew,ns)=  theta * A(2,2) * (sigmaxx * &
+                thck(ew,ns)  * (1 - sigmab)) ** gn
+                if ((thck(ew,ns) - ablation_field(ew,ns)) >= 0.0) then
+                thck(ew,ns) = thck(ew,ns) - ablation_field(ew,ns) 
+                else 
+                thck(ew,ns) = 0.0d0
+                end if
+            end if
           end do
        end do
-
 
     end select
 

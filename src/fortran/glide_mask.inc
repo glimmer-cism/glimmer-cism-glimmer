@@ -18,6 +18,8 @@
 #define GLIDE_MASK_SHELF_FRONT     128
 #define GLIDE_MASK_MARINE_EDGE     256
 
+
+#define GLIDE_IS_GROUNDING_LINE(mask) (iand(mask, GLIDE_MASK_GROUNDING_LINE) .gt. 0 .and. GLIDE_HAS_ICE(mask))
 #define GLIDE_IS_OCEAN(mask)       (mask .eq. GLIDE_MASK_OCEAN)
 #define GLIDE_IS_LAND(mask)        (mask .eq. GLIDE_MASK_LAND)
 #define GLIDE_HAS_ICE(mask)        (mask .gt. 0)
