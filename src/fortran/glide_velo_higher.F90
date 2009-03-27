@@ -10,6 +10,7 @@ module glide_velo_higher
     use glide_types
     use glide_vertint
     use glide_grids, only: stagvarb
+    use glimmer_physcon, only: gn
     implicit none
     
     !TODO: Parameterize the following globals
@@ -124,7 +125,7 @@ contains
                           model%geomderv%dthckdns-model%geomderv%dusrfdns, & 
                           model%geomderv%stagthck, model%velocity_hom%velmask, totpts, &
                           model%geometry%thkmask, &
-                          model%temper%flwa, model%paramets%flow_exponent, model%velocity_hom%beta, &
+                          model%temper%flwa, real(gn, dp), model%velocity_hom%beta, &
                           model%options%which_ho_bstress,&
                           model%options%periodic_ew .eq. 1, &
                           model%options%periodic_ns .eq. 1,&
@@ -142,7 +143,7 @@ contains
                           model%geometry%thck, model%geometry%usrf, model%geometry%lsrf, &
                           model%geometry%mask, model%geometry%totpts, &
                           model%geometry%thkmask, &
-                          model%temper%flwa, model%paramets%flow_exponent, &
+                          model%temper%flwa, real(gn, dp), &
                           model%velocity_hom%beta, model%options%which_ho_bstress, &
                           model%options%periodic_ew .eq. 1, &
                           model%options%periodic_ns .eq. 1, &

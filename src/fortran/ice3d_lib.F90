@@ -29,7 +29,7 @@
 #define AVERAGED_PRESSURE
 
 !The maximum number of iterations to use in the unstable manifold loop
-#define NUMBER_OF_ITERATIONS 100000
+#define NUMBER_OF_ITERATIONS 100
 
 !If defined, the model uses 2nd order upwinded and downwinded finite
 !differences.
@@ -929,13 +929,14 @@ contains
             call df_field_3d(uvel, dy, dx, dz, dudy, dudx, dudz, dzdy, dzdx)
             call df_field_3d(vvel, dy, dx, dz, dvdy, dvdx, dvdz, dzdy, dzdx)
         else
+            direction_x = 0
+            direction_y = 0
             call directions_from_mask(geometry_mask, direction_x, direction_y)
             call write_xls("direction_x.txt",direction_x)
             call write_xls("direction_y.txt",direction_y)
+            
             call df_field_3d(uvel_test, dy, dx, dz, dudy, dudx, dudz, direction_x, direction_y)
             call df_field_3d(vvel_test, dy, dx, dz, dvdy, dvdx, dvdz, direction_x, direction_y)
-            !call df_field_3d(uvel_test, dy, dx, dz, dudy, dudx, dudz)
-            !call df_field_3d(vvel_test, dy, dx, dz, dvdy, dvdx, dvdz)
          end if
 
         !Compute mu term from the acceleration fields
@@ -1324,6 +1325,8 @@ contains
         double precision dz_down1, dz_down2, dz_down3, dz_up1, dz_up2, dz_up3
         double precision dz_cen1, dz_cen2, dz_cen3, dz_sec1, dz_sec2, dz_sec3
         
+        double precision :: rhs2
+
         !call write_xls_3d("uvel.txt",uvel)
         !call write_xls_3d("vvel.txt",vvel)
 
@@ -1418,17 +1421,21 @@ contains
         else
             write(*,*)"FATAL ERROR: sparse_setup called with invalid component"
         end if
-        
-        if (.not. IS_NAN(latbc_normal(i,j))) then !Marine margin dynamic (Neumann) boundary condition
-            call sparse_marine_margin(component,i,j,k,h,latbc_normal, vel_perp, mu, dx, dy, ax, ay, dz,coef, rhs)
+
+
 #ifdef ENABLE_VERTAVG_SHELF
-        else if (GLIDE_IS_FLOAT(geometry_mask(i,j)) .and. k > 1) then
+        if (GLIDE_IS_FLOAT(geometry_mask(i,j)) .and. k > 1) then
             !Interior of ice shelf and not the surface.  In this case, we
             !just enforce plug flow
             coef(I_J_K) = 1
             coef(I_J_KM1) = -1
             rhs = 0
-#endif
+            return
+        end if
+#endif  
+
+        if (.not. IS_NAN(latbc_normal(i,j))) then !Marine margin dynamic (Neumann) boundary condition
+            call sparse_marine_margin(component,i,j,k,h,latbc_normal, vel_perp, mu, dx, dy, ax, ay, dz,coef, rhs)
         else if (k.eq.1) then !Upper boundary condition (stress-free surface)
             !Finite difference coefficients for an irregular Z grid, downwinded
             dz_down1=(2.*dz(k)-dz(k+1)-dz(k+2))/(dz(k+1)-dz(k))/(dz(k+2)-dz(k))
@@ -1454,7 +1461,16 @@ contains
             rhs = -dperp_dx * dfdy_3d(vel_perp,i,j,k,dx) &
                 -  dperp_dy * dfdx_3d(vel_perp,i,j,k,dy) &
                 -  dperp_dz * dfdz_3d_downwind_irregular(vel_perp,i,j,k,dz)
-
+                
+            !"Blend" with lateral boundary condition if we are on the
+            !boundary.  This functionally is just summing the equations.
+            !Note that sparse_marine_margin is written in such a way as
+            !to always add to coef, not overwrite it.
+            !if (.not. IS_NAN(latbc_normal(i,j))) then !Marine margin dynamic (Neumann) boundary condition
+            !    rhs2 = 0
+            !    call sparse_marine_margin(component,i,j,k,h,latbc_normal, vel_perp, mu, dx, dy, ax, ay, dz,coef, rhs2)
+            !    rhs = rhs + rhs2
+            !end if
         else if (k.eq.Ndz) then !Lower boundary condition (Basal sliding)
             !Finite difference coefficients for an irregular Z grid, upwinded
             dz_up1=(dz(k)-dz(k-1))/(dz(k-1)-dz(k-2))/(dz(k)-dz(k-2))
@@ -1502,9 +1518,17 @@ contains
                 !CORRECTION: Adding in normalization term that Pattyn has
                 !neglected.
                 coef(11) = coef(11) + beta(i,j)! * sqrt(1 + dhbdx(i,j)**2 + dhbdy(i,j)**2)
-
+                
+                !"Blend" with lateral boundary condition if we are on the
+                !boundary.  This functionally is just summing the equations.
+                !Note that sparse_marine_margin is written in such a way as
+                !to always add to coef, not overwrite it.
+                !if (.not. IS_NAN(latbc_normal(i,j))) then !Marine margin dynamic (Neumann) boundary condition
+                !    rhs2 = 0
+                !    call sparse_marine_margin(component,i,j,k,h,latbc_normal, vel_perp, mu, dx, dy, ax, ay, dz,coef, rhs2)
+                !    rhs = rhs + rhs2
+                !end if
             endif
-
         else !Interior of the ice (e.g. not a boundary condition)
             !Finite difference coefficients for an irregular Z grid
             dz_cen1 = (dz(k)-dz(k+1))/(dz(k)-dz(k-1))/(dz(k+1)-dz(k-1))
@@ -1641,6 +1665,8 @@ contains
         n_y = -cos(normals(i,j))
 
         !Clamp n_x and n_y so that small values register as zero
+        !(The need to do this arises from the fact that, sin(k*pi)
+        !cannot be exactly 0)
         if (abs(n_x) < 1d-10) then
             n_x = 0
         end if
@@ -1658,7 +1684,7 @@ contains
         pressure = rhoi * grav * h(i,j) * zeta(k)
         !Hydrostatic component, only if we're below the surface
         if (zeta(k) > (1 - rhoi/rhoo)) then
-            pressure = pressure + rhoo * grav * h(i,j) * (zeta(k) - 1 + rhoi/rhoo)
+            pressure = pressure - rhoo * grav * h(i,j) * (1 - rhoi/rhoo - zeta(k))
         end if
 
 
@@ -1725,11 +1751,15 @@ contains
                 dperp_dy = dfdx_3d(vel_perp,i,j,k,dy)
             end if
 
-
+#ifndef IGNORE_LAT_SIGMA
             rhs = pressure*n_x - (2*n_x*dperp_dy & 
                                   + n_y * dperp_dx &
                                   + (2*ay(i,j,k)*n_x + ax(i,j,k)*n_y)*dperp_dz)*mu(i,j,k)
+#else
+            rhs = pressure*n_x - (2*n_x*dperp_dy & 
+                                  + n_y * dperp_dx)*mu(i,j,k)
 
+#endif
             dx_coeff = n_x*4*mu(i,j,k)
             dy_coeff = n_y*mu(i,j,k)
             dz_coeff = (4*n_x*ax(i,j,k) + (n_y*ay(i,j,k)))*mu(i,j,k)
@@ -1754,12 +1784,15 @@ contains
             else
                 dperp_dx = dfdy_3d(vel_perp,i,j,k,dx)
             end if
-
+#ifndef IGNORE_LAT_SIGMA
             rhs = pressure*n_y - (2*n_y*dperp_dx & 
                                   + n_x * dperp_dy &
                                   + (2*ax(i,j,k)*n_y + ay(i,j,k)*n_x)*dperp_dz)*mu(i,j,k)
-
+#else
+            rhs = pressure*n_y - (2*n_y*dperp_dx & 
+                                  + n_x * dperp_dy)*mu(i,j,k)
   
+#endif  
             dy_coeff = n_y*4*mu(i,j,k)
             dx_coeff = n_x*mu(i,j,k)
             dz_coeff = (4*n_y*ay(i,j,k) + (n_x*ax(i,j,k)))*mu(i,j,k)

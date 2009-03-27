@@ -741,7 +741,6 @@ contains
     call GetValue(section,'calving_fraction',model%numerics%calving_fraction)
     call GetValue(section,'geothermal',model%paramets%geot)
     call GetValue(section,'flow_factor',model%paramets%flow_factor)
-    call GetValue(section,'flow_exponent',model%paramets%flow_exponent)
     call GetValue(section,'hydro_time',model%paramets%hydtim)
     call GetValue(section,'basal_tract',temp,5)
     if (associated(temp)) then
