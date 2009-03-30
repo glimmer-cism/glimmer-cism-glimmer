@@ -359,6 +359,7 @@ contains
     !*FD write data and move ice
     use glide_thck
     use glide_velo
+    use glide_ground
     use glide_setup
     use glide_temp
     use glide_mask
