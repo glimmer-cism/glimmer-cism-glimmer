@@ -26,15 +26,21 @@ module remap_glamutils
 
 !----------------------------------------------------------------------
 
-    subroutine horizontal_remap_init( ewn, nsn )
+    subroutine horizontal_remap_init (ewn, nsn)
 
     ! *sfp** initialize variables for use in inc. remapping code   
 
       implicit none
 
-      integer, intent(in) :: ewn, nsn
+      integer, intent(in) :: ewn, nsn   ! horizontal dimensions
 
-      dt_ir = 0.0_dp
+!whl - to do - Set ntrace to the actual number of tracers we want to transport
+!              (e.g., ice temperature, ice age)
+!              Hardwired ntrace = 1 for now
+
+      integer, parameter  :: ntrace = 1    ! number of tracers
+
+      dt_ir = 0.0_dp     ! time step
 
       ! allocate arrays/vars 
       allocate( thck_ir(1:ewn-1,1:nsn-1,1) ); thck_ir = 0.0_dp
@@ -48,7 +54,7 @@ module remap_glamutils
       allocate( tarea_ir(1:ewn-1,1:nsn-1,1) ); tarea_ir = 0.0_dp
       allocate( ubar_ir(1:ewn-1,1:nsn-1,1) ); ubar_ir = 0.0_dp
       allocate( vbar_ir(1:ewn-1,1:nsn-1,1) ); vbar_ir = 0.0_dp
-      allocate( trace_ir(1:ewn-1,1:nsn-1,1,1) ); trace_ir = 0.0_dp
+      allocate( trace_ir(1:ewn-1,1:nsn-1,ntrace,1) ); trace_ir = 0.0_dp
       allocate( mask_ir(1:ewn,1:nsn) ); mask_ir = 0.0_dp
 
     end subroutine horizontal_remap_init
@@ -77,6 +83,7 @@ module remap_glamutils
 !----------------------------------------------------------------------
 
     subroutine horizontal_remap_in( dt,       thck,     &
+                                    ntrace,   nghost,   &
                                     dew,      dns,      &
                                     uflx,     vflx,     &
                                     stagthck, thck_ir,  &
@@ -92,6 +99,11 @@ module remap_glamutils
     implicit none
 
 !whl - to do - add comments describing the arguments
+
+    integer, intent(out) ::   &
+         ntrace           ,&! number of tracer arrays to be remapped
+         nghost             ! number of ghost cells
+
     real (kind = dp), dimension(:,:), intent(in) :: thck, uflx, vflx, stagthck
     real (kind = dp), intent(in) :: dew, dns, dt
     real (kind = dp), dimension(:,:,:), intent(out) ::   & 
@@ -104,6 +116,17 @@ module remap_glamutils
 
     real (kind = dp), dimension(:,:,:,:), intent(out) :: trace_ir
     real (kind = dp), intent(out) :: dt_ir
+
+!whl - Hardwire ntrace and nghost for now
+!      Initially, no tracers are actually remapped, but the remapping routine
+!       requires ntrace >= 1
+
+    ntrace = 1
+
+!whl - The number of ghost cells is applicable only when we have a parallel code.
+!      For remapping, nghost = 2 is ideal because then no boundary updates are needed.
+!      
+    nghost = 2
 
     thck_ir(:,:,1) = thck(:,:)*thk0
     dew_ir(:,:,1)  = dew*len0; dns_ir(:,:,1) = dns*len0
@@ -120,7 +143,8 @@ module remap_glamutils
         vbar_ir(:,:,1) = 0.0_dp
     endwhere
 
-    trace_ir(:,:,1,1) = 1.0_dp;
+!whl - to do - Fill the tracer array with ice temperature and other tracers
+    trace_ir(:,:,:,1) = 1.0_dp;
     dt_ir = dt * tim0
 
     where( thck > 0.0_dp )

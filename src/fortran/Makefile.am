@@ -57,10 +57,9 @@ libglide_a_SOURCES = glide.F90 glide_setup.F90 glide_types.F90 glide_temp.F90 \
                      glissade_constants.F90 glide_vertint.F90\
                      glide_thckmask.F90 glide_nonlin.F90 glide_grids.F90\
                      glam.F90 glam_strs2.F90 glam_thck_ppm.F90\
-                     remap_advection.F90 remap_glamutils.F90\
-                     constants.F90 kinds_mod.F90 params_mod.F90 exit_mod.F90
-# *sp* Added the last two lines above for addition of Payne/Price HO dynamics and  
-# *sp* LANL inc. remapping for dH/dt calculation
+                     remap_advection.F90 remap_glamutils.F90
+# *sfp* Added the last two lines above for addition of Payne/Price HO dynamics and  
+# *sfp* LANL inc. remapping for dH/dt calculation
 
 libglint_a_SOURCES = glint_climate.F90 glint_initialise.F90 glint_io.F90 \
                      glint_timestep.F90 glint_type.F90 glint_main.F90 \

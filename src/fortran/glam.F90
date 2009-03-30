@@ -45,6 +45,10 @@ module glam
         real (kind = dp) :: dt_ir
         integer :: ewn, nsn
 
+        integer ::         & 
+          ntrace_ir       ,&! number of tracers to be remapped
+          nghost_ir         ! number of ghost cells
+
         ! *sfp** specify subroutine arguments here that are not already in the 
         ! model derived type. These are just dummy values for now
         ! to get things compiling ... 
@@ -87,6 +91,7 @@ module glam
         ! *sfp** put necessary variables in format for inc. remapping
 
          call horizontal_remap_in(model%numerics%dt,       model%geometry%thck(1:ewn-1,1:nsn-1),  &
+                                  ntrace_ir,               nghost_ir,                             &
                                   model%numerics%dew,      model%numerics%dns,                    &
                                   model%velocity_hom%uflx, model%velocity_hom%vflx,               &
                                   model%geomderv%stagthck, thck_ir,                      &
@@ -99,8 +104,9 @@ module glam
 
         ! *sfp** call remapping code
 
-         call horizontal_remap  ( dt_ir,               2,                 & 
+         call horizontal_remap  ( dt_ir,                                  & 
                                   ewn-1,               nsn-1,             &
+                                  ntrace_ir,           nghost_ir,         &
                                   ubar_ir,             vbar_ir,           &
                                   thck_ir,             trace_ir,          &
                                   dew_ir,              dns_ir,            &

@@ -35,14 +35,10 @@
 ! !USES:
 !
       use glimmer_paramets, only : dp
-!     use communicate, only: my_task, master_task
-!     use POP_DomainSizeMod, only: POP_maxBlocksClinic, POP_nt
-      use constants
-!     use io_types, only: stdout
-      use exit_mod
+      use glimmer_log
 
-      ! *sfp** remove this eventually by passing important vars to driver as args
-      use params_mod
+!     use communicate, only: my_task, master_task
+
 !
 !EOP
 !
@@ -57,21 +53,21 @@
       integer, parameter ::     &
          mtest = 0, btest = 999, itest = 10, jtest = 10, ktest = 1
 
-
-! Translate some names from POP to CICE
+!whl - Some parameters used in parallel versions of POP/CICE
+!      In a parallel code, my_task will be declared in a communication module
+!      For now, just set my_task = master_task = 0 for serial runs
       integer, parameter ::     &
-         nu_diag    = stdout     ,&
-!!!         max_blocks = POP_maxBlocksClinic
-         max_blocks = 1   ! if one block at a time is remapped
-                          ! (no ghost cell updates)
-
-      real (kind=dp), parameter ::        &
-         puny       = 1.0e-11_r8 ,&
-         eps13      = 1.0e-13_r8
+         my_task = 0           ,&
+         master_task = 0
 
       integer, parameter ::     &
-         ntrace = POP_nt
-                 
+         max_blocks = 1      ! if one block at a time is remapped
+                             ! (no ghost cell updates)
+
+!whl - to do - Swap out output to nu_diag with messages to glimmer_log
+      integer, parameter ::     &
+         nu_diag    = 6      ! hardwired output unit for now
+
 ! Remapping parameters
 
       integer, parameter ::     &
@@ -83,17 +79,24 @@
          integral_order = 2   ! polynomial order of quadrature integrals
                               ! linear=1, quadratic=2, cubic=3
 
-      ! for triangle integral formulas
-      real (kind=dp), parameter ::        & 
-         p5625m = -9._dp/16._dp    ,&
-         p52083 = 25._dp/48._dp    ,&
-         p333   = c1/c3                        ,&
-         p4     = 0.4_dp                 ,&
-         p6     = 0.6_dp
-
       logical, parameter ::     &
          l_dp_midpt = .true.  ! if true, find departure points using
                               ! corrected midpoint velocity
+
+      ! some numbers
+      real (kind=dp), parameter ::       &
+         puny   = 1.0e-11_dp       ,&
+         eps13  = 1.0e-13_dp       ,&
+         c0     =    0.0_dp        ,&
+         c1     =    1.0_dp        ,&
+         c2     =    2.0_dp        ,&
+         p25    =    0.25_dp       ,&
+         p333   =    1.0_dp/3.0_dp ,&
+         p4     =    0.4_dp        ,&
+         p5     =    0.5_dp        ,&
+         p6     =    0.6_dp        ,&
+         p5625m = -9._dp/16._dp    ,&   ! p5625m and p52083 are in triangle integration formulas  
+         p52083 = 25._dp/48._dp 
 
 !lipscomb - debugging parameters - remove later
       logical, parameter :: verbose = .false.
@@ -298,8 +301,8 @@
 ! !INTERFACE:
 !
       subroutine horizontal_remap (dt,                                  &
-                                   nghost,                              &
-                                   nx_block,          ny_block,         &  
+                                   nx_block,          ny_block,         &
+                                   ntrace,            nghost,           &
                                    uvel,              vvel,             &
                                    mm,                tm,               &
                                    hte,               htn,              &
@@ -341,11 +344,11 @@
       real (kind=dp), intent(in) ::     &
          dt      ! time step
 
-      ! *sfp** these 3 now passed as args rather than from 'use params' 
       integer, intent(in) ::     &
-         nghost,    &     ! number of ghost cells
-         nx_block,  &     ! number of cells in x direction
-         ny_block         ! number of cells in y direction
+         nx_block       ,&! number of cells in x direction
+         ny_block       ,&! number of cells in y direction
+         ntrace         ,&! number of tracers in tracer array (tm)
+         nghost           ! number of ghost cells
 
       real (kind=dp), intent(in),       &
                 dimension(nx_block,ny_block,max_blocks) ::           &
@@ -487,19 +490,20 @@
       integer ::     &
          istop, jstop     ! indices of grid cell where model aborts
 
-      character (len=char_len) ::   &
+      character (len=5) ::   &
          edge             ! 'north' or 'east'
 
       integer :: nv, ng
       real (kind=dp) :: h1, h2, w1
 
-      ! Translate from POP to CICE
-      integer  ::     &
-         nblocks        ,&! number of blocks per processor
-         istep1           ! number of steps since start of run
+      character(len=100) :: message
 
-! The following statements would be uncommented if remapping loops over 
-!  blocks and boundary updates are needed:
+
+! The following statements may be uncommented when we have a parallel code
+!  with block loops and boundary updates.
+! Note: If remapping is called from inside a block loop, we do not need boundary
+!       communications, and we will have nblocks = 1.  But this requires nghost >=2.
+
 !!!      type (block) ::     &
 !!!         this_block       ! block information for current block
 
@@ -509,15 +513,12 @@
 !!!      nblocks = nblocks_clinic
 !!!      bndy_info = bndy_clinic
 
-! Set nblocks = 1 since remapping is called inside a block loop
-      nblocks = 1
+!whl - May have nblocks > 1 in parallel code
+      integer, parameter  ::  nblocks = 1       ! number of blocks per processor
 
 ! *sfp** moved this statement, prev. in 'params_mod'
       nx = nx_block; ny = ny_block
 
-! istep1 not correct
-!     istep1 = nsteps_run
-      istep1 = 1
       l_stop = .false.
       istop = 0
       jstop = 0
@@ -596,7 +597,8 @@
     !------------------------------------------------------------------- 
 
          call make_masks (nx_block,           ny_block,              &
-                          nghost,             has_dependents,        &
+                          ntrace,             nghost,                &
+                          has_dependents,                            &
                           icellsnc(iblk),                            &
                           indxinc(:,iblk),    indxjnc(:,iblk),       &
                           mm(:,:,iblk),       mmask(:,:,iblk),       &
@@ -607,7 +609,7 @@
     !-------------------------------------------------------------------
 
          call construct_fields(nx_block,            ny_block,            &
-                               nghost,                                   &
+                               ntrace,              nghost,              &
                                tracer_type,         depend,              &
                                has_dependents,      icellsnc  (iblk),    &
                                indxinc  (:,iblk),   indxjnc (:,iblk),    &
@@ -643,8 +645,9 @@
 
          if (l_stop) then
 
-            write(nu_diag,*) 'istep1, my_task, iblk =',     &
-                              istep1, my_task, iblk
+!whl - Commented out some error diagnostics
+!            write(nu_diag,*) 'istep1, my_task, iblk =',     &
+!                              istep1, my_task, iblk
 
 !lipscomb - The following should be uncommented if the block loops
 !lipscomb   are inside the remapping:
@@ -654,7 +657,9 @@
 !!!                 write(nu_diag,*) 'Global i and j:',     &
 !!!                                  this_block%i_glob(istop),     &
 !!!                                  this_block%j_glob(jstop) 
-            call exit_POP(sigAbort,'remap transport: bad departure points')
+
+           write(message,*) 'remap transport: bad departure points'
+           call write_log(message,GM_FATAL)
          endif
 
       enddo                     ! iblk
@@ -707,7 +712,6 @@
                                triarea,                               &
                                l_prescribed_area, edgearea_e(:,:,iblk))
 
-
          if (my_task==mtest .and. verbose) then
             i = itest
             j = jtest
@@ -756,7 +760,7 @@
     !-------------------------------------------------------------------
 
          call transport_integrals(nx_block,           ny_block,           &
-                                  icellsng (:,iblk),                      &
+                                  ntrace,             icellsng (:,iblk),  &
                                   indxing(:,:,iblk),  indxjng(:,:,iblk),  &
                                   tracer_type,        depend,             &
                                   integral_order,     triarea,            &
@@ -822,7 +826,7 @@
                                     xp,                yp)
 
          call transport_integrals(nx_block,           ny_block,           &
-                                  icellsng (:,iblk),                      &
+                                  ntrace,             icellsng (:,iblk),  &
                                   indxing(:,:,iblk),  indxjng(:,:,iblk),  &
                                   tracer_type,        depend,             &
                                   integral_order,     triarea,            &
@@ -839,7 +843,7 @@
     !-------------------------------------------------------------------
 
          call update_fields (nx_block,            ny_block,          &
-                             nghost,                                 &
+                             ntrace,              nghost,            &
                              tracer_type,         depend,            &
                              tarea_r(:,:,iblk),   l_stop,            &
                              istop,               jstop,             &
@@ -849,8 +853,10 @@
                              tm     (:,:,:,iblk)   )
 
          if (l_stop) then
-            write (nu_diag,*) 'istep1, my_task, iblk =',          &
-                               istep1, my_task, iblk
+
+!whl - commented out some error diagnostics
+!            write (nu_diag,*) 'istep1, my_task, iblk =',          &
+!                               istep1, my_task, iblk
 
 !lipscomb - The following should be uncommented if the block loops
 !lipscomb   are inside the remapping:
@@ -860,7 +866,9 @@
 !!!                 write(nu_diag,*) 'Global i and j:',              &
 !!!                                  this_block%i_glob(istop),       &
 !!!                                  this_block%j_glob(jstop) 
-            call exit_POP (sigAbort, 'ice remap_transport: negative area')
+
+           write(message,*) 'remap transport: negative area'
+           call write_log(message,GM_FATAL)
          endif
 
       enddo                     ! iblk
@@ -877,7 +885,8 @@
 !
 
       subroutine make_masks (nx_block, ny_block,           &
-                             nghost,   has_dependents,     &
+                             ntrace,   nghost,             &
+                             has_dependents,               &
                              icells,                       &
                              indxi,    indxj,              &
                              mm,       mmask,              &
@@ -907,6 +916,7 @@
 !
       integer, intent(in) ::     &
            nx_block, ny_block  ,&! block dimensions
+           ntrace              ,&! number of tracers
            nghost                ! number of ghost cells
 
       logical, dimension (ntrace), intent(in) ::     &
@@ -1031,7 +1041,7 @@
 ! !INTERFACE:
 !
       subroutine construct_fields (nx_block,       ny_block,   &
-                                   nghost,                     &
+                                   ntrace,         nghost,     &
                                    tracer_type,    depend,     &
                                    has_dependents, icells,     &
                                    indxi,          indxj,      &
@@ -1067,6 +1077,7 @@
 !
       integer, intent(in) ::   &
          nx_block, ny_block  ,&! block dimensions
+         ntrace              ,&! number of tracers
          nghost              ,&! number of ghost cells
          icells                ! number of cells with mass
 
@@ -1771,7 +1782,7 @@
          nx_block, ny_block,&! block dimensions
          nghost              ! number of ghost cells
 
-      character (len=char_len), intent(in) ::   &
+      character (len=5), intent(in) ::   &
          edge             ! 'north' or 'east'
 
       real (kind=dp), dimension(nx_block,ny_block), intent(in) ::  &
@@ -2998,7 +3009,7 @@
 ! !INTERFACE:
 !
       subroutine transport_integrals (nx_block,             ny_block,    &
-                                      icells,                            &
+                                      ntrace,               icells,      &
                                       indxi,                indxj,       &
                                       tracer_type,          depend,      &
                                       integral_order,       triarea,     &
@@ -3028,7 +3039,9 @@
 !
       integer, intent(in) ::   &
            nx_block, ny_block  ,&! block dimensions
-           integral_order   ! polynomial order for quadrature integrals 
+           ntrace              ,&! number of tracers
+           integral_order        ! polynomial order for quadrature integrals 
+                                 ! linear = 1, quadratic = 2, cubic = 3
 
       integer, dimension (ntrace), intent(in) ::     &
            tracer_type       ,&! = 1, 2, or 3 (see comments above)
@@ -3368,7 +3381,7 @@
 ! !INTERFACE:
 !
       subroutine update_fields (nx_block,    ny_block,   &
-                                nghost,                  &
+                                ntrace,      nghost,     &
                                 tracer_type, depend,     &
                                 tarea_r,     l_stop,     &
                                 istop,       jstop,      &
@@ -3390,8 +3403,9 @@
 ! !INPUT/OUTPUT PARAMETERS:
 !
       integer, intent(in) ::   &
-         nx_block, ny_block,&! block dimensions
-         nghost              ! number of ghost cells
+         nx_block, ny_block  ,&! block dimensions
+         ntrace              ,&! number of tracers
+         nghost                ! number of ghost cells
 
       integer, dimension (ntrace), intent(in) ::     &
          tracer_type       ,&! = 1, 2, or 3 (see comments above)
