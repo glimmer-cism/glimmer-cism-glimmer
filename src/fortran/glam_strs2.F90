@@ -2925,8 +2925,8 @@ subroutine calcbetasquared (whichbabc,               &
       read(unin,*) ((betasquared(ew,ns), ew=1,ewn-1), ns=1,nsn-1)
       close(unin)
 
-      betasquared = betasquared / dsqrt( (thisvel*vel0*sfp*cyr)**2 + (othervel*vel0*sfp*cyr)**2 + (smallnum)**2 )
-!      betasquared = betasquared * ( (thisvel*vel0*sfp*cyr)**2 + (othervel*vel0*sfp*cyr)**2 + (smallnum)**2 )**(-0.5d0)
+      betasquared = betasquared / dsqrt( (thisvel*vel0*scyr)**2 + (othervel*vel0*scyr)**2 + (smallnum)**2 )
+!      betasquared = betasquared * ( (thisvel*vel0*scyr)**2 + (othervel*vel0*scyr)**2 + (smallnum)**2 )**(-0.5d0)
 
     case(3)
 
@@ -2944,13 +2944,13 @@ subroutine calcbetasquared (whichbabc,               &
         betasquared(ew,ns) = 5.0d3
       end do; end do
 
-      betasquared = betasquared / dsqrt( (thisvel*vel0*sfp*cyr)**2 + (othervel*vel0*sfp*cyr)**2 + (smallnum)**2 )
+      betasquared = betasquared / dsqrt( (thisvel*vel0*scyr)**2 + (othervel*vel0*scyr)**2 + (smallnum)**2 )
 
     case(4)     ! same as case(3) but taking yield stress from basal processes model
 
       betasquared = minTauf
-!      betasquared = minTauf / dsqrt( (thisvel*vel0*sfp*cyr)**2 + (othervel*vel0*sfp*cyr)**2 + (smallnum)**2 )
-!      betasquared = betasquared * ( (thisvel*vel0*sfp*cyr)**2 + (othervel*vel0*sfp*cyr)**2 + (smallnum)**2 )**(-0.5d0)
+!      betasquared = minTauf / dsqrt( (thisvel*vel0*scyr)**2 + (othervel*vel0*scyr)**2 + (smallnum)**2 )
+!      betasquared = betasquared * ( (thisvel*vel0*scyr)**2 + (othervel*vel0*scyr)**2 + (smallnum)**2 )**(-0.5d0)
 
     case(5)     ! simple 2d ice shelf
 
