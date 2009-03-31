@@ -21,7 +21,6 @@ units:         degree_Celsius
 long_name:     half range temp
 data:          data%temp%arng
 standard_name: degree half range
-#cell_methods:  time: mean
 coordinates:   lon lat
 
 [prcp]
@@ -29,7 +28,7 @@ dimensions:    time, y1, x1
 units:         meters/year
 long_name:     precipitation
 data:          data%mb%prcp
-standard_name: precipitation
+standard_name: lwe_precipitation_rate
 coordinates:   lon lat
 
 
@@ -38,7 +37,7 @@ dimensions:    time, y1, x1
 units:         meters/year
 long_name:     present precipitation
 data:          data%mb%presprcp
-standard_name: present precipitation
+#standard_name: present precipitation
 coordinates:   lon lat
 load: 1
 

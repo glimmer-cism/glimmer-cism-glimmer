@@ -15,9 +15,22 @@ module glide_ground
   use glimmer_log  !do i need this?
   implicit none
 
+  subroutine glide_initialise_backstress(thck,backstress)
+     use glimmer_global, only : dp,sp
+     implicit none
+     
+     real(dp), dimension(:,:), intent(in) :: thck !*FD Ice thickness
+     real(sp), dimension(:,:), intent(inout) :: backstress !*FD Backstress
+     backstress = 0.0
+     where(thck > 0.0) 
+         backstress = 1.0
+     end where
+  end subroutine glide_initialise_backstress
 !-------------------------------------------------------------------------
 
-  subroutine glide_marinlim(which,thck,relx,topg,flwa,levels,mask,mlimit,calving_fraction,eus,ablation_field)
+  subroutine glide_marinlim(which,thck,relx,topg,flwa,levels,mask,mlimit,calving_fraction,eus,ablation_field,backstress, & 
+                 tempanmly,dew,dns)
+
 
     !*FD Removes non-grounded ice, according to one of two altenative
     !*FD criteria, and sets upper surface of non-ice-covered points 
@@ -59,7 +72,10 @@ module glide_ground
     real(dp), parameter :: sigmaxx = 0.5 * rhoi * grav * (1.0 - rhoi / rhoo)
     real(dp), parameter :: theta = 0.5
     real(dp), dimension(2,2) :: A
-
+    
+    real(sp), dimension(:,:), intent(inout) :: backstress
+    real(sp) :: tempanmly
+    real(dp), intent(in) ::  dew,dns
 
     integer ew,ns
     real(dp) :: sigmab
@@ -104,20 +120,36 @@ module glide_ground
     case(5) ! Relation based on computing the horizontal stretching
             ! of the unconfined ice shelf (\dot \epsilon_{xx}) and multiplying by H.
             ! 
+    do ns = 2, size(backstress,2)-1
+       do ew = 2, size(backstress,1)-1
+            if(backstress(ew,ns) < 1.0) then
+               if (tempanmly > 0.0) then
+                  backstress(ew,ns) = 0.0
+               else
+                  backstress(ew,ns) = 1-0.85*exp(tempanmly) 
+               end if
+            end if
+       end do
+    end do 
        do ns = 2,size(thck,2)-1
           do ew = 2,size(thck,1)-1
              if (GLIDE_IS_GROUNDING_LINE(mask(ew,ns))) then
                 call vertint_output2d(flwa(:,ew-1:ew,ns-1:ns),A, levels * thck(ew,ns))
-                ablation_field(ew,ns)=  theta * A(2,2) * (sigmaxx * &
-                thck(ew,ns)  * (1 - sigmab)) ** gn
+                ablation_field(ew,ns)= ((dew*dns)/(50.0d3)**2)* theta * A(2,2) * (sigmaxx * &
+                thck(ew,ns)  * (1 - backstress(ew,ns))) ** gn
                 if ((thck(ew,ns) - ablation_field(ew,ns)) >= 0.0) then
-                thck(ew,ns) = thck(ew,ns) - ablation_field(ew,ns) 
+                  thck(ew,ns) = thck(ew,ns) - ablation_field(ew,ns) 
                 else 
-                thck(ew,ns) = 0.0d0
+                  thck(ew,ns) = 0.0d0
                 end if
             end if
           end do
        end do
+         
+       where (GLIDE_IS_MARINE_ICE_EDGE(mask).and.topg<mlimit+eus)
+          ablation_field=thck
+          thck = 0.0d0
+       end where
 
     end select
 

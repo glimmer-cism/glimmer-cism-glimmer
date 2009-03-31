@@ -184,6 +184,8 @@ contains
     call init_velo(model)
     call init_temp(model)
     call init_thck(model)
+    call glide_initialise_backstress(model%geometry%thck,model%climate%backstress)
+    
     if (model%options%gthf.gt.0) then
        call init_lithot(model)
     end if
@@ -442,7 +444,7 @@ contains
     call glide_marine_margin_normal(model%geometry%thck, model%geometry%thkmask, model%geometry%marine_bc_normal)
 
 
-    ! ------------------------------------------------------------------------ 
+   ! ------------------------------------------------------------------------ 
     ! Remove ice which is either floating, or is present below prescribed
     ! depth, depending on value of whichmarn
     ! ------------------------------------------------------------------------ 
@@ -456,7 +458,14 @@ contains
          model%numerics%mlimit,     &
          model%numerics%calving_fraction, &
          model%climate%eus,         &
-         model%climate%calving)
+         model%climate%calving,  &
+         model%climate%backstress, &
+         model%climate%tempanmly, &
+         model%numerics%dew,    &
+         model%numerics%dns)
+
+
+
 
     ! ------------------------------------------------------------------------
     ! update ice/water load if necessary

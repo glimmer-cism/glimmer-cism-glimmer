@@ -161,6 +161,8 @@ contains
                          model%general%ewn, &
                          model%general%nsn)
     end select
+  
+  model%climate%tempanmly = temp%tperturb(1)
   end subroutine spin_temp_routine
   
   
@@ -256,7 +258,7 @@ contains
       end where 
       
       !calculate the temperature half-range
-      arng = 30.78  - 0.006277 * glandhinv - 0.3262 * lati - artm + tperturb 
+      arng = 30.78  - 0.006277 * usrf - 0.3262 * lati - artm + tperturb 
     end select
   end subroutine spin_surftemp
 end module spin_temp

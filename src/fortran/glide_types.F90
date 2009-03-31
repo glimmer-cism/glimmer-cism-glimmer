@@ -479,6 +479,9 @@ module glide_types
      real(sp),dimension(:,:),pointer :: loni     => null() !*FD Longitudes of model grid points
      real(sp),dimension(:,:),pointer :: calving  => null() !*FD Calving flux (scaled as mass balance, thickness, etc)
      real(sp) :: eus = 0.                                  !*FD eustatic sea level
+     real(sp),dimension(:,:),pointer :: backstress => null() !*FD Back stress field for use with the 
+                                                             !*FD Van der veen grounding line scheme
+     real(sp) :: tempanmly                                  !*FD Temperature anomaly 
   end type glide_climate
 
   type glide_temper
@@ -907,6 +910,7 @@ contains
     call coordsystem_allocate(model%general%ice_grid, model%climate%lati)
     call coordsystem_allocate(model%general%ice_grid, model%climate%loni)
     call coordsystem_allocate(model%general%ice_grid, model%climate%calving)
+    call coordsystem_allocate(model%general%ice_grid, model%climate%backstress)
 
     call coordsystem_allocate(model%general%velo_grid, model%geomderv%dthckdew)
     call coordsystem_allocate(model%general%velo_grid, model%geomderv%dusrfdew)
@@ -1037,6 +1041,7 @@ contains
     deallocate(model%climate%artm)
     deallocate(model%climate%lati)
     deallocate(model%climate%loni)
+    deallocate(model%climate%backstress)
 
     deallocate(model%geomderv%dthckdew)
     deallocate(model%geomderv%dusrfdew)
