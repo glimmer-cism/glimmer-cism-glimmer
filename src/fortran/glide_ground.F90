@@ -10,11 +10,13 @@
 #include <config.inc>
 #endif
 
+#include <glide_mask.inc>
 module glide_ground
   use glide_types
   use glimmer_log  !do i need this?
+  use glimmer_global
   implicit none
-
+contains
   subroutine glide_initialise_backstress(thck,backstress)
      use glimmer_global, only : dp,sp
      implicit none

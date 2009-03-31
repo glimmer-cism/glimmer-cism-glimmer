@@ -53,7 +53,7 @@ module glide_setup
 
   private
   public :: glide_readconfig, glide_printconfig, glide_scale_params, &
-       glide_calclsrf, glide_marinlim, glide_load_sigma, &
+       glide_calclsrf, glide_load_sigma, &
        glide_read_sigma, glide_calc_sigma
 
 contains

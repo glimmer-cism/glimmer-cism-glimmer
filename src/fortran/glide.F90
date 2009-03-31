@@ -115,7 +115,7 @@ contains
     use glide_mask
     use isostasy
     use glimmer_map_init
-
+    use glide_ground
     use glissade, only: init_glissade
 
     ! *sfp** added
@@ -448,7 +448,7 @@ contains
     ! Remove ice which is either floating, or is present below prescribed
     ! depth, depending on value of whichmarn
     ! ------------------------------------------------------------------------ 
-    call glide_marinlim(model%options%  whichmarn, &
+    call glide_marinlim(model%options%whichmarn, &
          model%geometry% thck,      &
          model%isos% relx,      &
          model%geometry%topg,   &
