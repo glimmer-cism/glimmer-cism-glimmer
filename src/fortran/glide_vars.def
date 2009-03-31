@@ -458,3 +458,17 @@ standard_name: land_ice_age
 factor:        tim0/scyr
 hot:           1
 coordinates:   lon lat
+
+[gl_ew]
+dimensions:    time, y1, x1
+units:         meter
+long_name:     grounding line movement in ew directions
+data:          data%ground%gl_ew
+coordinates:   lon lat
+
+[gl_ns]
+dimensions:    time, y1, x1
+units:         meter
+long_name:     grounding line movement in ns directions
+data:          data%ground%gl_ns
+coordinates:   lon lat

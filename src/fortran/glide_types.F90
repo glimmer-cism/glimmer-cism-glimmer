@@ -585,8 +585,14 @@ module glide_types
     integer :: profile_period = 100            !*FD profile frequency
     integer :: ndiag = 1000                    !*FD diagnostic frequency
   end type glide_numerics
-
-
+  
+  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  ! variables for tracking the grounding line    
+  type glide_ground
+    real(dp),dimension(:,:),pointer :: gl_ew => null()
+    real(dp),dimension(:,:),pointer :: gl_ns => null()
+  end type glide_ground
+  
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   type glide_velowk
@@ -948,6 +954,11 @@ contains
 
     allocate(model%numerics%stagsigma(upn-1))
 
+    
+    ! allocate memory for grounding line
+    allocate (model%ground%gl_ew(ewn-1,nsn))
+    allocate (model%ground%gl_ns(ewn,nsn-1))
+    
     ! allocate memory for sparse matrix
     allocate (model%pcgdwk%rhsd(ewn*nsn))
     allocate (model%pcgdwk%answ(ewn*nsn))
@@ -991,6 +1002,10 @@ contains
     deallocate(model%temper%bmlt)
     deallocate(model%temper%bmlt_tavg)
 
+    
+    deallocate(model%ground%gl_ns)
+    deallocate(model%ground%gl_ew)
+    
     deallocate(model%lithot%temp)
     deallocate(model%lithot%mask)
 
