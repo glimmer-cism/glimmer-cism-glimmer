@@ -54,7 +54,7 @@ libglide_a_SOURCES = glide.F90 glide_setup.F90 glide_types.F90 glide_temp.F90 \
                      isostasy_setup.F90 isostasy_types.F90 glide_lithot.F90\
                      glide_lithot3d.F90 glide_lithot1d.F90 glide_profile.F90\
                      glide_diagnostics.F90 glissade.F90 glissade_remap.F90\
-                     glissade_constants.F90 glide_vertint.F90\
+                     glissade_velo.F90 glissade_constants.F90 glide_vertint.F90\
                      glide_thckmask.F90 glide_nonlin.F90 glide_grids.F90\
                      glam.F90 glam_strs2.F90 glam_thck_ppm.F90\
                      remap_advection.F90 remap_glamutils.F90 glide_ground.F90
