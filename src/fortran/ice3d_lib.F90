@@ -845,8 +845,8 @@ contains
         direction_y = 0
 
         !Detect locations of the marine margin
-        do i = 1, size(geometry_mask,1)
-            do j = 1, size(geometry_mask,2)
+        do i = 2, size(geometry_mask,1)-1
+            do j = 2, size(geometry_mask,2)-1
                 if (GLIDE_IS_SHELF_FRONT(geometry_mask(i,j))) then
                     !Detect whether we need to upwind or downwind in the Y
                     !direction
@@ -1026,7 +1026,8 @@ contains
 
 
         sparuv = 0
-
+        write(*,*)shape(kinematic_bc_u)
+        write(*,*)shape(h)
         do whichcomponent = 1,2
             if (whichcomponent == 1) then !Set up to compute u component
                 velpara => uvel
@@ -1048,7 +1049,8 @@ contains
             do i=1,MAXY
                 do j=1,MAXX
                     if (point_mask(i,j) /= 0) then
-                        do k=1,NZETA 
+                        do k=1,NZETA
+                            write(*,*)i,j,k
                             coef = 0
                             stencil_center_idx = csp_masked(I_J_K,i,j,k,point_mask,NZETA) 
                             if (h(i,j).lt.SMALL) then

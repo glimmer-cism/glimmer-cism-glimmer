@@ -420,8 +420,8 @@ contains
         real(dp), dimension(nsn-1, ewn-1, upn) :: kinematic_bc_u_t
         real(dp), dimension(nsn-1, ewn-1, upn) :: kinematic_bc_v_t
 
-        real(dp), dimension(nsn-1, ewn-1, upn) :: kinematic_bc_u_t_unstag
-        real(dp), dimension(nsn-1, ewn-1, upn) :: kinematic_bc_v_t_unstag
+        real(dp), dimension(nsn, ewn, upn) :: kinematic_bc_u_t_unstag
+        real(dp), dimension(nsn, ewn, upn) :: kinematic_bc_v_t_unstag
 
         real(dp), dimension(nsn,ewn) :: marine_bc_normal_t
 
@@ -487,9 +487,11 @@ contains
         !that aren't on the boundary
         do i = 1,nsn
             do j = 1, ewn
-                if (thck(i+1, j) /= 0 .and. thck(i-1, j) /= 0 .and. thck(i, j+1) /= 0 .and. thck(i, j-1) /= 0) then
-                    kinematic_bc_u_t_unstag(i,j,:) = NaN
-                    kinematic_bc_v_t_unstag(i,j,:) = NaN
+                if (i > 1 .and. i < nsn .and. j > 1 .and. j < ewn) then 
+                    if (thck(i+1, j) /= 0 .and. thck(i-1, j) /= 0 .and. thck(i, j+1) /= 0 .and. thck(i, j-1) /= 0) then
+                        kinematic_bc_u_t_unstag(i,j,:) = NaN
+                        kinematic_bc_v_t_unstag(i,j,:) = NaN
+                    end if
                 end if
             end do
         end do

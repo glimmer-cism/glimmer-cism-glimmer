@@ -142,11 +142,25 @@ contains
         integer, dimension(:,:), intent(in) :: mask
         real(dp), dimension(:,:), intent(out) :: marine_bc_normal
 
+        integer :: thck_im1, thck_ip1, thck_jm1, thck_jp1
+
         integer :: i, j
+
+        real(dp), dimension(0:size(thck,1)+1, 0:size(thck,2)+1) :: thckWithBounds
+        
+        !Set up a thickness variable with "ghost cells" so that we don't go out
+        !of bounds with the vectorized operation below
+        thckWithBounds(1:size(thck,1), 1:size(thck,2)) = thck
+        thckWithBounds(:,0) = thckWithBounds(:,1)
+        thckWithBounds(0,:) = thckWithBounds(1,:)
+        thckWithBounds(size(thck,1)+1,:) = thckWithBounds(size(thck,1),:)
+        thckWithBounds(:,size(thck,2)+1) = thckWithBounds(:,size(thck,2))
+
+
         do i = 1, size(mask, 1)
             do j = 1, size(mask, 2)
                 if (GLIDE_IS_SHELF_FRONT(mask(i,j))) then
-                    marine_bc_normal(i,j) = calc_normal_45deg(thck(i-1:i+1,j-1:j+1))
+                    marine_bc_normal(i,j) = calc_normal_45deg(thckWithBounds(i-1:i+1,j-1:j+1))
                 else
                     marine_bc_normal(i,j) = NaN
                 end if
