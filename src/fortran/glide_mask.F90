@@ -127,8 +127,8 @@ contains
           ! Edge of marine ice, whether floating or not
           if ((model%geometry%topg(ew,ns) .lt. model%climate%eus.and.&
                model%geometry%thck(ew,ns)>0.0).and. &
-               (GLIDE_IS_OCEAN(MASK(ew-1,ns)) .or. GLIDE_IS_OCEAN(MASK(ew+1,ns)) .or. &
-               GLIDE_IS_OCEAN(MASK(ew,ns-1)) .or. GLIDE_IS_OCEAN(MASK(ew,ns+1)))) then
+               (GLIDE_IS_OCEAN(maskWithBounds(ew-1,ns)) .or. GLIDE_IS_OCEAN(maskWithBounds(ew+1,ns)) .or. &
+               GLIDE_IS_OCEAN(maskWithBounds(ew,ns-1)) .or. GLIDE_IS_OCEAN(maskWithBounds(ew,ns+1)))) then
              MASK(ew,ns) = ior(MASK(ew,ns),GLIDE_MASK_MARINE_EDGE)
           end if
        end do
