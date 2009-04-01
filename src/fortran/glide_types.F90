@@ -747,7 +747,8 @@ module glide_types
     type(profile_type)   :: profile
     type(glide_prof_type) :: glide_prof
     type(isos_type)      :: isos
-  end type glide_global_type
+    type(glide_ground)   :: ground
+end type glide_global_type
 
   !MAKE_RESTART
 #ifdef RESTARTS
