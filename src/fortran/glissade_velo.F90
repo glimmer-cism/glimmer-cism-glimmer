@@ -81,17 +81,18 @@
                            dew,       dns,   &
                            uvel,      vvel,  &
                            thckmask,  eps2)
-
-! Calculate the effective strain rate for the 2D shallow shelf approximation
-!
-! eps^2 = (du/dx)^2 + (dv/dy)^2 + (du/dx + dv/dy)^2 + (1/2)*(du/dy + dv/dx)^2
-!
-!       =       2 * [(du/dx)^2 + (dv/dy)^2 + (du/dx*dv/dy)] + du/dy*dv/dx
-!         + (1/2) * [(dv/dx)^2 + (du/dy)^2]
-!
-! Each component in this sum is an integrated average over the grid cell,
-! given a bilinear reconstruction of u and v as a function of the four
-! nodal values.
+  !---------------------------------------------------------------------------
+  ! Calculate the effective strain rate for the 2D shallow shelf approximation
+  !
+  ! eps^2 = (du/dx)^2 + (dv/dy)^2 + (du/dx + dv/dy)^2 + (1/2)*(du/dy + dv/dx)^2
+  !
+  !       =       2 * [(du/dx)^2 + (dv/dy)^2 + (du/dx*dv/dy)] + du/dy*dv/dx
+  !         + (1/2) * [(dv/dx)^2 + (du/dy)^2]
+  !
+  ! Each component in this sum is an integrated average over the grid cell,
+  ! given a bilinear reconstruction of u and v as a function of the four
+  ! nodal values.
+  !---------------------------------------------------------------------------
 
   !---------------------------------------------------------------------------
   ! in-out variables
@@ -180,10 +181,24 @@
                          dew,           dns,          &  
                          uvel,          vvel,         &
                          thckmask,                    &
-                         Du_dudx2,      Dv_dvdx2,     &
-                         Du_dudy2,      Dv_dvdy2,     &
-                         Du_dudxdvdy,   Dv_dudxdvdy,  &
-                         Du_dvdxdudy,   Dv_dvdxdudy)
+                         Du_ne,         Du_nw,        &
+                         Du_se,         Du_sw,        &
+                         Dv_ne,         Dv_nw,        &
+                         Dv_se,         Dv_sw )
+
+  !---------------------------------------------------------------------------
+  ! Compute the derivative of the cell-integrated average of eps^2 with respect
+  ! to each velocity component (u,v) at each cell corner (ne, nw, se, sw).
+  !
+  ! Do this by computing the derivatives for each of 6 terms in eps^2,
+  ! then summing over the terms.
+  !
+  ! Recall that for the 2D SSA:
+  ! eps^2  =      2 * [(du/dx)^2 + (dv/dy)^2 + (du/dx*dv/dy)] + du/dy*dv/dx
+  !         + (1/2) * [(dv/dx)^2 + (du/dy)^2]
+  !
+  !---------------------------------------------------------------------------
+
 
   !---------------------------------------------------------------------------
   ! in-out variables
@@ -201,16 +216,16 @@
   integer, dimension(:,:), intent(in) ::       &
       thckmask                  ! = 1 where ice is present, else = 0
 
-  real(dp), dimension(:,:,:), intent(out) ::   &
-      Du_dudx2,         &!  d/du [(du/dx)^2]
-      Dv_dvdx2,         &!  d/dv [(dv/dx)^2]
-      Du_dudy2,         &!  d/du [(du/dy)^2]
-      Dv_dvdy2,         &!  d/dv [(dv/dy)^2]
-      Du_dudxdvdy,      &!  d/du [(du/dx)*(dv/dy)]
-      Dv_dudxdvdy,      &!  d/dv [(du/dx)*(dv/dy)]
-      Du_dvdxdudy,      &!  d/du [(dv/dx)*(du/dy)]
-      Dv_dvdxdudy        !  d/dv [(dv/dx)*(du/dy)]
-
+  real(dp), dimension(:,:), intent(out) ::   &
+      Du_ne,       &! derivative of eps2 wrt u_ne
+      Du_nw,       &! derivative of eps2 wrt u_nw
+      Du_se,       &! derivative of eps2 wrt u_se
+      Du_sw,       &! derivative of eps2 wrt u_sw
+      Dv_ne,       &! derivative of eps2 wrt v_ne
+      Dv_nw,       &! derivative of eps2 wrt v_nw
+      Dv_se,       &! derivative of eps2 wrt v_se
+      Dv_sw         ! derivative of eps2 wrt v_sw
+  
   !---------------------------------------------------------------------------
   ! local variables
   !---------------------------------------------------------------------------
@@ -222,6 +237,24 @@
      dun, dus, due, duw,    &! difference in uvel between adjacent nodes
      dvn, dvs, dve, dvw      ! difference in vvel between adjacent nodes
 
+  real(dp) ::   &
+      Du_dudx2_ne,     Du_dudx2_nw,     &!  d/du [(du/dx)^2]
+      Du_dudx2_se,     Du_dudx2_sw,     &!
+      Dv_dvdx2_ne,     Dv_dvdx2_nw,     &!  d/dv [(dv/dx)^2]
+      Dv_dvdx2_se,     Dv_dvdx2_sw,     &!
+      Du_dudy2_ne,     Du_dudy2_nw,     &!  d/du [(du/dy)^2]
+      Du_dudy2_se,     Du_dudy2_sw,     &!
+      Dv_dvdy2_ne,     Dv_dvdy2_nw,     &!  d/dv [(dv/dy)^2]
+      Dv_dvdy2_se,     Dv_dvdy2_sw,     &!
+      Du_dudxdvdy_ne,  Du_dudxdvdy_nw,  &!  d/du [(du/dx)*(dv/dy)]
+      Du_dudxdvdy_se,  Du_dudxdvdy_sw,  &!  
+      Dv_dudxdvdy_ne,  Dv_dudxdvdy_nw,  &!  d/dv [(du/dx)*(dv/dy)]
+      Dv_dudxdvdy_se,  Dv_dudxdvdy_sw,  &!  
+      Du_dvdxdudy_ne,  Du_dvdxdudy_nw,  &!  d/du [(dv/dx)*(du/dy)]
+      Du_dvdxdudy_se,  Du_dvdxdudy_sw,  &!  
+      Dv_dvdxdudy_ne,  Dv_dvdxdudy_nw,  &!  d/dv [(dv/dx)*(du/dy)]
+      Dv_dvdxdudy_se,  Dv_dvdxdudy_sw
+
   !---------------------------------------------------------------------------
   ! For each grid cell, calculate various derivatives of the effective strain rate
   ! with respect to the nodal velocities.
@@ -231,19 +264,16 @@
   fyy = c1 / (dns*dns)
   fxy = c1 / (dew*dns) 
 
-  Du_dudx2(:,:,:) = c0
-  Dv_dvdx2(:,:,:) = c0
-  Du_dudy2(:,:,:) = c0
-  Dv_dvdy2(:,:,:) = c0
-  Du_dudxdvdy(:,:,:) = c0  
-  Dv_dudxdvdy(:,:,:) = c0  
-  Du_dvdxdudy(:,:,:) = c0  
-  Dv_dvdxdudy(:,:,:) = c0  
- 
-!whl - to do - have data strides here with kne as 3rd index
-!    - Could define Du_dudx2_ne(i,j) instead of Du_dudx2(i,j,kne)
-!    - More arguments to pass, but might be faster 
+  Du_ne(:,:) = c0
+  Du_nw(:,:) = c0
+  Du_se(:,:) = c0
+  Du_sw(:,:) = c0
 
+  Dv_ne(:,:) = c0
+  Dv_nw(:,:) = c0
+  Dv_se(:,:) = c0
+  Dv_sw(:,:) = c0
+ 
   do j = 1, nsn
   do i = 1, ewn
 
@@ -260,52 +290,76 @@
         dvw = vvel(i-1,j) - vvel(i-1,j-1)
 
         ! d/du [(du/dx)^2]
-        Du_dudx2(i,j,kne) = fxx * (p667*dun + p333*dus)
-        Du_dudx2(i,j,knw) = -Du_dudx2(i,j,kne)
-        Du_dudx2(i,j,kse) = fxx * (p333*dun + p667*dus)
-        Du_dudx2(i,j,ksw) = -Du_dudx2(i,j,kse)
+        Du_dudx2_ne = fxx * (p667*dun + p333*dus)
+        Du_dudx2_nw = -Du_dudx2_ne
+        Du_dudx2_se = fxx * (p333*dun + p667*dus)
+        Du_dudx2_sw = -Du_dudx2_se
 
         ! d/dv [(dv/dx)^2]
-        Dv_dvdx2(i,j,kne) = fxx * (p667*dvn + p333*dvs)
-        Dv_dvdx2(i,j,knw) = -Dv_dvdx2(i,j,kne)
-        Dv_dvdx2(i,j,kse) = fxx * (p333*dvn + p667*dvs)
-        Dv_dvdx2(i,j,ksw) = -Dv_dvdx2(i,j,kse)
+        Dv_dvdx2_ne = fxx * (p667*dvn + p333*dvs)
+        Dv_dvdx2_nw = -Dv_dvdx2_ne
+        Dv_dvdx2_se = fxx * (p333*dvn + p667*dvs)
+        Dv_dvdx2_sw = -Dv_dvdx2_se
 
         ! d/du [(du/dy)^2]
-        Du_dudy2(i,j,kne) = fyy * (p667*due + p333*duw)
-        Du_dudy2(i,j,knw) = fyy * (p333*due + p667*duw)
-        Du_dudy2(i,j,kse) = -Du_dudy2(i,j,kne)
-        Du_dudy2(i,j,ksw) = -Du_dudy2(i,j,knw)
+        Du_dudy2_ne = fyy * (p667*due + p333*duw)
+        Du_dudy2_nw = fyy * (p333*due + p667*duw)
+        Du_dudy2_se = -Du_dudy2_ne
+        Du_dudy2_sw = -Du_dudy2_nw
 
         ! d/dv [(dv/dy)^2]
-        Dv_dvdy2(i,j,kne) = fyy * (p667*dve + p333*dvw)
-        Dv_dvdy2(i,j,knw) = fyy * (p333*dve + p667*dvw)
-        Dv_dvdy2(i,j,kse) = -Dv_dvdy2(i,j,kne)
-        Dv_dvdy2(i,j,ksw) = -Dv_dvdy2(i,j,knw)
+        Dv_dvdy2_ne = fyy * (p667*dve + p333*dvw)
+        Dv_dvdy2_nw = fyy * (p333*dve + p667*dvw)
+        Dv_dvdy2_se = -Dv_dvdy2_ne
+        Dv_dvdy2_sw = -Dv_dvdy2_nw
 
         ! d/du [(du/dx)*(dv/dy)]
-        Du_dudxdvdy(i,j,kne) = fxy * p25 * (dve + dvw)
-        Du_dudxdvdy(i,j,knw) = -Du_dudxdvdy(i,j,kne)
-        Du_dudxdvdy(i,j,kse) =  Du_dudxdvdy(i,j,kne)
-        Du_dudxdvdy(i,j,ksw) = -Du_dudxdvdy(i,j,kne)
+        Du_dudxdvdy_ne = fxy * p25 * (dve + dvw)
+        Du_dudxdvdy_nw = -Du_dudxdvdy_ne
+        Du_dudxdvdy_se =  Du_dudxdvdy_ne
+        Du_dudxdvdy_sw = -Du_dudxdvdy_ne
 
         ! d/dv [(du/dx)*(dv/dy)]
-        Dv_dudxdvdy(i,j,kne) = fxy * p25 * (dun + dus)
-        Dv_dudxdvdy(i,j,knw) =  Du_dudxdvdy(i,j,kne)
-        Dv_dudxdvdy(i,j,kse) = -Du_dudxdvdy(i,j,kne)
-        Dv_dudxdvdy(i,j,ksw) = -Du_dudxdvdy(i,j,kne)
+        Dv_dudxdvdy_ne = fxy * p25 * (dun + dus)
+        Dv_dudxdvdy_nw =  Du_dudxdvdy_ne
+        Dv_dudxdvdy_se = -Du_dudxdvdy_ne
+        Dv_dudxdvdy_sw = -Du_dudxdvdy_ne
 
         ! d/du [(dv/dx)*(du/dy)]
-        Du_dvdxdudy(i,j,kne) = fxy * p25 * (dvn + dvs)
-        Du_dvdxdudy(i,j,knw) =  Du_dvdxdudy(i,j,kne)
-        Du_dvdxdudy(i,j,kse) = -Du_dvdxdudy(i,j,kne)
-        Du_dvdxdudy(i,j,ksw) = -Du_dvdxdudy(i,j,kne)
+        Du_dvdxdudy_ne = fxy * p25 * (dvn + dvs)
+        Du_dvdxdudy_nw =  Du_dvdxdudy_ne
+        Du_dvdxdudy_se = -Du_dvdxdudy_ne
+        Du_dvdxdudy_sw = -Du_dvdxdudy_ne
 
         ! d/dv [(dv/dx)*(du/dy)]
-        Dv_dvdxdudy(i,j,kne) = fxy * p25 * (due + duw)
-        Dv_dvdxdudy(i,j,knw) = -Du_dvdxdudy(i,j,kne)
-        Dv_dvdxdudy(i,j,kse) =  Du_dvdxdudy(i,j,kne)
-        Dv_dvdxdudy(i,j,ksw) = -Du_dvdxdudy(i,j,kne)
+        Dv_dvdxdudy_ne = fxy * p25 * (due + duw)
+        Dv_dvdxdudy_nw = -Du_dvdxdudy_ne
+        Dv_dvdxdudy_se =  Du_dvdxdudy_ne
+        Dv_dvdxdudy_sw = -Du_dvdxdudy_ne
+
+        Du_ne(i,j) = c2 * Du_dudx2_ne + p5 * Du_dudy2_ne   &
+                   + c2 * Du_dudxdvdy_ne + Du_dvdxdudy_ne
+
+        Du_nw(i,j) = c2 * Du_dudx2_nw + p5 * Du_dudy2_nw   &
+                   + c2 * Du_dudxdvdy_nw + Du_dvdxdudy_nw
+
+        Du_se(i,j) = c2 * Du_dudx2_se + p5 * Du_dudy2_se   &
+                   + c2 * Du_dudxdvdy_se + Du_dvdxdudy_se
+
+        Du_sw(i,j) = c2 * Du_dudx2_sw + p5 * Du_dudy2_sw   &
+                   + c2 * Du_dudxdvdy_sw + Du_dvdxdudy_sw
+
+        Dv_ne(i,j) = c2 * Dv_dvdx2_ne + p5 * Dv_dvdy2_ne   &
+                   + c2 * Dv_dudxdvdy_ne + Dv_dvdxdudy_ne
+
+        Dv_nw(i,j) = c2 * Dv_dvdx2_nw + p5 * Dv_dvdy2_nw   &
+                   + c2 * Dv_dudxdvdy_nw + Dv_dvdxdudy_nw
+
+        Dv_se(i,j) = c2 * Dv_dvdx2_se + p5 * Dv_dvdy2_se   &
+                   + c2 * Dv_dudxdvdy_se + Dv_dvdxdudy_se
+
+        Dv_sw(i,j) = c2 * Dv_dvdx2_sw + p5 * Dv_dvdy2_sw   &
+                   + c2 * Dv_dudxdvdy_sw + Dv_dvdxdudy_sw
 
      endif  ! thckmask
 

@@ -588,10 +588,10 @@ module glide_types
   
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
   ! variables for tracking the grounding line    
-  type glide_ground
+  type glide_grnd
     real(dp),dimension(:,:),pointer :: gl_ew => null()
     real(dp),dimension(:,:),pointer :: gl_ns => null()
-  end type glide_ground
+  end type glide_grnd
   
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -747,7 +747,7 @@ module glide_types
     type(profile_type)   :: profile
     type(glide_prof_type) :: glide_prof
     type(isos_type)      :: isos
-    type(glide_ground)   :: ground
+    type(glide_grnd)     :: ground
 end type glide_global_type
 
   !MAKE_RESTART
