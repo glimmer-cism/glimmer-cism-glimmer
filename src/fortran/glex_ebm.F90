@@ -56,6 +56,7 @@ program glint_ebm_ex
   use glint_global_interp
   use glex_ebm_clim
   use glint_commandline
+  use glimmer_writestats_module
   implicit none
 
   ! Program variables -------------------------------------------------------------------
@@ -212,6 +213,7 @@ program glint_ebm_ex
   ! Finalise/tidy up everything ------------------------------------------------------------
 
   call end_glint(ice_sheet)
+  call glimmer_writestats(commandline_resultsname,commandline_configname)
 
 100 format(f9.5)
 101 format(e12.5)
