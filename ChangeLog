@@ -1,3 +1,17 @@
+2009-04-10 Magnus Hagdorn
+ * configure.in: test if fortran compiler supports f03 command line parser
+ * src/fortran/Makefile.am: add new programs, sources
+ * src/fortran/eis_glide.F90: use new command line parser
+ * src/fortran/eismint3_glide.F90: ditto
+ * src/fortran/glex_ebm.F90: ditto
+ * src/fortran/glint_example.F90: ditto
+ * src/fortran/simple_glide.F90: ditto
+ * src/fortran/glimmer_commandline.F90: new module providing common command
+   line interface
+ * src/fortran/glint_commandline.F90: as previous, only for glint/glex models
+ * src/fortran/nc2config.F90: improve command line parser
+ * src/fortran/test_commandline.F90: test command line parser
+
 2009-01-21 Magnus Hagdorn
  * bootstrap: search m4macros directory for extra m4 macros
  * configure.in: use ACX_BLAS to find blas library, check if netCDF

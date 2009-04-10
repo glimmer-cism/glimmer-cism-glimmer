@@ -1,6 +1,6 @@
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! +                                                           +
-! +  eis_glide.f90 - part of the GLIMMER ice model            + 
+! +  test_commandline.f90 - part of the GLIMMER ice model     + 
 ! +                                                           +
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! 
@@ -40,60 +40,10 @@
 !
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-#ifdef HAVE_CONFIG_H
-#include "config.inc"
-#endif
-
-program eis_glide
-  !*FD This is the Edinburgh Ice Sheet GLIDE driver
-  use glimmer_global, only:rk
-  use glide
-  use eis_forcing
-  use eis_io
-  use glimmer_log
-  use glimmer_config
+program test_commandline
   use glimmer_commandline
   implicit none
 
-  type(glide_global_type) :: model        ! model instance
-  type(eis_climate_type) :: climate       ! climate
-  type(ConfigSection), pointer :: config  ! configuration stuff
-  real(kind=rk) time
-  
-
-
   call glimmer_GetCommandline()
-  
-  ! start logging
-  call open_log(unit=50, fname=logname(commandline_configname))
-
-  ! read configuration
-  call ConfigRead(commandline_configname,config)
-
-  ! initialise GLIDE
-  call glide_config(model,config)
-  call glide_initialise(model)
-  call eis_initialise(climate,config,model)
-  call CheckSections(config)
-  ! fill dimension variables
-  call glide_nc_fillall(model)
-
-  time = model%numerics%tstart
-  call eis_climate(climate,model,time)
-  call spinup_lithot(model)
-
-  do while(time.le.model%numerics%tend)    
-     call glide_tstep_p1(model,time)
-     call eis_io_writeall(climate,model)
-     call glide_tstep_p2(model)
-     call glide_tstep_p3(model)
-     ! override masking stuff for now
-     time = time + model%numerics%tinc
-     call eis_climate(climate,model,time)
-  end do
-
-  ! finalise GLIDE
-  call glide_finalise(model)
-  call close_log
-
-end program eis_glide
+  call glimmer_PrintCommandline()
+end program test_commandline
