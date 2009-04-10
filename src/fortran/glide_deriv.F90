@@ -115,12 +115,18 @@ contains
     end function dfdy_2d_downwind
     
     !*FD Computes derivative fields of the given function.
-    subroutine df_field_2d(f, deltax, deltay, out_dfdx, out_dfdy, periodic_x, periodic_y)
+    subroutine df_field_2d(f, deltax, deltay, out_dfdx, out_dfdy, periodic_x, periodic_y, direction_x, direction_y)
         implicit none
         real(dp), dimension(:, :), intent(in) :: f
         real(dp), intent(in) :: deltax, deltay
         real(dp), dimension(:, :), intent(out) :: out_dfdx, out_dfdy
+        real(dp), dimension(:, :), intent(in), optional  :: direction_x, direction_y
         
+        logical :: upwind !Whether or not directions for upwinding were provided
+
+        integer :: grad_x, grad_y !Whether to upwind or downwind at the current point
+
+
         integer :: nx, ny, x, y
         logical :: periodic_x, periodic_y
         
@@ -128,30 +134,48 @@ contains
         nx = size(f, 1)
         ny = size(f, 2)
         
+        upwind = present(direction_x) .and. present(direction_y)
+
         !For now, we'll use the function calls defined above.
         !Later on we might want to refactor?
         do x = 1, nx
-                do y = 1, ny
-                        !For each of the variables in x, y, check whether or not
-                        !we need to use an upwinding or downwinding differentiation
-                        !scheme.
-                        if (x == 1) then
-                                out_dfdx(x, y) = dfdx_2d_downwind(f, x, y, deltax)
-                        else if (x == nx) then
-                                out_dfdx(x, y) = dfdx_2d_upwind(f, x, y, deltax)
-                        else
-                                out_dfdx(x, y) = dfdx_2d(f, x, y, deltax)
-                        end if
+            do y = 1, ny
+                grad_x = 0
+                grad_y = 0
+                if (upwind) then
+                    if (direction_x(x,y) < 0 .and. x > 2) then !Upstream case
+                        grad_x = -1
+                    else if(direction_x(x,y) > 0 .and. x < nx - 1) then !Downstream case
+                        grad_x = 1
+                    end if
+
+                    if (direction_y(x,y) < 0 .and. y > 2) then !Upstream case
+                        grad_y = -1
+                    else if(direction_y(x,y) > 0 .and. y < ny - 1) then !Downstream case
+                        grad_y = 1
+                    end if
+                end if
+  
+                !For each of the variables in x, y, check whether or not
+                !we need to use an upwinding or downwinding differentiation
+                !scheme.
+                if (x == 1 .or. grad_x > 0) then
+                    out_dfdx(x, y) = dfdx_2d_downwind(f, x, y, deltax)
+                else if (x == nx .or. grad_x < 0) then
+                    out_dfdx(x, y) = dfdx_2d_upwind(f, x, y, deltax)
+                else
+                    out_dfdx(x, y) = dfdx_2d(f, x, y, deltax)
+                end if
                         
-                        if (y == 1) then
-                                out_dfdy(x, y) = dfdy_2d_downwind(f, x, y, deltay)
-                        elseif (y == ny) then
-                                out_dfdy(x, y) = dfdy_2d_upwind(f, x, y, deltay)
-                        else
-                                out_dfdy(x, y) = dfdy_2d(f, x, y, deltay)
-                        end if
+                if (y == 1 .or. grad_y > 0) then
+                    out_dfdy(x, y) = dfdy_2d_downwind(f, x, y, deltay)
+                elseif (y == ny .or. grad_y < 0) then
+                    out_dfdy(x, y) = dfdy_2d_upwind(f, x, y, deltay)
+                else
+                    out_dfdy(x, y) = dfdy_2d(f, x, y, deltay)
+                end if
                         
-                end do  
+            end do  
         end do
         
     end subroutine
@@ -406,15 +430,19 @@ contains
                                 !scheme.
                                 if (x == 1 .or. grad_x > 0) then
                                         out_dfdx(x, y, z) = dfdx_3d_downwind(f, x, y, z, deltax)
+                                        !out_dfdx(x, y, z) = (f(x+1,y,z) - f(x,y,z))/deltax
                                 else if (x == nx .or. grad_x < 0) then
                                         out_dfdx(x, y, z) = dfdx_3d_upwind(f, x, y, z, deltax)
+                                        !out_dfdx(x, y, z) = (f(x,y,z) - f(x-1,y,z))/deltax
                                 else
                                         out_dfdx(x, y, z) = dfdx_3d(f, x, y, z, deltax)
                                 end if
                                 if (y == 1 .or. grad_y > 0) then
                                         out_dfdy(x, y, z) = dfdy_3d_downwind(f, x, y, z, deltay)
+                                        !out_dfdx(x, y, z) = (f(x,y+1,z) - f(x,y,z))/deltay
                                 else if (y == ny .or. grad_y < 0) then
                                         out_dfdy(x, y, z) = dfdy_3d_upwind(f, x, y, z, deltay)
+                                        !out_dfdx(x, y, z) = (f(x,y,z) - f(x,y-1,z))/deltay
                                 else
                                         out_dfdy(x, y, z) = dfdy_3d(f, x, y, z, deltay)
                                 end if
@@ -978,5 +1006,5 @@ contains
                                           2 * f(i, j, k) / (zkp1MinusZk * zkMinusZkm1) + &
                                           2 * f(i, j, k + 1) / (zkp1Minuszk * zkp1MinusZkm1)    
     end function
-    
+
 end module glide_deriv

@@ -227,7 +227,12 @@ contains
 
         integer, dimension(nsn-1, ewn-1) :: point_mask_t
         integer, dimension(nsn, ewn) :: geometry_mask_t
-        
+       
+        real(dp), dimension(nsn-1, ewn-1) :: direction_x, direction_y
+
+        direction_x = 0
+        direction_y = 0
+
         ijktot = (nsn-1)*(ewn-1)*upn
 
         !Put the surface, bed, and thickness onto staggered grids
@@ -284,7 +289,7 @@ contains
         !irregular Z grid and scales so that 0 is the surface, 1 is the bed)
         call init_rescaled_coordinates(dthckdew_t,dlsrfdew_t,dthckdns_t,dlsrfdns_t,stagusrf_t,stagthck_t,staglsrf_t,&
                                                dusrfdew_t,dusrfdns_t,d2zdx2_t,d2zdy2_t,d2hdx2_t,d2hdy2_t,&
-                                               sigma,ax,ay,bx,by,cxy,dew,dns)
+                                               sigma,ax,ay,bx,by,cxy,dew,dns,direction_x,direction_y)
        
         !"Spin up" estimate with Pattyn's SIA model runs if we don't already
         !have a good initial guess
@@ -403,7 +408,9 @@ contains
         
         real(dp), dimension(ewn, nsn) :: dusrfdew, dusrfdns, dlsrfdew, dlsrfdns, dthckdew, dthckdns
 
-
+        !whether to upwind or downwind derivatives.
+        real(dp), dimension(ewn, nsn) :: direction_x, direction_y
+        
         !Arrays to hold transposed data
         real(dp), dimension(nsn, ewn) :: dlsrfdew_t, dlsrfdns_t, dusrfdew_t, & 
         dusrfdns_t, dthckdew_t, dthckdns_t, btrc_t_unstag,&
@@ -430,13 +437,26 @@ contains
 
         !call fudge_mask(mask, totpts)
 
+        !Determine whether to upwind or downwind derivatives at points on the
+        !interior of the model domain (this is mainly important for the marine
+        !margin
+        !Since this is a call to Pattyn's model, derivatives need to be
+        !transposed.
+        direction_y = 0
+        direction_x = 0
+        call directions_from_mask(geometry_mask, direction_y, direction_x)
+
         !Compute first derivatives of geometry
-        call df_field_2d(usrf, dew, dns, dusrfdew, dusrfdns, .false., .false.)
-        call df_field_2d(lsrf, dew, dns, dlsrfdew, dlsrfdns, .false., .false.)
-        call df_field_2d(thck, dew, dns, dthckdew, dthckdns, .false., .false.)
+        call df_field_2d(usrf, dew, dns, dusrfdew, dusrfdns, .false., .false., &
+                direction_x, direction_y)
+        call df_field_2d(lsrf, dew, dns, dlsrfdew, dlsrfdns, .false., .false., &
+                direction_x, direction_y)
+        call df_field_2d(thck, dew, dns, dthckdew, dthckdns, .false., .false., &
+                direction_x, direction_y)
 
         !Compute second derivatives of thickness and surface, these are needed
         !for the rescaled coordinate parameters
+        !TODO: Augment these with direction info
         call d2f_field(usrf, dew, dns, d2zdx2, d2zdy2, .false., .false.)
         call d2f_field(thck, dew, dns, d2hdx2, d2hdy2, .false., .false.)
         
@@ -485,26 +505,26 @@ contains
         
         !In unstaggering the boundary condition fields, we need to remove points
         !that aren't on the boundary
-        do i = 1,nsn
-            do j = 1, ewn
-                if (i > 1 .and. i < nsn .and. j > 1 .and. j < ewn) then 
-                    if (thck(i+1, j) /= 0 .and. thck(i-1, j) /= 0 .and. thck(i, j+1) /= 0 .and. thck(i, j-1) /= 0) then
-                        kinematic_bc_u_t_unstag(i,j,:) = NaN
-                        kinematic_bc_v_t_unstag(i,j,:) = NaN
-                    end if
-                end if
-            end do
-        end do
+        !do i = 1,nsn
+        !    do j = 1, ewn
+        !        if (i > 1 .and. i < nsn .and. j > 1 .and. j < ewn) then 
+        !            if (thck(i+1, j) /= 0 .and. thck(i-1, j) /= 0 .and. thck(i, j+1) /= 0 .and. thck(i, j-1) /= 0) then
+        !                kinematic_bc_u_t_unstag(i,j,:) = NaN
+        !                kinematic_bc_v_t_unstag(i,j,:) = NaN
+        !            end if
+        !        end if
+        !    end do
+        !end do
 
         call unstagger_field_2d(btrc_t, btrc_t_unstag, periodic_ew, periodic_ns)
         write(*,*) ewn, dew, nsn, dns, upn
-        write(*,*) shape(btrc)
+       ! write(*,*) shape(btrc)
 
         !Compute rescaled coordinate parameters (needed because Pattyn uses an
         !irregular Z grid and scales so that 0 is the surface, 1 is the bed)
         call init_rescaled_coordinates(dthckdew_t,dlsrfdew_t,dthckdns_t,dlsrfdns_t,usrf_t,thck_t,lsrf_t,&
                                                dusrfdew_t,dusrfdns_t,d2zdx2_t,d2zdy2_t,d2hdx2_t,d2hdy2_t,&
-                                               sigma,ax,ay,bx,by,cxy,dew,dns)
+                                               sigma,ax,ay,bx,by,cxy,dew,dns,direction_x,direction_y)
        
         !"Spin up" estimate with Pattyn's SIA model runs if we don't already
         !have a good initial guess

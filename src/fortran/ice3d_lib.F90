@@ -16,7 +16,7 @@
 !matrix.  They should be disabled unless the higher-order code needs debugging.
 
 !Define to write the rows of the sparse matrix for each vel. component then stop.
-!#define OUTPUT_SPARSE_MATRIX
+#define OUTPUT_SPARSE_MATRIX
 
 !Define to output a NetCDF file of the partial iterations
 #define OUTPUT_PARTIAL_ITERATIONS
@@ -33,7 +33,7 @@
 
 !If defined, the model uses 2nd order upwinded and downwinded finite
 !differences.
-!#define USE_ORD2_HORIZ_UPDOWN
+#define USE_ORD2_HORIZ_UPDOWN
 
 !If defined, then sigma gradients will be ignored in the lateral b.c.
 !#define IGNORE_LAT_SIGMA
@@ -55,6 +55,9 @@ module ice3d_lib
     double precision, parameter :: plastic_bed_regularization = 1e-2
 
     logical, parameter :: sparverbose = .true.
+
+    real(dp), dimension(:,:), allocatable :: normal_x
+    real(dp), dimension(:,:), allocatable :: normal_y
 
 !------------------------------------------------------
 !   lookup coordinates in sparse matrix
@@ -113,61 +116,10 @@ module ice3d_lib
 
     integer, parameter :: STENCIL_SIZE = 26
 contains
-!
-!
-!     *****************************************
-!     *                                       *
-!     *         Start of subroutines          *
-!     *                                       *
-!     *****************************************
-!
-!
-!
-!------------------------------------------------------
-!   Initialization of geometric vectors and gradients.
-!   h, hb, and surf are given on unstaggered grids, while
-!   the derivatives are given on staggered grids
-!------------------------------------------------------
-!
-    SUBROUTINE init_geometry_vectors(dhdx,dhbdx,dhdy,dhbdy,surf,h,hb,dzdx,dzdy,dx,dy)
-!
-        INTEGER MAXX,MAXY
-        double precision, dimension(:,:), intent(out) :: dhdx
-        double precision, dimension(:,:), intent(out) :: dhbdx
-        double precision, dimension(:,:), intent(out) :: dhdy
-        double precision, dimension(:,:), intent(out) :: dhbdy
-        double precision, dimension(:,:), intent(out) :: surf
-        double precision, dimension(:,:), intent(in)  :: h
-        double precision, dimension(:,:), intent(in)  :: hb
-        double precision, dimension(:,:), intent(out) :: dzdx
-        double precision, dimension(:,:), intent(out) :: dzdy
-        
-        double precision, intent(in) :: dx
-        double precision, intent(in) :: dy
-        
-        MAXX = size(h, 1)
-        MAXY = size(h, 2)
-        write(*,*) "BEGIN init_geometry_vectors"
-        !Compute derivative fields for bed and thickness onto
-        !a staggered grid.
-        !Note that, because of the different indexing schemes, we switch the
-        !locations where we place dhdy and dhdx.  We also need to switch the
-        !x and y grid sizes given
-        call df_field_2d_staggered(h,  dy, dx, dhdy,  dhdx, .true., .true.)
-        call df_field_2d_staggered(hb, dy, dx, dhbdy, dhbdx, .true., .true.)
-      
-
-        !Compute surface, derivatives of surface
-        surf = h+hb
-        dzdx = dhdx+dhbdx
-        dzdy = dhdy+dhbdy 
-        write(*,*) "END init_geometry_vectors" 
-    END subroutine
-      
-      
     !Initialize rescaled coordinate coefficients
     subroutine init_rescaled_coordinates(dhdx,dhbdx,dhdy,dhbdy,surf,h,hb,&
-               dzdx,dzdy,d2zdx2, d2zdy2, d2hdx2, d2hdy2, zeta,ax,ay,bx,by,cxy,dx,dy)
+               dzdx,dzdy,d2zdx2, d2zdy2, d2hdx2, d2hdy2, zeta,ax,ay,bx,by,cxy,dx,dy, &
+               direction_x, direction_y)
 !
         INTEGER MAXX,MAXY,NZETA
         double precision, dimension(:,:), intent(in) :: dhdx
@@ -191,6 +143,11 @@ contains
         
         double precision, dimension(:,:), intent(in) :: d2zdx2,d2zdy2,d2hdx2,d2hdy2
         
+        double precision, dimension(:,:), intent(in) :: direction_x, direction_y
+
+        double precision, dimension(size(ax,1), size(ax,2), size(ax,3)) :: daxdx, daxdy, &
+                    daxdz, daydx, daydy, daydz
+
         INTEGER :: i,j,k
 #if 1
         call write_xls("h.txt",h)
@@ -513,6 +470,12 @@ contains
         write(*,*)"kinematic u shape:", shape(kinematic_bc_u)
         write(*,*)"kinematic v shape:", shape(kinematic_bc_v)
 
+        allocate(normal_x(maxy, maxx))
+        allocate(normal_y(maxy, maxx))
+
+        normal_x = NaN
+        normal_y = NaN
+
         maxiter=NUMBER_OF_ITERATIONS
         error=VEL2ERR
         m=1
@@ -554,8 +517,7 @@ contains
         call write_xls_int("geometry_mask.txt",geometry_mask)
         call write_xls_3d("kinematic_bc_u.txt",kinematic_bc_u)
         call write_xls_3d("kinematic_bc_v.txt",kinematic_bc_v)
-        call write_xls("normal_x.txt",sin(marine_bc_normal))
-        call write_xls("normal_y.txt",-cos(marine_bc_normal))
+        call write_xls_direction_guide("direction_guide.txt",3,3)
         write(*,*) "ZETA=",zeta
 #endif
 
@@ -626,11 +588,11 @@ contains
                 MAXX,NZETA,TOLER, delta_x, delta_y, zeta, point_mask, &
                 geometry_mask,matrix, workspace, options, kinematic_bc_u, kinematic_bc_v, &
                 marine_bc_normal)
-                      
+                   
             !Apply periodic boundary conditions to the computed velocity
             call periodic_boundaries_3d_stag(ustar,periodic_x,periodic_y)
             call periodic_boundaries_3d_stag(vstar,periodic_x,periodic_y)
-
+            call enforce_plug_flow(ustar, vstar, geometry_mask)
 #ifdef OUTPUT_PARTIAL_ITERATIONS
             call iteration_debug_step(ncid_debug, l, mu, uvel, vvel)
 #endif
@@ -666,7 +628,22 @@ contains
       write(*,*) "Pattyn higher-order solve took",solve_end_time - solve_start_time
       return
       END subroutine
-   
+  
+      subroutine enforce_plug_flow(uvel, vvel, geometry_mask)
+            real(dp), dimension(:,:,:), intent(inout) :: uvel, vvel
+            integer, dimension(:,:) :: geometry_mask
+            real(dp) :: avg
+            integer :: i,j,k
+            do i = 1, size(geometry_mask, 1)
+                do j = 1, size(geometry_mask, 2)
+                    if GLIDE_IS_FLOAT(geometry_mask(i,j)) then
+                        uvel(i,j,:) = sum(uvel(i,j,:))/size(uvel,3)
+                        vvel(i,j,:) = sum(vvel(i,j,:))/size(vvel,3)
+                    end if
+                end do
+            end do
+      end subroutine enforce_plug_flow
+
       subroutine smooth_field_3d(field, factor, outfield)
         double precision, dimension(:,:,:) ::    field
         double precision, dimension(:,:,:) :: outfield
@@ -935,8 +912,8 @@ contains
             call write_xls("direction_x.txt",direction_x)
             call write_xls("direction_y.txt",direction_y)
             
-            call df_field_3d(uvel_test, dy, dx, dz, dudy, dudx, dudz, direction_x, direction_y)
-            call df_field_3d(vvel_test, dy, dx, dz, dvdy, dvdx, dvdz, direction_x, direction_y)
+            call df_field_3d(uvel_test, dy, dx, dz, dudy, dudx, dudz, direction_y, direction_x)
+            call df_field_3d(vvel_test, dy, dx, dz, dvdy, dvdx, dvdz, direction_y, direction_x)
          end if
 
         !Compute mu term from the acceleration fields
@@ -1026,8 +1003,6 @@ contains
 
 
         sparuv = 0
-        write(*,*)shape(kinematic_bc_u)
-        write(*,*)shape(h)
         do whichcomponent = 1,2
             if (whichcomponent == 1) then !Set up to compute u component
                 velpara => uvel
@@ -1050,7 +1025,6 @@ contains
                 do j=1,MAXX
                     if (point_mask(i,j) /= 0) then
                         do k=1,NZETA
-                            write(*,*)i,j,k
                             coef = 0
                             stencil_center_idx = csp_masked(I_J_K,i,j,k,point_mask,NZETA) 
                             if (h(i,j).lt.SMALL) then
@@ -1115,7 +1089,9 @@ contains
             call handle_sparse_error(matrix, ierr, __FILE__, __LINE__)      
             call sparse_solver_postprocess(matrix, options, workspace)
 #endif
- 
+
+            call write_xls("normal_x.txt", normal_x)
+            call write_xls("normal_y.txt", normal_y)
             !Delinearize the solution
             do i=1,MAXY
                 do j=1,MAXX
@@ -1130,6 +1106,9 @@ contains
                 end do
             end do
         end do !END whichcomponent loop
+#ifdef OUTPUT_SPARSE_MATRIX
+    stop
+#endif
 
     end function sparuv
 !
@@ -1617,7 +1596,7 @@ contains
 
         real(dp), intent(in) :: dx, dy !*FD grid spacing in x and y directions
         
-        real(dp), intent(in), dimension(:,:,:) :: ax, ay !*FD coefficients introduced during vertical rescaling
+        real(dp), intent(in), dimension(:,:,:), target :: ax, ay !*FD coefficients introduced during vertical rescaling
         
         real(dp), dimension(:), intent(in) :: zeta !*FD Irregular grid levels in vertical coordinate
         
@@ -1630,7 +1609,7 @@ contains
         logical :: upwind_x, upwind_y, downwind_x, downwind_y
 
         !x and y components of the normal vector with unit length
-        real(dp) :: n_x, n_y
+        real(dp), target :: n_x, n_y
 
         !Hydrostatic pressure at this level
         real(dp) :: pressure
@@ -1638,19 +1617,26 @@ contains
         !Derivative of the perpendicular component (v if computing u and vice
         !versa) with respect to the parallel direction (x if computing u, y if
         !computing v)
-        real(dp) :: dperp_dx
-        real(dp) :: dperp_dy
-        real(dp) :: dperp_dz
+        real(dp), target :: dperp_dx
+        real(dp), target :: dperp_dy
+        real(dp), target :: dperp_dz
 
         !The derivatives of the velocity component being computed with respect
         !to each dimension.  These end up as coefficients in the stencil
         !definition
-        real(dp) :: dx_coeff, dy_coeff, dz_coeff
+        real(dp), target :: dx_coeff, dy_coeff, dz_coeff
 
         !Cached difference calculations for the nonstaggered Z grid
         double precision dz_down1, dz_down2, dz_down3, dz_up1, dz_up2, dz_up3
         double precision dz_cen1, dz_cen2, dz_cen3, dz_sec1, dz_sec2, dz_sec3
  
+        double precision, dimension(:,:,:), pointer :: a_para, a_perp
+
+        double precision, pointer :: n_para, n_perp, dperp_dpara, dperp_dperp
+        double precision, pointer :: para_coeff, perp_coeff
+
+        double precision :: ntot = 1d0
+
         !Get the normal unit vector
         !The angles are defined in radians, with 0 = 12 o' clock, pi/2 = 3 o' clock,
         !etc.
@@ -1666,6 +1652,9 @@ contains
         n_x = sin(normals(i,j))
         n_y = -cos(normals(i,j))
 
+        normal_x(i,j) = n_x
+        normal_y(i,j) = n_y
+
         !Clamp n_x and n_y so that small values register as zero
         !(The need to do this arises from the fact that, sin(k*pi)
         !cannot be exactly 0)
@@ -1676,6 +1665,12 @@ contains
         if (abs(n_y) < 1d-10) then
             n_y = 0
         end if
+   
+        !Facilitates proper splitting of the source term so the it adds to 1
+        !In the case of a 45 deg. boundary, this will result in changing
+        !1/sqrt(2) to 1/2.  It should do nothing in the case of a boundary
+        !aligned with the axis.
+        ntot = abs(n_x) + abs(n_y)
 
         !Determine the hydrostatic pressure at the current location
         !If we are at the part of the ice shelf above the water, 
@@ -1693,6 +1688,9 @@ contains
         !This line changes pressure to the vertically integrated hydrostatic
         !pressure, and applies that throughout the ice column regardless even of
         !whether the ice is underwater.
+        !This includes h, not h**2, because we divide by h to find the
+        !vertically averaged pressure rather than the vertically integrated
+        !pressure
 #ifdef AVERAGED_PRESSURE
         pressure = .5 * rhoi * grav * h(i,j) * (1 - rhoi/rhoo)
 #endif
@@ -1707,7 +1705,7 @@ contains
         downwind_y = .false.
 
         if (h(i-1,j) == 0) then
-            downwind_y = .true.
+           downwind_y = .true.
         else if (h(i+1,j) == 0) then
             upwind_y = .true.
         end if
@@ -1728,77 +1726,68 @@ contains
             dperp_dz = dfdz_3d_irregular(vel_perp,i,j,k,zeta)
         end if
 
-
-        !Determine the right-hand side of the equation and the various
-        !coefficents
-        if (component == "u") then
-            !Beware of transposed derivatives ahead (because x and y are
-            !switched, dx and dy have to be as well)
-
-            !X derivative of V component
-            if (upwind_x) then
-                dperp_dx = dfdy_3d_upwind(vel_perp, i,j,k,dx)
-            else if (downwind_x) then
-                dperp_dx = dfdy_3d_downwind(vel_perp,i,j,k,dx)
-            else
-                dperp_dx = dfdy_3d(vel_perp,i,j,k,dx)
-            end if
-
-            !Y derivative of V component
-            if (upwind_y) then
-                dperp_dy = dfdx_3d_upwind(vel_perp, i,j,k,dy)
-            else if (downwind_y) then
-                dperp_dy = dfdx_3d_downwind(vel_perp,i,j,k,dy)
-            else
-                dperp_dy = dfdx_3d(vel_perp,i,j,k,dy)
-            end if
-
-#ifndef IGNORE_LAT_SIGMA
-            rhs = pressure*n_x - (2*n_x*dperp_dy & 
-                                  + n_y * dperp_dx &
-                                  + (2*ay(i,j,k)*n_x + ax(i,j,k)*n_y)*dperp_dz)*mu(i,j,k)
+        !X derivative of perpendicular component
+        if (upwind_x) then
+#ifdef USE_ORD2_HORIZ_UPDOWN 
+            dperp_dx = dfdy_3d_upwind(vel_perp, i,j,k,dx)
 #else
-            rhs = pressure*n_x - (2*n_x*dperp_dy & 
-                                  + n_y * dperp_dx)*mu(i,j,k)
-
+            dperp_dx = (vel_perp(i,j,k) - vel_perp(i,j-1,k))/dx
 #endif
-            dx_coeff = n_x*4*mu(i,j,k)
-            dy_coeff = n_y*mu(i,j,k)
-            dz_coeff = (4*n_x*ax(i,j,k) + (n_y*ay(i,j,k)))*mu(i,j,k)
-        else if (component == "v") then
-            !Beware of transposed derivatives ahead (because x and y are
-            !switched, dx and dy have to be as well)
-
-            !Y derivative of U component
-            if (upwind_y) then
-                dperp_dy = dfdx_3d_upwind(vel_perp, i,j,k,dy)
-            else if (downwind_y) then
-                dperp_dy = dfdx_3d_downwind(vel_perp,i,j,k,dy)
-            else
-                dperp_dy = dfdx_3d(vel_perp,i,j,k,dy)
-            end if
-
-            !X derivative of U component
-            if (upwind_x) then
-                dperp_dx = dfdy_3d_upwind(vel_perp, i,j,k,dx)
-            else if (downwind_x) then
-                dperp_dx = dfdy_3d_downwind(vel_perp,i,j,k,dx)
-            else
-                dperp_dx = dfdy_3d(vel_perp,i,j,k,dx)
-            end if
-#ifndef IGNORE_LAT_SIGMA
-            rhs = pressure*n_y - (2*n_y*dperp_dx & 
-                                  + n_x * dperp_dy &
-                                  + (2*ax(i,j,k)*n_y + ay(i,j,k)*n_x)*dperp_dz)*mu(i,j,k)
+        else if (downwind_x) then
+#ifdef USE_ORD2_HORIZ_UPDOWN 
+            dperp_dx = dfdy_3d_downwind(vel_perp,i,j,k,dx)
 #else
-            rhs = pressure*n_y - (2*n_y*dperp_dx & 
-                                  + n_x * dperp_dy)*mu(i,j,k)
-  
-#endif  
-            dy_coeff = n_y*4*mu(i,j,k)
-            dx_coeff = n_x*mu(i,j,k)
-            dz_coeff = (4*n_y*ay(i,j,k) + (n_x*ax(i,j,k)))*mu(i,j,k)
+            dperp_dx = (vel_perp(i,j+1,k) - vel_perp(i,j,k))/dx
+#endif
+        else
+            dperp_dx = dfdy_3d(vel_perp,i,j,k,dx)
         end if
+
+        !Y derivative of perpendicular component
+        if (upwind_y) then
+            !dperp_dy = dfdx_3d_upwind(vel_perp, i,j,k,dy)
+            dperp_dy = (vel_perp(i,j,k) - vel_perp(i-1,j,k))/dy
+        else if (downwind_y) then
+            !dperp_dy = dfdx_3d_downwind(vel_perp,i,j,k,dy)
+            dperp_dy = (vel_perp(i+1,j,k) - vel_perp(i,j,k))/dy
+        else
+            dperp_dy = dfdx_3d(vel_perp,i,j,k,dy)
+        end if
+
+        if (component=="u") then
+            n_para => n_x
+            n_perp => n_y
+
+            dperp_dpara => dperp_dx
+            dperp_dperp => dperp_dy
+            
+            a_para => ax
+            a_perp => ay
+
+            para_coeff => dx_coeff
+            perp_coeff => dy_coeff
+        else if (component=="v") then
+            n_para => n_y
+            n_perp => n_x
+            
+            dperp_dpara => dperp_dy
+            dperp_dperp => dperp_dx
+            
+            a_para => ay
+            a_perp => ax
+
+            para_coeff => dy_coeff
+            perp_coeff => dx_coeff
+        end if
+        para_coeff = 4*mu(i,j,k)*n_para
+        perp_coeff =   mu(i,j,k)*n_perp
+        dz_coeff   =   mu(i,j,k)*(4*a_para(i,j,k)*n_para + a_perp(i,j,k)*n_perp)
+
+        rhs = pressure/ntot * n_para &
+                - 2*mu(i,j,k)*n_para*dperp_dperp & 
+                -   mu(i,j,k)*n_perp*dperp_dpara &
+                -   mu(i,j,k)*(2*a_para(i,j,k)*n_perp + a_perp(i,j,k)*n_para)*dperp_dz
+
 #ifndef IGNORE_LAT_SIGMA
         !Enter the z component into the finite difference scheme.
         !If we are on the top of bottom of the ice shelf, we will need
@@ -2280,6 +2269,21 @@ subroutine end_debug_iteration(ncid)
     call nc_errorhandle(__FILE__, __LINE__, err)
 end subroutine
 #endif
+
+subroutine write_xls_direction_guide(filename, nx, ny)
+    integer :: nx, ny
+    character(*) :: filename
+    
+    real(dp), dimension(nx, ny) :: field
+
+    field = 0
+    field(1,1) = 1
+    field(2,1) = 1
+
+    call write_xls(filename, field)
+
+end subroutine
+
 !
 !---------------------------------------------------
 !
