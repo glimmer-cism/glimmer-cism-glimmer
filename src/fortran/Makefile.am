@@ -126,8 +126,8 @@ test_lithot_LDADD = libclimate.a libglide.a libglimmer.a SLAP_library/libslap.a
 test_integrate_SOURCES = test_integrate.F90 glimmer_global.F90 \
                          glimmer_physcon.F90 glimmer_integrate.F90
 
-glimmer_unittest_SOURCES = unittest.F90 unittest_glide_deriv.F90
-glimmer_unittest_LDADD = libglide.a libglimmer.a
+glimmer_unittest_SOURCES = unittest.F90 unittest_glide_deriv.F90 unittest_ice3d_lib.F90
+glimmer_unittest_LDADD = libglide.a libglimmer.a SLAP_library/libslap.a
 
 ALL_SRC=$(test_integrage_SOURCES) $(test_lithot_SOURCES) $(test_ts_SOURCES) $(test_setup_SOURCES) \
         $(test_config_SOURCES) $(nc2config_SOURCES) $(glex_ebm_SOURCES) $(glint_example_SOURCES) \

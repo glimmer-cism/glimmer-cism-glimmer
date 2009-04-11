@@ -16,7 +16,7 @@
 !matrix.  They should be disabled unless the higher-order code needs debugging.
 
 !Define to write the rows of the sparse matrix for each vel. component then stop.
-#define OUTPUT_SPARSE_MATRIX
+!#define OUTPUT_SPARSE_MATRIX
 
 !Define to output a NetCDF file of the partial iterations
 #define OUTPUT_PARTIAL_ITERATIONS
@@ -1147,7 +1147,7 @@ contains
         integer :: pos, i, stencil_i
         if (pos <= 5) then
             stencil_i = i - 1
-        else if (pos <= 16) then
+        else if (pos <= 16 .or. pos == 24 .or. pos == 25) then
             stencil_i = i
         else if (pos == 22) then
             stencil_i = i - 2
