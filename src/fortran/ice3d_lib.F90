@@ -29,7 +29,7 @@
 #define AVERAGED_PRESSURE
 
 !The maximum number of iterations to use in the unstable manifold loop
-#define NUMBER_OF_ITERATIONS 100
+#define NUMBER_OF_ITERATIONS 10
 
 !If defined, the model uses 2nd order upwinded and downwinded finite
 !differences.
@@ -37,6 +37,8 @@
 
 !If defined, then sigma gradients will be ignored in the lateral b.c.
 !#define IGNORE_LAT_SIGMA
+
+#define LINEAR_RHEOLOGY
 
 module ice3d_lib
     use glimmer_global
@@ -114,7 +116,7 @@ module ice3d_lib
     integer, parameter :: I_JM2_K = 24
     integer, parameter :: I_JP2_K = 25
 
-    integer, parameter :: STENCIL_SIZE = 26
+    integer, parameter :: STENCIL_SIZE = 25
 contains
     !Initialize rescaled coordinate coefficients
     subroutine init_rescaled_coordinates(dhdx,dhbdx,dhdy,dhbdy,surf,h,hb,&
@@ -572,9 +574,13 @@ contains
             end if
 
             !Compute viscosity
+#ifndef LINEAR_RHEOLOGY
             call muterm(mu,uvel,vvel,arrh,h,dzdx,dzdy,ax,ay,delta_x,delta_y,zeta,FLOWN,ZIP,.false., &
                         geometry_mask,dudx, dudy, dudz, dvdx, dvdy, dvdz,&
                         direction_x, direction_y)
+#else
+            mu = 1d6
+#endif
             call write_xls_3d("mu.txt",mu)
             !Apply periodic boundary conditions to the viscosity
             call periodic_boundaries_3d_stag(mu,periodic_x,periodic_y)
@@ -592,7 +598,7 @@ contains
             !Apply periodic boundary conditions to the computed velocity
             call periodic_boundaries_3d_stag(ustar,periodic_x,periodic_y)
             call periodic_boundaries_3d_stag(vstar,periodic_x,periodic_y)
-            call enforce_plug_flow(ustar, vstar, geometry_mask)
+            !call enforce_plug_flow(ustar, vstar, geometry_mask)
 #ifdef OUTPUT_PARTIAL_ITERATIONS
             call iteration_debug_step(ncid_debug, l, mu, uvel, vvel)
 #endif
@@ -1681,7 +1687,7 @@ contains
         pressure = rhoi * grav * h(i,j) * zeta(k)
         !Hydrostatic component, only if we're below the surface
         if (zeta(k) > (1 - rhoi/rhoo)) then
-            pressure = pressure - rhoo * grav * h(i,j) * (1 - rhoi/rhoo - zeta(k))
+            pressure = pressure + rhoo * grav * h(i,j) * (1 - rhoi/rhoo - zeta(k))
         end if
 
 
