@@ -26,10 +26,10 @@
 
 !If defined, a vertically averaged pressure will be used across the ice front.
 !Otherwise, a vertically explicit pressure will be used.
-#define AVERAGED_PRESSURE
+!#define AVERAGED_PRESSURE
 
 !The maximum number of iterations to use in the unstable manifold loop
-#define NUMBER_OF_ITERATIONS 10
+#define NUMBER_OF_ITERATIONS 50
 
 !If defined, the model uses 2nd order upwinded and downwinded finite
 !differences.
@@ -573,11 +573,15 @@ contains
                 call plastic_bed(tau, beta, uvel(:,:,nzeta), vvel(:,:,nzeta))
             end if
 
-            !Compute viscosity
+            !Compute velocity derivatives
+            call velderivs(uvel, vvel, dzdx, dzdy, geometry_mask, &
+                           delta_x, delta_y, zeta, .false., &
+                           direction_x, direction_y, &
+                           dudx, dudy, dudz, dvdx, dvdy, dvdz)
+
 #ifndef LINEAR_RHEOLOGY
-            call muterm(mu,uvel,vvel,arrh,h,dzdx,dzdy,ax,ay,delta_x,delta_y,zeta,FLOWN,ZIP,.false., &
-                        geometry_mask,dudx, dudy, dudz, dvdx, dvdy, dvdz,&
-                        direction_x, direction_y)
+            !Compute viscosity
+            call muterm(mu,arrh,h,ax,ay,FLOWN,ZIP,dudx, dudy, dudz, dvdx, dvdy, dvdz)
 #else
             mu = 1d6
 #endif
@@ -590,10 +594,11 @@ contains
             !velocities will get spit into ustar and vstar, while uvel and vvel
             !will still hold the old velocities.
             iter=sparuv(mu,dzdx,dzdy,ax,ay,bx,by,cxy,h,&
-                uvel,vvel,ustar,vstar,tau,dhbdx,dhbdy,ijktot,MAXY,&
+                uvel,vvel,dudx,dudy,dudz,dvdx,dvdy,dvdz,&
+                ustar,vstar,tau,dhbdx,dhbdy,ijktot,MAXY,&
                 MAXX,NZETA,TOLER, delta_x, delta_y, zeta, point_mask, &
                 geometry_mask,matrix, workspace, options, kinematic_bc_u, kinematic_bc_v, &
-                marine_bc_normal)
+                marine_bc_normal,direction_x,direction_y)
                    
             !Apply periodic boundary conditions to the computed velocity
             call periodic_boundaries_3d_stag(ustar,periodic_x,periodic_y)
@@ -852,47 +857,34 @@ contains
 
     end subroutine
 
-!
-!
-!------------------------------------------------------
-!   nonlinear viscosity term
-!------------------------------------------------------
-!
-      subroutine muterm(mu,uvel,vvel,arrh,h,dzdx,dzdy,ax,ay,dx,dy,dz,FLOWN,ZIP,UPSTREAM, &
-                        geometry_mask, dudx, dudy, dudz, dvdx, dvdy, dvdz, direction_x, direction_y)
-!
-        double precision,                   intent(in)  :: FLOWN,ZIP
-        logical,                            intent(in)  :: UPSTREAM
-        double precision, dimension(:,:,:), intent(out) :: mu
-        double precision, dimension(:,:,:), intent(in)  :: uvel
-        double precision, dimension(:,:,:), intent(in)  :: vvel
-        double precision, dimension(:,:,:), intent(in)  :: arrh
-        double precision, dimension(:,:),   intent(in)  :: h
-        double precision, dimension(:,:),   intent(in)  :: dzdx
-        double precision, dimension(:,:),   intent(in)  :: dzdy
-        double precision, dimension(:,:,:), intent(in)  :: ax
-        double precision, dimension(:,:,:), intent(in)  :: ay
-        double precision,                   intent(in)  :: dx
-        double precision,                   intent(in)  :: dy
-        double precision, dimension(:),     intent(in)  :: dz
-        integer, dimension(:,:), intent(in) :: geometry_mask
-        
-        !Pre-allocated variables, no info need be passed in these
-        double precision, dimension(:,:,:), intent(inout) :: dudx, dudy, dudz
-        double precision, dimension(:,:,:), intent(inout) :: dvdx, dvdy, dvdz
-        double precision, dimension(:,:),   intent(inout) :: direction_x, direction_y
-        double precision, dimension(size(uvel,1),size(uvel,2),size(uvel,3)) :: uvel_test, vvel_test
-!
-        INTEGER :: i,j,k, MAXX, MAXY, NZETA
-        double precision :: macht
-        double precision :: exx,eyy,exy,exz,eyz,eeff
-!
-        MAXY = size(uvel, 1)
-        MAXX = size(uvel, 2)
-        NZETA = size(dz)
 
-        macht=(1.-FLOWN)/(2.*FLOWN)
-     
+    !Compute x,y,z derivative fields of u and v, upwinding if necessary at the
+    !ice shelf front
+    subroutine velderivs(uvel, vvel, dzdx, dzdy, geometry_mask, & 
+                         dx, dy, levels, UPSTREAM, &
+                         direction_x, direction_y, &
+                         dudx, dudy, dudz, dvdx, dvdy, dvdz)
+        double precision, dimension(:,:,:), intent(in) :: uvel
+        double precision, dimension(:,:,:), intent(in) :: vvel
+        double precision, dimension(:,:), intent(in) :: dzdx
+        double precision, dimension(:,:), intent(in) :: dzdy
+        integer, dimension(:,:), intent(in) :: geometry_mask
+        double precision, intent(in) :: dx
+        double precision, intent(in) :: dy
+        double precision, dimension(:), intent(in) :: levels
+        logical, intent(in) :: UPSTREAM
+        double precision, dimension(:,:), intent(out) :: direction_x
+        double precision, dimension(:,:), intent(out) :: direction_y
+
+        double precision, dimension(:,:,:), intent(out) :: dudx
+        double precision, dimension(:,:,:), intent(out) :: dudy
+        double precision, dimension(:,:,:), intent(out) :: dudz
+        double precision, dimension(:,:,:), intent(out) :: dvdx        
+        double precision, dimension(:,:,:), intent(out) :: dvdy        
+        double precision, dimension(:,:,:), intent(out) :: dvdz
+ 
+        double precision, dimension(size(uvel,1),size(uvel,2),size(uvel,3)) :: uvel_test, vvel_test
+
         !TEST of upwinding shelf boundary derivatives:
         !Everywhere where there's no ice, we set the velocity
         !to NaN.  If a location with no ice is ever used, this should
@@ -909,8 +901,8 @@ contains
         !TODO: Implement option for upstream differencing
         if (UPSTREAM) then
             !Upstream the number 
-            call df_field_3d(uvel, dy, dx, dz, dudy, dudx, dudz, dzdy, dzdx)
-            call df_field_3d(vvel, dy, dx, dz, dvdy, dvdx, dvdz, dzdy, dzdx)
+            call df_field_3d(uvel, dy, dx, levels, dudy, dudx, dudz, dzdy, dzdx)
+            call df_field_3d(vvel, dy, dx, levels, dvdy, dvdx, dvdz, dzdy, dzdx)
         else
             direction_x = 0
             direction_y = 0
@@ -918,10 +910,41 @@ contains
             call write_xls("direction_x.txt",direction_x)
             call write_xls("direction_y.txt",direction_y)
             
-            call df_field_3d(uvel_test, dy, dx, dz, dudy, dudx, dudz, direction_y, direction_x)
-            call df_field_3d(vvel_test, dy, dx, dz, dvdy, dvdx, dvdz, direction_y, direction_x)
+            call df_field_3d(uvel_test, dy, dx, levels, dudy, dudx, dudz, direction_y, direction_x)
+            call df_field_3d(vvel_test, dy, dx, levels, dvdy, dvdx, dvdz, direction_y, direction_x)
          end if
 
+    end subroutine
+
+!
+!
+!------------------------------------------------------
+!   nonlinear viscosity term
+!------------------------------------------------------
+!
+      subroutine muterm(mu, arrh, h, ax, ay, FLOWN, ZIP, &
+                        dudx, dudy, dudz, dvdx, dvdy, dvdz)
+!
+        double precision,                   intent(in)  :: FLOWN,ZIP
+        double precision, dimension(:,:,:), intent(out) :: mu
+        double precision, dimension(:,:,:), intent(in)  :: arrh
+        double precision, dimension(:,:),   intent(in)  :: h
+        double precision, dimension(:,:,:), intent(in)  :: ax
+        double precision, dimension(:,:,:), intent(in)  :: ay
+        
+        double precision, dimension(:,:,:), intent(in) :: dudx, dudy, dudz
+        double precision, dimension(:,:,:), intent(in) :: dvdx, dvdy, dvdz
+       !
+        INTEGER :: i,j,k, MAXX, MAXY, NZETA
+        double precision :: macht
+        double precision :: exx,eyy,exy,exz,eyz,eeff
+!
+        MAXY = size(mu, 1)
+        MAXX = size(mu, 2)
+        NZETA = size(mu, 3)
+
+        macht=(1.-FLOWN)/(2.*FLOWN)
+     
         !Compute mu term from the acceleration fields
         do i=1,MAXY
             do j=1,MAXX
@@ -949,9 +972,11 @@ contains
         return
     end subroutine
 
-    function sparuv(mu,dzdx,dzdy,ax,ay,bx,by,cxy,h,uvel,vvel,ustar,vstar,beta,dhbdx,dhbdy,&
+    function sparuv(mu,dzdx,dzdy,ax,ay,bx,by,cxy,h,uvel,vvel,dudx,dudy,dudz,dvdx,dvdy,dvdz,&
+                    ustar,vstar,beta,dhbdx,dhbdy,&
                     IJKTOT,MAXY,MAXX,NZETA,TOLER,GRIDX,GRIDY,zeta, point_mask, geometry_mask,&
-                    matrix, workspace, options, kinematic_bc_u, kinematic_bc_v,latbc_normal)
+                    matrix, workspace, options, kinematic_bc_u, kinematic_bc_v,latbc_normal, &
+                    direction_x, direction_y)
         INTEGER IJKTOT,MAXY,MAXX,NZETA
         double precision, dimension(:,:,:) :: mu
         double precision, dimension(:,:) :: dzdx
@@ -964,6 +989,9 @@ contains
         double precision, dimension(:,:) :: h
         double precision, dimension(:,:,:), target :: uvel
         double precision, dimension(:,:,:), target :: vvel
+        
+        real(dp), dimension(:,:,:), intent(in) :: dudx,dudy,dudz,dvdx,dvdy,dvdz
+        
         double precision, dimension(:,:,:), target :: ustar
         double precision, dimension(:,:,:), target :: vstar
         double precision, dimension(:,:) :: dhbdx
@@ -978,7 +1006,9 @@ contains
         double precision :: gridx
         double precision :: gridy
         double precision :: rhs
-          
+        
+        double precision, dimension(:,:), intent(in) :: direction_x,direction_y
+
         INTEGER i,j,k,l,m,sparuv,iter, ierr
         double precision :: d(IJKTOT),x(IJKTOT),coef(STENCIL_SIZE),err
       
@@ -1059,8 +1089,9 @@ contains
                             else
 
                                 call sparse_setup(componentstr, i, j, k, mu, dzdx, dzdy, ax, ay, bx, by, cxy, &
-                                     h, gridx, gridy, zeta, uvel, vvel, dhbdx, dhbdy, beta, geometry_mask, &
-                                     latbc_normal, maxx, maxy, Nzeta, coef, rhs)
+                                     h, gridx, gridy, zeta, uvel, vvel, dudx, dudy, dudx, dvdx, dvdy, dvdz, &
+                                     dhbdx, dhbdy, beta, geometry_mask, &
+                                     latbc_normal, maxx, maxy, Nzeta, coef, rhs, direction_x, direction_y)
                             endif
                             d(stencil_center_idx)=rhs
                             !Preliminary benchmarks indicate the we actually reach
@@ -1244,8 +1275,10 @@ contains
     !DON'T PANIC, this works!  It's been tested!  Really!  The bug is somewhere
     !else!
     subroutine sparse_setup(component, i,j,k,mu,dzdx,dzdy,ax,ay,bx,by,cxy,&
-        h,dx,dy,dz,uvel,vvel,dhbdx,dhbdy,beta,geometry_mask,latbc_normal,MAXX,MAXY,Ndz,&
-        coef, rhs)
+        h, dx, dy, dz, uvel, vvel, dudx_field, dudy_field, dudz_field, &
+        dvdx_field, dvdy_field, dvdz_field, &
+        dhbdx,dhbdy,beta,geometry_mask,latbc_normal,MAXX,MAXY,Ndz,&
+        coef, rhs, direction_x, direction_y)
 !
         integer :: i,j,k, MAXY, MAXX, Ndz
 
@@ -1257,6 +1290,9 @@ contains
 
         !Viscosity
         double precision, dimension(:,:,:) :: mu
+
+        double precision, dimension(:,:,:), intent(in) :: dudx_field, dudy_field, dudz_field 
+        double precision, dimension(:,:,:), intent(in) :: dvdx_field, dvdy_field, dvdz_field
 
         !Surface Gradients
         double precision, dimension(:,:), target :: dzdx, dzdy
@@ -1313,6 +1349,8 @@ contains
         double precision dz_cen1, dz_cen2, dz_cen3, dz_sec1, dz_sec2, dz_sec3
         
         double precision :: rhs2
+
+        double precision, dimension(:,:),intent(in) :: direction_x, direction_y
 
         !call write_xls_3d("uvel.txt",uvel)
         !call write_xls_3d("vvel.txt",vvel)
@@ -1422,7 +1460,8 @@ contains
 #endif  
 
         if (.not. IS_NAN(latbc_normal(i,j))) then !Marine margin dynamic (Neumann) boundary condition
-            call sparse_marine_margin(component,i,j,k,h,latbc_normal, vel_perp, mu, dx, dy, ax, ay, dz,coef, rhs)
+            call sparse_marine_margin(component,i,j,k,h,latbc_normal, vel_perp, mu, dx, dy, ax, ay, dz,coef, rhs, &
+                                      dudx_field,dudy_field,dudz_field,dvdx_field,dvdy_field,dvdz_field,direction_x, direction_y)
         else if (k.eq.1) then !Upper boundary condition (stress-free surface)
             !Finite difference coefficients for an irregular Z grid, downwinded
             dz_down1=(2.*dz(k)-dz(k+1)-dz(k+2))/(dz(k+1)-dz(k))/(dz(k+2)-dz(k))
@@ -1592,7 +1631,8 @@ contains
     end subroutine sparse_setup
 
     !Computes finite differences for the marine margin
-    subroutine sparse_marine_margin(component,i,j,k,h,normals, vel_perp, mu, dx, dy, ax, ay, zeta,coef, rhs)
+    subroutine sparse_marine_margin(component,i,j,k,h,normals, vel_perp, mu, dx, dy, ax, ay, zeta,coef, rhs, &
+                                    dudx,dudy,dudz,dvdx,dvdy,dvdz,direction_x,direction_y)
         character(*), intent(in) :: component !*FD Either "u" or "v"
         integer, intent(in) :: i,j,k !*FD Point that the boundary condition is computed for
         real(dp), dimension(:,:), intent(in) :: h !*FD Ice thickness field
@@ -1608,6 +1648,10 @@ contains
         
         real(dp), dimension(STENCIL_SIZE), intent(inout) :: coef !*FD Output array of stencil coefficients
         real(dp),                intent(out)   :: rhs !*FD Element of the right-hand side vector corresponding to this point
+        
+        real(dp), dimension(:,:,:), intent(in) :: dudx,dudy,dudz,dvdx,dvdy,dvdz
+        
+        real(dp),dimension(:,:) :: direction_x, direction_y
 
         !Whether or not we need to upwind or downwind lateral derivatives
         !Upwind is for when there's no ice on positive side,
@@ -1676,7 +1720,7 @@ contains
         !In the case of a 45 deg. boundary, this will result in changing
         !1/sqrt(2) to 1/2.  It should do nothing in the case of a boundary
         !aligned with the axis.
-        ntot = abs(n_x) + abs(n_y)
+        !ntot = abs(n_x) + abs(n_y)
 
         !Determine the hydrostatic pressure at the current location
         !If we are at the part of the ice shelf above the water, 
@@ -1710,56 +1754,6 @@ contains
         downwind_x = .false.
         downwind_y = .false.
 
-        if (h(i-1,j) == 0) then
-           downwind_y = .true.
-        else if (h(i+1,j) == 0) then
-            upwind_y = .true.
-        end if
-
-        if (h(i,j-1) == 0) then
-            downwind_x = .true.
-        else if (h(i,j+1) == 0) then
-            upwind_x = .true.
-        end if
-        
-        !Determine the derivative with respect to the vertical of the velocity
-        !component perpendicular to the one being computed
-        if (k == 1) then
-            dperp_dz = dfdz_3d_downwind_irregular(vel_perp,i,j,k,zeta)
-        else if (k == size(zeta)) then
-            dperp_dz = dfdz_3d_upwind_irregular(vel_perp,i,j,k,zeta)
-        else
-            dperp_dz = dfdz_3d_irregular(vel_perp,i,j,k,zeta)
-        end if
-
-        !X derivative of perpendicular component
-        if (upwind_x) then
-#ifdef USE_ORD2_HORIZ_UPDOWN 
-            dperp_dx = dfdy_3d_upwind(vel_perp, i,j,k,dx)
-#else
-            dperp_dx = (vel_perp(i,j,k) - vel_perp(i,j-1,k))/dx
-#endif
-        else if (downwind_x) then
-#ifdef USE_ORD2_HORIZ_UPDOWN 
-            dperp_dx = dfdy_3d_downwind(vel_perp,i,j,k,dx)
-#else
-            dperp_dx = (vel_perp(i,j+1,k) - vel_perp(i,j,k))/dx
-#endif
-        else
-            dperp_dx = dfdy_3d(vel_perp,i,j,k,dx)
-        end if
-
-        !Y derivative of perpendicular component
-        if (upwind_y) then
-            !dperp_dy = dfdx_3d_upwind(vel_perp, i,j,k,dy)
-            dperp_dy = (vel_perp(i,j,k) - vel_perp(i-1,j,k))/dy
-        else if (downwind_y) then
-            !dperp_dy = dfdx_3d_downwind(vel_perp,i,j,k,dy)
-            dperp_dy = (vel_perp(i+1,j,k) - vel_perp(i,j,k))/dy
-        else
-            dperp_dy = dfdx_3d(vel_perp,i,j,k,dy)
-        end if
-
         if (component=="u") then
             n_para => n_x
             n_perp => n_y
@@ -1772,6 +1766,10 @@ contains
 
             para_coeff => dx_coeff
             perp_coeff => dy_coeff
+        
+            dperp_dx = dvdx(i,j,k)
+            dperp_dy = dvdy(i,j,k)
+            dperp_dz = dvdz(i,j,k)
         else if (component=="v") then
             n_para => n_y
             n_perp => n_x
@@ -1784,7 +1782,25 @@ contains
 
             para_coeff => dy_coeff
             perp_coeff => dx_coeff
+
+            dperp_dx = dudx(i,j,k)
+            dperp_dy = dudy(i,j,k)
+            dperp_dz = dudz(i,j,k)
         end if
+ 
+        if (direction_y(i,j) < 0) then
+           downwind_y = .true.
+        else if (direction_y(i,j) > 0) then
+            upwind_y = .true.
+        end if
+
+        if (direction_x(i,j) < 0) then
+            downwind_x = .true.
+        else if (direction_x(i,j) > 0) then
+            upwind_x = .true.
+        end if
+        
+       
         para_coeff = 4*mu(i,j,k)*n_para
         perp_coeff =   mu(i,j,k)*n_perp
         dz_coeff   =   mu(i,j,k)*(4*a_para(i,j,k)*n_para + a_perp(i,j,k)*n_perp)
