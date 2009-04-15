@@ -544,7 +544,7 @@ contains
         end where
 #ifdef OUTPUT_PARTIAL_ITERATIONS        
         ncid_debug = begin_iteration_debug(maxx, maxy, nzeta)
-        call iteration_debug_step(ncid_debug, 0, mu, uvel, vvel)
+        call iteration_debug_step(ncid_debug, 0, mu, uvel, vvel, geometry_mask)
 #endif
         nonlinear_iteration: do l=1,maxiter !Loop until we have reached the number of iterations allowed
             call cpu_time(iter_start_time)
@@ -605,7 +605,7 @@ contains
             call periodic_boundaries_3d_stag(vstar,periodic_x,periodic_y)
             !call enforce_plug_flow(ustar, vstar, geometry_mask)
 #ifdef OUTPUT_PARTIAL_ITERATIONS
-            call iteration_debug_step(ncid_debug, l, mu, uvel, vvel)
+            call iteration_debug_step(ncid_debug, l, mu, uvel, vvel, geometry_mask)
 #endif
 
             !Apply unstable manifold correction.  This function returns
@@ -2202,7 +2202,7 @@ function begin_iteration_debug(nx, ny, nz)
     integer :: err
     integer :: ncid
 
-    integer :: xdim, ydim, zdim, iterdim, dims(4), varid
+    integer :: xdim, ydim, zdim, iterdim, dims(4), dims2d(3), varid
     integer :: begin_iteration_debug
 
     ncid = 0
@@ -2218,6 +2218,7 @@ function begin_iteration_debug(nx, ny, nz)
     call nc_errorhandle(__FILE__, __LINE__, err)
 
     dims = (/xdim, ydim, zdim, iterdim/)
+    dims2d = (/xdim, ydim, iterdim/)
 
     err = nf90_def_var(ncid, "mu", NF90_DOUBLE, dims, varid)
     call nc_errorhandle(__FILE__, __LINE__, err)
@@ -2225,6 +2226,11 @@ function begin_iteration_debug(nx, ny, nz)
     call nc_errorhandle(__FILE__, __LINE__, err)
     err = nf90_def_var(ncid, "vvel", NF90_DOUBLE, dims, varid)
     call nc_errorhandle(__FILE__, __LINE__, err) 
+    err = nf90_def_var(ncid, "velnorm", NF90_DOUBLE, dims, varid)
+    call nc_errorhandle(__FILE__, __LINE__, err) 
+    err = nf90_def_var(ncid, "mask", NF90_INT, dims2d, varid)
+    call nc_errorhandle(__FILE__, __LINE__, err) 
+
 
     err = nf90_enddef(ncid)
     call nc_errorhandle(__FILE__, __LINE__, err)
@@ -2234,13 +2240,14 @@ function begin_iteration_debug(nx, ny, nz)
 
 end function
 
-subroutine iteration_debug_step(ncid, iter, mu, uvel, vvel)
+subroutine iteration_debug_step(ncid, iter, mu, uvel, vvel, geometry_mask)
     use netcdf
     use glimmer_ncdf, only: nc_errorhandle
 
     integer :: ncid, iter
     real(dp), dimension(:,:,:) :: mu, uvel, vvel
-    
+    integer, dimension(:,:) :: geometry_mask
+
     integer :: varid, err
 
     integer :: nx, ny, nz
@@ -2271,7 +2278,19 @@ subroutine iteration_debug_step(ncid, iter, mu, uvel, vvel)
        
        err = nf90_put_var(ncid, varid, vvel(i,j,k), start)
        call nc_errorhandle(__FILE__, __LINE__, err)
+ 
+       err = nf90_inq_varid(ncid, "velnorm", varid)
+       call nc_errorhandle(__FILE__, __LINE__, err)
+       
+       err = nf90_put_var(ncid, varid, sqrt(uvel(i,j,k)**2 + vvel(i,j,k)**2), start)
+       call nc_errorhandle(__FILE__, __LINE__, err)
 
+ 
+       err = nf90_inq_varid(ncid, "mask", varid)
+       call nc_errorhandle(__FILE__, __LINE__, err)
+       
+       err = nf90_put_var(ncid, varid, geometry_mask(i,j), (/j,i,iter+1/))
+       call nc_errorhandle(__FILE__, __LINE__, err)
             end do
         end do
     end do
