@@ -885,18 +885,20 @@ contains
  
         double precision, dimension(size(uvel,1),size(uvel,2),size(uvel,3)) :: uvel_test, vvel_test
 
+        integer :: k
+
         !TEST of upwinding shelf boundary derivatives:
         !Everywhere where there's no ice, we set the velocity
         !to NaN.  If a location with no ice is ever used, this should
-        !propegate
+        !propegate.
         uvel_test = uvel
         vvel_test = vvel
-        !do k=1,NZETA
-        !    where(.not. GLIDE_HAS_ICE(geometry_mask))
-        !        uvel_test(:,:,k) = NaN
-        !        vvel_test(:,:,k) = NaN
-        !    endwhere
-        !end do
+        do k=1,size(uvel,3)
+            where(.not. GLIDE_HAS_ICE(geometry_mask))
+                uvel_test(:,:,k) = NaN
+                vvel_test(:,:,k) = NaN
+            endwhere
+        end do
 
         !TODO: Implement option for upstream differencing
         if (UPSTREAM) then
@@ -1102,16 +1104,29 @@ contains
                             !function.
                             !x=csp(I_J_K,i,j,k,MAXX,NZETA))=uvel(i,j,k) !Use current velocity as guess of solution
                             do m=1,STENCIL_SIZE
-                                si = stencil_i(m,i)
-                                sj = stencil_j(m,j)
-                                sk = stencil_k(m,k)
-                                if (si > 0 .and. si <= maxy .and. &
-                                    sj > 0 .and. sj <= maxx .and. &
-                                    sk > 0 .and. sk <= nzeta) then
-                                        call sparse_insert_val(matrix, &
+                                if (abs(coef(m)) > SMALL) then
+                                    si = stencil_i(m,i)
+                                    sj = stencil_j(m,j)
+                                    sk = stencil_k(m,k)
+                                    if (si > 0 .and. si <= maxy .and. &
+                                        sj > 0 .and. sj <= maxx .and. &
+                                        sk > 0 .and. sk <= nzeta) then
+                                            if (point_mask(si,sj) == 0) then
+                                                write(*,*) "ERROR: point is off mask."
+                                                write(*,*) "component:",componentstr
+                                                write(*,*) "location:",i,j,k
+                                                write(*,*) "stencil:",si,sj,sk
+                                                write(*,*) "stencil pos:", m, coef(m)
+                                                write(*,*) "h for stencil center and bad point:",h(i,j),h(si,sj)
+                                                write(*,*) "Mask for stencil center and bad point:",&
+                                                           geometry_mask(i,j), geometry_mask(si,sj)
+                                                stop
+                                            end if
+                                            call sparse_insert_val(matrix, &
                                                     stencil_center_idx, &
                                                     csp_stenciled(si,sj,sk,point_mask,NZETA), &
                                                     coef(m)) 
+                                    end if
                                 end if
                             end do !End loop through stencil
                         end do !END k loop
@@ -1788,15 +1803,15 @@ contains
             dperp_dz = dudz(i,j,k)
         end if
  
-        if (direction_y(i,j) < 0) then
+        if (direction_y(i,j) > 0) then
            downwind_y = .true.
-        else if (direction_y(i,j) > 0) then
+        else if (direction_y(i,j) < 0) then
             upwind_y = .true.
         end if
 
-        if (direction_x(i,j) < 0) then
+        if (direction_x(i,j) > 0) then
             downwind_x = .true.
-        else if (direction_x(i,j) > 0) then
+        else if (direction_x(i,j) < 0) then
             upwind_x = .true.
         end if
         
