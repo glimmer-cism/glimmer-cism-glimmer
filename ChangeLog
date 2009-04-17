@@ -1,3 +1,8 @@
+2009-04-17 Magnus Hagdorn
+ * src/python/Makefile.am: install new file
+ * src/python/glide_launch.py: modernise; add option to submit job to SGE
+ * src/python/qsub_glide.sh: simple wrapper script for submitting jobs to SGE
+
 2009-04-10 Magnus Hagdorn
  * configure.in: figure out C compiler and how to use cfortran.h
  * src/fortran/Makefile.am: add new targets
