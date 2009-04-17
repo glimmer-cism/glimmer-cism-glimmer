@@ -16,7 +16,7 @@
 !matrix.  They should be disabled unless the higher-order code needs debugging.
 
 !Define to write the rows of the sparse matrix for each vel. component then stop.
-!#define OUTPUT_SPARSE_MATRIX
+#define OUTPUT_SPARSE_MATRIX
 
 !Define to output a NetCDF file of the partial iterations
 #define OUTPUT_PARTIAL_ITERATIONS
@@ -26,10 +26,10 @@
 
 !If defined, a vertically averaged pressure will be used across the ice front.
 !Otherwise, a vertically explicit pressure will be used.
-!#define AVERAGED_PRESSURE
+#define AVERAGED_PRESSURE
 
 !The maximum number of iterations to use in the unstable manifold loop
-#define NUMBER_OF_ITERATIONS 50
+#define NUMBER_OF_ITERATIONS 10
 
 !If defined, the model uses 2nd order upwinded and downwinded finite
 !differences.
@@ -61,6 +61,7 @@ module ice3d_lib
     real(dp), dimension(:,:), allocatable :: normal_x
     real(dp), dimension(:,:), allocatable :: normal_y
 
+    integer, parameter :: ITER_UNIT = 42
 !------------------------------------------------------
 !   lookup coordinates in sparse matrix
 !
@@ -593,19 +594,26 @@ contains
             !Sparse matrix routine for determining velocities.  The new
             !velocities will get spit into ustar and vstar, while uvel and vvel
             !will still hold the old velocities.
+
+#ifdef OUTPUT_SPARSE_MATRIX
+            call open_sparse_output(l, ITER_UNIT)
+#endif
             iter=sparuv(mu,dzdx,dzdy,ax,ay,bx,by,cxy,h,&
                 uvel,vvel,dudx,dudy,dudz,dvdx,dvdy,dvdz,&
                 ustar,vstar,tau,dhbdx,dhbdy,ijktot,MAXY,&
                 MAXX,NZETA,TOLER, delta_x, delta_y, zeta, point_mask, &
                 geometry_mask,matrix, workspace, options, kinematic_bc_u, kinematic_bc_v, &
                 marine_bc_normal,direction_x,direction_y)
-                   
+#ifdef OUTPUT_SPARSE_MATRIX
+           close(ITER_UNIT)
+#endif
             !Apply periodic boundary conditions to the computed velocity
             call periodic_boundaries_3d_stag(ustar,periodic_x,periodic_y)
             call periodic_boundaries_3d_stag(vstar,periodic_x,periodic_y)
             !call enforce_plug_flow(ustar, vstar, geometry_mask)
 #ifdef OUTPUT_PARTIAL_ITERATIONS
-            call iteration_debug_step(ncid_debug, l, mu, uvel, vvel, geometry_mask)
+            call iteration_debug_step(ncid_debug, l, mu, ustar, vstar, geometry_mask)
+            call iteration_debug_write_vel_derivs(ncid_debug, l, dudx, dudy, dvdx, dvdy)
 #endif
 
             !Apply unstable manifold correction.  This function returns
@@ -1031,14 +1039,13 @@ contains
 !-------  velocity u
 !
 #ifdef OUTPUT_SPARSE_MATRIX
-        write(*,*) " Component Y X Z normal_x normal_y ax ay H mu ", &
+        write(ITER_UNIT,*) " Component Y X Z normal_x normal_y ax ay H mu source ", &
+                   "dperp_dx dperp_dy dperp_dz ",&
                    "im1jm1 im1km1 im1 im1kp1 im1jp1 jm1km1 jm1 jm1kp1 ", &
                    "km2 km1 center kp1 kp2 jp1km1 jp1 jp1kp1 ", &
-                   "ip1jm1 ip1km1 ip1 ip1kp1 ip1jp1 im2 ip2 jm2 jp2 rhs ", &
-                   "upwind_x downwind_x upwind_y downwind_y"
+                   "ip1jm1 ip1km1 ip1 ip1kp1 ip1jp1 im2 ip2 jm2 jp2 stencil_total rhs ", &
+                   "rhs_sans_source upwind_x downwind_x upwind_y downwind_y"
 #endif
-
-
 
         sparuv = 0
         do whichcomponent = 1,2
@@ -1103,11 +1110,24 @@ contains
                             !line here and and in the Y velocity section of this
                             !function.
                             !x=csp(I_J_K,i,j,k,MAXX,NZETA))=uvel(i,j,k) !Use current velocity as guess of solution
+                            if (abs(coef(I_J_K)) < SMALL) then
+                                write(*,*) "WARNING: 0 on diagonal at position",i,j,k
+                            end if
+
                             do m=1,STENCIL_SIZE
                                 if (abs(coef(m)) > SMALL) then
                                     si = stencil_i(m,i)
                                     sj = stencil_j(m,j)
                                     sk = stencil_k(m,k)
+
+                                    if (direction_y(i,j) /= 0) then
+                                        sj = sj + (sj - j) !delta j *= 2
+                                    end if
+
+                                    if (direction_x(i,j) /= 0) then
+                                        si = si + (si - i)
+                                    end if
+
                                     if (si > 0 .and. si <= maxy .and. &
                                         sj > 0 .and. sj <= maxx .and. &
                                         sk > 0 .and. sk <= nzeta) then
@@ -1133,14 +1153,12 @@ contains
                     end if !End mask check
                 end do !End j loop
             end do !End i loop
-#ifndef OUTPUT_SPARSE_MATRIX
             call sparse_solver_preprocess(matrix, options, workspace)        
             ierr = sparse_solve(matrix, d, x, options, workspace,  err, iter, verbose=sparverbose)
             sparuv = sparuv + iter
         
             call handle_sparse_error(matrix, ierr, __FILE__, __LINE__)      
             call sparse_solver_postprocess(matrix, options, workspace)
-#endif
 
             call write_xls("normal_x.txt", normal_x)
             call write_xls("normal_y.txt", normal_y)
@@ -1158,10 +1176,6 @@ contains
                 end do
             end do
         end do !END whichcomponent loop
-#ifdef OUTPUT_SPARSE_MATRIX
-    stop
-#endif
-
     end function sparuv
 !
 !
@@ -1759,8 +1773,11 @@ contains
 #ifdef AVERAGED_PRESSURE
         pressure = .5 * rhoi * grav * h(i,j) * (1 - rhoi/rhoo)
 #endif
-        !Apply viscosity to the RHS
-        !pressure = pressure/mu(i,j,k)
+
+        !Divide the source term by viscosity, less error-prone to do it here
+        !rather than multiply everything else by it (though it may give
+        !iterative solvers more fits maybe?)
+        pressure = pressure/mu(i,j,k)
 
         !Determine whether to use upwinded or downwinded derivatives for the
         !horizontal directions.
@@ -1814,17 +1831,37 @@ contains
         else if (direction_x(i,j) < 0) then
             upwind_x = .true.
         end if
-        
        
-        para_coeff = 4*mu(i,j,k)*n_para
-        perp_coeff =   mu(i,j,k)*n_perp
-        dz_coeff   =   mu(i,j,k)*(4*a_para(i,j,k)*n_para + a_perp(i,j,k)*n_perp)
+        !if (upwind_x .or. downwind_x) then
+        !     dperp_dx = dperp_dx*(-1)
+        !     write(*,*) "HI!"
+        !end if
+
+        !if (upwind_y .or. downwind_y) then
+        !    dperp_dy = dperp_dy*(-1)
+        !end if
+       
+        para_coeff = 4*n_para
+        perp_coeff =   n_perp
+        dz_coeff   =   (4*a_para(i,j,k)*n_para + a_perp(i,j,k)*n_perp)
 
         rhs = pressure/ntot * n_para &
-                - 2*mu(i,j,k)*n_para*dperp_dperp & 
-                -   mu(i,j,k)*n_perp*dperp_dpara &
-                -   mu(i,j,k)*(2*a_para(i,j,k)*n_perp + a_perp(i,j,k)*n_para)*dperp_dz
+                - 2*n_para*dperp_dperp & 
+                -   n_perp*dperp_dpara &
+                -   (2*a_para(i,j,k)*n_perp + a_perp(i,j,k)*n_para)*dperp_dz
 
+        if (n_para /= 0) then
+            perp_coeff = 0
+        end if
+
+        !if (upwind_x .or. downwind_x) then
+        !     dx_coeff = dx_coeff*(-1)
+        !end if
+
+        !if (upwind_y .or. downwind_y) then
+        !     dy_coeff = dy_coeff*(-1)
+        !end if
+ 
 #ifndef IGNORE_LAT_SIGMA
         !Enter the z component into the finite difference scheme.
         !If we are on the top of bottom of the ice shelf, we will need
@@ -1863,9 +1900,9 @@ contains
         if (downwind_y) then
 
 #ifdef USE_ORD2_HORIZ_UPDOWN 
-            coef(IP2_J_K) = coef(IP2_J_K) - 0.5 * dy_coeff/dy
-            coef(IP1_J_K) = coef(IP1_J_K) + 2.0 * dy_coeff/dy
-            coef(I_J_K)   = coef(I_J_K)   - 1.5 * dy_coeff/dy
+            coef(IP2_J_K) = coef(IP2_J_K) - 0.5 * dy_coeff/(dy*2)
+            coef(IP1_J_K) = coef(IP1_J_K) + 2.0 * dy_coeff/(dy*2)
+            coef(I_J_K)   = coef(I_J_K)   - 1.5 * dy_coeff/(dy*2)
 #else
             coef(IP1_J_K) = coef(IP1_J_K) + dy_coeff/dy
             coef(I_J_K)   = coef(I_J_K)   - dy_coeff/dy
@@ -1874,9 +1911,9 @@ contains
         else if (upwind_y) then
 
 #ifdef USE_ORD2_HORIZ_UPDOWN 
-            coef(I_J_K)   = coef(I_J_K)   + 1.5 * dy_coeff/dy
-            coef(IM1_J_K) = coef(IM1_J_K) - 2.0 * dy_coeff/dy 
-            coef(IM2_J_K) = coef(IM2_J_K) + 0.5 * dy_coeff/dy
+            coef(I_J_K)   = coef(I_J_K)   + 1.5 * dy_coeff/(dy*2)
+            coef(IM1_J_K) = coef(IM1_J_K) - 2.0 * dy_coeff/(dy*2)
+            coef(IM2_J_K) = coef(IM2_J_K) + 0.5 * dy_coeff/(dy*2)
 #else
             coef(I_J_K)   = coef(I_J_K)   + dy_coeff/dy
             coef(IM1_J_K) = coef(IM1_J_K) - dy_coeff/dy
@@ -1890,9 +1927,9 @@ contains
         if (downwind_x) then
 
 #ifdef USE_ORD2_HORIZ_UPDOWN 
-            coef(I_JP2_K) = coef(I_JP2_K) - 0.5 * dx_coeff/dx
-            coef(I_JP1_K) = coef(I_JP1_K) + 2.0 * dx_coeff/dx
-            coef(I_J_K)   = coef(I_J_K)   - 1.5 * dx_coeff/dx 
+            coef(I_JP2_K) = coef(I_JP2_K) - 0.5 * dx_coeff/(dx*2)
+            coef(I_JP1_K) = coef(I_JP1_K) + 2.0 * dx_coeff/(dx*2)
+            coef(I_J_K)   = coef(I_J_K)   - 1.5 * dx_coeff/(dx*2) 
 #else
             coef(I_JP1_K) = coef(I_JP1_K) + dx_coeff/dx
             coef(I_J_K)   = coef(I_J_K)   - dx_coeff/dx
@@ -1901,9 +1938,9 @@ contains
         else if (upwind_x) then
 
 #ifdef USE_ORD2_HORIZ_UPDOWN 
-            coef(I_J_K)   = coef(I_J_K)   + 1.5 * dx_coeff/dx
-            coef(I_JM1_K) = coef(I_JM1_K) - 2.0 * dx_coeff/dx 
-            coef(I_JM2_K) = coef(I_JM2_K) + 0.5 * dx_coeff/dx
+            coef(I_J_K)   = coef(I_J_K)   + 1.5 * dx_coeff/(dx*2)
+            coef(I_JM1_K) = coef(I_JM1_K) - 2.0 * dx_coeff/(dx*2)
+            coef(I_JM2_K) = coef(I_JM2_K) + 0.5 * dx_coeff/(dx*2)
 #else
             coef(I_J_K)   = coef(I_J_K)   + dx_coeff/dx
             coef(I_JM1_K) = coef(I_JM1_K) - dx_coeff/dx
@@ -1914,8 +1951,9 @@ contains
             coef(I_JM1_K) = coef(I_JM1_K) - 0.5 * dx_coeff/dx  
         end if
 #ifdef OUTPUT_SPARSE_MATRIX
-        write(*,*)component,i,j,k,n_x,n_y,ax(i,j,k),ay(i,j,k),h(i,j),mu(i,j,k),coef,rhs, &
-                  upwind_x, downwind_x, upwind_y, downwind_y
+        write(ITER_UNIT,*)component,i,j,k,n_x,n_y,ax(i,j,k),ay(i,j,k),h(i,j),mu(i,j,k), &
+                  pressure, dperp_dx, dperp_dy, dperp_dz, coef,sum(coef),rhs, &
+                  rhs - pressure/ntot*n_para, upwind_x, downwind_x, upwind_y, downwind_y
 #endif
     end subroutine
 
@@ -2246,7 +2284,15 @@ function begin_iteration_debug(nx, ny, nz)
     err = nf90_def_var(ncid, "mask", NF90_INT, dims2d, varid)
     call nc_errorhandle(__FILE__, __LINE__, err) 
 
-
+    err = nf90_def_var(ncid, "dudx", NF90_DOUBLE, dims, varid)
+    call nc_errorhandle(__FILE__, __LINE__, err) 
+    err = nf90_def_var(ncid, "dudy", NF90_DOUBLE, dims, varid)
+    call nc_errorhandle(__FILE__, __LINE__, err) 
+    err = nf90_def_var(ncid, "dvdx", NF90_DOUBLE, dims, varid)
+    call nc_errorhandle(__FILE__, __LINE__, err) 
+    err = nf90_def_var(ncid, "dvdy", NF90_DOUBLE, dims, varid)
+    call nc_errorhandle(__FILE__, __LINE__, err) 
+  
     err = nf90_enddef(ncid)
     call nc_errorhandle(__FILE__, __LINE__, err)
 
@@ -2313,6 +2359,60 @@ subroutine iteration_debug_step(ncid, iter, mu, uvel, vvel, geometry_mask)
 
 end subroutine
 
+subroutine iteration_debug_write_vel_derivs(ncid, iter, dudx, dudy, dvdx, dvdy)
+    use netcdf
+    use glimmer_ncdf, only: nc_errorhandle
+
+    integer :: ncid, iter
+    real(dp), dimension(:,:,:) :: dudx, dudy, dvdx, dvdy
+
+    integer :: varid, err
+
+    integer :: nx, ny, nz
+    integer :: i,j,k, start(4), count(4)
+    
+    nx = size(dudx, 2)
+    ny = size(dudx, 1)
+    nz = size(dudx, 3)
+
+    count = (/1,1,1,1/)
+    do i = 1,ny
+        do j = 1,nx
+            do k = 1,nz
+                start=(/j,i,k,iter+1/)
+                err = nf90_inq_varid(ncid, "dudx", varid)
+                call nc_errorhandle(__FILE__, __LINE__, err)
+       
+                err = nf90_put_var(ncid, varid, dudx(i,j,k), start)
+                call nc_errorhandle(__FILE__, __LINE__, err)
+
+                err = nf90_inq_varid(ncid, "dudy", varid)
+                call nc_errorhandle(__FILE__, __LINE__, err)
+       
+                err = nf90_put_var(ncid, varid, dudy(i,j,k), start)
+                call nc_errorhandle(__FILE__, __LINE__, err)
+       
+                err = nf90_inq_varid(ncid, "dvdx", varid)
+                call nc_errorhandle(__FILE__, __LINE__, err)
+       
+                err = nf90_put_var(ncid, varid, dvdx(i,j,k), start)
+                call nc_errorhandle(__FILE__, __LINE__, err)
+       
+                err = nf90_inq_varid(ncid, "dvdy", varid)
+                call nc_errorhandle(__FILE__, __LINE__, err)
+       
+                err = nf90_put_var(ncid, varid, dvdy(i,j,k), start)
+                call nc_errorhandle(__FILE__, __LINE__, err)
+       
+ 
+            end do
+        end do
+    end do
+    
+
+
+end subroutine
+
 subroutine end_debug_iteration(ncid)
     use netcdf
     use glimmer_ncdf, only: nc_errorhandle
@@ -2338,6 +2438,18 @@ subroutine write_xls_direction_guide(filename, nx, ny)
 
     call write_xls(filename, field)
 
+end subroutine
+
+subroutine open_sparse_output(iteration, iunit)
+    integer :: iteration
+    integer :: iunit
+
+    character(32) filename
+    character(2)  istring
+
+    write(istring, '(i2)') iteration
+    write(filename,*) "sparse"//istring//".txt"
+    open(unit=iunit, file=filename)
 end subroutine
 
 !
