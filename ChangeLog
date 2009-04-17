@@ -1,4 +1,9 @@
 2009-04-17 Magnus Hagdorn
+ * INSTALL: mention how to customise SGE script
+ * src/python/glide_launch.py: use popen instead of subprocess so it works
+   with older python versions
+
+2009-04-17 Magnus Hagdorn
  * src/python/Makefile.am: install new file
  * src/python/glide_launch.py: modernise; add option to submit job to SGE
  * src/python/qsub_glide.sh: simple wrapper script for submitting jobs to SGE

@@ -20,7 +20,7 @@
 
 # a handy python script which will launch glide and record the execution time of the model
 
-import os,sys,ConfigParser,os.path,optparse,subprocess
+import os,sys,ConfigParser,os.path,optparse
 
 usage = """%prog [options] config_file
 launch glide and record execution time of the model. The model binary can be
@@ -117,10 +117,10 @@ if __name__ == '__main__':
             sys.exit(0)
         prog = "qsub %s %s %s"%(options.submit_options,sge_script,prog)
 
-    try:
-        retcode = subprocess.call(prog,shell=True)
-        if retcode < 0:
-            sys.stderr.write("glide model %s was terminated by signal %d\n"%(model,-retcode))
-    except OSError, e:
-        sys.stderr.write("Execution failed: %s\n"%e)
-
+#    try:
+#        retcode = subprocess.call(prog,shell=True)
+#        if retcode < 0:
+#            sys.stderr.write("glide model %s was terminated by signal %d\n"%(model,-retcode))
+#    except OSError, e:
+#        sys.stderr.write("Execution failed: %s\n"%e)
+    print os.popen(prog,'r').read()
