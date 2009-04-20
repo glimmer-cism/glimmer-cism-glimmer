@@ -40,6 +40,8 @@
 
 #define LINEAR_RHEOLOGY
 
+#define SIMULATE_C_GRID
+
 module ice3d_lib
     use glimmer_global
     use glimmer_physcon, only: pi, grav, rhoi, rhoo, scyr
@@ -1120,14 +1122,6 @@ contains
                                     sj = stencil_j(m,j)
                                     sk = stencil_k(m,k)
 
-                                    if (direction_y(i,j) /= 0) then
-                                        sj = sj + (sj - j) !delta j *= 2
-                                    end if
-
-                                    if (direction_x(i,j) /= 0) then
-                                        si = si + (si - i)
-                                    end if
-
                                     if (si > 0 .and. si <= maxy .and. &
                                         sj > 0 .and. sj <= maxx .and. &
                                         sk > 0 .and. sk <= nzeta) then
@@ -1734,7 +1728,7 @@ contains
         normal_x(i,j) = n_x
         normal_y(i,j) = n_y
 
-        !Clamp n_x and n_y so that small values register as zero
+       !Clamp n_x and n_y so that small values register as zero
         !(The need to do this arises from the fact that, sin(k*pi)
         !cannot be exactly 0)
         if (abs(n_x) < 1d-10) then
@@ -1819,7 +1813,14 @@ contains
             dperp_dy = dudy(i,j,k)
             dperp_dz = dudz(i,j,k)
         end if
- 
+
+#ifdef SIMULATE_C_GRID
+        !Discard the component opposite the flow if there are two components.
+        if (abs(n_x) > SMALL  .and. abs(n_y) > SMALL) then !proper FP compare
+            n_para = 0
+        end if
+#endif
+  
         if (direction_y(i,j) > 0) then
            downwind_y = .true.
         else if (direction_y(i,j) < 0) then
@@ -1850,9 +1851,9 @@ contains
                 -   n_perp*dperp_dpara &
                 -   (2*a_para(i,j,k)*n_perp + a_perp(i,j,k)*n_para)*dperp_dz
 
-        if (n_para /= 0) then
-            perp_coeff = 0
-        end if
+        !if (n_para /= 0) then
+        !    perp_coeff = 0
+        !end if
 
         !if (upwind_x .or. downwind_x) then
         !     dx_coeff = dx_coeff*(-1)
@@ -1900,9 +1901,9 @@ contains
         if (downwind_y) then
 
 #ifdef USE_ORD2_HORIZ_UPDOWN 
-            coef(IP2_J_K) = coef(IP2_J_K) - 0.5 * dy_coeff/(dy*2)
-            coef(IP1_J_K) = coef(IP1_J_K) + 2.0 * dy_coeff/(dy*2)
-            coef(I_J_K)   = coef(I_J_K)   - 1.5 * dy_coeff/(dy*2)
+            coef(IP2_J_K) = coef(IP2_J_K) - 0.5 * dy_coeff/dy
+            coef(IP1_J_K) = coef(IP1_J_K) + 2.0 * dy_coeff/dy
+            coef(I_J_K)   = coef(I_J_K)   - 1.5 * dy_coeff/dy
 #else
             coef(IP1_J_K) = coef(IP1_J_K) + dy_coeff/dy
             coef(I_J_K)   = coef(I_J_K)   - dy_coeff/dy
@@ -1911,9 +1912,9 @@ contains
         else if (upwind_y) then
 
 #ifdef USE_ORD2_HORIZ_UPDOWN 
-            coef(I_J_K)   = coef(I_J_K)   + 1.5 * dy_coeff/(dy*2)
-            coef(IM1_J_K) = coef(IM1_J_K) - 2.0 * dy_coeff/(dy*2)
-            coef(IM2_J_K) = coef(IM2_J_K) + 0.5 * dy_coeff/(dy*2)
+            coef(I_J_K)   = coef(I_J_K)   + 1.5 * dy_coeff/dy
+            coef(IM1_J_K) = coef(IM1_J_K) - 2.0 * dy_coeff/dy
+            coef(IM2_J_K) = coef(IM2_J_K) + 0.5 * dy_coeff/dy
 #else
             coef(I_J_K)   = coef(I_J_K)   + dy_coeff/dy
             coef(IM1_J_K) = coef(IM1_J_K) - dy_coeff/dy
@@ -1927,9 +1928,9 @@ contains
         if (downwind_x) then
 
 #ifdef USE_ORD2_HORIZ_UPDOWN 
-            coef(I_JP2_K) = coef(I_JP2_K) - 0.5 * dx_coeff/(dx*2)
-            coef(I_JP1_K) = coef(I_JP1_K) + 2.0 * dx_coeff/(dx*2)
-            coef(I_J_K)   = coef(I_J_K)   - 1.5 * dx_coeff/(dx*2) 
+            coef(I_JP2_K) = coef(I_JP2_K) - 0.5 * dx_coeff/dx
+            coef(I_JP1_K) = coef(I_JP1_K) + 2.0 * dx_coeff/dx
+            coef(I_J_K)   = coef(I_J_K)   - 1.5 * dx_coeff/dx 
 #else
             coef(I_JP1_K) = coef(I_JP1_K) + dx_coeff/dx
             coef(I_J_K)   = coef(I_J_K)   - dx_coeff/dx
@@ -1938,9 +1939,9 @@ contains
         else if (upwind_x) then
 
 #ifdef USE_ORD2_HORIZ_UPDOWN 
-            coef(I_J_K)   = coef(I_J_K)   + 1.5 * dx_coeff/(dx*2)
-            coef(I_JM1_K) = coef(I_JM1_K) - 2.0 * dx_coeff/(dx*2)
-            coef(I_JM2_K) = coef(I_JM2_K) + 0.5 * dx_coeff/(dx*2)
+            coef(I_J_K)   = coef(I_J_K)   + 1.5 * dx_coeff/dx
+            coef(I_JM1_K) = coef(I_JM1_K) - 2.0 * dx_coeff/dx
+            coef(I_JM2_K) = coef(I_JM2_K) + 0.5 * dx_coeff/dx
 #else
             coef(I_J_K)   = coef(I_J_K)   + dx_coeff/dx
             coef(I_JM1_K) = coef(I_JM1_K) - dx_coeff/dx
