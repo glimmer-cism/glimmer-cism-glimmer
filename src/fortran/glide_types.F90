@@ -263,7 +263,7 @@ module glide_types
     !*FD $\tau_{b,i} = -\tau_c \frac{v_i}{\lVert v \rVert}
 
 !whlmod - added the following three options for Price-Payne higher-order (glam)
-    integer :: which_ho_babc = 4
+    integer :: which_ho_babc = 0
     !*FD Flag that describes basal boundary condition (betasquared) for glam: 
     !*FD \begin{description}
     !*FD \item[0] constant value

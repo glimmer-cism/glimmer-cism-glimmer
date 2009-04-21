@@ -204,7 +204,6 @@ contains
                                         model%general%upn,                        &
                                         model%numerics%dew,   model%numerics%dns, &
                                         model%numerics%sigma, model%numerics%stagsigma)
-
     end if
 
     ! initialisations for remapping, ice age

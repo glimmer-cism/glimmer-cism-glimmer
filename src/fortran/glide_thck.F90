@@ -146,7 +146,7 @@ contains
             model%geomderv%dusrfdns,model%velocity%diffu)
 
        !Calculate higher-order velocities if the user asked for them
-       if (model%options%which_ho_diagnostic /= 0) then
+       if (model%options%which_ho_diagnostic /= 0 ) then
             call run_ho_diagnostic(model)                          
        end if
 
@@ -284,7 +284,7 @@ contains
                model%geomderv%dusrfdns,model%velocity%diffu)
 
        !Calculate higher-order velocities if the user asked for them
-       if (model%options%which_ho_diagnostic /= 0) then
+       if (model%options%which_ho_diagnostic /= 0 ) then
             call run_ho_diagnostic(model)                          
        end if
 

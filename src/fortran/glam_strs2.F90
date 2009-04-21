@@ -119,6 +119,7 @@ subroutine glam_velo_fordsiapstr_init (ewn,   nsn,   upn,    &
 ! - Initialize the horizontal remapping
 ! - Add ppm thickness routines
 
+    allocate( dup(upn) )
     allocate( dupm(upn) )
     allocate( cvert(upn,2) )
     allocate( cdsdx(upn,2) )
@@ -126,8 +127,10 @@ subroutine glam_velo_fordsiapstr_init (ewn,   nsn,   upn,    &
     allocate( cds(upn) )
     allocate( fvert(upn,3) )
 
-    ! *sfp** Note that "dup" is defined as a vector and is read in from file like sigma coordinate 
-    ! (NOT a scalar)
+    ! *sfp** Note that "dup" is defined as a vector (to allow to be read in from file - not working!!) 
+    ! *sfp*  ... assume constant value for dup based on linearly spaced sigma coord
+    dup = (/ ( (sigma(2)-sigma(1)), up = 1, upn) /) 
+
     dupm = - 0.25_dp / dup
 
     !eta = (/ (dup * real(up-1,dp), up = 1, upn) /)
@@ -222,7 +225,7 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
 
   real (kind = dp), save :: etaorder = 1.0073e-6_dp  ! linear 1.0073e-6_dp 
 
-  integer, parameter :: cmax = 100 
+  integer, parameter :: cmax = 10  
    
   integer :: count, linit 
 

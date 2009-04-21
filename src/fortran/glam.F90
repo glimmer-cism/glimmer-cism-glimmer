@@ -90,29 +90,29 @@ module glam
 
         ! *sfp** put necessary variables in format for inc. remapping
 
-         call horizontal_remap_in(model%numerics%dt,       model%geometry%thck(1:ewn-1,1:nsn-1),  &
-                                  ntrace_ir,               nghost_ir,                             &
-                                  model%numerics%dew,      model%numerics%dns,                    &
-                                  model%velocity_hom%uflx, model%velocity_hom%vflx,               &
-                                  model%geomderv%stagthck, thck_ir,                      &
-                                  dew_ir,                  dns_ir,                       &
-                                  dewt_ir,                 dnst_ir,                      &
-                                  dewu_ir,                 dnsu_ir,                      &
-                                  hm_ir,                   tarea_ir,                     &
-                                  ubar_ir,                 vbar_ir,                      &
-                                  trace_ir,                dt_ir )
+!         call horizontal_remap_in(model%numerics%dt,       model%geometry%thck(1:ewn-1,1:nsn-1),  &
+!                                  ntrace_ir,               nghost_ir,                             &
+!                                  model%numerics%dew,      model%numerics%dns,                    &
+!                                  model%velocity_hom%uflx, model%velocity_hom%vflx,               &
+!                                  model%geomderv%stagthck, thck_ir,                      &
+!                                  dew_ir,                  dns_ir,                       &
+!                                  dewt_ir,                 dnst_ir,                      &
+!                                  dewu_ir,                 dnsu_ir,                      &
+!                                  hm_ir,                   tarea_ir,                     &
+!                                  ubar_ir,                 vbar_ir,                      &
+!                                  trace_ir,                dt_ir )
 
         ! *sfp** call remapping code
 
-         call horizontal_remap  ( dt_ir,                                  & 
-                                  ewn-1,               nsn-1,             &
-                                  ntrace_ir,           nghost_ir,         &
-                                  ubar_ir,             vbar_ir,           &
-                                  thck_ir,             trace_ir,          &
-                                  dew_ir,              dns_ir,            &
-                                  dewt_ir,             dnst_ir,           &
-                                  dewu_ir,             dnsu_ir,           &
-                                  hm_ir,               tarea_ir )
+!         call horizontal_remap  ( dt_ir,                                  & 
+!                                  ewn-1,               nsn-1,             &
+!                                  ntrace_ir,           nghost_ir,         &
+!                                  ubar_ir,             vbar_ir,           &
+!                                  thck_ir,             trace_ir,          &
+!                                  dew_ir,              dns_ir,            &
+!                                  dewt_ir,             dnst_ir,           &
+!                                  dewu_ir,             dnsu_ir,           &
+!                                  hm_ir,               tarea_ir )
 
 
         ! *sfp** put variables back into format to be used by glam
