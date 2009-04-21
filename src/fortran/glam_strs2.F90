@@ -189,6 +189,7 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
                                  whichbabc,              &
                                  whichefvs,              &
                                  whichresid,             &
+                                 periodic_ew,periodic_ns,&
                                  uvel,     vvel,         &
                                  uflx,     vflx,         &
                                  efvs,                   &
@@ -212,6 +213,7 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
   integer, intent(in) :: whichbabc
   integer, intent(in) :: whichefvs
   integer, intent(in) :: whichresid
+  integer, intent(in) :: periodic_ew, periodic_ns
 
   real (kind = dp), dimension(:,:,:), intent(out) :: uvel, vvel
   real (kind = dp), dimension(:,:),   intent(out) :: uflx, vflx
@@ -225,7 +227,7 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
 
   real (kind = dp), save :: etaorder = 1.0073e-6_dp  ! linear 1.0073e-6_dp 
 
-  integer, parameter :: cmax = 10  
+  integer, parameter :: cmax = 50  
    
   integer :: count, linit 
 
@@ -325,18 +327,25 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
     tvel = slapsolvstr(ewn,  nsn,   upn,  &
                        vvel, uindx, linit)
 
-!   !*sfp** must be ACTIVE for test case (OR commented OUT for ice shelf test case) 
+! implement periodic boundary conditions in V (if flagged)
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-     ! periodic boundary conditions ...
-!     tvel(:,1:ewn-1,nsn-1) = tvel(:,1:ewn-1,2)
-!     tvel(:,1:ewn-2,1) = tvel(:,1:ewn-2,nsn-2)
-!     tvel(:,ewn-1,1:nsn-1) = tvel(:,2,1:nsn-1)
-!     tvel(:,1,1:nsn-1) = tvel(:,ewn-2,1:nsn-1)
+    if( periodic_ns .eq. 1 )then
+        tvel(:,1:ewn-1,nsn-1) = tvel(:,1:ewn-1,2)
+        tvel(:,1:ewn-2,1) = tvel(:,1:ewn-2,nsn-2)
+    end if
+    if( periodic_ew .eq. 1 )then
+        tvel(:,ewn-1,1:nsn-1) = tvel(:,2,1:nsn-1)
+        tvel(:,1,1:nsn-1) = tvel(:,ewn-2,1:nsn-1)
+    end if
 
-!     tvel(:,1:ewn-1,nsn-2) = tvel(:,1:ewn-1,3)    ! if using rempping for dH/dt (domain def. is different) 
-!     tvel(:,1:ewn-1,2) = tvel(:,1:ewn-1,nsn-3)
-!     tvel(:,ewn-2,1:nsn-1) = tvel(:,3,1:nsn-1) 
-!     tvel(:,2,1:nsn-1) = tvel(:,ewn-3,1:nsn-1)
+!    if( periodic_ns .eq. 1 )then
+!        tvel(:,1:ewn-1,nsn-2) = tvel(:,1:ewn-1,3)    ! if using rempping for dH/dt (domain def. is different) 
+!        tvel(:,1:ewn-1,2) = tvel(:,1:ewn-1,nsn-3)
+!    end if
+!    if( periodic_ew .eq. 1 )then
+!        tvel(:,ewn-2,1:nsn-1) = tvel(:,3,1:nsn-1) 
+!        tvel(:,2,1:nsn-1) = tvel(:,ewn-3,1:nsn-1)
+!    end if
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
     !  ... however, call it 'tvel' so that 'vvel', the solution from the previous iteration,
@@ -371,18 +380,25 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
     uvel = mindcrshstr(1,whichresid,uvel,count,resid(1))
     vvel = mindcrshstr(2,whichresid,tvel,count,resid(2))
 
-!   !*sfp** must be ACTIVE for test case (OR commented OUT for ice shelf test case) 
+! implement periodic boundary conditions in U (if flagged)
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-     ! periodic boundary conditions ...
-!     uvel(:,1:ewn-1,nsn-1) = uvel(:,1:ewn-1,2)
-!     uvel(:,1:ewn-1,1) = uvel(:,1:ewn-1,nsn-2)
-!     uvel(:,1,1:nsn-1) = uvel(:,ewn-2,1:nsn-1)
-!     uvel(:,ewn-1,1:nsn-1) = uvel(:,2,1:nsn-1)
+    if( periodic_ns .eq. 1 )then
+        uvel(:,1:ewn-1,nsn-1) = uvel(:,1:ewn-1,2)
+        uvel(:,1:ewn-2,1) = uvel(:,1:ewn-2,nsn-2)
+    end if
+    if( periodic_ew .eq. 1 )then
+        uvel(:,ewn-1,1:nsn-1) = uvel(:,2,1:nsn-1)
+        uvel(:,1,1:nsn-1) = uvel(:,ewn-2,1:nsn-1)
+    end if
 
-!     uvel(:,1:ewn-1,nsn-2) = uvel(:,1:ewn-1,3)     ! if using rempping for dH/dt (domain def. is different) 
-!     uvel(:,1:ewn-1,2) = uvel(:,1:ewn-1,nsn-3)
-!     uvel(:,ewn-2,1:nsn-1) = uvel(:,3,1:nsn-1)
-!     uvel(:,2,1:nsn-1) = uvel(:,ewn-3,1:nsn-1)
+!    if( periodic_ns .eq. 1 )then
+!        uvel(:,1:ewn-1,nsn-2) = uvel(:,1:ewn-1,3)    ! if using rempping for dH/dt (domain def. is different) 
+!        uvel(:,1:ewn-1,2) = uvel(:,1:ewn-1,nsn-3)
+!    end if
+!    if( periodic_ew .eq. 1 )then
+!        uvel(:,ewn-2,1:nsn-1) = uvel(:,3,1:nsn-1) 
+!        uvel(:,2,1:nsn-1) = uvel(:,ewn-3,1:nsn-1)
+!    end if
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
     count = count + 1

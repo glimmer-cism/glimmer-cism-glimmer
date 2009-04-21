@@ -83,6 +83,8 @@ module glam
                                     model%options%which_ho_babc,                                &
                                     model%options%which_ho_efvs,                                &
                                     model%options%which_ho_resid,                               &
+                                    model%options%periodic_ew,                                  &
+                                    model%options%periodic_ns,                                  &
                                     model%velocity_hom%uvel, model%velocity_hom%vvel,           &
                                     model%velocity_hom%uflx, model%velocity_hom%vflx,           &
                                     model%velocity_hom%efvs,                                    &
