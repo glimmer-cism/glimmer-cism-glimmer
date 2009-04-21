@@ -94,6 +94,7 @@ contains
 !***********************************************************************
 !whl - added a subroutine to be called at initialization (in lieu of 'first')
 
+
 subroutine glam_velo_fordsiapstr_init (ewn,   nsn,   upn,    &
                                        dew,   dns,           &
                                        sigma, stagsigma)
@@ -227,7 +228,7 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
 
   real (kind = dp), save :: etaorder = 1.0073e-6_dp  ! linear 1.0073e-6_dp 
 
-  integer, parameter :: cmax = 50  
+  integer, parameter :: cmax = 100 
    
   integer :: count, linit 
 
@@ -291,6 +292,11 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
   linit = 0;
 
   ! *sfp** main iteration on stress, vel, and eff. visc. solutions,
+  print *, ' '
+  print *, 'Running Payne/Price higher-order dynamics solver'
+  print *, ' '
+  print *, 'iter #     uvel resid          vvel resid         target resid'
+  print *, ' '
 
   do while ( maxval(resid) > minres .and. count < cmax)	
 !  do while ( resid(1) > minres .and. count < cmax)  ! *sfp** for 1d solutions (d*/dy=0) 
@@ -404,12 +410,13 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
     count = count + 1
 
     ! *sfp** output status of iteration: iteration number, max residual, and location of max residual
-    print '(" * strs ",i3,3g20.6)', count, resid(1), resid(2), minres
+    print '(i3,3g20.6)', count, resid(1), resid(2), minres
 
 !whl - write this info to the log file
-    write(message,'(" * strs ",i3,3g20.6)') count, resid(1), resid(2), minres
-    call write_log (message)
+!    write(message,'(" * strs ",i3,3g20.6)') count, resid(1), resid(2), minres
+!    call write_log (message)
   end do
+
 
 !whl - to do - Compute the stresses outside this module?
 !              The stresses are no longer passed as arguments.
@@ -1219,39 +1226,39 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
    !*sfp** must be commented OUT for test case OR commented IN for ice shelf test case) 
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-        call calccoeffs( upn,               sigma,              &
-                         stagthck(ew,ns),                       &
-                         dusrfdew(ew,ns),   dusrfdns(ew,ns),    &
-                         dthckdew(ew,ns),   dthckdns(ew,ns),    &
-                         d2usrfdew2(ew,ns), d2usrfdns2(ew,ns),  &
-                         d2usrfdewdns(ew,ns),                   &
-                         d2thckdew2(ew,ns), d2thckdns2(ew,ns),  &
-                         d2thckdewdns(ew,ns))
+!        call calccoeffs( upn,               sigma,              &
+!                         stagthck(ew,ns),                       &
+!                         dusrfdew(ew,ns),   dusrfdns(ew,ns),    &
+!                         dthckdew(ew,ns),   dthckdns(ew,ns),    &
+!                         d2usrfdew2(ew,ns), d2usrfdns2(ew,ns),  &
+!                         d2usrfdewdns(ew,ns),                   &
+!                         d2thckdew2(ew,ns), d2thckdns2(ew,ns),  &
+!                         d2thckdewdns(ew,ns))
 
-        do up = 1, upn
+!        do up = 1, upn
 
-           lateralboundry = .true.
+!           lateralboundry = .true.
 
-            shift = indshift(  1, ew, ns, up,                  &
-                               ewn, nsn, upn,                  &
-                               loc_array,                      & 
-                               stagthck(ew-1:ew+1,ns-1:ns+1) )
+!            shift = indshift(  1, ew, ns, up,                  &
+!                               ewn, nsn, upn,                  &
+!                               loc_array,                      & 
+!                               stagthck(ew-1:ew+1,ns-1:ns+1) )
 
-            call bodyset(ew,  ns,  up,        &
-                         ewn, nsn, upn,       &
-                         dew,      dns,       &
-                         pt,       loc_array, &
-                         loc,      stagthck,  &
-                         thisdusrfdx,         &
-                         dusrfdew, dusrfdns,  &
-                         dlsrfdew, dlsrfdns,  &
-                         efvs(up-1+shift(1):up+shift(1),ew:ew+1,ns:ns+1),  &
-                         othervel(up-1+shift(1):up+1+shift(1),  &
-                         ew-1+shift(2):ew+1+shift(2),  &
-                         ns-1+shift(3):ns+1+shift(3)), &
-                         betasquared(ew,ns), abar=flwabar )        
-        end do
-        lateralboundry = .false.
+!            call bodyset(ew,  ns,  up,        &
+!                         ewn, nsn, upn,       &
+!                         dew,      dns,       &
+!                         pt,       loc_array, &
+!                         loc,      stagthck,  &
+!                         thisdusrfdx,         &
+!                         dusrfdew, dusrfdns,  &
+!                         dlsrfdew, dlsrfdns,  &
+!                         efvs(up-1+shift(1):up+shift(1),ew:ew+1,ns:ns+1),  &
+!                         othervel(up-1+shift(1):up+1+shift(1),  &
+!                         ew-1+shift(2):ew+1+shift(2),  &
+!                         ns-1+shift(3):ns+1+shift(3)), &
+!                         betasquared(ew,ns), abar=flwabar )        
+!        end do
+!        lateralboundry = .false.
 
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -1262,15 +1269,15 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
 !    !*sfp** must be ACTIVE for test case OR commented OUT for ice shelf test case 
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-!        !*sfp** puts zeros on rhs, coincident w/ location of the additional equation for the HO sfc and basal bcs
-!        locplusup = loc(1)
-!        call valueset(0.0_dp)
-!        locplusup = loc(1) + upn + 1
-!        call valueset(0.0_dp)
-!        do up = 1,upn
-!           locplusup = loc(1) + up
-!           call valueset( thisvel(up,ew,ns) )     ! *sfp** vel at margin set to 0
-!        end do
+        !*sfp** puts zeros on rhs, coincident w/ location of the additional equation for the HO sfc and basal bcs
+        locplusup = loc(1)
+        call valueset(0.0_dp)
+        locplusup = loc(1) + upn + 1
+        call valueset(0.0_dp)
+        do up = 1,upn
+           locplusup = loc(1) + up
+           call valueset( thisvel(up,ew,ns) )     ! *sfp** vel at margin set to 0
+        end do
 
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 

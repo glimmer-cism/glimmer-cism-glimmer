@@ -90,6 +90,7 @@ module glam
                                     model%velocity_hom%efvs,                                    &
                                     model%velocity_hom%gdsx, model%velocity_hom%gdsy )
 
+
         ! *sfp** put necessary variables in format for inc. remapping
 
 !         call horizontal_remap_in(model%numerics%dt,       model%geometry%thck(1:ewn-1,1:nsn-1),  &
