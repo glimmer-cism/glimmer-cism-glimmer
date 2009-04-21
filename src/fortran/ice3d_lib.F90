@@ -26,21 +26,21 @@
 
 !If defined, a vertically averaged pressure will be used across the ice front.
 !Otherwise, a vertically explicit pressure will be used.
-#define AVERAGED_PRESSURE
+!#define AVERAGED_PRESSURE
 
 !The maximum number of iterations to use in the unstable manifold loop
-#define NUMBER_OF_ITERATIONS 10
+#define NUMBER_OF_ITERATIONS 100
 
 !If defined, the model uses 2nd order upwinded and downwinded finite
 !differences.
-#define USE_ORD2_HORIZ_UPDOWN
+!#define USE_ORD2_HORIZ_UPDOWN
 
 !If defined, then sigma gradients will be ignored in the lateral b.c.
 !#define IGNORE_LAT_SIGMA
 
-#define LINEAR_RHEOLOGY
+!#define LINEAR_RHEOLOGY
 
-#define SIMULATE_C_GRID
+!#define SIMULATE_C_GRID
 
 module ice3d_lib
     use glimmer_global
@@ -441,7 +441,7 @@ contains
         !Velocity estimates computed for the *current* iteration.  uvel and
         !vvel, comparitively, hold the velocity estimates for the *last*
         !iteration.
-        double precision, dimension(size(mu,1),size(mu,2),size(mu,3)) :: ustar, vstar
+        double precision, dimension(size(mu,1),size(mu,2),size(mu,3)) :: ustar, vstar, utmp, vtmp
         double precision, dimension(size(mu,1),size(mu,2)) :: tau !Basal traction, to be computed from the provided beta parameter
        
         double precision, dimension(size(mu,1),size(mu,2),size(mu,3)) :: dudx, dudy, dudz
@@ -609,10 +609,14 @@ contains
 #ifdef OUTPUT_SPARSE_MATRIX
            close(ITER_UNIT)
 #endif
+
             !Apply periodic boundary conditions to the computed velocity
             call periodic_boundaries_3d_stag(ustar,periodic_x,periodic_y)
             call periodic_boundaries_3d_stag(vstar,periodic_x,periodic_y)
             !call enforce_plug_flow(ustar, vstar, geometry_mask)
+
+            !call artificial_diffuse_latbc(ustar, vstar, geometry_mask)
+
 #ifdef OUTPUT_PARTIAL_ITERATIONS
             call iteration_debug_step(ncid_debug, l, mu, ustar, vstar, geometry_mask)
             call iteration_debug_write_vel_derivs(ncid_debug, l, dudx, dudy, dvdx, dvdy)
@@ -664,6 +668,44 @@ contains
                 end do
             end do
       end subroutine enforce_plug_flow
+
+      subroutine artificial_diffuse_latbc(uvel, vvel, geometry_mask)
+        real(dp), dimension(:,:,:), intent(inout) :: uvel, vvel
+        integer, dimension(:,:) :: geometry_mask
+
+        integer :: i,j,i1,j1,ntot
+
+        integer :: nx, ny
+
+        real(dp) :: tot
+
+        real(dp), dimension(size(uvel,3)) :: columnu, columnv
+
+        ny = size(geometry_mask, 1)
+        nx = size(geometry_mask, 2)
+
+        do i = 1,ny
+            do j=1,nx
+                if GLIDE_IS_CALVING(geometry_mask(i,j)) then
+                    columnu = 0
+                    columnv = 0
+                    ntot = 0
+                    do i1 = -1,1
+                        do j1 = -1, 1
+                            if GLIDE_HAS_ICE(geometry_mask(i+i1, j+j1)) then
+                                columnu = columnu + uvel(i+i1,j+j1,:)
+                                columnv = columnv + vvel(i+i1,j+j1,:)
+                                ntot = ntot + 1
+                            end if
+                        end do
+                    end do
+                    uvel(i,j,:) = columnu/ntot
+                    vvel(i,j,:) = columnv/ntot
+                end if
+            end do
+        end do
+
+      end subroutine
 
       subroutine smooth_field_3d(field, factor, outfield)
         double precision, dimension(:,:,:) ::    field
@@ -1364,7 +1406,7 @@ contains
 
         !Fields done in the RELATIVE coordinate system
         double precision, dimension(:,:,:), pointer :: a_para, a_perp, b_para, b_perp
-        double precision, dimension(:,:,:), pointer :: vel_perp
+        double precision, dimension(:,:,:), pointer :: vel_perp, vel_para
         double precision, dimension(:,:), pointer :: dz_dpara, dz_dperp, dhb_dpara, dhb_dperp
 
         !Cached difference calculations for the nonstaggered Z grid
@@ -1424,6 +1466,7 @@ contains
             dhb_dperp => dhbdy
 
             vel_perp => vvel
+            vel_para => uvel
         else if (component == "v") then
             dpara_dpara => dvdy
             dpara_dperp => dvdx
@@ -1466,6 +1509,7 @@ contains
             dhb_dperp => dhbdx
 
             vel_perp => uvel
+            vel_para => vvel
         else
             write(*,*)"FATAL ERROR: sparse_setup called with invalid component"
         end if
@@ -1817,21 +1861,22 @@ contains
 #ifdef SIMULATE_C_GRID
         !Discard the component opposite the flow if there are two components.
         if (abs(n_x) > SMALL  .and. abs(n_y) > SMALL) then !proper FP compare
-            n_para = 0
+            n_perp = 0
+            !n_para =  n_para / abs(n_para)
         end if
 #endif
   
-        if (direction_y(i,j) > 0) then
-           downwind_y = .true.
-        else if (direction_y(i,j) < 0) then
-            upwind_y = .true.
-        end if
+        !if (direction_y(i,j) > 0) then
+        !   downwind_y = .true.
+        !else if (direction_y(i,j) < 0) then
+        !    upwind_y = .true.
+        !end if
 
-        if (direction_x(i,j) > 0) then
-            downwind_x = .true.
-        else if (direction_x(i,j) < 0) then
-            upwind_x = .true.
-        end if
+        !if (direction_x(i,j) > 0) then
+        !    downwind_x = .true.
+        !else if (direction_x(i,j) < 0) then
+        !    upwind_x = .true.
+        !end if
        
         !if (upwind_x .or. downwind_x) then
         !     dperp_dx = dperp_dx*(-1)
