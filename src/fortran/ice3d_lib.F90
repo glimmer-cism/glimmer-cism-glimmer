@@ -33,12 +33,10 @@
 
 !If defined, the model uses 2nd order upwinded and downwinded finite
 !differences.
-!#define USE_ORD2_HORIZ_UPDOWN
+#define USE_ORD2_HORIZ_UPDOWN
 
 !If defined, then sigma gradients will be ignored in the lateral b.c.
 !#define IGNORE_LAT_SIGMA
-
-!#define LINEAR_RHEOLOGY
 
 !#define SIMULATE_C_GRID
 
@@ -46,6 +44,7 @@ module ice3d_lib
     use glimmer_global
     use glimmer_physcon, only: pi, grav, rhoi, rhoo, scyr
     use glide_deriv
+    use glide_types
     use glimmer_sparse
     use glimmer_sparse_solver
     use glimmer_sparse_util
@@ -384,7 +383,7 @@ contains
     SUBROUTINE veloc2(mu,uvel,vvel,arrh,dzdx,dzdy,h,ax,ay,&
                 zeta,bx,by,cxy,beta,&
                 dhbdx,dhbdy,FLOWN,ZIP,VEL2ERR,&
-                MANIFOLD,TOLER,PERIODIC_X, PERIODIC_Y, PLASTIC, delta_x, delta_y, &
+                MANIFOLD,TOLER,PERIODIC_X, PERIODIC_Y, PLASTIC, WHICH_MU, delta_x, delta_y, &
                 point_mask, active_points, geometry_mask, kinematic_bc_u, kinematic_bc_v, &
                 marine_bc_normal)
                 
@@ -408,6 +407,8 @@ contains
         double precision, dimension(:,:) :: dhbdy
         double precision, dimension(:,:) :: beta
         double precision :: FLOWN,ZIP,VEL2ERR,TOLER,delta_x, delta_y
+
+        integer, intent(in) :: WHICH_MU
 
         integer, dimension(:,:), intent(in) :: point_mask 
         !*FD Contains a unique nonzero number on each point of ice that should be computed or that is
@@ -582,12 +583,13 @@ contains
                            direction_x, direction_y, &
                            dudx, dudy, dudz, dvdx, dvdy, dvdz)
 
-#ifndef LINEAR_RHEOLOGY
             !Compute viscosity
-            call muterm(mu,arrh,h,ax,ay,FLOWN,ZIP,dudx, dudy, dudz, dvdx, dvdy, dvdz)
-#else
-            mu = 1d6
-#endif
+            if (WHICH_MU == HO_EFVS_FULL) then
+                call muterm(mu,arrh,h,ax,ay,FLOWN,ZIP,dudx, dudy, dudz, dvdx, dvdy, dvdz)
+            else if (WHICH_MU == HO_EFVS_CONSTANT) then
+                mu = 1d6
+            end if
+
             call write_xls_3d("mu.txt",mu)
             !Apply periodic boundary conditions to the viscosity
             call periodic_boundaries_3d_stag(mu,periodic_x,periodic_y)
@@ -1866,17 +1868,17 @@ contains
         end if
 #endif
   
-        !if (direction_y(i,j) > 0) then
-        !   downwind_y = .true.
-        !else if (direction_y(i,j) < 0) then
-        !    upwind_y = .true.
-        !end if
+        if (direction_y(i,j) > 0) then
+           downwind_y = .true.
+        else if (direction_y(i,j) < 0) then
+            upwind_y = .true.
+        end if
 
-        !if (direction_x(i,j) > 0) then
-        !    downwind_x = .true.
-        !else if (direction_x(i,j) < 0) then
-        !    upwind_x = .true.
-        !end if
+        if (direction_x(i,j) > 0) then
+            downwind_x = .true.
+        else if (direction_x(i,j) < 0) then
+            upwind_x = .true.
+        end if
        
         !if (upwind_x .or. downwind_x) then
         !     dperp_dx = dperp_dx*(-1)

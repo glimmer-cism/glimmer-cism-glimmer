@@ -131,6 +131,14 @@ module glide_types
   integer, parameter :: HO_BSTRESS_LINEAR = 0
   integer, parameter :: HO_BSTRESS_PLASTIC = 1
 
+  integer, parameter :: HO_EFVS_FULL = 0
+  integer, parameter :: HO_EFVS_CONSTANT = 1
+  integer, parameter :: HO_EFVS_MINIMUM = 2
+    !*FD Flag that indicates how effective viscosity is computed
+    !*FD \begin{description}
+    !*FD \item[0] compute from effective strain rate
+    !*FD \item[1] constant value
+    !*FD \item[2] minimum value
   type glide_options
 
     !*FD Holds user options controlling the methods used in the ice-model

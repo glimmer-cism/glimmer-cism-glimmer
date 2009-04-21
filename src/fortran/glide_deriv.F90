@@ -439,10 +439,10 @@ contains
                                 end if
                                 if (y == 1 .or. grad_y > 0) then
                                         out_dfdy(x, y, z) = dfdy_3d_downwind(f, x, y, z, deltay)
-                                        !out_dfdx(x, y, z) = (f(x,y+1,z) - f(x,y,z))/deltay
+                                        !out_dfdy(x, y, z) = (f(x,y+1,z) - f(x,y,z))/deltay
                                 else if (y == ny .or. grad_y < 0) then
                                         out_dfdy(x, y, z) = dfdy_3d_upwind(f, x, y, z, deltay)
-                                        !out_dfdx(x, y, z) = (f(x,y,z) - f(x,y-1,z))/deltay
+                                        !out_dfdy(x, y, z) = (f(x,y,z) - f(x,y-1,z))/deltay
                                 else
                                         out_dfdy(x, y, z) = dfdy_3d(f, x, y, z, deltay)
                                 end if

@@ -127,6 +127,7 @@ contains
                           model%geometry%thkmask, &
                           model%temper%flwa, real(gn, dp), model%velocity_hom%beta, &
                           model%options%which_ho_bstress,&
+                          model%options%which_ho_efvs, &
                           model%options%periodic_ew .eq. 1, &
                           model%options%periodic_ns .eq. 1,&
                           model%velocity_hom%kinematic_bc_u, model%velocity_hom%kinematic_bc_v, &
@@ -145,6 +146,7 @@ contains
                           model%geometry%thkmask, &
                           model%temper%flwa, real(gn, dp), &
                           model%velocity_hom%beta, model%options%which_ho_bstress, &
+                          model%options%which_ho_efvs, &
                           model%options%periodic_ew .eq. 1, &
                           model%options%periodic_ns .eq. 1, &
                           model%velocity_hom%kinematic_bc_u, model%velocity_hom%kinematic_bc_v, &
@@ -160,7 +162,7 @@ contains
     subroutine velo_hom_pattyn(ewn, nsn, upn, dew, dns, sigma, &
                                thck, usrf, dthckdew, dthckdns, dusrfdew, dusrfdns, &
                                dlsrfdew, dlsrfdns, stagthck, point_mask, totpts, geometry_mask, flwa, flwn, btrc, &
-                               which_sliding_law, &
+                               which_sliding_law, which_efvs, &
                                periodic_ew, periodic_ns, kinematic_bc_u, kinematic_bc_v, marine_bc_normal, &
                                uvel, vvel, valid_initial_guess, uflx, vflx, efvs, tau, gdsx, gdsy)
                             
@@ -188,6 +190,7 @@ contains
         real(dp), dimension(:,:), intent(in)   :: marine_bc_normal
         real(dp), intent(in) :: flwn !*FD Exponent in Glenn power law
         integer, intent(in) :: which_sliding_law
+        integer, intent(in) :: which_efvs
         logical, intent(in) :: periodic_ew !*Whether to use periodic boundary conditions
         logical, intent(in) :: periodic_ns
         real(dp), dimension(:,:,:), intent(inout) :: uvel 
@@ -302,7 +305,7 @@ contains
             if (which_sliding_law == 1) then
                 call veloc2(mu_t, uvel_t, vvel_t, flwa_t_stag, dusrfdew_t, dusrfdns_t, stagthck_t, ax, ay, &
                         sigma, bx, by, cxy, btrc_t/100, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, MANIFOLD,&
-                        TOLER, periodic_ew,periodic_ns, 0, dew, dns,point_mask_t,totpts,geometry_mask_t, &
+                        TOLER, periodic_ew,periodic_ns, 0, which_efvs, dew, dns,point_mask_t,totpts,geometry_mask_t, &
                         kinematic_bc_u_t, kinematic_bc_v_t, marine_bc_normal)
             end if
         end if
@@ -315,7 +318,7 @@ contains
         !that they normally would.
         call veloc2(mu_t, uvel_t, vvel_t, flwa_t, dusrfdew_t, dusrfdns_t, stagthck_t, ax, ay, &
                     sigma, bx, by, cxy, btrc_t, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, MANIFOLD,&
-                    TOLER, periodic_ew,periodic_ns, which_sliding_law, dew,&
+                    TOLER, periodic_ew,periodic_ns, which_sliding_law, which_efvs, dew,&
                     dns,point_mask_t,totpts, geometry_mask_t, kinematic_bc_u_t, kinematic_bc_v_t, marine_bc_normal)
        
         !Final computation of stress field for output
@@ -366,7 +369,7 @@ contains
     !there causes problems.
     subroutine velo_hom_pattyn_nonstag(ewn, nsn, upn, dew, dns, sigma, &
                                thck, usrf, lsrf, point_mask, totpts, geometry_mask, flwa, flwn, btrc, which_sliding_law, &
-                               periodic_ew, periodic_ns, kinematic_bc_u, kinematic_bc_v, marine_bc_normal,&
+                               which_efvs, periodic_ew, periodic_ns, kinematic_bc_u, kinematic_bc_v, marine_bc_normal,&
                                uvel, vvel, valid_initial_guess)
                             
         integer, intent(in)  :: ewn !*FD Number of cells X
@@ -387,6 +390,7 @@ contains
         real(dp), dimension(:,:), intent(in)   :: marine_bc_normal
         real(dp), intent(in) :: flwn !*FD Exponent in Glenn power law
         integer, intent(in) :: which_sliding_law
+        integer, intent(in) :: which_efvs
         logical, intent(in) :: periodic_ew !*Whether to use periodic boundary conditions
         logical :: periodic_ns
         real(dp), dimension(:,:,:), intent(out) :: uvel 
@@ -537,7 +541,7 @@ contains
             if (which_sliding_law == 1) then
                 call veloc2(mu_t, uvel_t, vvel_t, flwa_t, dusrfdew_t, dusrfdns_t, thck_t, ax, ay, &
                         sigma, bx, by, cxy, btrc_t_unstag, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, MANIFOLD,&
-                        TOLER, periodic_ew,periodic_ns, 0, dew, dns,point_mask_t,totpts,geometry_mask_t,&
+                        TOLER, periodic_ew,periodic_ns, 0, which_efvs, dew, dns,point_mask_t,totpts,geometry_mask_t,&
                         kinematic_bc_u_t_unstag, kinematic_bc_v_t_unstag, marine_bc_normal_t)
             end if
         end if
@@ -550,7 +554,7 @@ contains
         !that they normally would.
         call veloc2(mu_t, uvel_t_unstag, vvel_t_unstag, flwa_t, dusrfdew_t, dusrfdns_t, thck_t, ax, ay, &
                     sigma, bx, by, cxy, btrc_t_unstag, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, MANIFOLD,&
-                    TOLER, periodic_ew,periodic_ns, which_sliding_law, dew,&
+                    TOLER, periodic_ew,periodic_ns, which_sliding_law, which_efvs, dew,&
                     dns,point_mask_t,totpts,geometry_mask_t,kinematic_bc_u_t_unstag, kinematic_bc_v_t_unstag, marine_bc_normal_t)
        
         !Final computation of stress field for output
