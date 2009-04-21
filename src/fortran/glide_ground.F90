@@ -166,8 +166,7 @@ contains
      type(glide_global_type) :: model        !*FD model instance
      integer ns1,ew1,ns2,ew2,slot_ns,slot_ew !grounding line in ns/ew direction
      real appr_ground !grounding line
-     !this is assuming a greedy grounding line progression.  Always setting the
-     ! mask by rounding up to the next grid point
+     
      if (ns1 .eq. ns2) then
          slot_ew = min(ew1,ew2)
          appr_ground = model%ground%gl_ns(slot_ew,ns1)
@@ -189,8 +188,7 @@ contains
      integer, intent(in) :: ew2 !grounding line in ew direction
      real(sp), intent(in) :: value !grounding line in ew direction
      integer slot_ew, slot_ns !integers to compute the min
-     !this is assuming a greedy grounding line progression.  Always setting the
-     ! mask by rounding up to the next grid point
+     
      if (ns1 .eq. ns2) then
          slot_ew = min(ew1,ew2)
          model%ground%gl_ew(slot_ew,ns1) = value
@@ -245,7 +243,6 @@ contains
         do ew = 1,model%general%ewn
             if (GLIDE_IS_GROUNDING_LINE(mask(ew,ns))) then
                 !the grounding line always rounds down so it is grounded.
-                
                 !northern grounding line
                 if (GLIDE_IS_OCEAN(mask(ew,ns - 1)) &
                         .or. (GLIDE_IS_FLOAT(mask(ew,ns - 1)))) then
@@ -274,5 +271,50 @@ contains
         end do
      end do
   end subroutine update_ground_line
+  !-------------------------------------------------------------------------
+  !also need an update mask
+  real function get_ground_thck(model,ew1,ns1,ew2,ns2)
+     use glide_types
+     implicit none
+     type(glide_global_type) :: model        !*FD model instance
+     integer ns1,ew1,ns2,ew2,min_ns,min_ew,max_ns,max_ew !grounding line in ns/ew direction
+     real(sp) ::  xg                        !grounding line
+     real(sp) ::  tg                        !topographic height at grounding line
+     real(sp) ::  ig                        !ice height at grounding line
+     real(sp) ::  hg                        !thickness at the grounding line
+     real(sp) ::  x1                        !pts for linear interpolation
+     real(sp) ::  x0
+     real(sp) ::  y1                        
+     real(sp) ::  y0
+     !using lin. interpolation to find top at grounding line
+     if (ns1 .eq. ns2) then
+         min_ew = min(ew1,ew2)
+         max_ew = max(ew1,ew2)
+         min_ns = ns1
+         max_ns = ns1
+         x0 = min_ew*model%numerics%dew
+         x1 = max_ew*model%numerics%dew
+     else if (ew1 .eq. ew2) then
+         min_ns = min(ns1,ns2)
+         max_ns = max(ns1,ns2)
+         min_ew = ew1
+         max_ew = ew1
+         x0 = min_ns*model%numerics%dns
+         x1 = max_ns*model%numerics%dns
+     end if
+     !get grounding line
+     xg = model%ground%gl_ns(min_ew,min_ns)
+     !find top height at xg
+     y0 = model%geometry%topg(min_ew,min_ns)
+     y1 = model%geometry%topg(max_ew,max_ns)
+     tg = y0 + (xg - x0)*((y1 - y0)/(x1 - x0))
+     !find ice at xg
+     y0 = model%geometry%usrf(min_ew,min_ns)
+     y1 = model%geometry%usrf(max_ew,max_ns)
+     ig = y0 + (xg - x0)*((y1 - y0)/(x1 - x0))
+     !thickness
+     hg = ig - tg
+     return
+  end function get_ground_thck
 !---------------------------------------------------------------------------
 end module glide_ground
