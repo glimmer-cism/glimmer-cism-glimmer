@@ -231,7 +231,9 @@ contains
     end if
 
     ! calculate mask
-    call glide_set_mask(model)
+    call glide_set_mask(model%numerics, model%geometry%thck, model%geometry%topg, &
+                        model%general%ewn, model%general%nsn, model%climate%eus, &
+                        model%geometry%thkmask, model%geometry%ivol, model%geometry%iarea)
 
     !calculate the normal at the marine margin
     call glide_marine_margin_normal(model%geometry%thck, model%geometry%thkmask, model%geometry%marine_bc_normal)
@@ -434,7 +436,9 @@ contains
 #ifdef PROFILING
     call glide_prof_start(model,model%glide_prof%ice_mask2)
 #endif
-    call glide_set_mask(model)
+    call glide_set_mask(model%numerics, model%geometry%thck, model%geometry%topg, &
+                        model%general%ewn, model%general%nsn, model%climate%eus, &
+                        model%geometry%thkmask, model%geometry%ivol, model%geometry%iarea)
 #ifdef PROFILING
     call glide_prof_stop(model,model%glide_prof%ice_mask2)
 #endif

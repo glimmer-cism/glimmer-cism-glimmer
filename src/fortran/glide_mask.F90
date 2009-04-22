@@ -46,18 +46,22 @@
 
 #include <glide_mask.inc>
 
-#define MASK model%geometry%thkmask
-
 module glide_mask
-    use glimmer_global, only : dp, NaN
+    use glimmer_global, only : dp, sp, NaN
   !*FD masking ice thicknesses
 
 contains
-  subroutine glide_set_mask(model)
+  subroutine glide_set_mask(numerics, thck, topg, ewn, nsn, eus, mask, iarea, ivol)
     use glide_types
     use glimmer_physcon, only : rhoi, rhoo
     implicit none
-    type(glide_global_type) :: model        !*FD model instance
+    type(glide_numerics), intent(in) :: numerics !Numerical parameters structure
+    real(dp), dimension(:,:), intent(in) :: thck !Ice thickness
+    real(dp), dimension(:,:), intent(in) :: topg !Bedrock topography (not lower surface!)
+    integer, intent(in) :: ewn, nsn !Grid size
+    real(sp), intent(in) :: eus !Sea level
+    integer, dimension(:,:), intent(inout) :: mask !Output mask
+    real(dp), intent(inout) :: ivol, iarea !Area and volume of ice
 
     ! local variables
     integer ew,ns
@@ -65,45 +69,44 @@ contains
 
     !Create an array to "fake" the boundaries of the mask so that boundary
     !finding can work even on the boundaries of the real mask.
-    integer, dimension(0:model%general%ewn+1,0:model%general%nsn+1) :: maskWithBounds;
+    integer, dimension(0:ewn+1,0:nsn+1) :: maskWithBounds;
 
     MASK = 0
-    model%geometry%iarea = 0.
-    model%geometry%ivol = 0.
-    do ns=1,model%general%nsn
-       do ew = 1,model%general%ewn
+    iarea = 0.
+    ivol = 0.
+    do ns=1,nsn
+       do ew = 1,ewn
           
-          if (model%geometry%thck(ew,ns) .eq. 0.) then                               ! no ice
-             if (model%geometry%topg(ew,ns) .lt. model%climate%eus) then             ! below SL
+          if (thck(ew,ns) .eq. 0.) then       ! no ice
+             if (topg(ew,ns) .lt. eus) then   ! below SL
                 MASK(ew,ns) = GLIDE_MASK_OCEAN
-             else                                                                    ! above SL
+             else                             ! above SL
                 MASK(ew,ns) = GLIDE_MASK_LAND
              end if
           else
-             model%geometry%iarea = model%geometry%iarea + 1.
-             model%geometry%ivol = model%geometry%ivol + model%geometry%thck(ew,ns)
-             if (model%geometry%topg(ew,ns) - model%climate%eus &                    ! ice
-                  < con * model%geometry%thck(ew,ns)) then                           ! floating ice
+             iarea = iarea + 1.
+             ivol = ivol + thck(ew,ns)
+             if (topg(ew,ns) - eus < con * thck(ew,ns)) then ! floating ice
                 MASK(ew,ns) = GLIDE_MASK_SHELF
-             else                                                                    ! grounded ice
+             else                                            ! grounded ice
                 MASK(ew,ns) = GLIDE_MASK_INTERIOR
              end if
-             if (model%geometry%thck(ew,ns) .le. model%numerics%thklim) then         ! ice below dynamic limit
+             if (thck(ew,ns) .le. numerics%thklim) then         ! ice below dynamic limit
                 MASK(ew,ns) = ior(MASK(ew,ns),GLIDE_MASK_THIN_ICE)
              end if
           end if
 
        end do
     end do
-    model%geometry%iarea = model%geometry%iarea * model%numerics%dew * model%numerics%dns
-    model%geometry%ivol = model%geometry%ivol * model%numerics%dew * model%numerics%dns
+    iarea = iarea * numerics%dew * numerics%dns
+    ivol = ivol * numerics%dew * numerics%dns
     
     maskWithBounds = 0
-    maskWithBounds(1:model%general%ewn, 1:model%general%nsn) = MASK
+    maskWithBounds(1:ewn, 1:nsn) = MASK
 
     ! finding boundaries
-    do ns=1,model%general%nsn
-       do ew = 1,model%general%ewn
+    do ns=1,nsn
+       do ew = 1,ewn
           if (GLIDE_IS_FLOAT(MASK(ew,ns))) then
              ! shelf front
              if (GLIDE_IS_OCEAN(maskWithBounds(ew-1,ns)) .or. GLIDE_IS_OCEAN(maskWithBounds(ew+1,ns)) .or. &
@@ -125,8 +128,7 @@ contains
              end if
           end if
           ! Edge of marine ice, whether floating or not
-          if ((model%geometry%topg(ew,ns) .lt. model%climate%eus.and.&
-               model%geometry%thck(ew,ns)>0.0).and. &
+          if ((topg(ew,ns) .lt. eus .and. thck(ew,ns)>0.0).and. &
                (GLIDE_IS_OCEAN(maskWithBounds(ew-1,ns)) .or. GLIDE_IS_OCEAN(maskWithBounds(ew+1,ns)) .or. &
                GLIDE_IS_OCEAN(maskWithBounds(ew,ns-1)) .or. GLIDE_IS_OCEAN(maskWithBounds(ew,ns+1)))) then
              MASK(ew,ns) = ior(MASK(ew,ns),GLIDE_MASK_MARINE_EDGE)
