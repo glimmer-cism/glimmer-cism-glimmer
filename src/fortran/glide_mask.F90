@@ -61,7 +61,7 @@ contains
     integer, intent(in) :: ewn, nsn !Grid size
     real(sp), intent(in) :: eus !Sea level
     integer, dimension(:,:), intent(inout) :: mask !Output mask
-    real(dp), intent(inout) :: ivol, iarea !Area and volume of ice
+    real(dp), intent(inout), optional :: ivol, iarea !Area and volume of ice
 
     ! local variables
     integer ew,ns
@@ -72,8 +72,14 @@ contains
     integer, dimension(0:ewn+1,0:nsn+1) :: maskWithBounds;
 
     MASK = 0
-    iarea = 0.
-    ivol = 0.
+    if (present(iarea)) then
+        iarea = 0.
+    end if
+
+    if (present(ivol)) then
+        ivol = 0.
+    end if
+
     do ns=1,nsn
        do ew = 1,ewn
           
@@ -84,8 +90,14 @@ contains
                 MASK(ew,ns) = GLIDE_MASK_LAND
              end if
           else
-             iarea = iarea + 1.
-             ivol = ivol + thck(ew,ns)
+             if (present(iarea)) then
+                iarea = iarea + 1.
+             end if
+             
+             if (present(ivol)) then
+                ivol = ivol + thck(ew,ns)
+             end if
+
              if (topg(ew,ns) - eus < con * thck(ew,ns)) then ! floating ice
                 MASK(ew,ns) = GLIDE_MASK_SHELF
              else                                            ! grounded ice
@@ -98,9 +110,14 @@ contains
 
        end do
     end do
-    iarea = iarea * numerics%dew * numerics%dns
-    ivol = ivol * numerics%dew * numerics%dns
-    
+    if (present(iarea)) then
+        iarea = iarea * numerics%dew * numerics%dns
+    end if
+
+    if (present(ivol)) then
+        ivol = ivol * numerics%dew * numerics%dns
+    end if
+
     maskWithBounds = 0
     maskWithBounds(1:ewn, 1:nsn) = MASK
 

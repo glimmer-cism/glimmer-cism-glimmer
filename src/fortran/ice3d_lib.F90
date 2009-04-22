@@ -57,7 +57,7 @@ module ice3d_lib
 
     double precision, parameter :: plastic_bed_regularization = 1e-2
 
-    logical, parameter :: sparverbose = .true.
+    logical, parameter :: sparverbose = .false.
 
     real(dp), dimension(:,:), allocatable :: normal_x
     real(dp), dimension(:,:), allocatable :: normal_y
@@ -475,7 +475,10 @@ contains
         write(*,*)"uvel shape:", shape(uvel)
         write(*,*)"kinematic u shape:", shape(kinematic_bc_u)
         write(*,*)"kinematic v shape:", shape(kinematic_bc_v)
-
+        write(*,*)"point mask shape:", shape(point_mask)
+        write(*,*)"geom mask shape:",shape(geometry_mask)
+        write(*,*)"bc normals:",shape(marine_bc_normal)
+        write(*,*)"I think the dimensions should be:",maxy, maxx, nzeta
         allocate(normal_x(maxy, maxx))
         allocate(normal_y(maxy, maxx))
 
@@ -523,10 +526,10 @@ contains
         call write_xls_int("geometry_mask.txt",geometry_mask)
         call write_xls_3d("kinematic_bc_u.txt",kinematic_bc_u)
         call write_xls_3d("kinematic_bc_v.txt",kinematic_bc_v)
+        call write_xls("marine_bc_norms.txt",marine_bc_normal)
         call write_xls_direction_guide("direction_guide.txt",3,3)
         write(*,*) "ZETA=",zeta
 #endif
-
 
         !Copy the velocity estimate from the previous iteration as the current velocity
         ustar=uvel
