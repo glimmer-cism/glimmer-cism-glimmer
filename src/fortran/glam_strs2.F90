@@ -580,7 +580,7 @@ subroutine findefvsstr(ewn,  nsn, upn,       &
 
   select case(whichefvs)
 
-  case(0)			! *sfp** calculate eff. visc. from eff. strain rate, etc
+  case(0)       ! *sfp** calculate eff. visc. from eff. strain rate, etc
 
   if (1 == count) then
     do ns = 2,nsn-1; do ew = 2,ewn-1
@@ -634,7 +634,7 @@ subroutine findefvsstr(ewn,  nsn, upn,       &
 
     ! *sfp** p2 = (1-n)/2n, where the factor of 1/2 comes from taking 
     !      the sqr root of the squared eff. strain rate ...
-    efvs(:,ew,ns) = flwafact(:,ew,ns) * effstr**p2	
+    efvs(:,ew,ns) = flwafact(:,ew,ns) * effstr**p2
 
     else  
       efvs(:,ew,ns) = effstrminsq
@@ -642,11 +642,13 @@ subroutine findefvsstr(ewn,  nsn, upn,       &
    end do
    end do
 
-  case(1)			! *sfp** set a constant eff. visc. 
-	
-    efvs = 1 / 100.0_dp    	
+  case(1)       ! *sfp** set a constant eff. visc. 
+
+    efvs = 1 / 100.0_dp
 
 !whl - changed default to case 2
+! *sfp* - not sure what this does. Doesn't make sense to assign the value of 
+! the eff. visc. to the value of the min eff. strain rate. Consider removing this option?
   case (2)
 
     efvs = effstrminsq

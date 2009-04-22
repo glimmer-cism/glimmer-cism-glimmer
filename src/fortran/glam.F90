@@ -120,8 +120,8 @@ module glam
 
         ! *sfp** put variables back into format to be used by glam
 
-         call horizontal_remap_out (thck_ir,            model%geometry%thck,    &
-                                    model%climate%acab, model%numerics%dt )
+!         call horizontal_remap_out (thck_ir,            model%geometry%thck,    &
+!                                    model%climate%acab, model%numerics%dt )
 
 !       These to be moved elsewhere ... somewhere in "glide_stop.F90"?
 !
