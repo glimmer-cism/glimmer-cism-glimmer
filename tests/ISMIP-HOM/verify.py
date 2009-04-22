@@ -82,4 +82,4 @@ for experiment in experiments:
 
 #If intercomparisons were run, create the output visuals
 if not formatOnly:
-    os.system(sys.executable + " createVisuals.py " + sys.argv[1:])
+    os.system(sys.executable + " createVisuals.py " + " ".join(sys.argv[1:]))
