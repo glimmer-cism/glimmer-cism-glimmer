@@ -48,7 +48,7 @@ if "--diagnostic-type" in optdict:
 else:
     diagnosticSchemeOverride = None
 #Determine the prefix to use for the ISMIP-HOM format output files
-if "--ismip-hom-prefix" in optdict:
+if "--prefix" in optdict:
     ismipHomOutputPrefix = optdict["--ismip-hom-prefix"]
 else:
     ismipHomOutputPrefix = "glm1"
@@ -57,7 +57,7 @@ for experiment in experiments:
     #Name of the configuration file for this experiment
     filename = "ishom." + experiment + ".config"
     #Name of the netcdf generation script for this experiment
-    ncScript = "python ismip_hom_" + experiment + ".py"
+    ncScript = sys.executable + " ismip_hom_" + experiment + ".py"
     for domain in domainSizes:
         #Create a new configuration file that reflects the new domain size and (possibly) grid spacing
         newConfigFile = changeDomainSize.changeDomainSize(filename, domain, 
@@ -78,4 +78,8 @@ for experiment in experiments:
             #Run Glimmer
             os.system("echo " + newConfigFile + "|simple_glide")
             #Reformat the output as the ISMIP-HOM format
-            os.system("./formatData.py " + experiment + " " + ncOutputFilename + " " + intercompareOutputFilename)
+            os.system(sys.executable + " formatData.py " + experiment + " " + ncOutputFilename + " " + intercompareOutputFilename)
+
+#If intercomparisons were run, create the output visuals
+if not formatOnly:
+    os.system(sys.executable + " createVisuals.py " + sys.argv[1:])

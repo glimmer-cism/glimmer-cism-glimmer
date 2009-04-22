@@ -15,14 +15,14 @@ for gridSizeArg in ["20","40","80"]:
                 args.append("--horiz-grid-size=" +gridSizeArg)
                 args.append("--vert-grid-size=" +vertGridArg)
                 args.append("--vert-grid-spacing=" +vertGridSpacing)
-                args.append("--ismip-hom-prefix="+prefix)
+                args.append("--prefix="+prefix)
                 args.append("--diagnostic-type="+diagnosticScheme)
 
-                verifyCommand = "./verify.py -abc " + " ".join(args) + " >>refinement-log.txt"
+                verifyCommand = sys.executable + " verify.py -abc " + " ".join(args) + " >>refinement-log.txt"
 
                 caption = gridSizeArg + "x" + gridSizeArg + "x" + vertGridArg + ", " + vertGridSpacing + " spacing, " + strDiagnostic
 
-                visualsCommand = "./createVisuals.py -abc --prefix=" + prefix + " '--subtitle=" + caption + "'"
+                visualsCommand = sys.executable + " createVisuals.py -abc --prefix=" + prefix + " '--subtitle=" + caption + "'"
 
                 print "RUNNING:",verifyCommand
                 os.system(verifyCommand)
