@@ -76,8 +76,8 @@ module glam
                                     model%geometry%lsrf,     model%geometry%topg,               &
                                     model%geomderv%dthckdew, model%geomderv%dthckdns,           &
                                     model%geomderv%dusrfdew, model%geomderv%dusrfdns,           &
-                                    model%geomderv%dthckdew-model%geomderv%dusrfdew,            &
-                                    model%geomderv%dthckdns-model%geomderv%dusrfdns,            & 
+                                    model%geomderv%dusrfdew-model%geomderv%dthckdew,            &
+                                    model%geomderv%dusrfdns-model%geomderv%dthckdns,            & 
                                     model%geomderv%stagthck, model%temper%flwa,                 &
                                     minTauf,                                                    &
                                     model%options%which_ho_babc,                                &
@@ -87,9 +87,7 @@ module glam
                                     model%options%periodic_ns,                                  &
                                     model%velocity_hom%uvel, model%velocity_hom%vvel,           &
                                     model%velocity_hom%uflx, model%velocity_hom%vflx,           &
-                                    model%velocity_hom%efvs,                                    &
-                                    model%velocity_hom%gdsx, model%velocity_hom%gdsy )
-
+                                    model%velocity_hom%efvs )
 
         ! *sfp** put necessary variables in format for inc. remapping
 

@@ -193,8 +193,7 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
                                  periodic_ew,periodic_ns,&
                                  uvel,     vvel,         &
                                  uflx,     vflx,         &
-                                 efvs,                   &
-                                 gdsx,     gdsy)
+                                 efvs )
 
   implicit none
 
@@ -218,7 +217,6 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
 
   real (kind = dp), dimension(:,:,:), intent(out) :: uvel, vvel
   real (kind = dp), dimension(:,:),   intent(out) :: uflx, vflx
-  real (kind = dp), dimension(:,:,:), intent(out) :: gdsx, gdsy
   real (kind = dp), dimension(:,:,:), intent(out) :: efvs
 
   integer :: ew, ns, up
@@ -226,11 +224,9 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
   real (kind = dp), parameter :: minres = 1.0d-5 
   real (kind = dp), save, dimension(2) :: resid  
 
-  real (kind = dp), save :: etaorder = 1.0073e-6_dp  ! linear 1.0073e-6_dp 
-
   integer, parameter :: cmax = 100 
    
-  integer :: count, linit 
+  integer :: counter, linit 
 
   character(len=100) :: message
 
@@ -241,13 +237,14 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
 
   ! *sfp** geometric 1st deriv. for generic input variable 'ipvr',
   !      output as 'opvr' (includes 'upwinding' for boundary values)
-  call geom2ders(ewn, nsn, dew, dns, usrf, stagthck, d2usrfdew2, d2usrfdns2)	
+  call geom2ders(ewn, nsn, dew, dns, usrf, stagthck, d2usrfdew2, d2usrfdns2)
   call geom2ders(ewn, nsn, dew, dns, thck, stagthck, d2thckdew2, d2thckdns2)
 
   ! *sfp** geometric (2nd) cross-deriv. for generic input variable 'ipvr', output as 'opvr'
   call geom2derscros(dew, dns, thck, stagthck, d2thckdewdns)
   call geom2derscros(dew, dns, usrf, stagthck, d2usrfdewdns)
 
+  ! *sfp* These are passed a number of times below, but I don't think they are used anymore - remove?
   valubbc = 0.0_dp
   typebbc = 0.0_dp
 
@@ -268,13 +265,6 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
 
   tvel = 0.0_dp 
 
-  ! *sfp** calculate scaled driving stresses in x,y directions	
-  call calcgdststr(ewn,      nsn,        &
-                   sigma,    stagsigma,  &
-                   thck,                 &
-                   dusrfdew, dusrfdns,   &
-                   gdsx,     gdsy)
-
   ! *sfp** allocate space for variables used by 'mindcrash' function
   allocate(corr(upn,ewn-1,nsn-1,2,2),usav(upn,ewn-1,nsn-1,2))
 
@@ -288,7 +278,7 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
   !whl - Removed subroutine findbtrcstr; superseded by calcbetasquared
   
   resid = 1.0_dp
-  count = 1
+  counter = 1
   linit = 0;
 
   ! *sfp** main iteration on stress, vel, and eff. visc. solutions,
@@ -298,12 +288,12 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
   print *, 'iter #     uvel resid          vvel resid         target resid'
   print *, ' '
 
-  do while ( maxval(resid) > minres .and. count < cmax)	
-!  do while ( resid(1) > minres .and. count < cmax)  ! *sfp** for 1d solutions (d*/dy=0) 
+  do while ( maxval(resid) > minres .and. counter < cmax)	
+!  do while ( resid(1) > minres .and. counter < cmax)  ! *sfp** for 1d solutions (d*/dy=0) 
 
     ! *sfp** effective viscosity calculation, based on previous estimate for vel. field
     call findefvsstr(ewn,  nsn,  upn,      &
-                     stagsigma,  count,    &
+                     stagsigma,  counter,    &
                      whichefvs,  efvs,     &
                      uvel,       vvel,     &
                      flwa,       thck,     &
@@ -383,8 +373,8 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
                        uvel, uindx, linit)
 
     ! *sfp** correct the velocity estimates using the "unstable manifold" correction scheme
-    uvel = mindcrshstr(1,whichresid,uvel,count,resid(1))
-    vvel = mindcrshstr(2,whichresid,tvel,count,resid(2))
+    uvel = mindcrshstr(1,whichresid,uvel,counter,resid(1))
+    vvel = mindcrshstr(2,whichresid,tvel,counter,resid(2))
 
 ! implement periodic boundary conditions in U (if flagged)
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -407,44 +397,42 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
 !    end if
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-    count = count + 1
+    counter = counter + 1
 
     ! *sfp** output status of iteration: iteration number, max residual, and location of max residual
-    print '(i3,3g20.6)', count, resid(1), resid(2), minres
+    print '(i3,3g20.6)', counter, resid(1), resid(2), minres
 
 !whl - write this info to the log file
-!    write(message,'(" * strs ",i3,3g20.6)') count, resid(1), resid(2), minres
+!    write(message,'(" * strs ",i3,3g20.6)') counter, resid(1), resid(2), minres
 !    call write_log (message)
   end do
 
 
-!whl - to do - Compute the stresses outside this module?
-!              The stresses are no longer passed as arguments.
-  ! *sfp** calc. stress fields from converged vel. fields
-!  call calcstrsstr(ewn,  nsn,  upn,       &
-!                   stagsigma,  thck,      &
-!                   dusrfdew,   dusrfdns,  &
-!                   dthckdew,   dthckdns,  &
-!                   uvel,       vvel,      &
-!                   efvs,                  &
-!                   tauxx,      tauyy,     &
-!                   tauxy,      tau,       &
-!                   tauxz,      tauyz,     &
-!                   umask)
+!*sfp* removed call to 'calcstrsstr' here (stresses now calculated externally)
 
+  
   do ns = 1,nsn-1
-  do ew = 1,ewn-1 
-     ! *sfp** calc. fluxes from converged vel. fields (for input to thickness evolution subroutine)
-     if (umask(ew,ns) > 0) then	
-        uflx(ew,ns) = vertintg(upn, sigma, uvel(:,ew,ns)) * stagthck(ew,ns)
-        vflx(ew,ns) = vertintg(upn, sigma, vvel(:,ew,ns)) * stagthck(ew,ns)
-     end if
-  end do
+      do ew = 1,ewn-1 
+      ! *sfp** calc. fluxes from converged vel. fields (for input to thickness evolution subroutine)
+         if (umask(ew,ns) > 0) then
+             uflx(ew,ns) = vertintg(upn, sigma, uvel(:,ew,ns)) * stagthck(ew,ns)
+             vflx(ew,ns) = vertintg(upn, sigma, vvel(:,ew,ns)) * stagthck(ew,ns)
+         end if
+      end do
   end do
 
   deallocate(tvel)
   deallocate(uindx,corr,usav)
   deallocate(pcgval,pcgrow,pcgcol,rhsd,answ)
+
+!  ! *sfp* DEBUGGING
+!  print *, 'u_sfc = '
+!  print *, maxval( uvel(:,:,:) * vel0 * scyr )
+!  print *, 'u_sfc = '
+!  print *, maxval( vvel(:,:,:) * vel0 * scyr )
+!  pause
+
+  return
 
 end subroutine glam_velo_fordsiapstr
 
@@ -468,14 +456,14 @@ function indxvelostr(ewn,  nsn,  upn,  &
   pointno = 1
 
   do ew = 1,ewn-1
-  do ns = 1,nsn-1			
-    if (any(strdomain == mask(ew,ns))) then
-      indxvelostr(ew,ns) = pointno
-      pointno = pointno + 1
-    else
-      indxvelostr(ew,ns) = 0
-    end if
-  end do
+      do ns = 1,nsn-1
+        if (any(strdomain == mask(ew,ns))) then
+          indxvelostr(ew,ns) = pointno
+          pointno = pointno + 1
+        else
+          indxvelostr(ew,ns) = 0
+        end if
+      end do
   end do
 
 ! add twop ghost points at upper and lower boundaries
@@ -488,64 +476,13 @@ end function indxvelostr
 
 !***********************************************************************
 
-subroutine calcgdststr(ewn,      nsn,        &
-                       sigma,    stagsigma,  &
-                       thck,                 &
-                       dusrfdew, dusrfdns,   &
-                       gdsx,     gdsy)
-
-! *sfp** calculate scaled driving stresses in x,y directions
-
-  implicit none
-
-  integer, intent(in) :: ewn, nsn
-  real (kind = dp), intent(in),  dimension(:)      :: sigma, stagsigma
-  real (kind = dp), intent(in),  dimension(:,:)    :: thck, dusrfdew, dusrfdns
-  real (kind = dp), intent(out), dimension(:,:,:)  :: gdsx, gdsy
-
-  integer :: ew, ns
-  real (kind = dp) :: fx, fy
-
-! *sfp** the factor of 1/4 is used to average sfc slopes over 4 grid points (below), 
-! ... the minus sign is to give a positive value for the driving stress, 
-! ... the terms in ( ) give the ratio of thickness to horiz length scales, H0/X0	
-
-  real (kind = dp), parameter :: c =  -0.25_dp * (thk0 / len0)	
-
-  do ns = 2, nsn-1
-  do ew = 2, ewn-1
-
-!whl - Change to thck > 0?
-   if (thck(ew,ns) .ne. 0.0_dp) then 
-
-    ! *sfp** gives the scaled driving stress. e.g. rho*g*H*dh/dx * (1/Tau_0) * (H0/X0) = H'*dh'/dx' 
-    fx = c * thck(ew,ns) * sum(dusrfdew(ew-1:ew,ns-1:ns))
-    fy = c * thck(ew,ns) * sum(dusrfdns(ew-1:ew,ns-1:ns))
-
-!whl - Reduce gdsx and gdsy to rank 2 arrays?
-
-    ! *sfp** make rank 3 arrays containing scaled driv. stresses in x, y, z directions 
-    !      (constant in z direction)
-    gdsx(:,ew,ns) = stagsigma * fx
-    gdsy(:,ew,ns) = stagsigma * fy
-  
-  else
-
-    gdsx(:,ew,ns) = 0.0_dp
-    gdsy(:,ew,ns) = 0.0_dp
-
-   end if  ! thck .ne. 0.0
-  end do
-  end do
-
-  return
-
-end subroutine calcgdststr
+!*sfp* removed subroutine 'calcgdststr' here, which calculated 3d driving stress
+! arrays (no longer needed - stress fields calc. externally now)
 
 !***********************************************************************
 
 subroutine findefvsstr(ewn,  nsn, upn,       &
-                       stagsigma, count,     &
+                       stagsigma, counter,     &
                        whichefvs, efvs,      &
                        uvel,      vvel,      &
                        flwa,      thck,      &
@@ -566,7 +503,7 @@ subroutine findefvsstr(ewn,  nsn, upn,       &
   real (kind = dp), intent(in), dimension(:,:) :: thck, dthckdew, dusrfdew, & 
                                                   dusrfdns, dthckdns
   integer, intent(in), dimension(:,:) :: mask
-  integer, intent(in) :: whichefvs, count
+  integer, intent(in) :: whichefvs, counter
        
   integer :: ew, ns, up
 
@@ -582,7 +519,7 @@ subroutine findefvsstr(ewn,  nsn, upn,       &
 
   case(0)       ! *sfp** calculate eff. visc. from eff. strain rate, etc
 
-  if (1 == count) then
+  if (1 == counter) then
     do ns = 2,nsn-1; do ew = 2,ewn-1
     if (thck(ew,ns) > 0.0_dp) then
       ! *sfp** term: 1/2*A^(-1/n)
@@ -644,7 +581,7 @@ subroutine findefvsstr(ewn,  nsn, upn,       &
 
   case(1)       ! *sfp** set a constant eff. visc. 
 
-    efvs = 1 / 100.0_dp
+    efvs = 1.0_dp / 100.0_dp
 
 !whl - changed default to case 2
 ! *sfp* - not sure what this does. Doesn't make sense to assign the value of 
@@ -661,92 +598,7 @@ end subroutine findefvsstr
 
 !***********************************************************************
 
-subroutine calcstrsstr(ewn,  nsn,  upn,       &
-                       stagsigma,  thck,      &
-                       dusrfdew,   dusrfdns,  &
-                       dthckdew,   dthckdns,  &
-                       uvel,       vvel,      &
-                       efvs,                  &
-                       tauxx,      tauyy,     &
-                       tauxy,      tau,       &
-                       tauxz,      tauyz,     &
-                       mask)
-
-! *sfp** calc. stress based on vel. and eff. visc. solutions
-!whl - no longer called from within glam_strs2
-
-  implicit none
- 
-  integer, intent(in) :: ewn, nsn, upn 
-
-  real (kind = dp), intent(in), dimension(:)     :: stagsigma
-  real (kind = dp), intent(in), dimension(:,:,:) :: efvs, uvel, vvel 
-  real (kind = dp), intent(in), dimension(:,:) :: thck, dusrfdew, &
-                                                  dusrfdns, dthckdew, dthckdns 
-  integer, intent(in), dimension(:,:) :: mask
-
-  integer :: ew, ns, up
-  real (kind = dp), intent(out), dimension(:,:,:) :: tauxx, tauyy, tauxy, &
-                                                     tauxz, tauyz, tau
-
-  real (kind = dp), parameter :: f1 = len0 / thk0
-
-  integer, dimension(2) :: mew, mns
-  
-  do ns = 2,nsn-1
-  do ew = 2,ewn-1; 
-   if (thck(ew,ns) > 0.0_dp) then
-
-    tauxz(:,ew,ns) = vertideriv(upn, hsum(uvel(:,ew-1:ew,ns-1:ns)), thck(ew,ns))
-
-    tauyz(:,ew,ns) = vertideriv(upn, hsum(vvel(:,ew-1:ew,ns-1:ns)), thck(ew,ns))
-
-    tauxx(:,ew,ns) = horizderiv(upn,  stagsigma,                &
-                                sum(uvel(:,ew-1:ew,ns-1:ns),3), &
-                                dew4, tauxz(:,ew,ns),           &             
-                                sum(dusrfdew(ew-1:ew,ns-1:ns)), &
-                                sum(dthckdew(ew-1:ew,ns-1:ns)))
-
-    tauyy(:,ew,ns) = horizderiv(upn,  stagsigma,                &
-                                sum(vvel(:,ew-1:ew,ns-1:ns),2), &
-                                dns4, tauyz(:,ew,ns),           &             
-                                sum(dusrfdns(ew-1:ew,ns-1:ns)), &
-                                sum(dthckdns(ew-1:ew,ns-1:ns)))
-
-    tauxy(:,ew,ns) = horizderiv(upn,  stagsigma,                &
-                                sum(uvel(:,ew-1:ew,ns-1:ns),2), &
-                                dns4, tauxz(:,ew,ns),           &             
-                                sum(dusrfdns(ew-1:ew,ns-1:ns)), &
-                                sum(dthckdns(ew-1:ew,ns-1:ns))) + &
-                     horizderiv(upn,  stagsigma,                &
-                                sum(vvel(:,ew-1:ew,ns-1:ns),3), &
-                                dew4, tauyz(:,ew,ns),           &             
-                                sum(dusrfdew(ew-1:ew,ns-1:ns)), &
-                                sum(dthckdew(ew-1:ew,ns-1:ns)))
- 
-   else
-
-    tauxz(:,ew,ns) = 0.0_dp
-    tauyz(:,ew,ns) = 0.0_dp
-    tauxx(:,ew,ns) = 0.0_dp
-    tauyy(:,ew,ns) = 0.0_dp
-    tauxy(:,ew,ns) = 0.0_dp
-
-   end if
-  end do
-  end do
-
-  tauxz = f1 * efvs * tauxz
-  tauyz = f1 * efvs * tauyz
-  tauxx = 2.0_dp * efvs * tauxx
-  tauyy = 2.0_dp * efvs * tauyy
-  tauxy = efvs * tauxy  
-
-  tau = sqrt(tauxz**2 + tauyz**2 + tauxx**2 + tauyy**2 + tauxx*tauyy + tauxy**2)
-         
-  return
-
-end subroutine calcstrsstr
+!*sfp* removed 'calcstrsstr' subroutine here (stresses now calculated externally)
 
 !***********************************************************************
 
@@ -764,7 +616,6 @@ function vertideriv(upn, varb, thck)
 !       there should be a '-' in front of this expression...
 
   vertideriv(1:upn-1) = dupm * (varb(2:upn) - varb(1:upn-1)) / thck
-
 
   return
 
@@ -966,7 +817,7 @@ end function slapsolvstr
 
 !***********************************************************************
 
-function mindcrshstr(pt,whichresid,vel,count,resid)
+function mindcrshstr(pt,whichresid,vel,counter,resid)
 
 ! *sfp** function to perform 'unstable manifold correction' - 
 !      corrects velocity fields u, v, from an initial guess at u, v, and eff. visc. 
@@ -978,7 +829,7 @@ function mindcrshstr(pt,whichresid,vel,count,resid)
   implicit none
 
   real (kind = dp), intent(in), dimension(:,:,:) :: vel
-  integer, intent(in) :: count, pt, whichresid 
+  integer, intent(in) :: counter, pt, whichresid 
 
   real (kind = dp), intent(out) :: resid
 
@@ -996,13 +847,13 @@ function mindcrshstr(pt,whichresid,vel,count,resid)
   integer :: nr
   integer, dimension(size(vel,1),size(vel,2),size(vel,3)) :: vel_ne_0
 
-  if (count == 1) then
+  if (counter == 1) then
     usav(:,:,:,pt) = 0.0d0
   end if
 
   corr(:,:,:,new(pt),pt) = vel - usav(:,:,:,pt)           
 
-  if (count > 1) then
+  if (counter > 1) then
 
     where (acos((corr(:,:,:,new(pt),pt) * corr(:,:,:,old(pt),pt)) / &
           (abs(corr(:,:,:,new(pt),pt)) * abs(corr(:,:,:,old(pt),pt)) + small)) > &
@@ -1065,7 +916,7 @@ function mindcrshstr(pt,whichresid,vel,count,resid)
 
     usav(:,:,:,pt) = vel
 
-!  print '("* ",i3,g20.6,3i6,g20.6)', count, resid, locat, vel(locat(1),locat(2),locat(3))
+!  print '("* ",i3,g20.6,3i6,g20.6)', counter, resid, locat, vel(locat(1),locat(2),locat(3))
 
   return
 
@@ -1451,7 +1302,7 @@ subroutine bodyset(ew,  ns,  up,           &
     ! full thickness at the boundary (as a result of averaging to make 'stagthck' from 'thck'). 
     source = rhoi * grav * 2.0d0 * stagthck(ew,ns) * thk0 / 2.0_dp * ( 1.0_dp - rhoi / rhoo )
 
-    ! terms after "/" below count number of non-zero efvs cells ... needed for averaging efvs at boundary 
+    ! terms after "/" below counter number of non-zero efvs cells ... needed for averaging efvs at boundary 
     source = source / ( evs0 * sum(local_efvs, local_efvs .gt. 1.0d-10) / &
              sum( local_efvs/local_efvs,local_efvs .gt. 1.0d-10 ) )
 
@@ -2250,7 +2101,7 @@ function croshorizmainbc_lat (dew,       dns,       &
     ! set remaining coeff. on this level to to 0 ...
     croshorizmainbc_lat(1,:,:) = 0.0_dp
 
-    ! account for vertical terms stored seperately in 'gvert'
+    ! accounter for vertical terms stored seperately in 'gvert'
     croshorizmainbc_lat(1,2+inormal(1),2+inormal(2)) = gvert(1) * whichbc(what)
     croshorizmainbc_lat(3,2+inormal(1),2+inormal(2)) = gvert(3) * whichbc(what)
 
@@ -2445,6 +2296,7 @@ end subroutine fillsprsemain
 !***********************************************************************
 
 subroutine fillsprsebndy(inp,locplusup,ptindx,up,normal)
+!*sfp* subroutine to put coeff. in correct locations for boundary conditions
 
   implicit none
 
@@ -2535,6 +2387,9 @@ end subroutine fillsprsebndy
 subroutine getlatboundinfo( ew, ns, up, ewn, nsn, upn,  &  
                            thck, loc_array,             &
                            fwdorbwd, normal, loc_latbc)
+!*sfp* subroutine to calculate map plane normal vector at 45 deg. increments
+! for regions of floating ice
+
   implicit none
 
   integer, intent(in) :: ew, ns, up
@@ -2576,21 +2431,6 @@ subroutine getlatboundinfo( ew, ns, up, ewn, nsn, upn,  &
 
   testvect = sum( thckmask * mask, 1 )
 
-!if( up .eq. 3 )then ! temporary code for debugging
-!  do i = 3,1,-1
-!  print *, 'thck = ', thck(:,i)
-!  end do
-!  print *, ' '
-!
-!  do i = 3,1,-1
-!      print *, 'thckmask = ', thckmask(:,i)
-!  end do
-!  print *, ' '
-!
-!  print *, 'testvect =  ', testvect
-!  print *, ' '
-!end if
-
     ! calculate the angle of the normal in cart. (x,y) system w/ 0 deg. at 12 O'clock, 90 deg. at 3 O'clock, etc.
     if( sum( sum( thckmask, 1 ) ) .eq. 1.0d0 )then
         phi = sum( sum( thckmask * maskcorners, 1 ) )
@@ -2607,11 +2447,6 @@ subroutine getlatboundinfo( ew, ns, up, ewn, nsn, upn,  &
             phi = sum( testvect ) / sum( testvect/testvect, testvect .ne. 0.0d0 )
         end if
     end if
-
-!  print *, 'up,ew,ns = ', up,ew,ns 
-!  print *, 'phi = ', phi
-!  print *, ' ' 
-!  pause 
 
     ! define normal vectors and change to loc_array based on this angle
     if( phi .eq. 0.0d0 )then
@@ -2655,6 +2490,9 @@ end subroutine getlatboundinfo
 !***********************************************************************
 
 function indshift( which, ew, ns, up, ewn, nsn, upn, loc_array, thck )  
+!*sfp* subroutine to rearrange indices slightly at sfc,bed, and lateral boundaries,
+!so that values one index inside of the domain are used for, e.g. eff. visc.
+
 ! function output is a vector containing necessary index shifts for portions of 'othervel' 
 ! extracted near domain boundaries. NOTE that this contains duplication of some of the code in the 
 ! subroutine "getlatboundinfo", and the two could be combines at some point
@@ -2796,26 +2634,6 @@ function maskvelostr(ewn,  nsn,   &
 
     end if
 
-
-!	if ( thck(ew,ns) > 20.0_dp / thk0 ) then
-!		maskvelostr(ew,ns) = mnbdy
-!	else
-!		maskvelostr(ew,ns) = noice
-!	end if
-! end do; end do
-
-!  do ns = 1,nsn-1; do ew = 1,ewn-1
-!	if ( maskvelostr(ew-1,ns) .eq. noice .and. maskvelostr(ew,ns) .eq. mnbdy ) then
-!		maskvelostr(ew,ns) = boundarys
-!	else if ( maskvelostr(ew,ns) .eq. mnbdy .and. maskvelostr(ew+1,ns) .eq. noice ) then
-!		maskvelostr(ew,ns) = boundarys
-!	else if ( maskvelostr(ew,ns-1) .eq. noice .and. maskvelostr(ew,ns) .eq. mnbdy ) then
-!		maskvelostr(ew,ns) = boundarys
-!	else if ( maskvelostr(ew,ns+1) .eq. noice .and. maskvelostr(ew,ns) .eq. mnbdy ) then
-!		maskvelostr(ew,ns) = boundarys
-!	end if
-
-
   end do   ! ew
   end do   ! ns
 
@@ -2827,6 +2645,7 @@ end function maskvelostr
 
 function viewsparse( dim, pcgrow, pcgcol, pcgval )
 
+! *sfp*
 ! function to construct sparse matrix from SLAPSOLV solver inputs 
 ! (for debugging test problems only!)
 
@@ -2856,56 +2675,6 @@ function viewsparse( dim, pcgrow, pcgcol, pcgval )
 end function viewsparse
 
 !***********************************************************************
-
-!whl - Currently this function is not called
-
-function siabccalc(upn,      sigma,    &
-                   which,    flwa,     &
-                   thck,               & 
-                   dusrfdew, dusrfdns, &
-                   x,        y)
-
-! calculate column of horiz. vel. using 0-order SIA, for lateral bc approx.
-
-    implicit none
-
-    integer, intent(in) :: upn 
-    integer, intent(in) :: which, x, y
-    real (kind = dp), dimension(:), intent(in) :: sigma
-	real (kind = dp), intent(in) :: thck, dusrfdew, dusrfdns
-    real (kind = dp), dimension(:,:,:), intent(in) :: flwa
-	real (kind = dp), dimension(upn) :: shapefunc, siabccalc 
-	real (kind = dp), dimension(2) :: slope
-	real (kind = dp) :: u_surf, abar 
-	real (kind = dp), dimension(1,2,2) :: abar0
-    integer :: c, i, j
-
-    c = 0; abar = 0.0_dp
-
-    ! calculate dimensional sfc velocity from 0-order SIA
-    slope = (/ dusrfdew, dusrfdns /) * (thk0/len0)
-
-    abar0(1,:,:) = sum( flwa(:,x:(x+1),y:(y+1)), 1 ) / upn
-
-    do i = 1,2; do j = 1,2
-    if( abar0(1,i,j) .ne. 0.0_dp )then
-      c = c + 1
-      abar = abar + abar0(1,i,j)
-    end if
-    end do; end do
-
-    abar = ( abar / c ) * vis0
-
-    u_surf = ( 2.0_dp * abar ) / ( gn + 1.0_dp ) * ( -rhoi * grav * slope(which) )**gn & 
-                * (thck * thk0)**(gn + 1.0_dp)
-
-    shapefunc = 1.0_dp - ( sigma )**( gn + 1.0_dp )
-
-    siabccalc = ( u_surf * shapefunc ) / vel0  !scale back to dimensionless value
-
-    return
-
-end function siabccalc
 
 ! *sfp** function to specify map of betasquared
 subroutine calcbetasquared (whichbabc,               & 
@@ -3275,22 +3044,6 @@ end subroutine geom2ders
  
   end function whichway
  
-!***********************************************************************
-!whl - copied this from module strswk
-! CURRENTLY NOT BEING CALLED by 'findcoefstr' (commented out) 
-
-!function vertibasl(whichbc,efvs,basalbc,rhs)            
-
-! *sfp** function called by 'findcoefstr' to stuff coeff. assoc. w/ deriv. 
-!      "d/d_sigma ( _ d/d_sigma)" basal b.c. directly in sparse matrix 
-
-!  implicit none 
-!  integer, intent(in) :: whichbc
-!  real (kind = dp), intent(in) :: efvs, basalbc
-!  real (kind = dp), intent(inout) :: rhs
-!  real (kind = dp), dimension(2) :: vertibasl 
-
-!end function vertibasl 
 
 !***********************************************************************
 !whl - copied this from module general
