@@ -1,4 +1,3 @@
-
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! +                                                           +
 ! +  glimmer_paramets.f90 - part of the GLIMMER ice model     + 
@@ -63,7 +62,12 @@ module glimmer_paramets
   real(dp), parameter :: vel0 = 500.0 / scyr    ! m yr^{-1} converted to S.I. units
   !real(dp), parameter :: vis0 = 5.70d-18 / scyr  ! yr^{-1} Pa^{-3} converted to S.I. units
   real(dp), parameter :: vis0 = 1d-16 / scyr 
-  !real(dp), parameter :: vis0 = (rhoi*grav*thk0)**(-gn) * (vel0/len0)  ! yr^{-1} Pa^{-3} (as defined in GLAM) 
+
+  ! *sfp* defined these to convert scales to values used by GLAM
+  real(dp), parameter :: tau0_glam = rhoi*grav*thk0                   ! stress scale in GLAM ( Pa )  
+  real(dp), parameter :: vis0_glam = tau0_glam**(-gn) * (vel0/len0)   ! rate factor scale in GLAM ( Pa^-3 s^-1 )
+  real(dp), parameter :: evs0 = tau0_glam * (vel0/len0) ! eff. visc. scale in GLAM ( Pa s )
+
 #endif
 
   real(dp), parameter :: acc0 = thk0 * vel0 / len0  ! m s^{-1} 
@@ -73,10 +77,8 @@ module glimmer_paramets
                                           ! parameters with noninteger powers in - look
                                           ! in initial in blah.f90 (not sure this applies now...)
 
-  real(dp) :: evs0                        ! effective viscosity scale (Pa s)
-                                          ! defined later as tau0 * (len0/vel0) 
 !whl - to do - remove lambda0
-  real(dp), parameter :: lambda0 = 4      ! basal topo/friction parameter for ismip-hom tests 
+  real(dp), parameter :: lambda0 = 40.0d3 / len0    ! basal topo/friction parameter for ismip-hom tests 
                              
   real(sp), parameter :: conv = tim0 / scyr
 

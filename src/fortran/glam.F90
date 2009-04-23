@@ -10,6 +10,8 @@ module glam
     ! *sfp** contains only stubs for now
 
     use glide_types
+    use glimmer_paramets, only : vis0, vis0_glam 
+    use glimmer_physcon, only :
 
     use glam_strs2, only: glam_velo_fordsiapstr
     use remap_advection
@@ -78,7 +80,7 @@ module glam
                                     model%geomderv%dusrfdew, model%geomderv%dusrfdns,           &
                                     model%geomderv%dusrfdew-model%geomderv%dthckdew,            &
                                     model%geomderv%dusrfdns-model%geomderv%dthckdns,            & 
-                                    model%geomderv%stagthck, model%temper%flwa,                 &
+                                    model%geomderv%stagthck, model%temper%flwa*vis0/vis0_glam,  &
                                     minTauf,                                                    &
                                     model%options%which_ho_babc,                                &
                                     model%options%which_ho_efvs,                                &

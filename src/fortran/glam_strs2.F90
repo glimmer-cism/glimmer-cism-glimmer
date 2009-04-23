@@ -17,7 +17,7 @@ module glam_strs2
 
 use glimmer_paramets, only : dp
 use glimmer_physcon,  only : gn, rhoi, rhoo, grav, pi, scyr
-use glimmer_paramets, only : thk0, len0, vel0, vis0, tim0, tau0, lambda0, evs0
+use glimmer_paramets, only : thk0, len0, vel0, vis0, tim0, tau0, lambda0, evs0, tau0_glam
 use glimmer_log,      only : write_log
 
 implicit none
@@ -86,6 +86,7 @@ implicit none
 
 !whl - The following is from glam_funits
   integer, parameter :: unin = 90
+
 
 !***********************************************************************
 
@@ -2797,7 +2798,7 @@ subroutine calcbetasquared (whichbabc,               &
   end select
   
   ! convert to dimensional model units ( Pa * s * m^-1 ) and then non-dimensionalize
-  betasquared = ( betasquared * scyr ) / ( tau0 * tim0 / len0 )
+  betasquared = ( betasquared * scyr ) / ( tau0_glam * tim0 / len0 )     !*sfp* glam scaling
 
 end subroutine calcbetasquared
 
