@@ -48,7 +48,7 @@
 module glimmer_paramets
 
   use glimmer_global, only : sp, dp
-  use glimmer_physcon, only : scyr
+  use glimmer_physcon, only : scyr, rhoi, grav, gn
 
   implicit none; save
 
@@ -63,6 +63,7 @@ module glimmer_paramets
   real(dp), parameter :: vel0 = 500.0 / scyr    ! m yr^{-1} converted to S.I. units
   !real(dp), parameter :: vis0 = 5.70d-18 / scyr  ! yr^{-1} Pa^{-3} converted to S.I. units
   real(dp), parameter :: vis0 = 1d-16 / scyr 
+  !real(dp), parameter :: vis0 = (rhoi*grav*thk0)**(-gn) * (vel0/len0)  ! yr^{-1} Pa^{-3} (as defined in GLAM) 
 #endif
 
   real(dp), parameter :: acc0 = thk0 * vel0 / len0  ! m s^{-1} 

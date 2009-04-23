@@ -425,13 +425,6 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
   deallocate(uindx,corr,usav)
   deallocate(pcgval,pcgrow,pcgcol,rhsd,answ)
 
-!  ! *sfp* DEBUGGING
-!  print *, 'u_sfc = '
-!  print *, maxval( uvel(:,:,:) * vel0 * scyr )
-!  print *, 'u_sfc = '
-!  print *, maxval( vvel(:,:,:) * vel0 * scyr )
-!  pause
-
   return
 
 end subroutine glam_velo_fordsiapstr
