@@ -246,7 +246,7 @@ def normSurfaceVelocityPlan(planview):
 #velocity.  Other experiments are flowline experiments; that is, they only occur in the x and
 #z axis.  If this is the case, we can just read in the flowline file and use it as-is
 def grabFlowline(filename):
-    experiment = filename[4]
+    experiment = filename[-8]
     isFlowlineExp = experiment in ["b","d","e"]
     if isFlowlineExp:
         return readFlowlineFile(filename)

@@ -70,6 +70,7 @@ def createPlot(experiment, domainSizeKm, fig, subplotNum, notFullStokesModelType
                 flowlines.append(fl)
             except Exception, e:
                 print f, "failed to load:", e
+                raise
 
         #Compute the mean and standard deviations of the experiments
         mean, stdev = intercomparison.aggregateExperimentFlowlines(flowlines, glimFlowline.getPointLocations())
