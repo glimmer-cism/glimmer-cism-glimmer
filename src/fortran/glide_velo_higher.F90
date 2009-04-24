@@ -4,6 +4,8 @@
 
 #include "glide_nan.inc"
 
+#define shapedbg(x) write(*,*) "x", shape(x)
+
 module glide_velo_higher
     use ice3d_lib
     use glimmer_global, only : dp
@@ -57,113 +59,137 @@ contains
     !model right now because the analysis on what needs to be passed has yet to
     !be done.
     subroutine run_ho_diagnostic(model)
-            use glide_thckmask
-             type(glide_global_type),intent(inout) :: model
-            !For HO masking
-            logical :: empty
-            integer :: totpts
-            real(sp), dimension(model%general%ewn-1, model%general%nsn-1) :: stagmassb
+        use glide_thckmask
+        use glide_mask
+        
+        type(glide_global_type),intent(inout) :: model
+        !For HO masking
+        logical :: empty
+        integer :: totpts
+        real(sp), dimension(model%general%ewn-1, model%general%nsn-1) :: stagmassb
 
+        !TEMPORARY arrays, these should at some point be placed in Model
+        !probably
+        integer, dimension(model%general%ewn-1, model%general%nsn-1)  :: geom_mask_stag
+        real(dp), dimension(model%general%ewn-1, model%general%nsn-1) :: latbc_norms_stag
+
+        !Beta field computations that change in time
+        if (model%options%which_ho_beta_in == HO_BETA_USE_BTRC) then
+           where (model%velocity%btrc /= 0)
+               model%velocity_hom%beta = 1/model%velocity%btrc
+            elsewhere
+                model%velocity_hom%beta = NAN
+            end where
+        else if (model%options%which_ho_beta_in == HO_BETA_SLIP_RATIO) then
+            call calc_slip_ratio(model%temper%flwa(model%general%upn,:,:), model%geomderv%stagthck, &
+                                 model%paramets%slip_ratio, model%velocity_hom%beta)
+        end if
+
+            
+        if (model%options%which_ho_diagnostic == HO_DIAG_PATTYN_STAGGERED) then
+            write(*,*)"Running Pattyn staggered"
+         
+            !Compute the "point mask" (mask that assigns a unique value to each
+            !grid point on which ice dynamics are enabled) for the
+            !staggered grid.  
             stagmassb = 0
 
-             call stagvarb(model%geometry% thck, model%geomderv%stagthck, &
-                            model%general%ewn, model%general%nsn)
-               
-             call df_field_2d_staggered(model%geometry%usrf, model%numerics%dew, model%numerics%dns,& 
-                    model%geomderv%dusrfdew, model%geomderv%dusrfdns, .false., .false.)
+            
+            call glide_maskthck(model%geomderv%stagthck, stagmassb, .true., model%geometry%dom, &
+                                model%velocity_hom%velmask, totpts, empty)
+                 
+            !Compute the "geometry mask" (type of square) for the staggered grid
 
-             call df_field_2d_staggered(model%geometry%thck, model%numerics%dew, model%numerics%dns, &
-                   model%geomderv%dthckdew, model%geomderv%dthckdns, .false., .false.)
-             
+            call glide_set_mask(model%numerics, model%geomderv%stagthck, model%geomderv%stagtopg, &
+                                model%general%ewn-1, model%general%nsn-1, model%climate%eus, &
+                                geom_mask_stag) 
 
-             !Beta field computations that change in time
-             if (model%options%which_ho_beta_in == HO_BETA_USE_BTRC) then
-                where (model%velocity%btrc /= 0)
-                    model%velocity_hom%beta = 1/model%velocity%btrc
-                elsewhere
-                    model%velocity_hom%beta = NAN
-                end where
-             else if (model%options%which_ho_beta_in == HO_BETA_SLIP_RATIO) then
-                call calc_slip_ratio(model%temper%flwa(model%general%upn,:,:), model%geomderv%stagthck, &
-                                     model%paramets%slip_ratio, model%velocity_hom%beta)
-             end if
+            !Compute the normal vectors to the marine margin for the staggered grid
+            call glide_marine_margin_normal(model%geomderv%stagthck, geom_mask_stag, latbc_norms_stag)
+                
+            call velo_hom_pattyn(model%general%ewn, model%general%nsn, model%general%upn, &
+                                 model%numerics%dew, model%numerics%dns, model%numerics%sigma, &
+                                 model%geomderv%stagthck, model%geomderv%stagusrf, model%geomderv%staglsrf, &
+                                 model%geomderv%dthckdew, model%geomderv%dthckdns, &
+                                 model%geomderv%dusrfdew, model%geomderv%dusrfdns, &
+                                 model%geomderv%dlsrfdew, model%geomderv%dlsrfdns, & 
+                                 model%geomderv%d2usrfdew2, model%geomderv%d2usrfdns2, &
+                                 model%geomderv%d2thckdew2, model%geomderv%d2thckdns2, &
+                                 model%velocity_hom%velmask, totpts, &
+                                 geom_mask_stag, &
+                                 model%temper%flwa, real(gn, dp), model%velocity_hom%beta, &
+                                 model%options%which_ho_bstress,&
+                                 model%options%which_ho_efvs, &
+                                 model%options%periodic_ew .eq. 1, &
+                                 model%options%periodic_ns .eq. 1,&
+                                 model%velocity_hom%kinematic_bc_u, model%velocity_hom%kinematic_bc_v, &
+                                 latbc_norms_stag,&
+                                 model%velocity_hom%uvel, model%velocity_hom%vvel, &
+                                 model%velocity_hom%is_velocity_valid, &
+                                 model%velocity_hom%uflx, model%velocity_hom%vflx, &
+                                 model%velocity_hom%efvs, model%velocity_hom%tau, &
+                                 model%velocity_hom%gdsx, model%velocity_hom%gdsy)
+        else if (model%options%which_ho_diagnostic == HO_DIAG_PATTYN_UNSTAGGERED) then
+            write(*,*)"Running Pattyn unstaggered"
+            call velo_hom_pattyn_nonstag(model%general%ewn, model%general%nsn, model%general%upn, &
+                                         model%numerics%dew, model%numerics%dns, model%numerics%sigma, &
+                                         model%geometry%thck, model%geometry%usrf, model%geometry%lsrf, &
+                                         model%geomderv%dusrfdew_unstag, model%geomderv%dusrfdns_unstag, &
+                                         model%geomderv%dthckdew_unstag, model%geomderv%dthckdns_unstag, &
+                                         model%geomderv%dlsrfdew_unstag, model%geomderv%dlsrfdns_unstag, &
+                                         model%geomderv%d2usrfdew2_unstag, model%geomderv%d2usrfdns2_unstag, &
+                                         model%geomderv%d2thckdew2_unstag, model%geomderv%d2thckdns2_unstag, &
+                                         model%geometry%mask, model%geometry%totpts, &
+                                         model%geometry%thkmask, &
+                                         model%temper%flwa, real(gn, dp), &
+                                         model%velocity_hom%beta, model%options%which_ho_bstress, &
+                                         model%options%which_ho_efvs, &
+                                         model%options%periodic_ew .eq. 1, &
+                                         model%options%periodic_ns .eq. 1, &
+                                         model%velocity_hom%kinematic_bc_u, model%velocity_hom%kinematic_bc_v, &
+                                         model%geometry%marine_bc_normal, &
+                                         model%velocity_hom%uvel, model%velocity_hom%vvel, &
+                                         model%velocity_hom%is_velocity_valid)
+        end if
 
-             call glide_maskthck(model%geomderv%stagthck, stagmassb, .true., model%geometry%dom, &
-                                 model%velocity_hom%velmask, totpts, empty)
-             print *, "totpts=",model%geometry%totpts
-             !Compute the mask.  We do this in this step because otherwise it sucks...
-             if (model%options%which_ho_diagnostic == HO_DIAG_PATTYN_STAGGERED) then
-                write(*,*)"Running Pattyn staggered"
-                call velo_hom_pattyn(model%numerics, model%general%ewn, model%general%nsn, model%general%upn, &
-                          model%numerics%sigma, &
-                          model%geometry%thck, model%geometry%usrf, model%geometry%topg, &
-                          model%geomderv%dthckdew, model%geomderv%dthckdns, &
-                          model%geomderv%dusrfdew, model%geomderv%dusrfdns, &
-                          model%geomderv%dthckdew-model%geomderv%dusrfdew, & 
-                          model%geomderv%dthckdns-model%geomderv%dusrfdns, & 
-                          model%geomderv%stagthck, model%velocity_hom%velmask, totpts, &
-                          model%temper%flwa, real(gn, dp), model%climate%eus, model%velocity_hom%beta, &
-                          model%options%which_ho_bstress,&
-                          model%options%which_ho_efvs, &
-                          model%options%periodic_ew .eq. 1, &
-                          model%options%periodic_ns .eq. 1,&
-                          model%velocity_hom%kinematic_bc_u, model%velocity_hom%kinematic_bc_v, &
-                          model%velocity_hom%uvel, model%velocity_hom%vvel, &
-                          model%velocity_hom%is_velocity_valid, &
-                          model%velocity_hom%uflx, model%velocity_hom%vflx, &
-                          model%velocity_hom%efvs, model%velocity_hom%tau, &
-                          model%velocity_hom%gdsx, model%velocity_hom%gdsy)
-            else if (model%options%which_ho_diagnostic == HO_DIAG_PATTYN_UNSTAGGERED) then
-                write(*,*)"Running Pattyn unstaggered"
-                call velo_hom_pattyn_nonstag(model%general%ewn, model%general%nsn, model%general%upn, &
-                          model%numerics%dew, model%numerics%dns, model%numerics%sigma, &
-                          model%geometry%thck, model%geometry%usrf, model%geometry%lsrf, &
-                          model%geometry%mask, model%geometry%totpts, &
-                          model%geometry%thkmask, &
-                          model%temper%flwa, real(gn, dp), &
-                          model%velocity_hom%beta, model%options%which_ho_bstress, &
-                          model%options%which_ho_efvs, &
-                          model%options%periodic_ew .eq. 1, &
-                          model%options%periodic_ns .eq. 1, &
-                          model%velocity_hom%kinematic_bc_u, model%velocity_hom%kinematic_bc_v, &
-                          model%geometry%marine_bc_normal, &
-                          model%velocity_hom%uvel, model%velocity_hom%vvel, &
-                          model%velocity_hom%is_velocity_valid)
-            end if
-
-            model%velocity_hom%is_velocity_valid = .true.
+        model%velocity_hom%is_velocity_valid = .true.
         
     end subroutine
 
-    subroutine velo_hom_pattyn(numerics, ewn, nsn, upn, sigma, &
-                               thck, usrf, topg, dthckdew, dthckdns, dusrfdew, dusrfdns, &
-                               dlsrfdew, dlsrfdns, stagthck, point_mask, totpts, flwa, flwn, eus, btrc, &
+    subroutine velo_hom_pattyn(ewn, nsn, upn, dew, dns, sigma, &
+                               thck, usrf, lsrf, dthckdew, dthckdns, dusrfdew, dusrfdns, &
+                               dlsrfdew, dlsrfdns, &
+                               d2zdx2, d2zdy2, d2hdx2, d2hdy2, &
+                               point_mask, totpts, geometry_mask, flwa, flwn, btrc, &
                                which_sliding_law, which_efvs, &
                                periodic_ew, periodic_ns, kinematic_bc_u, kinematic_bc_v, &
+                               marine_bc_normal, &
                                uvel, vvel, valid_initial_guess, uflx, vflx, efvs, tau, gdsx, gdsy)
                            
-        type(glide_numerics), intent(in) :: numerics
         integer, intent(in)  :: ewn !*FD Number of cells X
         integer, intent(in)  :: nsn !*FD Number of cells Y
         integer, intent(in)  :: upn !*FD Number of cells Z
-	real(dp), dimension(:), intent(in) :: sigma !*FD Sigma coord for rescaled Z dimension
-	real(dp), dimension(:,:), intent(in) :: thck !*FD Thickness, on non-staggered grid
+        real(dp), intent(in) :: dew
+        real(dp), intent(in) :: dns
+        real(dp), dimension(:), intent(in) :: sigma !*FD Sigma coord for rescaled Z dimension
+        real(dp), dimension(:,:), intent(in) :: thck !*FD Thickness, on staggered grid
 	real(dp), dimension(:,:), intent(in) :: usrf !*FD Upper surface profile
-        real(dp), dimension(:,:), intent(in) :: topg
+        real(dp), dimension(:,:), intent(in) :: lsrf !*FD Lower surface profile
 	real(dp), dimension(:,:), intent(in) :: dthckdew !*FD X thickness gradient
 	real(dp), dimension(:,:), intent(in) :: dthckdns !*FD Y thickness gradient
 	real(dp), dimension(:,:), intent(in) :: dusrfdew !*FD X surface gradient
 	real(dp), dimension(:,:), intent(in) :: dusrfdns !*FD Y surface gradient
 	real(dp), dimension(:,:), intent(in) :: dlsrfdew !*FD X bed gradient
 	real(dp), dimension(:,:), intent(in) :: dlsrfdns !*FD Y bed gradient
-	real(dp), dimension(:,:), intent(in) :: stagthck !*FD Staggered thickness
+        real(dp), dimension(:,:), intent(in) :: d2zdx2, d2zdy2, d2hdx2, d2hdy2
         integer,  dimension(:,:), intent(in) :: point_mask     !*FD Numbers points in the staggered grid that are included in computation
         integer, intent(in) :: totpts
+        integer, dimension(:,:), intent(in) :: geometry_mask
         real(dp), dimension(:,:,:), intent(in) :: flwa !*FD Glen's A (rate factor) - Used for thermomechanical coupling
         real(dp), dimension(:,:), intent(in)   :: btrc !*FD Basal Traction, either betasquared or tau0
         real(dp), dimension(:,:,:), intent(in)   :: kinematic_bc_u, kinematic_bc_v
+        real(dp), dimension(:,:), intent(in)   :: marine_bc_normal
         real(dp), intent(in) :: flwn !*FD Exponent in Glenn power law
-        real(sp), intent(in) :: eus !*FD Sea level
         integer, intent(in) :: which_sliding_law
         integer, intent(in) :: which_efvs
         logical, intent(in) :: periodic_ew !*Whether to use periodic boundary conditions
@@ -174,31 +200,22 @@ contains
         real(dp), dimension(:,:), intent(out) :: uflx
         real(dp), dimension(:,:), intent(out) :: vflx
         real(dp), dimension(:,:,:), intent(out) :: efvs !*FD Effective viscosity
-        type(glide_tensor), intent(out)         :: tau
+        type(glide_tensor), intent(inout)         :: tau
         real(dp), dimension(:,:,:), intent(out) :: gdsx !*FD X driving stress
         real(dp), dimension(:,:,:), intent(out) :: gdsy !*FD Y driving stress
-        integer :: i, k
-
 
         !Second derivative of surface
-        real(dp), dimension(ewn-1,nsn-1) :: d2zdx2, d2zdy2, d2hdx2, d2hdy2
-
-        !Arrays for rescaled coordinate parameters
+                !Arrays for rescaled coordinate parameters
         real(dp), dimension(nsn-1, ewn-1, upn) :: ax, ay, bx, by, cxy
-        !Arrays for staggered versions of quantities that were passed unstaggered
-        real(dp), dimension(ewn-1, nsn-1) :: stagusrf, staglsrf, stagtopg
         
         real(dp), dimension(nsn-1, ewn-1, upn) :: kinematic_bc_u_t, kinematic_bc_v_t
 
         real(dp), dimension(nsn, ewn)::u,v
 
-        !Total number of grid points in 3 dimensions
-        integer :: ijktot
-
         !Arrays to hold transposed data
         real(dp), dimension(nsn-1, ewn-1) :: dlsrfdew_t, dlsrfdns_t, dusrfdew_t, & 
         dusrfdns_t, dthckdew_t, dthckdns_t, btrc_t, staglsrf_t, stagusrf_t, stagthck_t, &
-        d2zdx2_t, d2zdy2_t, d2hdx2_t, d2hdy2_t, stagtopg_t
+        d2zdx2_t, d2zdy2_t, d2hdx2_t, d2hdy2_t
        
         real(dp), dimension(nsn, ewn, upn) :: flwa_t
         real(dp), dimension(nsn-1, ewn-1, upn) :: uvel_t, vvel_t, mu_t, flwa_t_stag, &
@@ -208,38 +225,20 @@ contains
         integer,  dimension(nsn-1, ewn-1) :: geometry_mask_t
         real(dp), dimension(nsn-1, ewn-1) :: marine_bc_normal_t       
         real(dp), dimension(nsn-1, ewn-1) :: direction_x, direction_y
-
-        real(dp) :: dew, dns
-
-        dew = numerics%dew
-        dns = numerics%dns
-
+        
         direction_x = 0
         direction_y = 0
 
-        ijktot = (nsn-1)*(ewn-1)*upn
-
-        !Put the surface, bed, and thickness onto staggered grids
-        !We do this because Ice3d is by nature unstaggered.
-        !Note that we are already passed the staggered thickness
-        call stagvarb(usrf, stagusrf,ewn,nsn)
-        call stagvarb(topg, stagtopg,ewn,nsn)
-        staglsrf = stagusrf - stagthck
-
-        !Compute second derivatives of thickness and surface, these are needed
-        !for the rescaled coordinate parameters
-        call d2f_field_stag(usrf, dew, dns, d2zdx2, d2zdy2, .false., .false.)
-        call d2f_field_stag(thck, dew, dns, d2hdx2, d2hdy2, .false., .false.)
-        
         !Move everything into transposed coordinates
         !This means that we need to transpose every data field with x and y that
         !we have thus far.
         !It also means that we need to swap x and y derivatives
-        stagthck_t = transpose(stagthck)
-        staglsrf_t = transpose(staglsrf)
-        stagusrf_t = transpose(stagusrf)
+        stagthck_t = transpose(thck)
+        staglsrf_t = transpose(lsrf)
+        stagusrf_t = transpose(usrf)
         btrc_t = transpose(btrc)
 
+        !TODO: Recompute these derivatives?
         dthckdew_t = transpose(dthckdew)
         dthckdns_t = transpose(dthckdns)
         dlsrfdew_t = transpose(dlsrfdew)
@@ -251,9 +250,10 @@ contains
         d2zdy2_t = transpose(d2zdy2)
         d2hdx2_t = transpose(d2hdx2)
         d2hdy2_t = transpose(d2hdy2)
-        stagtopg_t = transpose(stagtopg)
 
         point_mask_t = transpose(point_mask)
+        geometry_mask_t = transpose(geometry_mask)
+        marine_bc_normal_t = transpose(marine_bc_normal)
 
         call glimToIce3d_3d(uvel,uvel_t,ewn-1,nsn-1,upn)
         call glimToIce3d_3d(vvel,vvel_t,ewn-1,nsn-1,upn)
@@ -265,21 +265,14 @@ contains
         !of fun!!!
         call glimToIce3d_3d(flwa,flwa_t,ewn,nsn,upn)
         call staggered_field_3d(flwa_t, flwa_t_stag)
-      
-        call df_field_2d(stagusrf_t, dns, dew, dusrfdns_t, dusrfdew_t, .false., .false.)
-        call df_field_2d(staglsrf_t, dns, dew, dlsrfdns_t, dlsrfdew_t, .false., .false.)
-        call df_field_2d(stagthck_t, dns, dew, dthckdns_t, dthckdew_t, .false., .false.)
 
         !Compute a new geometry mask based on staggered geometry
-        call glide_set_mask(numerics, stagthck_t, stagtopg_t, ewn-1, nsn-1, eus, geometry_mask_t) 
-        call glide_marine_margin_normal(stagthck_t, geometry_mask_t, marine_bc_normal_t)
-        
+       
         !Compute rescaled coordinate parameters (needed because Pattyn uses an
         !irregular Z grid and scales so that 0 is the surface, 1 is the bed)
         call init_rescaled_coordinates(dthckdew_t,dlsrfdew_t,dthckdns_t,dlsrfdns_t,stagusrf_t,stagthck_t,staglsrf_t,&
                                                dusrfdew_t,dusrfdns_t,d2zdx2_t,d2zdy2_t,d2hdx2_t,d2hdy2_t,&
                                                sigma,ax,ay,bx,by,cxy,dew,dns,direction_x,direction_y)
-       
         !"Spin up" estimate with Pattyn's SIA model runs if we don't already
         !have a good initial guess
         if (.not. valid_initial_guess) then
@@ -310,13 +303,13 @@ contains
         !Final computation of stress field for output
         call stressf(mu_t, uvel_t, vvel_t, flwa_t, stagthck_t, ax, ay, dew, dns, sigma, & 
                      tau_xz_t, tau_yz_t, tau_xx_t, tau_yy_t, tau_xy_t, flwn, zip, periodic_ew, periodic_ns) 
+    
         !Transpose from the ice3d coordinate system (y,x,z) to the glimmer
         !coordinate system (z,x,y).  We need to do this for all the 3D outputs
         !that Glimmer expects
         call ice3dToGlim_3d(uvel_t, uvel, ewn-1, nsn-1, upn)
         call ice3dToGlim_3d(vvel_t, vvel, ewn-1, nsn-1, upn)
         call ice3dToGlim_3d(mu_t, efvs, ewn-1, nsn-1, upn)
-        
         call ice3dToGlim_3d(tau_xz_t, tau%xz, ewn-1, nsn-1, upn)
         call ice3dToGlim_3d(tau_yz_t, tau%yz, ewn-1, nsn-1, upn)
         call ice3dToGlim_3d(tau_xx_t, tau%xx, ewn-1, nsn-1, upn)
@@ -353,10 +346,12 @@ contains
     !*FD initially and then staggers them.  This might introduce less error than
     !computing velocities on a staggered grid; it is thought that the averaging
     !there causes problems.
-    subroutine velo_hom_pattyn_nonstag(ewn, nsn, upn, dew, dns, sigma, &
-                               thck, usrf, lsrf, point_mask, totpts, geometry_mask, flwa, flwn, btrc, which_sliding_law, &
-                               which_efvs, periodic_ew, periodic_ns, kinematic_bc_u, kinematic_bc_v, marine_bc_normal,&
-                               uvel, vvel, valid_initial_guess)
+    subroutine velo_hom_pattyn_nonstag(ewn, nsn, upn, dew, dns, sigma, thck, usrf, lsrf, &
+                              dusrfdew, dusrfdns, dthckdew, dthckdns, dlsrfdew, dlsrfdns, &
+                              d2zdx2, d2zdy2, d2hdx2, d2hdy2, &
+                              point_mask, totpts, geometry_mask, flwa, flwn, btrc, which_sliding_law, &
+                              which_efvs, periodic_ew, periodic_ns, kinematic_bc_u, kinematic_bc_v, marine_bc_normal,&
+                              uvel, vvel, valid_initial_guess)
                             
         integer, intent(in)  :: ewn !*FD Number of cells X
         integer, intent(in)  :: nsn !*FD Number of cells Y
@@ -367,6 +362,13 @@ contains
 	real(dp), dimension(:,:), intent(in) :: thck !*FD Thickness, on non-staggered grid
 	real(dp), dimension(:,:), intent(in) :: usrf !*FD Upper surface profile
         real(dp), dimension(:,:), intent(in) :: lsrf !*FD Lower surface profile
+	real(dp), dimension(:,:), intent(in) :: dthckdew !*FD X thickness gradient
+	real(dp), dimension(:,:), intent(in) :: dthckdns !*FD Y thickness gradient
+	real(dp), dimension(:,:), intent(in) :: dusrfdew !*FD X surface gradient
+	real(dp), dimension(:,:), intent(in) :: dusrfdns !*FD Y surface gradient
+	real(dp), dimension(:,:), intent(in) :: dlsrfdew !*FD X bed gradient
+	real(dp), dimension(:,:), intent(in) :: dlsrfdns !*FD Y bed gradient
+        real(dp), dimension(:,:), intent(in) :: d2zdx2, d2zdy2, d2hdx2, d2hdy2
         integer,  dimension(:,:), intent(in) :: point_mask     !*FD Numbers points in the staggered grid that are included in computation
         integer, intent(in) :: totpts
         integer, dimension(:,:), intent(in) :: geometry_mask
@@ -383,20 +385,10 @@ contains
         real(dp), dimension(:,:,:), intent(out) :: vvel
         logical, intent(in) :: valid_initial_guess !*Whether or not the given uvel or vvel are appropriate initial guesses.  If not we'll have to roll our own.
         
-        integer :: i, j, k
-
-        !Second derivative of surface
-        real(dp), dimension(ewn,nsn) :: d2zdx2, d2zdy2, d2hdx2, d2hdy2
-
         !Arrays for rescaled coordinate parameters
         real(dp), dimension(nsn, ewn, upn) :: ax, ay, bx, by, cxy
         
         real(dp), dimension(nsn, ewn)::u,v
-
-        !Total number of grid points in 3 dimensions
-        integer :: ijktot
-        
-        real(dp), dimension(ewn, nsn) :: dusrfdew, dusrfdns, dlsrfdew, dlsrfdns, dthckdew, dthckdns
 
         !whether to upwind or downwind derivatives.
         real(dp), dimension(ewn, nsn) :: direction_x, direction_y
@@ -408,7 +400,7 @@ contains
 
         real(dp), dimension(nsn-1, ewn-1) :: btrc_t 
         real(dp), dimension(nsn, ewn, upn) :: flwa_t
-        real(dp), dimension(nsn-1, ewn-1, upn) :: uvel_t, vvel_t, flwa_t_stag
+        real(dp), dimension(nsn-1, ewn-1, upn) :: uvel_t, vvel_t
         real(dp), dimension(nsn, ewn, upn) :: mu_t
         real(dp), dimension(nsn, ewn, upn) :: uvel_t_unstag, vvel_t_unstag
         integer, dimension(nsn, ewn) :: point_mask_t
@@ -422,11 +414,6 @@ contains
 
         real(dp), dimension(nsn,ewn) :: marine_bc_normal_t
 
-
-
-        write(*,*)"Unstaggered!"
-        ijktot = (nsn)*(ewn)*upn
-
         !Determine whether to upwind or downwind derivatives at points on the
         !interior of the model domain (this is mainly important for the marine
         !margin
@@ -434,22 +421,8 @@ contains
         !transposed.
         direction_y = 0
         direction_x = 0
-        call directions_from_mask(geometry_mask, direction_y, direction_x)
+        call upwind_from_mask(geometry_mask, direction_y, direction_x)
 
-        !Compute first derivatives of geometry
-        call df_field_2d(usrf, dew, dns, dusrfdew, dusrfdns, .false., .false., &
-                direction_x, direction_y)
-        call df_field_2d(lsrf, dew, dns, dlsrfdew, dlsrfdns, .false., .false., &
-                direction_x, direction_y)
-        call df_field_2d(thck, dew, dns, dthckdew, dthckdns, .false., .false., &
-                direction_x, direction_y)
-
-        !Compute second derivatives of thickness and surface, these are needed
-        !for the rescaled coordinate parameters
-        !TODO: Augment these with direction info
-        call d2f_field(usrf, dew, dns, d2zdx2, d2zdy2, .false., .false.)
-        call d2f_field(thck, dew, dns, d2hdx2, d2hdy2, .false., .false.)
-        
         !Move everything into transposed coordinates
         !This means that we need to transpose every data field with x and y that
         !we have thus far.
@@ -504,7 +477,6 @@ contains
         !end do
 
         call unstagger_field_2d(btrc_t, btrc_t_unstag, periodic_ew, periodic_ns)
-        write(*,*) ewn, dew, nsn, dns, upn
 
         !Compute rescaled coordinate parameters (needed because Pattyn uses an
         !irregular Z grid and scales so that 0 is the surface, 1 is the bed)
@@ -567,8 +539,7 @@ contains
     subroutine glimToIce3d_3d(field, dest, nx, ny, nz)
         real(dp), dimension(:, :, :) :: field
         real(dp), dimension(:, :, :) :: dest
-        integer :: nx, ny, nz, ni, nj, nk, i, j, k
-        logical :: to_glimmer
+        integer :: nx, ny, nz, i, j, k
  
         do i=1,nx
             do j=1,ny
@@ -582,9 +553,7 @@ contains
     subroutine ice3dToGlim_3d(field, dest, nx, ny, nz)
         real(dp), dimension(:, :, :) :: field
         real(dp), dimension(:, :, :) :: dest
-        integer :: nx, ny, nz, ni, nj, nk, i, j, k
-        logical :: to_glimmer
-
+        integer :: nx, ny, nz, i, j, k
         do i=1,nx
             do j=1,ny
                 do k=1,nz

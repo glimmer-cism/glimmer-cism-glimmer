@@ -280,35 +280,7 @@ contains
 #ifdef PROFILING
     call glide_prof_start(model,model%glide_prof%geomderv)
 #endif
-    call stagvarb(model%geometry% thck, &
-         model%geomderv% stagthck,&
-         model%general%  ewn, &
-         model%general%  nsn, &
-         1, &
-         model%geometry%usrf, &
-         model%numerics%thklim)
-    call df_field_2d_staggered(model%geometry%usrf, &
-                               model%numerics%dew, model%numerics%dns, &
-                               model%geomderv%dusrfdew, & 
-                               model%geomderv%dusrfdns, &
-                               .false., .false.)
-          
-    call df_field_2d_staggered(model%geometry%thck, &
-                               model%numerics%dew, model%numerics%dns, &
-                               model%geomderv%dthckdew, &
-                               model%geomderv%dthckdns, &
-                               .false., .false.)
-          
-    !Make sure that the derivatives are 0 where staggered thickness is 0
-    where (model%geomderv%stagthck == 0)
-       model%geomderv%dusrfdew = 0
-       model%geomderv%dusrfdns = 0
-       model%geomderv%dthckdew = 0
-       model%geomderv%dthckdns = 0
-    endwhere
-
-
-
+    call geometry_derivs(model)
 #ifdef PROFILING
     call glide_prof_stop(model,model%glide_prof%geomderv)
 #endif

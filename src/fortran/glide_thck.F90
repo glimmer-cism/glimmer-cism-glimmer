@@ -61,7 +61,8 @@ module glide_thck
   use glide_io
   private
   public :: init_thck, thck_nonlin_evolve, thck_lin_evolve, timeders, &
-            stagleapthck, fix_mass_conservation 
+            stagleapthck, fix_mass_conservation, geometry_derivs, &
+            geometry_derivs_unstag 
 
 #ifdef DEBUG_PICARD
   ! debugging Picard iteration
@@ -124,6 +125,8 @@ contains
 #endif
     else
 
+       call geometry_derivs(model)
+
        ! calculate basal velos
        if (newtemps) then
           call slipvelo(model,                &
@@ -147,6 +150,7 @@ contains
 
        !Calculate higher-order velocities if the user asked for them
        if (model%options%which_ho_diagnostic /= 0 ) then
+            call geometry_derivs_unstag(model)
             call run_ho_diagnostic(model)                          
        end if
 
@@ -244,34 +248,7 @@ contains
        model%thckwk%oldthck2 = model%geometry%thck
        do p=1,pmax
           
-          call stagvarb(model%geometry% thck, &
-               model%geomderv% stagthck,&
-               model%general%  ewn, &
-               model%general%  nsn, &
-               1, &
-               model%geometry%usrf, &
-               model%numerics%thklim)
-          !call fix_mass_conservation(model%geometry%thck, &
-          !                          model%geomderv%stagthck)
-          call df_field_2d_staggered(model%geometry%usrf, &
-                                     model%numerics%dew, model%numerics%dns, &
-                                     model%geomderv%dusrfdew, & 
-                                     model%geomderv%dusrfdns, &
-                                     .false., .false.)
-
-          call df_field_2d_staggered(model%geometry%thck, &
-                                     model%numerics%dew, model%numerics%dns, &
-                                     model%geomderv%dthckdew, &
-                                     model%geomderv%dthckdns, &
-                                     .false., .false.)
-          
-          !Make sure that the derivatives are 0 where staggered thickness is 0
-          where (model%geomderv%stagthck == 0)
-                model%geomderv%dusrfdew = 0
-                model%geomderv%dusrfdns = 0
-                model%geomderv%dthckdew = 0
-                model%geomderv%dthckdns = 0
-          endwhere
+          call geometry_derivs(model)
 
           call slipvelo(model,                &
                2,                             &
@@ -285,6 +262,7 @@ contains
 
        !Calculate higher-order velocities if the user asked for them
        if (model%options%which_ho_diagnostic /= 0 ) then
+            call geometry_derivs_unstag(model)
             call run_ho_diagnostic(model)                          
        end if
 
@@ -293,6 +271,8 @@ contains
        ! get new thicknesses
             call thck_evolve(model,model%velocity%diffu, model%velocity%diffu, .true.,model%geometry%thck,model%geometry%thck)
        else if (model%options%which_ho_prognostic == HO_PROG_PATTYN) then
+            
+
             call hom_diffusion_pattyn(model%velocity_hom%uvel, model%velocity_hom%vvel, model%geomderv%stagthck, &
                                       model%geomderv%dusrfdew, model%geomderv%dusrfdns, model%numerics%sigma, &
                                       model%velocity_hom%diffu_x, model%velocity_hom%diffu_y) 
@@ -353,6 +333,7 @@ contains
 
 !---------------------------------------------------------------------------------
 
+  
   subroutine thck_evolve(model,diffu_x, diffu_y,calc_rhs,old_thck,new_thck)
 
     !*FD set up sparse matrix and solve matrix equation to find new ice thickness distribution
@@ -577,6 +558,118 @@ contains
     where (thck(2:ewn, 2:nsn)*thk0 < 100)
         stagthck = 0
     endwhere
+  end subroutine
+
+!---------------------------------------------------------------
+
+  subroutine geometry_derivs(model)
+     use glide_mask, only: upwind_from_mask
+     implicit none
+
+     !*FD Computes derivatives of the ice and bed geometry, as well as averaging
+     !*FD them onto the staggered grid
+     type(glide_global_type), intent(inout) :: model
+
+     !Fields allow us to upwind derivatives at the ice sheet lateral boundaries
+     !so that we're not differencing out of the domain
+     real(dp), dimension(model%general%ewn, model%general%nsn) :: direction_x, direction_y
+
+     call stagvarb(model%geometry% thck, &
+               model%geomderv%stagthck,&
+               model%general%ewn, &
+               model%general%nsn, &
+               1, &
+               model%geometry%usrf, &
+               model%numerics%thklim)
+      
+     call stagvarb(model%geometry%lsrf, &
+               model%geomderv%staglsrf,&
+               model%general%ewn, &
+               model%general%nsn, &
+               0)
+
+     call stagvarb(model%geometry%topg, &
+               model%geomderv%stagtopg,&
+               model%general%ewn, &
+               model%general%nsn, &
+               0)
+
+
+     model%geomderv%stagusrf = model%geomderv%staglsrf + model%geomderv%stagthck
+
+      
+     call df_field_2d_staggered(model%geometry%usrf, &
+                                     model%numerics%dew, model%numerics%dns, &
+                                     model%geomderv%dusrfdew, & 
+                                     model%geomderv%dusrfdns, &
+                                     .false., .false.)
+
+     call df_field_2d_staggered(model%geometry%thck, &
+                                     model%numerics%dew, model%numerics%dns, &
+                                     model%geomderv%dthckdew, &
+                                     model%geomderv%dthckdns, &
+                                     .false., .false.)
+     
+      !Make sure that the derivatives are 0 where staggered thickness is 0
+      where (model%geomderv%stagthck == 0)
+             model%geomderv%dusrfdew = 0
+             model%geomderv%dusrfdns = 0
+             model%geomderv%dthckdew = 0
+             model%geomderv%dthckdns = 0
+      endwhere
+
+      !TODO: correct signs
+      model%geomderv%dlsrfdew = model%geomderv%dusrfdew - model%geomderv%dthckdew
+      model%geomderv%dlsrfdns = model%geomderv%dusrfdns - model%geomderv%dthckdns
+        
+      !Compute second derivatives.
+      !TODO: Turn this on and off conditionally based on whether the computation
+      !is requred
+      
+      !Compute seond derivatives
+      !TODO: maybe turn this on and off conditionally?
+      call d2f_field_stag(model%geometry%usrf, model%numerics%dew, model%numerics%dns, &
+                          model%geomderv%d2usrfdew2, model%geomderv%d2usrfdns2, &
+                          .false., .false.)
+
+      call d2f_field_stag(model%geometry%thck, model%numerics%dew, model%numerics%dns, &
+                          model%geomderv%d2thckdew2, model%geomderv%d2thckdns2, &
+                          .false., .false.)
+ 
+  end subroutine
+
+  !*FD Computes derivatives of the geometry onto variables on a nonstaggered
+  !*FD grid.  Used for some higher-order routines
+  subroutine geometry_derivs_unstag(model)
+     implicit none
+     type(glide_global_type) :: model
+
+     !Fields allow us to upwind derivatives at the ice sheet lateral boundaries
+     !so that we're not differencing out of the domain
+     real(dp), dimension(model%general%ewn, model%general%nsn) :: direction_x, direction_y
+
+     !Compute first derivatives of geometry
+     call df_field_2d(model%geometry%usrf, model%numerics%dew, model%numerics%dns, &
+                      model%geomderv%dusrfdew_unstag, model%geomderv%dusrfdns_unstag, &
+                      .false., .false., direction_x, direction_y)
+
+     call df_field_2d(model%geometry%lsrf, model%numerics%dew, model%numerics%dns, &
+                      model%geomderv%dlsrfdew_unstag, model%geomderv%dlsrfdns_unstag, &
+                      .false., .false., direction_x, direction_y)
+
+     call df_field_2d(model%geometry%thck, model%numerics%dew, model%numerics%dns, &
+                      model%geomderv%dthckdew_unstag, model%geomderv%dthckdns_unstag, &
+                      .false., .false., direction_x, direction_y)
+
+     call d2f_field(model%geometry%usrf, model%numerics%dew, model%numerics%dns, &
+                          model%geomderv%d2usrfdew2_unstag, model%geomderv%d2usrfdns2_unstag, &
+                          .false., .false.)
+
+     call d2f_field(model%geometry%thck, model%numerics%dew, model%numerics%dns, &
+                          model%geomderv%d2thckdew2_unstag, model%geomderv%d2thckdns2_unstag, &
+                          .false., .false.)
+  
+
   end subroutine
 
 !---------------------------------------------------------------------------------

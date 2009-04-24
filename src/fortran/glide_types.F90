@@ -393,14 +393,54 @@ module glide_types
     !*FD Holds the horizontal and temporal derivatives of the thickness and
     !*FD upper surface elevation, as well as the thickness on the staggered grid.
 
+    !*tb* Added a bunch of stuff here to clean up the higher order code that
+    !I've been writing.  Might be worth it to add a mechanism to conditionally
+    !allocate these depending on whether they are needed by the SIA core or by
+    !the higher-order extensions
+
+    !First derivatives on a staggered grid
     real(dp),dimension(:,:),pointer :: dthckdew => null() !*FD E-W derivative of thickness.
     real(dp),dimension(:,:),pointer :: dusrfdew => null() !*FD E-W derivative of upper surface elevation.
     real(dp),dimension(:,:),pointer :: dthckdns => null() !*FD N-S derivative of thickness.
     real(dp),dimension(:,:),pointer :: dusrfdns => null() !*FD N-S derivative of upper surface elevation.
+    real(dp),dimension(:,:),pointer :: dlsrfdew => null() !*tb* added
+    real(dp),dimension(:,:),pointer :: dlsrfdns => null() !*tb* added
+
+    !Second derivatives on a staggered grid
+    !*tb* added all of these
+    real(dp),dimension(:,:),pointer :: d2usrfdew2 => null()
+    real(dp),dimension(:,:),pointer :: d2usrfdns2 => null()
+    real(dp),dimension(:,:),pointer :: d2thckdew2 => null()
+    real(dp),dimension(:,:),pointer :: d2thckdns2 => null()
+
+    !First derivatives on a nonstaggered grid
+    !*tb* added all of these
+    real(dp),dimension(:,:),pointer :: dthckdew_unstag => null() !*FD E-W derivative of thickness.
+    real(dp),dimension(:,:),pointer :: dusrfdew_unstag => null() !*FD E-W derivative of upper surface elevation.
+    real(dp),dimension(:,:),pointer :: dthckdns_unstag => null() !*FD N-S derivative of thickness.
+    real(dp),dimension(:,:),pointer :: dusrfdns_unstag => null() !*FD N-S derivative of upper surface elevation.
+    real(dp),dimension(:,:),pointer :: dlsrfdew_unstag => null()
+    real(dp),dimension(:,:),pointer :: dlsrfdns_unstag => null()
+
+    !Second derivatives on a nonstaggered grid
+    !*tb* added all of these
+    real(dp),dimension(:,:),pointer :: d2usrfdew2_unstag => null()
+    real(dp),dimension(:,:),pointer :: d2usrfdns2_unstag => null()
+    real(dp),dimension(:,:),pointer :: d2thckdew2_unstag => null()
+    real(dp),dimension(:,:),pointer :: d2thckdns2_unstag => null()
+
+
+    !Time derivatives
     real(dp),dimension(:,:),pointer :: dthckdtm => null() !*FD Temporal derivative of thickness.
     real(dp),dimension(:,:),pointer :: dusrfdtm => null() !*FD Temporal derivative of upper surface elevation.
+
+    !Staggered grid versions of geometry variables
     real(dp),dimension(:,:),pointer :: stagthck => null() !*FD Thickness averaged onto the staggered grid.
 
+    !*tb* added everything below
+    real(dp),dimension(:,:),pointer :: stagusrf => null() !*FD Upper surface averaged onto the staggered grid
+    real(dp),dimension(:,:),pointer :: staglsrf => null() !*FD Lower surface averaged onto the staggered grid
+    real(dp),dimension(:,:),pointer :: stagtopg => null() !*FD Bedrock topography averaged onto the staggered grid
   end type glide_geomderv
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -929,11 +969,35 @@ contains
 
     call coordsystem_allocate(model%general%velo_grid, model%geomderv%dthckdew)
     call coordsystem_allocate(model%general%velo_grid, model%geomderv%dusrfdew)
+    call coordsystem_allocate(model%general%velo_grid, model%geomderv%dlsrfdew)    
     call coordsystem_allocate(model%general%velo_grid, model%geomderv%dthckdns)
     call coordsystem_allocate(model%general%velo_grid, model%geomderv%dusrfdns)
-    call coordsystem_allocate(model%general%ice_grid, model%geomderv%dthckdtm)
-    call coordsystem_allocate(model%general%ice_grid, model%geomderv%dusrfdtm)
+    call coordsystem_allocate(model%general%velo_grid, model%geomderv%dlsrfdns)
+    
+    call coordsystem_allocate(model%general%velo_grid, model%geomderv%d2usrfdew2)
+    call coordsystem_allocate(model%general%velo_grid, model%geomderv%d2usrfdns2)
+    call coordsystem_allocate(model%general%velo_grid, model%geomderv%d2thckdew2)
+    call coordsystem_allocate(model%general%velo_grid, model%geomderv%d2thckdns2)
+    
+    call coordsystem_allocate(model%general%ice_grid, model%geomderv%dthckdew_unstag)
+    call coordsystem_allocate(model%general%ice_grid, model%geomderv%dusrfdew_unstag)
+    call coordsystem_allocate(model%general%ice_grid, model%geomderv%dlsrfdew_unstag)    
+    call coordsystem_allocate(model%general%ice_grid, model%geomderv%dthckdns_unstag)
+    call coordsystem_allocate(model%general%ice_grid, model%geomderv%dusrfdns_unstag)
+    call coordsystem_allocate(model%general%ice_grid, model%geomderv%dlsrfdns_unstag)
+    
+    call coordsystem_allocate(model%general%ice_grid, model%geomderv%d2usrfdew2_unstag)
+    call coordsystem_allocate(model%general%ice_grid, model%geomderv%d2usrfdns2_unstag)
+    call coordsystem_allocate(model%general%ice_grid, model%geomderv%d2thckdew2_unstag)
+    call coordsystem_allocate(model%general%ice_grid, model%geomderv%d2thckdns2_unstag)
+ 
+    call coordsystem_allocate(model%general%ice_grid,  model%geomderv%dthckdtm)
+    call coordsystem_allocate(model%general%ice_grid,  model%geomderv%dusrfdtm)
+
     call coordsystem_allocate(model%general%velo_grid, model%geomderv%stagthck)
+    call coordsystem_allocate(model%general%velo_grid, model%geomderv%staglsrf)
+    call coordsystem_allocate(model%general%velo_grid, model%geomderv%stagusrf)
+    call coordsystem_allocate(model%general%velo_grid, model%geomderv%stagtopg)
   
     call coordsystem_allocate(model%general%velo_grid, model%geometry%temporary0)
     call coordsystem_allocate(model%general%ice_grid, model%geometry%temporary1)
@@ -1069,12 +1133,35 @@ contains
 
     deallocate(model%geomderv%dthckdew)
     deallocate(model%geomderv%dusrfdew)
+    deallocate(model%geomderv%dlsrfdew)
     deallocate(model%geomderv%dthckdns)
     deallocate(model%geomderv%dusrfdns)
+    deallocate(model%geomderv%dlsrfdns)
+
+    deallocate(model%geomderv%d2usrfdew2)
+    deallocate(model%geomderv%d2thckdew2)
+    deallocate(model%geomderv%d2usrfdns2)
+    deallocate(model%geomderv%d2thckdns2)
+
+    deallocate(model%geomderv%dthckdew_unstag)
+    deallocate(model%geomderv%dusrfdew_unstag)
+    deallocate(model%geomderv%dlsrfdew_unstag)
+    deallocate(model%geomderv%dthckdns_unstag)
+    deallocate(model%geomderv%dusrfdns_unstag)
+    deallocate(model%geomderv%dlsrfdns_unstag)
+
+    deallocate(model%geomderv%d2usrfdew2_unstag)
+    deallocate(model%geomderv%d2thckdew2_unstag)
+    deallocate(model%geomderv%d2usrfdns2_unstag)
+    deallocate(model%geomderv%d2thckdns2_unstag)
+
     deallocate(model%geomderv%dthckdtm)
     deallocate(model%geomderv%dusrfdtm)
     deallocate(model%geomderv%stagthck)
-  
+    deallocate(model%geomderv%stagusrf)
+    deallocate(model%geomderv%staglsrf)
+    deallocate(model%geomderv%stagtopg)
+
     deallocate(model%geometry%temporary0)
     deallocate(model%geometry%temporary1)
     deallocate(model%geometry%thck)

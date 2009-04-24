@@ -16,7 +16,7 @@
 !matrix.  They should be disabled unless the higher-order code needs debugging.
 
 !Define to write the rows of the sparse matrix for each vel. component then stop.
-#define OUTPUT_SPARSE_MATRIX
+!#define OUTPUT_SPARSE_MATRIX
 
 !Define to output a NetCDF file of the partial iterations
 #define OUTPUT_PARTIAL_ITERATIONS
@@ -149,11 +149,14 @@ contains
         
         double precision, dimension(:,:), intent(in) :: direction_x, direction_y
 
-        double precision, dimension(size(ax,1), size(ax,2), size(ax,3)) :: daxdx, daxdy, &
-                    daxdz, daydx, daydy, daydz
-
         INTEGER :: i,j,k
-#if 1
+
+#ifndef NO_RESCALE
+        write(*,*) "Pattyn-Bocek model does not work with scaling yet.  Please re-compile with the flag -DNO_RESCALE."
+        stop
+#endif
+
+#if 0
         call write_xls("h.txt",h)
         call write_xls("hb.txt",hb)
         call write_xls("surf.txt",surf)
@@ -427,10 +430,8 @@ contains
         !in radians, with 0=12 o'clock, pi/2=3 o'clock, etc.
         double precision, dimension(:,:)   :: marine_bc_normal
 
-        INTEGER i,j,k,l,lacc,m,n,maxiter,iter,DU1,DU2,DV1,DV2,&
-           ijktot
-        double precision :: error,tot,alfa,norm1,norm2,norm3,norm4,&
-            norm5,teta
+        INTEGER l,lacc,m,maxiter,iter,DU1,DU2,DV1,DV2,ijktot
+        double precision :: error,tot,teta
 
         logical :: periodic_x, periodic_y
         PARAMETER (DU1=1,DU2=2,DV1=3,DV2=4)
@@ -442,14 +443,12 @@ contains
         !Velocity estimates computed for the *current* iteration.  uvel and
         !vvel, comparitively, hold the velocity estimates for the *last*
         !iteration.
-        double precision, dimension(size(mu,1),size(mu,2),size(mu,3)) :: ustar, vstar, utmp, vtmp
+        double precision, dimension(size(mu,1),size(mu,2),size(mu,3)) :: ustar, vstar
         double precision, dimension(size(mu,1),size(mu,2)) :: tau !Basal traction, to be computed from the provided beta parameter
        
         double precision, dimension(size(mu,1),size(mu,2),size(mu,3)) :: dudx, dudy, dudz
         double precision, dimension(size(mu,1),size(mu,2),size(mu,3)) :: dvdx, dvdy, dvdz
         double precision, dimension(size(mu,1),size(mu,2)) :: direction_x, direction_y
-
-        double precision, dimension(size(mu,1),size(mu,2)) ::ubas, vbas
 
         logical :: cont
 
@@ -472,13 +471,6 @@ contains
         nzeta = size(mu,3)
         ijktot = active_points*nzeta
 
-        write(*,*)"uvel shape:", shape(uvel)
-        write(*,*)"kinematic u shape:", shape(kinematic_bc_u)
-        write(*,*)"kinematic v shape:", shape(kinematic_bc_v)
-        write(*,*)"point mask shape:", shape(point_mask)
-        write(*,*)"geom mask shape:",shape(geometry_mask)
-        write(*,*)"bc normals:",shape(marine_bc_normal)
-        write(*,*)"I think the dimensions should be:",maxy, maxx, nzeta
         allocate(normal_x(maxy, maxx))
         allocate(normal_y(maxy, maxx))
 
@@ -491,7 +483,6 @@ contains
         lacc=0
         em = 0
         correction_vec = 0
-        write(*,*)"ARRH",arrh(1,1,1)
         !Set up sparse matrix options
         call sparse_solver_default_options(options)
         options%tolerance=TOLER
@@ -505,9 +496,8 @@ contains
         !Create the sparse matrix
         call new_sparse_matrix(ijktot, ijktot*STENCIL_SIZE, matrix)
         call sparse_allocate_workspace(matrix, options, workspace, ijktot*STENCIL_SIZE)
-        write(*,*)"NEW stuff added here"
 
-#if 1
+#if 0
         call write_xls_3d("arrh.txt",arrh)
         call write_xls("dzdx.txt",dzdx)
         call write_xls("dzdy.txt",dzdy)
@@ -585,7 +575,14 @@ contains
                            delta_x, delta_y, zeta, .false., &
                            direction_x, direction_y, &
                            dudx, dudy, dudz, dvdx, dvdy, dvdz)
-
+#if 0
+            call write_xls_3d("dudx.txt",dudx)
+            call write_xls_3d("dudy.txt",dudy)
+            call write_xls_3d("dudz.txt",dudz)
+            call write_xls_3d("dvdx.txt",dvdx)
+            call write_xls_3d("dvdy.txt",dvdy)
+            call write_xls_3d("dvdz.txt",dvdz)
+#endif
             !Compute viscosity
             if (WHICH_MU == HO_EFVS_FULL) then
                 call muterm(mu,arrh,h,ax,ay,FLOWN,ZIP,dudx, dudy, dudz, dvdx, dvdy, dvdz)
@@ -644,12 +641,12 @@ contains
 #ifdef OUTPUT_PARTIAL_ITERATIONS
       call end_debug_iteration(ncid_debug)
 #endif
-
+#if 0
       call write_xls_3d("uvel.txt",uvel)
       call write_xls_3d("vvel.txt",vvel)
       call write_xls("uvel_surf.txt",uvel(:,:,1))
       call write_xls("vvel_surf.txt",vvel(:,:,1))
-
+#endif
       call sparse_destroy_workspace(matrix, options, workspace)
       call del_sparse_matrix(matrix) 
 
@@ -659,90 +656,6 @@ contains
       return
       END subroutine
   
-      subroutine enforce_plug_flow(uvel, vvel, geometry_mask)
-            real(dp), dimension(:,:,:), intent(inout) :: uvel, vvel
-            integer, dimension(:,:) :: geometry_mask
-            real(dp) :: avg
-            integer :: i,j,k
-            do i = 1, size(geometry_mask, 1)
-                do j = 1, size(geometry_mask, 2)
-                    if GLIDE_IS_FLOAT(geometry_mask(i,j)) then
-                        uvel(i,j,:) = sum(uvel(i,j,:))/size(uvel,3)
-                        vvel(i,j,:) = sum(vvel(i,j,:))/size(vvel,3)
-                    end if
-                end do
-            end do
-      end subroutine enforce_plug_flow
-
-      subroutine artificial_diffuse_latbc(uvel, vvel, geometry_mask)
-        real(dp), dimension(:,:,:), intent(inout) :: uvel, vvel
-        integer, dimension(:,:) :: geometry_mask
-
-        integer :: i,j,i1,j1,ntot
-
-        integer :: nx, ny
-
-        real(dp) :: tot
-
-        real(dp), dimension(size(uvel,3)) :: columnu, columnv
-
-        ny = size(geometry_mask, 1)
-        nx = size(geometry_mask, 2)
-
-        do i = 1,ny
-            do j=1,nx
-                if GLIDE_IS_CALVING(geometry_mask(i,j)) then
-                    columnu = 0
-                    columnv = 0
-                    ntot = 0
-                    do i1 = -1,1
-                        do j1 = -1, 1
-                            if GLIDE_HAS_ICE(geometry_mask(i+i1, j+j1)) then
-                                columnu = columnu + uvel(i+i1,j+j1,:)
-                                columnv = columnv + vvel(i+i1,j+j1,:)
-                                ntot = ntot + 1
-                            end if
-                        end do
-                    end do
-                    uvel(i,j,:) = columnu/ntot
-                    vvel(i,j,:) = columnv/ntot
-                end if
-            end do
-        end do
-
-      end subroutine
-
-      subroutine smooth_field_3d(field, factor, outfield)
-        double precision, dimension(:,:,:) ::    field
-        double precision, dimension(:,:,:) :: outfield
-        integer :: factor
-
-        integer :: i, j, k
-        integer :: maxx, maxy, nzeta
-
-        integer :: xlow, xhi, ylow, yhi
-        integer :: npoints
-
-        maxx = size(field, 2)
-        maxy = size(field, 1)
-        nzeta = size(field, 3)
-
-        do i=1,maxy
-            do j=1,maxx
-                !Clamp the range that we are going to average to the limits of the grid
-                xlow = max(1, j - factor)
-                ylow = max(1, i - factor)
-                xhi  = min(maxx, j + factor)
-                yhi  = min(maxy, i + factor)
-                npoints = (xhi-xlow)*(yhi-ylow)
-                do k=1,nzeta
-                    outfield(i,j,k) = sum(field(ylow, yhi : xlow, xhi : k))/npoints
-                end do
-            end do
-        end do
-
-      end subroutine 
-
 !----------------------------------------------------------------------------------------
 ! BOP
 !
@@ -818,42 +731,6 @@ contains
         end do
     end subroutine vel_2d_from_3d
 
-    subroutine fill_radial_symmetry(field, maxv, component)
-        double precision, dimension(:,:,:) :: field
-        double precision :: falloff
-        double precision :: maxv
-        double precision :: r, dir
-        integer::component
-
-        integer :: maxx, maxy, i, j, k
-        double precision::centx,centy
-        maxx = size(field, 1)
-        maxy = size(field, 2)
-
-        centx = maxx/2
-        centy = maxy/2
-        
-        do i=1,maxy
-            do j=1,maxx
-                !compute dist. from center
-                r = sqrt((i-centy)**2 + (j-centx)**2)
-                !compute component of unit direction vector
-                if (component == 2) then
-                    dir = i-centy
-                else
-                    dir = j-centx
-                end if
-                
-                if (r /= 0) dir = dir/r
-                
-                if (r <= min(centx, centy)) then
-                    field(i,j,:) = maxv * r * dir
-                else
-                    field(i,j,:) = 0
-                end if
-            end do
-        end do
-    end subroutine fill_radial_symmetry
 
 !-----------------------------------------------------
 !   plastic bed computation
@@ -864,7 +741,7 @@ contains
         double precision, dimension(:,:), intent(in)  :: ubas
         double precision, dimension(:,:), intent(in)  :: vbas
         
-        integer :: maxy, maxx, nzeta, i, j, k
+        integer :: maxy, maxx, i, j
 
         maxy = size(ubas,1)
         maxx = size(ubas,2)
@@ -876,44 +753,6 @@ contains
         end do
     end subroutine plastic_bed
 
-    !Fills a field of differencing directions suitable to give a field
-    !derivative routine.  Uses centered differencing everywhere except for the
-    !marine ice margin, where upwinding and downwinding is used to avoid
-    !differencing across the boundary.
-    subroutine directions_from_mask(geometry_mask, direction_x, direction_y)
-        integer, dimension(:,:), intent(in) :: geometry_mask
-        double precision, dimension(:,:), intent(out) :: direction_x, direction_y
-
-        integer :: i,j
-
-        direction_x = 0
-        direction_y = 0
-
-        !Detect locations of the marine margin
-        do i = 2, size(geometry_mask,1)-1
-            do j = 2, size(geometry_mask,2)-1
-                if (GLIDE_IS_SHELF_FRONT(geometry_mask(i,j))) then
-                    !Detect whether we need to upwind or downwind in the Y
-                    !direction
-                    if (.not. GLIDE_HAS_ICE(geometry_mask(i-1,j))) then
-                        direction_y(i,j) = 1
-                    else if (.not. GLIDE_HAS_ICE(geometry_mask(i+1,j))) then
-                        direction_y(i,j) = -1
-                    end if
-
-                    !Detect whether we need to upwind or downwind in the X
-                    !direction
-                    if (.not. GLIDE_HAS_ICE(geometry_mask(i,j-1))) then
-                        direction_x(i,j) = 1
-                    else if (.not. GLIDE_HAS_ICE(geometry_mask(i,j+1))) then
-                        direction_x(i,j) = -1
-                    end if
-                end if
-            end do
-        end do
-
-    end subroutine
-
 
     !Compute x,y,z derivative fields of u and v, upwinding if necessary at the
     !ice shelf front
@@ -921,6 +760,8 @@ contains
                          dx, dy, levels, UPSTREAM, &
                          direction_x, direction_y, &
                          dudx, dudy, dudz, dvdx, dvdy, dvdz)
+        use glide_mask, only: upwind_from_mask
+
         double precision, dimension(:,:,:), intent(in) :: uvel
         double precision, dimension(:,:,:), intent(in) :: vvel
         double precision, dimension(:,:), intent(in) :: dzdx
@@ -965,7 +806,7 @@ contains
         else
             direction_x = 0
             direction_y = 0
-            call directions_from_mask(geometry_mask, direction_x, direction_y)
+            call upwind_from_mask(geometry_mask, direction_y, direction_x)
             call write_xls("direction_x.txt",direction_x)
             call write_xls("direction_y.txt",direction_y)
             
@@ -1068,7 +909,7 @@ contains
         
         double precision, dimension(:,:), intent(in) :: direction_x,direction_y
 
-        INTEGER i,j,k,l,m,sparuv,iter, ierr
+        INTEGER i,j,k,m,sparuv,iter, ierr
         double precision :: d(IJKTOT),x(IJKTOT),coef(STENCIL_SIZE),err
       
         !Sparse matrix variables.  These are passed in so that allocation can be
@@ -1418,8 +1259,6 @@ contains
         double precision dz_down1, dz_down2, dz_down3, dz_up1, dz_up2, dz_up3
         double precision dz_cen1, dz_cen2, dz_cen3, dz_sec1, dz_sec2, dz_sec3
         
-        double precision :: rhs2
-
         double precision, dimension(:,:),intent(in) :: direction_x, direction_y
 
         !call write_xls_3d("uvel.txt",uvel)
@@ -1750,8 +1589,7 @@ contains
 
         !Cached difference calculations for the nonstaggered Z grid
         double precision dz_down1, dz_down2, dz_down3, dz_up1, dz_up2, dz_up3
-        double precision dz_cen1, dz_cen2, dz_cen3, dz_sec1, dz_sec2, dz_sec3
- 
+        double precision dz_cen1, dz_cen2, dz_cen3 
         double precision, dimension(:,:,:), pointer :: a_para, a_perp
 
         double precision, pointer :: n_para, n_perp, dperp_dpara, dperp_dperp

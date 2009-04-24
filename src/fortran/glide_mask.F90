@@ -161,8 +161,6 @@ contains
         integer, dimension(:,:), intent(in) :: mask
         real(dp), dimension(:,:), intent(out) :: marine_bc_normal
 
-        integer :: thck_im1, thck_ip1, thck_jm1, thck_jp1
-
         integer :: i, j
 
         real(dp), dimension(0:size(thck,1)+1, 0:size(thck,2)+1) :: thckWithBounds
@@ -275,5 +273,42 @@ contains
         if (calc_normal_45deg < 0) calc_normal_45deg = calc_normal_45deg + 2*pi
 
     end function
+
+    !Fills a field of differencing directions suitable to give a field
+    !derivative routine.  Uses centered differencing everywhere except for the
+    !marine ice margin, where upwinding and downwinding is used to avoid
+    !differencing across the boundary.
+    subroutine upwind_from_mask(geometry_mask, direction_x, direction_y)
+        integer, dimension(:,:), intent(in) :: geometry_mask
+        double precision, dimension(:,:), intent(out) :: direction_x, direction_y
+
+        integer :: i,j
+
+        direction_x = 0
+        direction_y = 0
+
+        !Detect locations of the marine margin
+        do i = 2, size(geometry_mask,1)-1
+            do j = 2, size(geometry_mask,2)-1
+                if (GLIDE_IS_SHELF_FRONT(geometry_mask(i,j))) then
+                    !Detect whether we need to upwind or downwind in the Y
+                    !direction
+                    if (.not. GLIDE_HAS_ICE(geometry_mask(i-1,j))) then
+                        direction_x(i,j) = 1
+                    else if (.not. GLIDE_HAS_ICE(geometry_mask(i+1,j))) then
+                        direction_x(i,j) = -1
+                    end if
+
+                    !Detect whether we need to upwind or downwind in the X
+                    !direction
+                    if (.not. GLIDE_HAS_ICE(geometry_mask(i,j-1))) then
+                        direction_y(i,j) = 1
+                    else if (.not. GLIDE_HAS_ICE(geometry_mask(i,j+1))) then
+                        direction_y(i,j) = -1
+                    end if
+                end if
+            end do
+        end do
+    end subroutine
 
 end module glide_mask
