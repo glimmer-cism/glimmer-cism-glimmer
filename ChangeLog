@@ -1,3 +1,11 @@
+2009-04-24 Ian Rutt
+ * Fixed bug in daily PDD scheme: model was cutting back pre-existing
+   superimposed ice to wmax rather than just using this limit to constrain
+   refreezing.
+ * Added fix to allow global grids in GLINT with polar points - these are
+   now moved automatically slightly away from the poles. This is necessary
+   to avoid problems with mean-preserving interpolation
+
 2009-02-25 Ian Rutt
  * Bump version to 1.0.17 (new development series)
 

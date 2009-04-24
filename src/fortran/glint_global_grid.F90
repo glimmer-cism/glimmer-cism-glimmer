@@ -200,6 +200,12 @@ contains
     grid%lats=lats
     grid%lons=lons
 
+    ! Check to see if we have polar points, and fudge if necessary
+    ! By moving 1/20 of the way towards the next equatorward point.
+
+    if (abs(grid%lats(1)-90)<1e-8)       grid%lats(1)       =  90.0-(grid%lats(1)        -grid%lats(2))/20.0
+    if (abs(grid%lats(grid%ny)+90)<1e-8) grid%lats(grid%ny) = -90.0+(grid%lats(grid%ny-1)-grid%lats(grid%ny))/20.0
+
     ! Calculate boundaries if necessary
 
     if (present(lonb)) then

@@ -326,7 +326,7 @@ contains
     real(sp), intent(in)    :: prcp          !*FD Total precip (m)
     real(sp), intent(in)    :: rain          !*FD Rain (m)
 
-    real(sp) :: potablt, wfrac
+    real(sp) :: potablt, wfrac, rfrez
 
     !-------------------------------------------------------------------------
     ! Assume snowfall goes into snow, and rainfall goes into superimposed ice
@@ -342,22 +342,41 @@ contains
     ! Initial potential ablation of snow
 
     potablt = degd * params%pddfac_snow
+    
+    ! Calculate possible amount of refreezing. We need to do this to 
+    ! take into account of the fact that there may already be more superimposed
+    ! ice than is required for runoff
+
+    rfrez  = max(0.0,wfrac-sicedepth)
 
     ! Start off trying to ablate snow, and add it to superimposed ice
 
-    if (potablt<snowdepth) then
+    if (potablt<snowdepth) then ! ==========================================
+
+       ! If we have enough snow to consume all potential ablation
+       ! Melt that amount of snow
        snowdepth=snowdepth-potablt
-       sicedepth=sicedepth+potablt
+
+       ! Refreeze up to the limit
+       sicedepth=sicedepth+min(potablt,rfrez)
+
+       ! We've used all the potential ablation, so set to zero
        potablt=0.0_sp
-    else
+
+    else ! ==================================================================
+
+       ! If there isn't enough snow to use all the potential ablation
+       ! Set potential ablation to what remains - we use this later.
+       ! For this section, the ablation is the whole snow depth.
        potablt=potablt-snowdepth
-       sicedepth=sicedepth+snowdepth
+
+       ! Refreeze up to the limit
+       sicedepth=sicedepth+min(snowdepth,rfrez)
+
+       ! We've ablated all the snow, so set to zero
        snowdepth=0.0_sp
-    endif
 
-    ! If we have enough superimposed ice to have runoff, trim it back
-
-    if (sicedepth>wfrac) sicedepth=wfrac
+    endif ! =================================================================
 
     ! If we have any potential ablation left, use it to melt ice, 
     ! first from the firn, and then glacial ice
