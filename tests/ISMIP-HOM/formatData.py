@@ -7,7 +7,7 @@
 import sys
 import pycdf
 
-def extractMapView(ncdf, fields, fromSurface):
+def extractMapView(ncdf, fields, fromSurface, time):
     #Get the staggered grid dimensions
     x0dim = ncdf.dim("x0")
     y0dim = ncdf.dim("y0")
@@ -18,7 +18,6 @@ def extractMapView(ncdf, fields, fromSurface):
 
 
     rows = []
-    time = 0
 
     #Account for periodic BCs by ignoring the ghost cells
     #We also account for the fact that we are on a staggered grid by offsetting
@@ -42,7 +41,7 @@ def extractMapView(ncdf, fields, fromSurface):
 
     return rows
 
-def extractFlowline(ncdf, fields, fromSurface, transpose=False):
+def extractFlowline(ncdf, fields, fromSurface, time, transpose=False):
     #Get the staggered grid dimensions
     x0dim = ncdf.dim("x0")
     y0dim = ncdf.dim("y0")
@@ -60,7 +59,6 @@ def extractFlowline(ncdf, fields, fromSurface, transpose=False):
     vars = [ncdf.var(f) for f in fields]
 
     rows = []
-    time = 0
 
     for i in range(nPoints-1):
         xhat = float(i+.5)/float(nPoints - 1)
@@ -82,24 +80,32 @@ def extractFlowline(ncdf, fields, fromSurface, transpose=False):
     return rows
 
 if __name__ == "__main__":
-    experimentLetter = sys.argv[1].lower()
-    inFileName = sys.argv[2]
-    outFileName = sys.argv[3]
+    from getopt import gnu_getopt
+    optlist, args = gnu_getopt(sys.argv, '', ['tstep='])
+    opts = dict(optlist)
+    experimentLetter = args[1].lower()
+    inFileName = args[2]
+    outFileName = args[3]
 
     ncdf = pycdf.CDF(inFileName)
 
+    if "--tstep" in opts:
+        tstep = int(opts["--tstep"])
+    else:
+        tstep = 0
+
     if experimentLetter == "a":
         rows = extractMapView(ncdf, ["uvelhom","vvelhom","wvel","tau_xz","tau_yz"],
-                                    [True,     True,     True,  False,   False])
+                                    [True,     True,     True,  False,   False], tstep)
     elif experimentLetter == "b":
         rows = extractFlowline(ncdf, ["uvelhom", "wvel", "tau_xz"],
-                                     [True,      True,   False])
+                                     [True,      True,   False], tstep)
     elif experimentLetter == "c":
         rows = extractMapView(ncdf, ["uvelhom","vvelhom","wvel","uvelhom","vvelhom","tau_xz","tau_yz"],
-                                    [True,     True,     True,  False,    False,    False,   False])
+                                    [True,     True,     True,  False,    False,    False,   False], tstep)
     elif experimentLetter == "d":
         rows = extractFlowline(ncdf, ["uvelhom", "wvel", "uvelhom", "tau_xz"],
-                                     [True,      True,   False,     False])
+                                     [True,      True,   False,     False], tstep)
 
     ncdf.close()
 
