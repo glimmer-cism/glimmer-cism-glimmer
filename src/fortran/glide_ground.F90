@@ -16,21 +16,30 @@ module glide_ground
   use glimmer_global
   implicit none
 contains
-!-------------------------------------------------------------------------
-  subroutine glide_initialise_backstress(thck,backstress)
+  
+!-------------------------------------------------------------------------------  
+  subroutine glide_initialise_backstress(thck,backstressmap,backstress,sigmabin)
+  
      implicit none
      
      real(dp), dimension(:,:), intent(in) :: thck !*FD Ice thickness
-     real(sp), dimension(:,:), intent(inout) :: backstress !*FD Backstress
+     logical, dimension(:,:), intent(inout) :: backstressmap !*FD Backstress map
+     real(sp), dimension(:,:), intent(inout):: backstress !*FD Backstress
+     real(sp) :: sigmabin
      backstress = 0.0
+     backstressmap = .False. 
      where(thck > 0.0) 
-         backstress = 1.0
+         backstressmap = .True. 
+     end where
+
+     where (thck > 0.0)
+         backstress = sigmabin
      end where
   end subroutine glide_initialise_backstress
 !-------------------------------------------------------------------------
 
   subroutine glide_marinlim(which,thck,relx,topg,flwa,levels,mask,mlimit,calving_fraction,eus,ablation_field,backstress, & 
-                 tempanmly,dew,dns)
+                 tempanmly,dew,dns,backstressmap,sigmabout,sigmabin)
 
 
     !*FD Removes non-grounded ice, according to one of two altenative
@@ -77,9 +86,11 @@ contains
     real(sp), dimension(:,:), intent(inout) :: backstress
     real(sp) :: tempanmly
     real(dp), intent(in) ::  dew,dns
-
+    logical, dimension(:,:), intent(in)   :: backstressmap !*FD map of the
+                                                           !*FD backstresses for the initial map
     integer ew,ns
     real(dp) :: sigmab
+    real(sp) :: sigmabout,sigmabin
     !---------------------------------------------------------------------
 
     sigmab = 0.95
@@ -100,7 +111,7 @@ contains
           ablation_field=thck
           thck = 0.0d0
        end where
-
+    
     case(3) ! remove fraction of ice when floating
        do ns = 2,size(thck,2)-1
           do ew = 2,size(thck,1)-1
@@ -123,15 +134,21 @@ contains
             ! 
     do ns = 2, size(backstress,2)-1
        do ew = 2, size(backstress,1)-1
-            if(backstress(ew,ns) < 1.0) then
+            if(.not. backstressmap(ew,ns)) then
                if (tempanmly > 0.0) then
-                  backstress(ew,ns) = 0.0
+                  backstress(ew,ns) = sigmabout
                else
-                  backstress(ew,ns) = 1-0.85*exp(tempanmly) 
+                  !backstress(ew,ns) = 1-exp(tempanmly) 
+                  backstress(ew,ns) = sigmabout + (1-sigmabout)*abs(tempanmly/9.2)
                end if
             end if
        end do
     end do 
+    where (backstressmap) 
+      backstress = sigmabin + (1-sigmabin)*abs(tempanmly/9.2)
+    end where 
+       
+       
        do ns = 2,size(thck,2)-1
           do ew = 2,size(thck,1)-1
              if (GLIDE_IS_GROUNDING_LINE(mask(ew,ns))) then
@@ -146,14 +163,26 @@ contains
             end if
           end do
        end do
-         
-       where (GLIDE_IS_MARINE_ICE_EDGE(mask).and.topg<mlimit+eus)
+      
+      where (GLIDE_IS_FLOAT(mask).and.relx<mlimit+eus)
           ablation_field=thck
           thck = 0.0d0
        end where
-
+      do ns = 2,size(thck,2)-1
+         do ew = 2,size(thck,1)-1
+           if (GLIDE_IS_FLOAT(mask(ew,ns)) .and. .not. backstressmap(ew,ns))then 
+      
+             if ((.not. GLIDE_IS_GROUNDING_LINE(mask(ew-1,ns))) &
+              .and. (.not. GLIDE_IS_GROUNDING_LINE(mask(ew+1,ns))) .and. &
+              (.not. GLIDE_IS_GROUNDING_LINE(mask(ew,ns-1))) .and. &
+              (.not. GLIDE_IS_GROUNDING_LINE(mask(ew,ns+1)))) then
+                   thck(ew,ns) = 0.0
+                   ablation_field = thck
+             end if
+           end if
+         end do
+       end do
     end select
-
   end subroutine glide_marinlim
   
 !-------------------------------------------------------------------------

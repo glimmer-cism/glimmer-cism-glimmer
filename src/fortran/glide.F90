@@ -184,8 +184,10 @@ contains
     call init_velo(model)
     call init_temp(model)
     call init_thck(model)
-    call glide_initialise_backstress(model%geometry%thck,model%climate%backstress)
-    
+    call glide_initialise_backstress(model%geometry%thck,&
+                                     model%climate%backstressmap,&
+                                     model%climate%backstress, &
+                                     model%climate%sigmabin)
     if (model%options%gthf.gt.0) then
        call init_lithot(model)
     end if
@@ -437,7 +439,10 @@ contains
          model%climate%backstress, &
          model%climate%tempanmly, &
          model%numerics%dew,    &
-         model%numerics%dns)
+         model%numerics%dns, &
+         model%climate%backstressmap, &
+         model%climate%sigmabout, &
+         model%climate%sigmabin)
 
 
 
