@@ -2,9 +2,7 @@
 #The purpose of this script is to run the ISMIP-HOM suite for various grid refinements and solver options
 #to study their impact on the model output.
 import os
-
-k = 10
-guideFile = open("refinement-experiments.txt","w")
+import sys
 
 def runExperiment(gridSizeArg="40", vertGridArg="40", vertGridSpacing="even", diagnosticScheme="2"):
     global k
@@ -14,7 +12,7 @@ def runExperiment(gridSizeArg="40", vertGridArg="40", vertGridSpacing="even", di
     vertGridArg= str(vertGridArg)
     diagnosticScheme= str(diagnosticScheme)
 
-    strDiagnostic = {"1":"unstaggered". "2":"staggered"}[diagnosticScheme]
+    strDiagnostic = {"1":"unstaggered", "2":"staggered"}[diagnosticScheme]
 
     print >>guideFile, k, gridSizeArg, vertGridArg, vertGridSpacing, strDiagnostic
     prefix = "gl"+str(k)
@@ -68,9 +66,14 @@ def isolatedVariables():
     #Try a colocated grid
     runExperiment(diagnosticScheme = 1)
 
-guideFile.close()
+k = 10
+guideFile = open("refinement-experiments.txt","w")
+
 
 #Uncomment to run the fully combinatoric version of the experiment
 #fullCombinatorics()
 
 isolatedVariables()
+
+guideFile.close()
+

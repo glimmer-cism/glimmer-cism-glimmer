@@ -15,7 +15,7 @@ import intercomparison
 #Parse command line arguments
 optlist, args = gnu_getopt(sys.argv, intercomparison.ExperimentOptionsShort, 
          intercomparison.ExperimentOptionsLong + 
-         ["format-only","horiz-grid-size=","vert-grid-size=","vert-grid-spacing=","ismip-hom-prefix=","diagnostic-type="])
+         ["format-only","horiz-grid-size=","vert-grid-size=","vert-grid-spacing=","prefix=","diagnostic-type="])
 
 optdict = dict(optlist)
 
@@ -49,7 +49,7 @@ else:
     diagnosticSchemeOverride = None
 #Determine the prefix to use for the ISMIP-HOM format output files
 if "--prefix" in optdict:
-    ismipHomOutputPrefix = optdict["--ismip-hom-prefix"]
+    ismipHomOutputPrefix = optdict["--prefix"]
 else:
     ismipHomOutputPrefix = "glm1"
 
