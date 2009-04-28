@@ -284,7 +284,7 @@ contains
             if (which_sliding_law == 1) then
                 call veloc2(mu_t, uvel_t, vvel_t, flwa_t_stag, dusrfdew_t, dusrfdns_t, stagthck_t, ax, ay, &
                         sigma, bx, by, cxy, btrc_t/100, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, MANIFOLD,&
-                        TOLER, periodic_ew,periodic_ns, 0, which_efvs, dew, dns,point_mask_t,totpts,geometry_mask_t, &
+                        TOLER, periodic_ew,periodic_ns, 0, which_efvs, .true., dew, dns,point_mask_t,totpts,geometry_mask_t, &
                         kinematic_bc_u_t, kinematic_bc_v_t, marine_bc_normal_t)
             end if
         end if
@@ -297,7 +297,7 @@ contains
         !that they normally would.
         call veloc2(mu_t, uvel_t, vvel_t, flwa_t, dusrfdew_t, dusrfdns_t, stagthck_t, ax, ay, &
                     sigma, bx, by, cxy, btrc_t, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, MANIFOLD,&
-                    TOLER, periodic_ew,periodic_ns, which_sliding_law, which_efvs, dew,&
+                    TOLER, periodic_ew,periodic_ns, which_sliding_law, which_efvs, .true., dew,&
                     dns,point_mask_t,totpts, geometry_mask_t, kinematic_bc_u_t, kinematic_bc_v_t, marine_bc_normal_t)
        
         !Final computation of stress field for output
@@ -495,7 +495,7 @@ contains
             if (which_sliding_law == 1) then
                 call veloc2(mu_t, uvel_t, vvel_t, flwa_t, dusrfdew_t, dusrfdns_t, thck_t, ax, ay, &
                         sigma, bx, by, cxy, btrc_t_unstag, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, MANIFOLD,&
-                        TOLER, periodic_ew,periodic_ns, 0, which_efvs, dew, dns,point_mask_t,totpts,geometry_mask_t,&
+                        TOLER, periodic_ew,periodic_ns, 0, which_efvs, .true., dew, dns,point_mask_t,totpts,geometry_mask_t,&
                         kinematic_bc_u_t_unstag, kinematic_bc_v_t_unstag, marine_bc_normal_t)
             end if
         end if
@@ -508,7 +508,7 @@ contains
         !that they normally would.
         call veloc2(mu_t, uvel_t_unstag, vvel_t_unstag, flwa_t, dusrfdew_t, dusrfdns_t, thck_t, ax, ay, &
                     sigma, bx, by, cxy, btrc_t_unstag, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, MANIFOLD,&
-                    TOLER, periodic_ew,periodic_ns, which_sliding_law, which_efvs, dew,&
+                    TOLER, periodic_ew,periodic_ns, which_sliding_law, which_efvs, .true., dew,&
                     dns,point_mask_t,totpts,geometry_mask_t,kinematic_bc_u_t_unstag, kinematic_bc_v_t_unstag, marine_bc_normal_t)
        
         !Final computation of stress field for output

@@ -156,7 +156,7 @@ contains
         stop
 #endif
 
-#if 0
+#if 1
         call write_xls("h.txt",h)
         call write_xls("hb.txt",hb)
         call write_xls("surf.txt",surf)
@@ -386,7 +386,7 @@ contains
     SUBROUTINE veloc2(mu,uvel,vvel,arrh,dzdx,dzdy,h,ax,ay,&
                 zeta,bx,by,cxy,beta,&
                 dhbdx,dhbdy,FLOWN,ZIP,VEL2ERR,&
-                MANIFOLD,TOLER,PERIODIC_X, PERIODIC_Y, PLASTIC, WHICH_MU, delta_x, delta_y, &
+                MANIFOLD,TOLER,PERIODIC_X, PERIODIC_Y, PLASTIC, WHICH_MU, STAGGERED, delta_x, delta_y, &
                 point_mask, active_points, geometry_mask, kinematic_bc_u, kinematic_bc_v, &
                 marine_bc_normal)
                 
@@ -410,7 +410,9 @@ contains
         double precision, dimension(:,:) :: dhbdy
         double precision, dimension(:,:) :: beta
         double precision :: FLOWN,ZIP,VEL2ERR,TOLER,delta_x, delta_y
-
+        logical, intent(in) :: STAGGERED !Whether the model is run on a staggered grid or a colocated grid.
+                                         !This is passed so that corrections arising from averaging can be made.
+        
         integer, intent(in) :: WHICH_MU
 
         integer, dimension(:,:), intent(in) :: point_mask 
@@ -488,6 +490,12 @@ contains
         options%tolerance=TOLER
 !If we've compiled with the SLAP solver, we want to configure to use the GMRES method instead of the BiCG method.
 !GMRES works much better for the HO solves
+
+        if (WHICH_MU == 1) then
+            write(*,*) "Using linear rheology"
+        else
+            write(*,*) "Using full stress calculation"
+        end if
 
 #if SPARSE_SOLVER==slap
         !options%use_gmres = .true.
@@ -594,7 +602,7 @@ contains
             !Apply periodic boundary conditions to the viscosity
             call periodic_boundaries_3d_stag(mu,periodic_x,periodic_y)
             !call write_xls_3d("mu.txt",mu)
-            !stop
+            
             !Sparse matrix routine for determining velocities.  The new
             !velocities will get spit into ustar and vstar, while uvel and vvel
             !will still hold the old velocities.
@@ -607,7 +615,7 @@ contains
                 ustar,vstar,tau,dhbdx,dhbdy,ijktot,MAXY,&
                 MAXX,NZETA,TOLER, delta_x, delta_y, zeta, point_mask, &
                 geometry_mask,matrix, workspace, options, kinematic_bc_u, kinematic_bc_v, &
-                marine_bc_normal,direction_x,direction_y)
+                marine_bc_normal,direction_x,direction_y, STAGGERED)
 #ifdef OUTPUT_SPARSE_MATRIX
            close(ITER_UNIT)
 #endif
@@ -876,7 +884,7 @@ contains
                     ustar,vstar,beta,dhbdx,dhbdy,&
                     IJKTOT,MAXY,MAXX,NZETA,TOLER,GRIDX,GRIDY,zeta, point_mask, geometry_mask,&
                     matrix, workspace, options, kinematic_bc_u, kinematic_bc_v,latbc_normal, &
-                    direction_x, direction_y)
+                    direction_x, direction_y, STAGGERED)
         INTEGER IJKTOT,MAXY,MAXX,NZETA
         double precision, dimension(:,:,:) :: mu
         double precision, dimension(:,:) :: dzdx
@@ -908,6 +916,9 @@ contains
         double precision :: rhs
         
         double precision, dimension(:,:), intent(in) :: direction_x,direction_y
+        
+        logical, intent(in)::STAGGERED
+
 
         INTEGER i,j,k,m,sparuv,iter, ierr
         double precision :: d(IJKTOT),x(IJKTOT),coef(STENCIL_SIZE),err
@@ -990,7 +1001,7 @@ contains
                                 call sparse_setup(componentstr, i, j, k, mu, dzdx, dzdy, ax, ay, bx, by, cxy, &
                                      h, gridx, gridy, zeta, uvel, vvel, dudx, dudy, dudx, dvdx, dvdy, dvdz, &
                                      dhbdx, dhbdy, beta, geometry_mask, &
-                                     latbc_normal, maxx, maxy, Nzeta, coef, rhs, direction_x, direction_y)
+                                     latbc_normal, maxx, maxy, Nzeta, coef, rhs, direction_x, direction_y, STAGGERED)
                             endif
                             d(stencil_center_idx)=rhs
                             !Preliminary benchmarks indicate the we actually reach
@@ -1189,7 +1200,7 @@ contains
         h, dx, dy, dz, uvel, vvel, dudx_field, dudy_field, dudz_field, &
         dvdx_field, dvdy_field, dvdz_field, &
         dhbdx,dhbdy,beta,geometry_mask,latbc_normal,MAXX,MAXY,Ndz,&
-        coef, rhs, direction_x, direction_y)
+        coef, rhs, direction_x, direction_y, STAGGERED)
 !
         integer :: i,j,k, MAXY, MAXX, Ndz
 
@@ -1232,6 +1243,8 @@ contains
         !Contains the angle of the normal to the marine margine, NaN
         !everywhere not on the margin
         double precision, dimension(:,:) :: latbc_normal
+
+        logical, intent(in) :: STAGGERED
 
         character(1) :: component
 !
@@ -1372,7 +1385,8 @@ contains
 
         if (.not. IS_NAN(latbc_normal(i,j))) then !Marine margin dynamic (Neumann) boundary condition
             call sparse_marine_margin(component,i,j,k,h,latbc_normal, vel_perp, mu, dx, dy, ax, ay, dz,coef, rhs, &
-                                      dudx_field,dudy_field,dudz_field,dvdx_field,dvdy_field,dvdz_field,direction_x, direction_y)
+                                      dudx_field,dudy_field,dudz_field,dvdx_field,dvdy_field,dvdz_field,&
+                                      direction_x, direction_y, STAGGERED)
         else if (k.eq.1) then !Upper boundary condition (stress-free surface)
             !Finite difference coefficients for an irregular Z grid, downwinded
             dz_down1=(2.*dz(k)-dz(k+1)-dz(k+2))/(dz(k+1)-dz(k))/(dz(k+2)-dz(k))
@@ -1543,7 +1557,7 @@ contains
 
     !Computes finite differences for the marine margin
     subroutine sparse_marine_margin(component,i,j,k,h,normals, vel_perp, mu, dx, dy, ax, ay, zeta,coef, rhs, &
-                                    dudx,dudy,dudz,dvdx,dvdy,dvdz,direction_x,direction_y)
+                                    dudx,dudy,dudz,dvdx,dvdy,dvdz,direction_x,direction_y, STAGGERED)
         character(*), intent(in) :: component !*FD Either "u" or "v"
         integer, intent(in) :: i,j,k !*FD Point that the boundary condition is computed for
         real(dp), dimension(:,:), intent(in) :: h !*FD Ice thickness field
@@ -1563,6 +1577,8 @@ contains
         real(dp), dimension(:,:,:), intent(in) :: dudx,dudy,dudz,dvdx,dvdy,dvdz
         
         real(dp),dimension(:,:) :: direction_x, direction_y
+
+        logical, intent(in) :: STAGGERED
 
         !Whether or not we need to upwind or downwind lateral derivatives
         !Upwind is for when there's no ice on positive side,
@@ -1655,6 +1671,14 @@ contains
         pressure = .5 * rhoi * grav * h(i,j) * (1 - rhoi/rhoo)
 #endif
 
+        !If we are running on a staggered grid, then we need to correct for the averaging that has
+        !taken place on the boundary.  Since the thickness is, on average, halved, we double
+        !the source term
+        !(technique from Stephen Price)
+        if (STAGGERED) then
+            pressure = pressure * 2
+        end if
+
         !Divide the source term by viscosity, less error-prone to do it here
         !rather than multiply everything else by it (though it may give
         !iterative solvers more fits maybe?)
@@ -1705,7 +1729,6 @@ contains
         !Discard the component opposite the flow if there are two components.
         if (abs(n_x) > SMALL  .and. abs(n_y) > SMALL) then !proper FP compare
             n_perp = 0
-            !n_para =  n_para / abs(n_para)
         end if
 #endif
   
@@ -1732,13 +1755,23 @@ contains
        
         para_coeff = 4*n_para
         perp_coeff =   n_perp
+        
+#ifndef IGNORE_LAT_SIGMA
         dz_coeff   =   (4*a_para(i,j,k)*n_para + a_perp(i,j,k)*n_perp)
+#else
+        dz_coeff   = 0
+#endif
 
+#ifndef IGNORE_LAT_SIGMA
         rhs = pressure/ntot * n_para &
                 - 2*n_para*dperp_dperp & 
                 -   n_perp*dperp_dpara &
                 -   (2*a_para(i,j,k)*n_perp + a_perp(i,j,k)*n_para)*dperp_dz
-
+#else
+        rhs = pressure/ntot * n_para &
+                - 2*n_para*dperp_dperp & 
+                -   n_perp*dperp_dpara
+#endif
         !if (n_para /= 0) then
         !    perp_coeff = 0
         !end if
