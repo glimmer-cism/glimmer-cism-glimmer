@@ -648,6 +648,9 @@ contains
      !so that we're not differencing out of the domain
      real(dp), dimension(model%general%ewn, model%general%nsn) :: direction_x, direction_y
 
+     call upwind_from_mask(model%geometry%thkmask, direction_x, direction_y)
+     call write_xls("direction_x_unstag.txt", direction_x)
+     call write_xls("direction_y_unstag.txt", direction_y)
      !Compute first derivatives of geometry
      call df_field_2d(model%geometry%usrf, model%numerics%dew, model%numerics%dns, &
                       model%geomderv%dusrfdew_unstag, model%geomderv%dusrfdns_unstag, &
