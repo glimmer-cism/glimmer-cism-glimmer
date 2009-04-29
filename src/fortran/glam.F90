@@ -12,8 +12,9 @@ module glam
     use glide_types
     use glimmer_paramets, only : vis0, vis0_glam 
     use glimmer_physcon, only :
+    use glide_mask
 
-    use glam_strs2, only: glam_velo_fordsiapstr
+    use glam_strs2, only: glam_velo_fordsiapstr, umask
     use remap_advection
     use remap_glamutils
 
@@ -22,13 +23,13 @@ module glam
 
     public :: glam_driver
 
-    contains
-
     ! *sfp** note that initializtion routines for "glam_velo_fordsiapstr" and "remap_advection
     ! have been moved to initialization portion of "glide.F90"
 
     ! *sfp** driver subroutine for Payne/Price HO dynamics and LANL inc. remapping for dH/dt
     ! ... called from 'glide'
+
+    contains
 
     subroutine glam_driver( model )
 
@@ -61,6 +62,12 @@ module glam
         ewn = model%general%ewn
         nsn = model%general%nsn
 
+        ! *sfp* calculate mask for staggered thickness grid, using CISM subroutines. This will eventually
+        ! take the place of the mask subroutines that are internal to 'glam_strs2'
+        call glide_set_mask(model%numerics, model%geomderv%stagthck, model%geomderv%stagtopg, &
+                             model%general%ewn, model%general%nsn, model%climate%eus, &
+                             umask ) 
+
         ! Compute the higher-order velocities using the method of Payne and Price
 
         !whl - to do - Make sure that the sigma field passed to glam is consistent with glam numerics.
@@ -81,7 +88,7 @@ module glam
                                     model%geomderv%dusrfdew-model%geomderv%dthckdew,            &
                                     model%geomderv%dusrfdns-model%geomderv%dthckdns,            & 
                                     model%geomderv%stagthck, model%temper%flwa*vis0/vis0_glam,  &
-                                    minTauf,                                                    &
+                                    minTauf, umask,                                             &
                                     model%options%which_ho_babc,                                &
                                     model%options%which_ho_efvs,                                &
                                     model%options%which_ho_resid,                               &

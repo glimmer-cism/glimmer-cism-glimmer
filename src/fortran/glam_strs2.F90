@@ -1,3 +1,6 @@
+
+#include "glide_mask.inc"       !*sfp* include macros for glide mask definitions
+
 module glam_strs2
 
 !whl - Use statements modified for glimmer
@@ -19,6 +22,7 @@ use glimmer_paramets, only : dp
 use glimmer_physcon,  only : gn, rhoi, rhoo, grav, pi, scyr
 use glimmer_paramets, only : thk0, len0, vel0, vis0, tim0, tau0, lambda0, evs0, tau0_glam
 use glimmer_log,      only : write_log
+use glide_mask
 
 implicit none
 
@@ -38,11 +42,15 @@ implicit none
   real (kind = dp), allocatable, dimension(:),         save :: dup, dupm
 
   integer, dimension(:,:), allocatable :: typebbc
-  integer, dimension(:,:), allocatable :: uindx, umask
+  integer, dimension(:,:), allocatable :: uindx
+  integer, dimension(:,:), allocatable :: umask 
 
-  integer, parameter :: mnbdy = 1, noice = 0
-  integer, parameter :: boundarys = 2
-  integer, dimension(2), parameter :: strdomain = (/ mnbdy, boundarys /)
+   !*sfp* to be removed when mask is fixed
+!  integer, parameter :: mnbdy = 1, noice = 0
+!  integer, parameter :: boundarys = 2
+  
+  !*sfp* to be replaced/removed b.c. of new mask def.
+!  integer, dimension(2), parameter :: strdomain = (/ mnbdy, boundarys /)
 
   real (kind = dp), parameter :: effstrminsq = (1.0e-20_dp * tim0)**2
 
@@ -188,6 +196,7 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
                                  dlsrfdew, dlsrfdns,     &
                                  stagthck, flwa,         & 
                                  mintauf,                & 
+                                 umask,                  & 
                                  whichbabc,              &
                                  whichefvs,              &
                                  whichresid,             &
@@ -200,6 +209,7 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
   implicit none
 
   integer, intent(in) :: ewn, nsn, upn
+  integer, dimension(:,:),   intent(inout)  :: umask  !*sfp* replaces the prev., internally calc. mask
   real (kind = dp), intent(in) :: dew, dns
 
   real (kind = dp), dimension(:),     intent(in)  :: sigma, stagsigma
@@ -260,7 +270,28 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
   !      has non-zero thickness and is interior, or has non-zero thickness
   !      and is along a boundary
 
-  umask = maskvelostr(ewn, nsn, thck, stagthck)
+
+
+   !*sfp* replacing the internally calc. mask w/ the one passed in, and calc. using CISM routines
+!  umask = maskvelostr(ewn, nsn, thck, stagthck)
+
+   !*sfp* fix to label mask w/ unique value for boundaries coincident w/ domain edge
+   ! ... consider re-using / re-naming the above function to do this hack?
+   do ns = 1,nsn-1; do ew = 1,ewn-1
+    if (all(stagthck(ew:ew+1,ns:ns+1) > 0.0_dp )) then
+      ! *sfp** if at the domain edges, define as a boundary
+      if (ew == 1 .or. ew == ewn-1) then
+        umask(ew,ns) = GLIDE_MASK_BOUNDARY 
+      else if (ns == 1 .or. ns == nsn-1) then
+        umask(ew,ns) = GLIDE_MASK_BOUNDARY
+      end if
+    else if (any(thck(ew:ew+1,ns:ns+1) > 0.0_dp )) then
+     umask(ew,ns) = GLIDE_MASK_BOUNDARY 
+    end if
+   end do; end do 
+
+
+
 
   allocate(uindx(ewn-1,nsn-1))
 
@@ -459,7 +490,9 @@ function indxvelostr(ewn,  nsn,  upn,  &
 
   do ew = 1,ewn-1
       do ns = 1,nsn-1
-        if (any(strdomain == mask(ew,ns))) then
+        !*sfp* to be replaced/removed b.c. of new mask def.
+        !if (any(strdomain == mask(ew,ns))) then
+        if ( GLIDE_HAS_ICE( mask(ew,ns) ) ) then 
           indxvelostr(ew,ns) = pointno
           pointno = pointno + 1
         else
@@ -684,12 +717,13 @@ end function getlocation
 !***********************************************************************
 
 function getlocationarray(ewn, nsn, upn,  &
-                          mask, mnbdy, boundarys)
+!                          mask, mnbdy, boundarys) !*sfp* to be removed when mask fixed
+                          mask )
     implicit none
 
     integer, intent(in) :: ewn, nsn, upn 
     integer, dimension(:,:), intent(in) :: mask
-    integer, intent(in) :: mnbdy, boundarys
+!    integer, intent(in) :: mnbdy, boundarys    !*sfp* to be removed when mask fixed
     integer, dimension(ewn-1,nsn-1) :: getlocationarray, temparray
     integer :: cumsum, ew, ns
 
@@ -698,7 +732,8 @@ function getlocationarray(ewn, nsn, upn,  &
     do ew=1,ewn-1
         do ns=1,nsn-1
         !*sfp** if in main body, there are upn+2 columns ...
-        if ( mask(ew,ns) .eq. mnbdy .or. mask(ew,ns) .eq. boundarys ) then
+!        if ( mask(ew,ns) .eq. mnbdy .or. mask(ew,ns) .eq. boundarys ) then
+        if ( mask(ew,ns) == GLIDE_MASK_INTERIOR .or. mask(ew,ns) == GLIDE_MASK_BOUNDARY ) then
             cumsum = cumsum + ( upn + 2 )
             getlocationarray(ew,ns) = cumsum
             temparray(ew,ns) = upn + 2
@@ -991,6 +1026,7 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
 
   ct = 1
 
+! *sfp* to be removed if/when mask is input from cism rather than defined internally
 ! *sfp** read in mask to ID where to apply floating ice bc 
 !      open(unin,file=shlfmask,status='old')         
 !      read(unin,*) ((shelfmask(ew,ns), ew=1,ewn-1), ns=1,nsn-1)
@@ -1027,12 +1063,14 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
 
     if( ns == 1 .and. ew == 1 ) then
            loc_array = getlocationarray(ewn, nsn, upn,  &
-                                        mask, mnbdy,boundarys)
+!                                        mask, mnbdy,boundarys) !*sfp* to be removed when mask is fixed
+                                        mask )
     end if
 
     loc(1) = loc_array(ew,ns)
 
-    if (mnbdy == mask(ew,ns)) then
+!    if (mnbdy == mask(ew,ns)) then
+    if ( GLIDE_MASK_INTERIOR == mask(ew,ns) ) then
 
         call calccoeffs( upn,               sigma,              &
                          stagthck(ew,ns),                       &
@@ -1076,14 +1114,14 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
 
 !   !*sfp** must be ACTIVE for test cases 
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-    else if (boundarys == mask(ew,ns)) then
+!    else if (boundarys == mask(ew,ns)) then
+!    elseif ( GLIDE_MASK_BOUNDARY == mask(ew,ns) ) then
+    elseif ( mask(ew,ns) == GLIDE_MASK_BOUNDARY  ) then
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-!     else if (boundarys == mask(ew,ns) .and. shelfmask(ew,ns) == 1 )then
-
-   !*sfp** must be commented OUT for test case OR commented IN for ice shelf test case) 
-! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-
+!!    else if (boundarys == mask(ew,ns) .and. shelfmask(ew,ns) == 1 )then
+!    if ( GLIDE_IS_CALVING( mask(ew,ns) ) ) then
+!
 !        call calccoeffs( upn,               sigma,              &
 !                         stagthck(ew,ns),                       &
 !                         dusrfdew(ew,ns),   dusrfdns(ew,ns),    &
@@ -1092,16 +1130,14 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
 !                         d2usrfdewdns(ew,ns),                   &
 !                         d2thckdew2(ew,ns), d2thckdns2(ew,ns),  &
 !                         d2thckdewdns(ew,ns))
-
+!
 !        do up = 1, upn
-
 !           lateralboundry = .true.
-
-!            shift = indshift(  1, ew, ns, up,                  &
+!           shift = indshift(  1, ew, ns, up,                   &
 !                               ewn, nsn, upn,                  &
 !                               loc_array,                      & 
 !                               stagthck(ew-1:ew+1,ns-1:ns+1) )
-
+!
 !            call bodyset(ew,  ns,  up,        &
 !                         ewn, nsn, upn,       &
 !                         dew,      dns,       &
@@ -1134,7 +1170,7 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
         call valueset(0.0_dp)
         do up = 1,upn
            locplusup = loc(1) + up
-           call valueset( thisvel(up,ew,ns) )     ! *sfp** vel at margin set to 0
+           call valueset( thisvel(up,ew,ns) )     ! *sfp** vel at margin set to specified value (default = 0) 
         end do
 
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -1225,7 +1261,7 @@ subroutine bodyset(ew,  ns,  up,           &
                            stagthck(ew-1:ew+1, ns-1:ns+1),          &
                            loc_array, fwdorbwd, normal, loc_latbc)
                 
-    if( up == 1 .or. up == upn )then
+     if( up == 1 .or. up == upn )then
     
         if( up == 1 )then
            locplusup = loc(1) + up - 1  ! reverse the sparse matrix / rhs vector row index by 1 ...
@@ -2595,56 +2631,57 @@ end function indshift
 
 !***********************************************************************
 
-function maskvelostr(ewn,  nsn,   &
-                     thck, stagthck)
-
-! *sfp** make 2d array containing a '0' (no ice present in associated cell), 
-! '1' (cell contains ice and is in main body of ice sheet), 
-! '2' (cell contains ice and is on a boundary)
-! ... a 'cell' is an area bound by 4 grid points
-
-  implicit none
-
-  integer, intent(in) :: ewn, nsn 
-  real (kind = dp), intent(in), dimension(:,:) :: thck, stagthck
-
-  integer :: ew, ns
-  integer, dimension(size(thck,1)-1,size(thck,2)-1) :: maskvelostr
-  integer, dimension(3,3) :: template    ! *sfp** added ...
-
-  do ns = 1,nsn-1
-  do ew = 1,ewn-1
-
-! *sfp** if all of the 4 points on the non-staggered grid contain non-zero ice thickness,
-!       we are either in the main body of the ice or on a boundary
-
-    if (all(thck(ew:ew+1,ns:ns+1) > 0.0_dp )) then
-
-      ! *sfp** if at the domain edges, define as a boundary
-      if (ew == 1 .or. ew == ewn-1) then
-        maskvelostr(ew,ns) = boundarys 
-      else if (ns == 1 .or. ns == nsn-1) then
-        maskvelostr(ew,ns) = boundarys 
-      else      ! *sfp** if not at domain edge, define as main body 
-        maskvelostr(ew,ns) = mnbdy
-      end if
-    
-    else if (any(thck(ew:ew+1,ns:ns+1) > 0.0_dp )) then
-
-      maskvelostr(ew,ns) = boundarys
-
-    else
-
-      maskvelostr(ew,ns) = noice
-
-    end if
-
-  end do   ! ew
-  end do   ! ns
-
-  return
-
-end function maskvelostr
+! *sfp* to be removed when mask is fixed
+!!function maskvelostr(ewn,  nsn,   &
+!                     thck, stagthck)
+!
+!! *sfp** make 2d array containing a '0' (no ice present in associated cell), 
+!! '1' (cell contains ice and is in main body of ice sheet), 
+!! '2' (cell contains ice and is on a boundary)
+!! ... a 'cell' is an area bound by 4 grid points
+!
+!  implicit none
+!
+!  integer, intent(in) :: ewn, nsn 
+!  real (kind = dp), intent(in), dimension(:,:) :: thck, stagthck
+!
+!  integer :: ew, ns
+!  integer, dimension(size(thck,1)-1,size(thck,2)-1) :: maskvelostr
+!  integer, dimension(3,3) :: template    ! *sfp** added ...
+!
+!  do ns = 1,nsn-1
+!  do ew = 1,ewn-1
+!
+!! *sfp** if all of the 4 points on the non-staggered grid contain non-zero ice thickness,
+!!       we are either in the main body of the ice or on a boundary
+!
+!    if (all(thck(ew:ew+1,ns:ns+1) > 0.0_dp )) then
+!
+!      ! *sfp** if at the domain edges, define as a boundary
+!      if (ew == 1 .or. ew == ewn-1) then
+!        maskvelostr(ew,ns) = boundarys 
+!      else if (ns == 1 .or. ns == nsn-1) then
+!        maskvelostr(ew,ns) = boundarys 
+!      else      ! *sfp** if not at domain edge, define as main body 
+!        maskvelostr(ew,ns) = mnbdy
+!      end if
+!    
+!    else if (any(thck(ew:ew+1,ns:ns+1) > 0.0_dp )) then
+!
+!      maskvelostr(ew,ns) = boundarys
+!
+!    else
+!
+!      maskvelostr(ew,ns) = noice
+!
+!    end if
+!
+!  end do   ! ew
+!  end do   ! ns
+!
+!  return
+!
+!end function maskvelostr
 
 !***********************************************************************
 

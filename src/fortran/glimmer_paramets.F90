@@ -80,7 +80,7 @@ module glimmer_paramets
                                           ! in initial in blah.f90 (not sure this applies now...)
 
 !whl - to do - remove lambda0
-  real(dp), parameter :: lambda0 = 40.0d3 / len0    ! basal topo/friction parameter for ismip-hom tests 
+  real(dp), parameter :: lambda0 = 80.0d3 / len0    ! basal topo/friction parameter for ismip-hom tests 
                              
   real(sp), parameter :: conv = tim0 / scyr
 
