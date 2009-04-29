@@ -51,11 +51,11 @@ module ice3d_lib
     use glimmer_log
     use xls
     implicit none
-    double precision :: small, zip, toler_adjust_factor
+    real(dp) :: small, zip, toler_adjust_factor
     PARAMETER(SMALL=1.D-10,ZIP=1.D-30)
     PARAMETER(toler_adjust_factor=1.1)
 
-    double precision, parameter :: plastic_bed_regularization = 1e-2
+    real(dp) :: plastic_bed_regularization = 1e-2
 
     logical, parameter :: sparverbose = .false.
 
@@ -126,28 +126,28 @@ contains
                direction_x, direction_y)
 !
         INTEGER MAXX,MAXY,NZETA
-        double precision, dimension(:,:), intent(in) :: dhdx
-        double precision, dimension(:,:), intent(in) :: dhbdx
-        double precision, dimension(:,:), intent(in) :: dhdy
-        double precision, dimension(:,:), intent(in) :: dhbdy
-        double precision, dimension(:,:), intent(in) :: surf
-        double precision, dimension(:,:), intent(in) :: h
-        double precision, dimension(:,:), intent(in) :: hb
-        double precision, dimension(:,:), intent(in) :: dzdx
-        double precision, dimension(:,:), intent(in) :: dzdy
-        double precision, dimension(:),   intent(in) :: zeta
-        double precision, dimension(:,:,:) :: ax
-        double precision, dimension(:,:,:) :: ay
-        double precision, dimension(:,:,:) :: bx
-        double precision, dimension(:,:,:) :: by
-        double precision, dimension(:,:,:) :: cxy
+        real(dp), dimension(:,:), intent(in) :: dhdx
+        real(dp), dimension(:,:), intent(in) :: dhbdx
+        real(dp), dimension(:,:), intent(in) :: dhdy
+        real(dp), dimension(:,:), intent(in) :: dhbdy
+        real(dp), dimension(:,:), intent(in) :: surf
+        real(dp), dimension(:,:), intent(in) :: h
+        real(dp), dimension(:,:), intent(in) :: hb
+        real(dp), dimension(:,:), intent(in) :: dzdx
+        real(dp), dimension(:,:), intent(in) :: dzdy
+        real(dp), dimension(:),   intent(in) :: zeta
+        real(dp), dimension(:,:,:) :: ax
+        real(dp), dimension(:,:,:) :: ay
+        real(dp), dimension(:,:,:) :: bx
+        real(dp), dimension(:,:,:) :: by
+        real(dp), dimension(:,:,:) :: cxy
         
-        double precision, intent(in) :: dx
-        double precision, intent(in) :: dy
+        real(dp), intent(in) :: dx
+        real(dp), intent(in) :: dy
         
-        double precision, dimension(:,:), intent(in) :: d2zdx2,d2zdy2,d2hdx2,d2hdy2
+        real(dp), dimension(:,:), intent(in) :: d2zdx2,d2zdy2,d2hdx2,d2hdy2
         
-        double precision, dimension(:,:), intent(in) :: direction_x, direction_y
+        real(dp), dimension(:,:), intent(in) :: direction_x, direction_y
 
         INTEGER :: i,j,k
 
@@ -234,15 +234,15 @@ contains
         MAXY,MAXX,NZETA,FLOWN,PERIODIC_X,PERIODIC_Y)
 !
         INTEGER MAXX,MAXY,NZETA
-        double precision :: dzdx(MAXY,MAXX)
-        double precision :: dzdy(MAXY,MAXX),h(MAXY,MAXX),zeta(NZETA)
-        double precision :: arrh(MAXY,MAXX,NZETA),uvel(MAXY,MAXX,NZETA)
-        double precision :: vvel(MAXY,MAXX,NZETA),u(MAXY,MAXX)
-        double precision :: v(MAXY,MAXX),FLOWN
+        real(dp) :: dzdx(MAXY,MAXX)
+        real(dp) :: dzdy(MAXY,MAXX),h(MAXY,MAXX),zeta(NZETA)
+        real(dp) :: arrh(MAXY,MAXX,NZETA),uvel(MAXY,MAXX,NZETA)
+        real(dp) :: vvel(MAXY,MAXX,NZETA),u(MAXY,MAXX)
+        real(dp) :: v(MAXY,MAXX),FLOWN
         logical :: PERIODIC_X, PERIODIC_Y
 !
       INTEGER i,j,k
-      double precision :: diff1(NZETA),d,grad,z,diffus,us,vs
+      real(dp) :: diff1(NZETA),d,grad,z,diffus,us,vs
 !
       diff1 = 0
      
@@ -310,7 +310,7 @@ contains
      !
 
     subroutine periodic_boundaries(m, apply_to_x, apply_to_y)
-        double precision, dimension(:,:), intent(inout) :: m
+        real(dp), dimension(:,:), intent(inout) :: m
         integer :: maxx, maxy
         logical :: apply_to_x, apply_to_y
         maxx = size(m, 2)
@@ -328,7 +328,7 @@ contains
     end subroutine periodic_boundaries
     
     subroutine periodic_boundaries_stag(m, apply_to_x, apply_to_y)
-        double precision, dimension(:,:), intent(inout) :: m
+        real(dp), dimension(:,:), intent(inout) :: m
         integer :: maxx, maxy
         logical :: apply_to_x, apply_to_y
 
@@ -355,7 +355,7 @@ contains
     end subroutine periodic_boundaries_stag
     
     subroutine periodic_boundaries_3d(m, apply_to_x, apply_to_y)
-        double precision, dimension(:,:,:) :: m
+        real(dp), dimension(:,:,:) :: m
         integer :: maxx, maxy, maxz , k
         logical :: apply_to_x, apply_to_y
                 
@@ -370,7 +370,7 @@ contains
     end subroutine periodic_boundaries_3d
     
     subroutine periodic_boundaries_3d_stag(m,apply_to_x,apply_to_y)
-        double precision, dimension(:,:,:) :: m
+        real(dp), dimension(:,:,:) :: m
         integer :: k
         logical :: apply_to_x, apply_to_y
     
@@ -393,23 +393,23 @@ contains
 
         INTEGER MAXY,MAXX,NZETA,MANIFOLD,PLASTIC
 
-        double precision, dimension(:,:,:) :: mu
-        double precision, dimension(:,:,:) :: uvel
-        double precision, dimension(:,:,:) :: vvel
-        double precision, dimension(:,:,:) :: arrh
-        double precision, dimension(:,:) :: dzdx
-        double precision, dimension(:,:) :: dzdy
-        double precision, dimension(:,:) :: h
-        double precision, dimension(:,:,:) :: ax
-        double precision, dimension(:,:,:) :: ay
-        double precision, dimension(:,:,:) :: bx
-        double precision, dimension(:,:,:) :: by
-        double precision, dimension(:,:,:) :: cxy
-        double precision, dimension(:) :: zeta
-        double precision, dimension(:,:) :: dhbdx
-        double precision, dimension(:,:) :: dhbdy
-        double precision, dimension(:,:) :: beta
-        double precision :: FLOWN,ZIP,VEL2ERR,TOLER,delta_x, delta_y
+        real(dp), dimension(:,:,:) :: mu
+        real(dp), dimension(:,:,:) :: uvel
+        real(dp), dimension(:,:,:) :: vvel
+        real(dp), dimension(:,:,:) :: arrh
+        real(dp), dimension(:,:) :: dzdx
+        real(dp), dimension(:,:) :: dzdy
+        real(dp), dimension(:,:) :: h
+        real(dp), dimension(:,:,:) :: ax
+        real(dp), dimension(:,:,:) :: ay
+        real(dp), dimension(:,:,:) :: bx
+        real(dp), dimension(:,:,:) :: by
+        real(dp), dimension(:,:,:) :: cxy
+        real(dp), dimension(:) :: zeta
+        real(dp), dimension(:,:) :: dhbdx
+        real(dp), dimension(:,:) :: dhbdy
+        real(dp), dimension(:,:) :: beta
+        real(dp) :: FLOWN,ZIP,VEL2ERR,TOLER,delta_x, delta_y
         logical, intent(in) :: STAGGERED !Whether the model is run on a staggered grid or a colocated grid.
                                          !This is passed so that corrections arising from averaging can be made.
         
@@ -425,32 +425,32 @@ contains
 
         !Contains NaN everywhere except where a kinematic boundary is to be
         !applied, in which case contains the value at the boundary
-        double precision, dimension(:,:,:) :: kinematic_bc_u, kinematic_bc_v
+        real(dp), dimension(:,:,:) :: kinematic_bc_u, kinematic_bc_v
         
         !Contains NaN everywhere except on the marine ice edge of an ice shelf,
         !where this should contain the angle of the normal to the marine edge,
         !in radians, with 0=12 o'clock, pi/2=3 o'clock, etc.
-        double precision, dimension(:,:)   :: marine_bc_normal
+        real(dp), dimension(:,:)   :: marine_bc_normal
 
         INTEGER l,lacc,m,maxiter,iter,DU1,DU2,DV1,DV2,ijktot
-        double precision :: error,tot,teta
+        real(dp) :: error,tot,teta
 
         logical :: periodic_x, periodic_y
         PARAMETER (DU1=1,DU2=2,DV1=3,DV2=4)
 
-        double precision, dimension(4,size(mu,1)*size(mu,2)*size(mu,3)) :: em
+        real(dp), dimension(4,size(mu,1)*size(mu,2)*size(mu,3)) :: em
 
 
-        double precision, dimension(2*size(mu,1)*size(mu,2)*size(mu,3)) :: correction_vec
+        real(dp), dimension(2*size(mu,1)*size(mu,2)*size(mu,3)) :: correction_vec
         !Velocity estimates computed for the *current* iteration.  uvel and
         !vvel, comparitively, hold the velocity estimates for the *last*
         !iteration.
-        double precision, dimension(size(mu,1),size(mu,2),size(mu,3)) :: ustar, vstar
-        double precision, dimension(size(mu,1),size(mu,2)) :: tau !Basal traction, to be computed from the provided beta parameter
+        real(dp), dimension(size(mu,1),size(mu,2),size(mu,3)) :: ustar, vstar
+        real(dp), dimension(size(mu,1),size(mu,2)) :: tau !Basal traction, to be computed from the provided beta parameter
        
-        double precision, dimension(size(mu,1),size(mu,2),size(mu,3)) :: dudx, dudy, dudz
-        double precision, dimension(size(mu,1),size(mu,2),size(mu,3)) :: dvdx, dvdy, dvdz
-        double precision, dimension(size(mu,1),size(mu,2)) :: direction_x, direction_y
+        real(dp), dimension(size(mu,1),size(mu,2),size(mu,3)) :: dudx, dudy, dudz
+        real(dp), dimension(size(mu,1),size(mu,2),size(mu,3)) :: dvdx, dvdy, dvdz
+        real(dp), dimension(size(mu,1),size(mu,2)) :: direction_x, direction_y
 
         logical :: cont
 
@@ -744,10 +744,10 @@ contains
 !   plastic bed computation
 !-----------------------------------------------------
     subroutine plastic_bed(tau, tau0, ubas, vbas)
-        double precision, dimension(:,:), intent(out) :: tau
-        double precision, dimension(:,:), intent(in)  :: tau0
-        double precision, dimension(:,:), intent(in)  :: ubas
-        double precision, dimension(:,:), intent(in)  :: vbas
+        real(dp), dimension(:,:), intent(out) :: tau
+        real(dp), dimension(:,:), intent(in)  :: tau0
+        real(dp), dimension(:,:), intent(in)  :: ubas
+        real(dp), dimension(:,:), intent(in)  :: vbas
         
         integer :: maxy, maxx, i, j
 
@@ -770,26 +770,26 @@ contains
                          dudx, dudy, dudz, dvdx, dvdy, dvdz)
         use glide_mask, only: upwind_from_mask
 
-        double precision, dimension(:,:,:), intent(in) :: uvel
-        double precision, dimension(:,:,:), intent(in) :: vvel
-        double precision, dimension(:,:), intent(in) :: dzdx
-        double precision, dimension(:,:), intent(in) :: dzdy
+        real(dp), dimension(:,:,:), intent(in) :: uvel
+        real(dp), dimension(:,:,:), intent(in) :: vvel
+        real(dp), dimension(:,:), intent(in) :: dzdx
+        real(dp), dimension(:,:), intent(in) :: dzdy
         integer, dimension(:,:), intent(in) :: geometry_mask
-        double precision, intent(in) :: dx
-        double precision, intent(in) :: dy
-        double precision, dimension(:), intent(in) :: levels
+        real(dp), intent(in) :: dx
+        real(dp), intent(in) :: dy
+        real(dp), dimension(:), intent(in) :: levels
         logical, intent(in) :: UPSTREAM
-        double precision, dimension(:,:), intent(out) :: direction_x
-        double precision, dimension(:,:), intent(out) :: direction_y
+        real(dp), dimension(:,:), intent(out) :: direction_x
+        real(dp), dimension(:,:), intent(out) :: direction_y
 
-        double precision, dimension(:,:,:), intent(out) :: dudx
-        double precision, dimension(:,:,:), intent(out) :: dudy
-        double precision, dimension(:,:,:), intent(out) :: dudz
-        double precision, dimension(:,:,:), intent(out) :: dvdx        
-        double precision, dimension(:,:,:), intent(out) :: dvdy        
-        double precision, dimension(:,:,:), intent(out) :: dvdz
+        real(dp), dimension(:,:,:), intent(out) :: dudx
+        real(dp), dimension(:,:,:), intent(out) :: dudy
+        real(dp), dimension(:,:,:), intent(out) :: dudz
+        real(dp), dimension(:,:,:), intent(out) :: dvdx        
+        real(dp), dimension(:,:,:), intent(out) :: dvdy        
+        real(dp), dimension(:,:,:), intent(out) :: dvdz
  
-        double precision, dimension(size(uvel,1),size(uvel,2),size(uvel,3)) :: uvel_test, vvel_test
+        real(dp), dimension(size(uvel,1),size(uvel,2),size(uvel,3)) :: uvel_test, vvel_test
 
         integer :: k
 
@@ -833,19 +833,19 @@ contains
       subroutine muterm(mu, arrh, h, ax, ay, FLOWN, ZIP, &
                         dudx, dudy, dudz, dvdx, dvdy, dvdz)
 !
-        double precision,                   intent(in)  :: FLOWN,ZIP
-        double precision, dimension(:,:,:), intent(out) :: mu
-        double precision, dimension(:,:,:), intent(in)  :: arrh
-        double precision, dimension(:,:),   intent(in)  :: h
-        double precision, dimension(:,:,:), intent(in)  :: ax
-        double precision, dimension(:,:,:), intent(in)  :: ay
+        real(dp),                   intent(in)  :: FLOWN,ZIP
+        real(dp), dimension(:,:,:), intent(out) :: mu
+        real(dp), dimension(:,:,:), intent(in)  :: arrh
+        real(dp), dimension(:,:),   intent(in)  :: h
+        real(dp), dimension(:,:,:), intent(in)  :: ax
+        real(dp), dimension(:,:,:), intent(in)  :: ay
         
-        double precision, dimension(:,:,:), intent(in) :: dudx, dudy, dudz
-        double precision, dimension(:,:,:), intent(in) :: dvdx, dvdy, dvdz
+        real(dp), dimension(:,:,:), intent(in) :: dudx, dudy, dudz
+        real(dp), dimension(:,:,:), intent(in) :: dvdx, dvdy, dvdz
        !
         INTEGER :: i,j,k, MAXX, MAXY, NZETA
-        double precision :: macht
-        double precision :: exx,eyy,exy,exz,eyz,eeff
+        real(dp) :: macht
+        real(dp) :: exx,eyy,exy,exz,eyz,eeff
 !
         MAXY = size(mu, 1)
         MAXX = size(mu, 2)
@@ -886,42 +886,42 @@ contains
                     matrix, workspace, options, kinematic_bc_u, kinematic_bc_v,latbc_normal, &
                     direction_x, direction_y, STAGGERED)
         INTEGER IJKTOT,MAXY,MAXX,NZETA
-        double precision, dimension(:,:,:) :: mu
-        double precision, dimension(:,:) :: dzdx
-        double precision, dimension(:,:) :: dzdy
-        double precision, dimension(:,:,:) :: ax
-        double precision, dimension(:,:,:) :: ay
-        double precision, dimension(:,:,:) :: bx
-        double precision, dimension(:,:,:) :: by
-        double precision, dimension(:,:,:) :: cxy
-        double precision, dimension(:,:) :: h
-        double precision, dimension(:,:,:), target :: uvel
-        double precision, dimension(:,:,:), target :: vvel
+        real(dp), dimension(:,:,:) :: mu
+        real(dp), dimension(:,:) :: dzdx
+        real(dp), dimension(:,:) :: dzdy
+        real(dp), dimension(:,:,:) :: ax
+        real(dp), dimension(:,:,:) :: ay
+        real(dp), dimension(:,:,:) :: bx
+        real(dp), dimension(:,:,:) :: by
+        real(dp), dimension(:,:,:) :: cxy
+        real(dp), dimension(:,:) :: h
+        real(dp), dimension(:,:,:), target :: uvel
+        real(dp), dimension(:,:,:), target :: vvel
         
         real(dp), dimension(:,:,:), intent(in) :: dudx,dudy,dudz,dvdx,dvdy,dvdz
         
-        double precision, dimension(:,:,:), target :: ustar
-        double precision, dimension(:,:,:), target :: vstar
-        double precision, dimension(:,:) :: dhbdx
-        double precision, dimension(:,:) :: dhbdy
-        double precision, dimension(:,:) :: beta
-        double precision, dimension(:) :: zeta
+        real(dp), dimension(:,:,:), target :: ustar
+        real(dp), dimension(:,:,:), target :: vstar
+        real(dp), dimension(:,:) :: dhbdx
+        real(dp), dimension(:,:) :: dhbdy
+        real(dp), dimension(:,:) :: beta
+        real(dp), dimension(:) :: zeta
         integer, dimension(:,:) :: geometry_mask
-        double precision, dimension(:,:,:), target :: kinematic_bc_u
-        double precision, dimension(:,:,:), target :: kinematic_bc_v
-        double precision, dimension(:,:)   :: latbc_normal !On the marine ice front, this is the angle of the normal to the ice front
-        double precision :: toler
-        double precision :: gridx
-        double precision :: gridy
-        double precision :: rhs
+        real(dp), dimension(:,:,:), target :: kinematic_bc_u
+        real(dp), dimension(:,:,:), target :: kinematic_bc_v
+        real(dp), dimension(:,:)   :: latbc_normal !On the marine ice front, this is the angle of the normal to the ice front
+        real(dp) :: toler
+        real(dp) :: gridx
+        real(dp) :: gridy
+        real(dp) :: rhs
         
-        double precision, dimension(:,:), intent(in) :: direction_x,direction_y
+        real(dp), dimension(:,:), intent(in) :: direction_x,direction_y
         
         logical, intent(in)::STAGGERED
 
 
         INTEGER i,j,k,m,sparuv,iter, ierr
-        double precision :: d(IJKTOT),x(IJKTOT),coef(STENCIL_SIZE),err
+        real(dp) :: d(IJKTOT),x(IJKTOT),coef(STENCIL_SIZE),err
       
         !Sparse matrix variables.  These are passed in so that allocation can be
         !done once per velocity solve instead of once per iteration
@@ -933,19 +933,17 @@ contains
         
         integer :: stencil_center_idx
         integer :: si, sj, sk
-        double precision, dimension(:,:,:), pointer :: velpara, velperp, velpara_star, kinematic_bc_para
+        real(dp), dimension(:,:,:), pointer :: velpara, velperp, velpara_star, kinematic_bc_para
         integer :: whichcomponent
         character(1) :: componentstr
 !
 !-------  velocity u
 !
 #ifdef OUTPUT_SPARSE_MATRIX
-        write(ITER_UNIT,*) " Component Y X Z normal_x normal_y ax ay H mu source ", &
-                   "dperp_dx dperp_dy dperp_dz ",&
+        write(ITER_UNIT,*) " Component Y X Z h mu point_type ", &
                    "im1jm1 im1km1 im1 im1kp1 im1jp1 jm1km1 jm1 jm1kp1 ", &
                    "km2 km1 center kp1 kp2 jp1km1 jp1 jp1kp1 ", &
-                   "ip1jm1 ip1km1 ip1 ip1kp1 ip1jp1 im2 ip2 jm2 jp2 stencil_total rhs ", &
-                   "rhs_sans_source upwind_x downwind_x upwind_y downwind_y"
+                   "ip1jm1 ip1km1 ip1 ip1kp1 ip1jp1 im2 ip2 jm2 jp2 stencil_total rhs "
 #endif
 
         sparuv = 0
@@ -973,7 +971,7 @@ contains
                         do k=1,NZETA
                             coef = 0
                             stencil_center_idx = csp_masked(I_J_K,i,j,k,point_mask,NZETA) 
-                            if (h(i,j).lt.SMALL) then
+                            if (.not. GLIDE_HAS_ICE(geometry_mask(i,j))) then
                                 !No ice - "pass through"
                                 coef(I_J_K)=1.
                                 !Normally, we use uvel(i,j,k) as our initial guess.
@@ -1205,44 +1203,44 @@ contains
         integer :: i,j,k, MAXY, MAXX, Ndz
 
         !Output array
-        double precision, dimension(STENCIL_SIZE), intent(out) :: coef
+        real(dp), dimension(STENCIL_SIZE), intent(out) :: coef
 
         !Output RHS value
-        double precision, intent(out) :: rhs
+        real(dp), intent(out) :: rhs
 
         !Viscosity
-        double precision, dimension(:,:,:) :: mu
+        real(dp), dimension(:,:,:) :: mu
 
-        double precision, dimension(:,:,:), intent(in) :: dudx_field, dudy_field, dudz_field 
-        double precision, dimension(:,:,:), intent(in) :: dvdx_field, dvdy_field, dvdz_field
+        real(dp), dimension(:,:,:), intent(in) :: dudx_field, dudy_field, dudz_field 
+        real(dp), dimension(:,:,:), intent(in) :: dvdx_field, dvdy_field, dvdz_field
 
         !Surface Gradients
-        double precision, dimension(:,:), target :: dzdx, dzdy
+        real(dp), dimension(:,:), target :: dzdx, dzdy
 
         !Rescaling Factors
-        double precision, dimension(:,:,:), target :: ax, ay, bx, by, cxy
+        real(dp), dimension(:,:,:), target :: ax, ay, bx, by, cxy
         
         !Ice Thickness
-        double precision, dimension(:,:) :: h
+        real(dp), dimension(:,:) :: h
 
         !Grid Spacing (Z is an irregular grid)
-        double precision :: dx, dy
-        double precision, dimension(:) :: dz
+        real(dp) :: dx, dy
+        real(dp), dimension(:) :: dz
 
         !Current velocities
-        double precision, dimension(:,:,:), target :: uvel, vvel
+        real(dp), dimension(:,:,:), target :: uvel, vvel
 
         !Bedrock Gradients
-        double precision, dimension(:,:), target :: dhbdx, dhbdy
+        real(dp), dimension(:,:), target :: dhbdx, dhbdy
 
         !Basal Traction
-        double precision, dimension(:,:) :: beta
+        real(dp), dimension(:,:) :: beta
 
         integer, dimension(:,:) :: geometry_mask
 
         !Contains the angle of the normal to the marine margine, NaN
         !everywhere not on the margin
-        double precision, dimension(:,:) :: latbc_normal
+        real(dp), dimension(:,:) :: latbc_normal
 
         logical, intent(in) :: STAGGERED
 
@@ -1250,32 +1248,33 @@ contains
 !
         !Temporary calculations done in the ABSOLUTE (using u/x, v/y) coordinate
         !system
-        double precision, target :: dmudx, dmudy, dmudz, dmudx2, dmudy2
-        double precision, target :: dudx, dudy, dudz, dudx2, dudy2, dudz2, dudxz, dudyz, dudxy
-        double precision, target :: dvdx, dvdy, dvdz, dvdx2, dvdy2, dvdz2, dvdxz, dvdyz, dvdxy
+        real(dp), target :: dmudx, dmudy, dmudz, dmudx2, dmudy2
+        real(dp), target :: dudx, dudy, dudz, dudx2, dudy2, dudz2, dudxz, dudyz, dudxy
+        real(dp), target :: dvdx, dvdy, dvdz, dvdx2, dvdy2, dvdz2, dvdxz, dvdyz, dvdxy
 
         !Temporary calculations done in the RELATIVE (using para, perp)
         !coordinate system
-        double precision, pointer :: dpara_dpara, dpara_dperp, dpara_dx, dpara_dy, dpara_dz
-        double precision, pointer :: dpara_dpara2, dpara_dparaz, dpara_dz2, dpara_dperp2, dpara_dperpz
-        double precision, pointer :: dpara_dyz, dpara_dxz, dpara_dx2, dpara_dy2
-        double precision, pointer :: dperp_dpara, dperp_dperp, dperp_dx, dperp_dy, dperp_dz
-        double precision, pointer :: dperp_dxy, dperp_dxz, dperp_dyz, dperp_dz2
-        double precision, pointer :: dmu_dpara2, dmu_dperp2
+        real(dp), pointer :: dpara_dpara, dpara_dperp, dpara_dx, dpara_dy, dpara_dz
+        real(dp), pointer :: dpara_dpara2, dpara_dparaz, dpara_dz2, dpara_dperp2, dpara_dperpz
+        real(dp), pointer :: dpara_dyz, dpara_dxz, dpara_dx2, dpara_dy2
+        real(dp), pointer :: dperp_dpara, dperp_dperp, dperp_dx, dperp_dy, dperp_dz
+        real(dp), pointer :: dperp_dxy, dperp_dxz, dperp_dyz, dperp_dz2
+        real(dp), pointer :: dmu_dpara2, dmu_dperp2
 
         !Fields done in the RELATIVE coordinate system
-        double precision, dimension(:,:,:), pointer :: a_para, a_perp, b_para, b_perp
-        double precision, dimension(:,:,:), pointer :: vel_perp, vel_para
-        double precision, dimension(:,:), pointer :: dz_dpara, dz_dperp, dhb_dpara, dhb_dperp
+        real(dp), dimension(:,:,:), pointer :: a_para, a_perp, b_para, b_perp
+        real(dp), dimension(:,:,:), pointer :: vel_perp, vel_para
+        real(dp), dimension(:,:), pointer :: dz_dpara, dz_dperp, dhb_dpara, dhb_dperp
 
         !Cached difference calculations for the nonstaggered Z grid
-        double precision dz_down1, dz_down2, dz_down3, dz_up1, dz_up2, dz_up3
-        double precision dz_cen1, dz_cen2, dz_cen3, dz_sec1, dz_sec2, dz_sec3
+        real(dp) dz_down1, dz_down2, dz_down3, dz_up1, dz_up2, dz_up3
+        real(dp) dz_cen1, dz_cen2, dz_cen3, dz_sec1, dz_sec2, dz_sec3
         
-        double precision, dimension(:,:),intent(in) :: direction_x, direction_y
+        real(dp), dimension(:,:),intent(in) :: direction_x, direction_y
 
         !call write_xls_3d("uvel.txt",uvel)
         !call write_xls_3d("vvel.txt",vvel)
+        character(20) :: point_type
 
         !Set up a system of pointers to encapsulate the nomenclature described
         !above
@@ -1387,7 +1386,9 @@ contains
             call sparse_marine_margin(component,i,j,k,h,latbc_normal, vel_perp, mu, dx, dy, ax, ay, dz,coef, rhs, &
                                       dudx_field,dudy_field,dudz_field,dvdx_field,dvdy_field,dvdz_field,&
                                       direction_x, direction_y, STAGGERED)
+            point_type = "lateral"
         else if (k.eq.1) then !Upper boundary condition (stress-free surface)
+            point_type = "surface"
             !Finite difference coefficients for an irregular Z grid, downwinded
             dz_down1=(2.*dz(k)-dz(k+1)-dz(k+2))/(dz(k+1)-dz(k))/(dz(k+2)-dz(k))
             dz_down2=(dz(k+2)-dz(k))/(dz(k+2)-dz(k+1))/(dz(k+1)-dz(k))
@@ -1431,7 +1432,9 @@ contains
             if (IS_NAN(beta(i,j))) then !No sliding at the base
                 coef(I_J_K)=1.
                 rhs=0.
+                point_type = "base-no-slip"
             else !Compute sliding 
+                point_type = "base-stress-free"
                 dpara_dpara = 4.*dhb_dpara(i,j)
                 dpara_dz = 4.*a_para(i,j,k)*dhb_dpara(i,j) + a_perp(i,j,k)*dhb_dperp(i,j) + 1./h(i,j)
                 dpara_dperp = dhb_dperp(i,j)
@@ -1444,6 +1447,7 @@ contains
                 !strain rates by the viscosity.  If there is no friction, then
                 !we have a stress-free base and these coefficients disappear.
                 if (beta(i,j) >= SMALL) then
+                   point_type = "base-beta-squared"
                    dpara_dpara = dpara_dpara*mu(i,j,k)
                    dpara_dperp = dpara_dperp*mu(i,j,k)
                    dpara_dz = dpara_dz*mu(i,j,k)
@@ -1536,23 +1540,21 @@ contains
             coef(20) = dpara_dyz * dz_cen3 * (.5/dy)
           
             !Transposition of derivatives below
-            rhs = RHOI * GRAV * dz_dpara(i,j) &
-                - dperp_dx  * dfdy_3d(vel_perp,i,j,k,dx)&
-                - dperp_dy  * dfdx_3d(vel_perp,i,j,k,dy)&
-                - dperp_dz  * dfdz_3d_irregular(vel_perp,i,j,k,dz)&
-                - dperp_dxy * d2fdxy_3d(vel_perp,i,j,k,dx,dy)&
-                - dperp_dxz * d2fdyz_3d(vel_perp,i,j,k,dx,dz)&
-                - dperp_dyz * d2fdxz_3d(vel_perp,i,j,k,dy,dz)&
-                - dperp_dz2 * d2fdz2_3d_irregular(vel_perp,i,j,k,dz)
-            !write(*,*)i,j,k,dz_dpara(i,j),& !4
-            !      dperp_dx,dfdy_3d(vel_perp,i,j,k,dx),& !6
-            !      dperp_dy,dfdx_3d(vel_perp,i,j,k,dy),& !8
-            !      dperp_dz,dfdz_3d_irregular(vel_perp,i,j,k,dz),& !10
-            !      dperp_dxy,d2fdxy_3d(vel_perp,i,j,k,dx,dy),&
-            !      dperp_dxz,d2fdyz_3d(vel_perp,i,j,k,dx,dz),&
-            !      dperp_dyz,d2fdxz_3d(vel_perp,i,j,k,dy,dz),&
-            !      dperp_dz2,d2fdz2_3d_irregular(vel_perp,i,j,k,dz)
+            rhs =0 !RHOI * GRAV * dz_dpara(i,j) &
+                !- dperp_dx  * dfdy_3d(vel_perp,i,j,k,dx)&
+                !- dperp_dy  * dfdx_3d(vel_perp,i,j,k,dy)&
+                !- dperp_dz  * dfdz_3d_irregular(vel_perp,i,j,k,dz)&
+                !- dperp_dxy * d2fdxy_3d(vel_perp,i,j,k,dx,dy)&
+                !- dperp_dxz * d2fdyz_3d(vel_perp,i,j,k,dx,dz)&
+                !- dperp_dyz * d2fdxz_3d(vel_perp,i,j,k,dy,dz)&
+                !- dperp_dz2 * d2fdz2_3d_irregular(vel_perp,i,j,k,dz)
         end if
+
+#ifdef OUTPUT_SPARSE_MATRIX
+        write(ITER_UNIT,*)component,i,j,k,h(i,j),mu(i,j,k), &
+                  point_type, coef,sum(coef),rhs
+#endif
+
     end subroutine sparse_setup
 
     !Computes finite differences for the marine margin
@@ -1604,14 +1606,14 @@ contains
         real(dp), target :: dx_coeff, dy_coeff, dz_coeff
 
         !Cached difference calculations for the nonstaggered Z grid
-        double precision dz_down1, dz_down2, dz_down3, dz_up1, dz_up2, dz_up3
-        double precision dz_cen1, dz_cen2, dz_cen3 
-        double precision, dimension(:,:,:), pointer :: a_para, a_perp
+        real(dp) dz_down1, dz_down2, dz_down3, dz_up1, dz_up2, dz_up3
+        real(dp) dz_cen1, dz_cen2, dz_cen3 
+        real(dp), dimension(:,:,:), pointer :: a_para, a_perp
 
-        double precision, pointer :: n_para, n_perp, dperp_dpara, dperp_dperp
-        double precision, pointer :: para_coeff, perp_coeff
+        real(dp), pointer :: n_para, n_perp, dperp_dpara, dperp_dperp
+        real(dp), pointer :: para_coeff, perp_coeff
 
-        double precision :: ntot = 1d0
+        real(dp) :: ntot = 1d0
 
         !Get the normal unit vector
         !The angles are defined in radians, with 0 = 12 o' clock, pi/2 = 3 o' clock,
@@ -1872,11 +1874,6 @@ contains
             coef(I_JP1_K) = coef(I_JP1_K) + 0.5 * dx_coeff/dx
             coef(I_JM1_K) = coef(I_JM1_K) - 0.5 * dx_coeff/dx  
         end if
-#ifdef OUTPUT_SPARSE_MATRIX
-        write(ITER_UNIT,*)component,i,j,k,n_x,n_y,ax(i,j,k),ay(i,j,k),h(i,j),mu(i,j,k), &
-                  pressure, dperp_dx, dperp_dy, dperp_dz, coef,sum(coef),rhs, &
-                  rhs - pressure/ntot*n_para, upwind_x, downwind_x, upwind_y, downwind_y
-#endif
     end subroutine
 
 !
@@ -1889,30 +1886,30 @@ contains
         dz,txz,tyz,txx,tyy,txy,FLOWN,ZIP,PERIODIC_X, PERIODIC_Y)
 !
         INTEGER MAXY,MAXX,NZETA
-        double precision :: FLOWN,ZIP
-        double precision, dimension(:,:,:), intent(inout) :: mu
-        double precision, dimension(:,:,:), intent(in) :: uvel
-        double precision, dimension(:,:,:), intent(in) :: vvel
-        double precision, dimension(:,:,:), intent(in) :: arrh
-        double precision, dimension(:,:),   intent(in) :: h
-        double precision, dimension(:,:,:), intent(in) :: ax
-        double precision, dimension(:,:,:), intent(in) :: ay
-        double precision, dimension(:,:,:), intent(out) :: txz 
-        double precision, dimension(:,:,:), intent(out) :: tyz
-        double precision, dimension(:,:,:), intent(out) :: txx
-        double precision, dimension(:,:,:), intent(out) :: tyy
-        double precision, dimension(:,:,:), intent(out) :: txy
-        double precision,                   intent(in) :: dx
-        double precision,                   intent(in) :: dy
-        double precision, dimension(:),     intent(in) :: dz
+        real(dp) :: FLOWN,ZIP
+        real(dp), dimension(:,:,:), intent(inout) :: mu
+        real(dp), dimension(:,:,:), intent(in) :: uvel
+        real(dp), dimension(:,:,:), intent(in) :: vvel
+        real(dp), dimension(:,:,:), intent(in) :: arrh
+        real(dp), dimension(:,:),   intent(in) :: h
+        real(dp), dimension(:,:,:), intent(in) :: ax
+        real(dp), dimension(:,:,:), intent(in) :: ay
+        real(dp), dimension(:,:,:), intent(out) :: txz 
+        real(dp), dimension(:,:,:), intent(out) :: tyz
+        real(dp), dimension(:,:,:), intent(out) :: txx
+        real(dp), dimension(:,:,:), intent(out) :: tyy
+        real(dp), dimension(:,:,:), intent(out) :: txy
+        real(dp),                   intent(in) :: dx
+        real(dp),                   intent(in) :: dy
+        real(dp), dimension(:),     intent(in) :: dz
         
         logical :: PERIODIC_X, PERIODIC_Y
 
       INTEGER i,j,k
-      double precision, dimension(:,:,:), allocatable :: dudz, dvdz, dudx, dvdx, dudy, dvdy
+      real(dp), dimension(:,:,:), allocatable :: dudz, dvdz, dudx, dvdx, dudy, dvdy
 
-      double precision :: exx,eyy,exy,exz,eyz,eeff
-      double precision :: macht
+      real(dp) :: exx,eyy,exy,exz,eyz,eeff
+      real(dp) :: macht
 !
       
       macht=(1.-FLOWN)/(2.*FLOWN)
