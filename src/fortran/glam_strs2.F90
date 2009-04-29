@@ -192,6 +192,7 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
                                  whichefvs,              &
                                  whichresid,             &
                                  periodic_ew,periodic_ns,&
+                                 beta,                   & 
                                  uvel,     vvel,         &
                                  uflx,     vflx,         &
                                  efvs )
@@ -209,6 +210,12 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
   real (kind = dp), dimension(:,:),   intent(in)  :: stagthck
   real (kind = dp), dimension(:,:),   intent(in)  :: minTauf
   real (kind = dp), dimension(:,:,:), intent(in)  :: flwa
+
+  !*sfp* This is the betasquared field from CISM (externally specified), and should eventually
+  ! take the place of the subroutine 'calcbetasquared' below (for now, using this value instead
+  ! will simply be included as another option within that subroutine) 
+  real (kind = dp), dimension(:,:),   intent(in)  :: beta 
+
 
 !whl - to do - Merge whichbabc with whichbtrc?
   integer, intent(in) :: whichbabc
@@ -318,7 +325,8 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
                      valubbc,     typebbc,        &
                      uindx,       umask,          &
                      lsrf,        topg,           &
-                     minTauf,     flwa )
+                     minTauf,     flwa,           &
+                     beta )
 
     ! *sfp** solve 'Ax=b' for the across-flow velocity component
     tvel = slapsolvstr(ewn,  nsn,   upn,  &
@@ -366,8 +374,8 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
                      valubbc,     typebbc,        &
                      uindx,       umask,          &
                      lsrf,        topg,           &
-                     minTauf,     flwa )
-
+                     minTauf,     flwa,           &
+                     beta )
 
     ! *sfp** solve 'Ax=b' for along-flow velocity component
     uvel = slapsolvstr(ewn,  nsn,   upn,  &
@@ -933,7 +941,8 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
                        valubbc,     typebbc,        &
                        uindx,       mask,           &
                        lsrf,        topg,           &
-                       minTauf,     flwa )
+                       minTauf,     flwa,           &    
+                       beta )
 
 ! *sfp** find coeffecients in stress balance equation ...
 ! ... also appears to contain important bc information
@@ -957,6 +966,8 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
                                                   thck, lsrf, topg 
 
   real (kind = dp), dimension(:,:), intent(in) :: minTauf
+
+  real (kind = dp), dimension(:,:), intent(in) :: beta
 
   real (kind = dp), dimension(:,:,:), intent(in) :: flwa
 
@@ -993,7 +1004,7 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
                         thck,                   &
                         thisvel(upn,:,:),       &   
                         othervel(upn,:,:),      &
-                        minTauf,                &
+                        minTauf, beta,          &
                         betasquared )
 
   do ns = 1,nsn-1
@@ -2677,22 +2688,24 @@ subroutine calcbetasquared (whichbabc,               &
                             lsrf,        topg,       &
                             thck,                    &
                             thisvel,     othervel,   &
-                            minTauf,                 &
+                            minTauf, beta,           &
                             betasquared, betafile) 
 
   integer, intent(in) :: whichbabc
   integer, intent(in) :: ewn, nsn
 
   real (kind = dp), intent(in) :: dew, dns
-  real (kind = dp), intent(in), dimension(ewn,nsn) :: lsrf, topg, thck
-  real (kind = dp), intent(in), dimension(ewn-1,nsn-1) :: thisvel, othervel, minTauf
+!  real (kind = dp), intent(in), dimension(ewn,nsn) :: lsrf, topg, thck
+!  real (kind = dp), intent(in), dimension(ewn-1,nsn-1) :: thisvel, othervel, minTauf, beta
+  real (kind = dp), intent(in), dimension(:,:) :: lsrf, topg, thck
+  real (kind = dp), intent(in), dimension(:,:) :: thisvel, othervel, minTauf, beta
 
   real (kind = dp), intent(out), dimension(ewn-1,nsn-1) :: betasquared
 
   character (len=30), intent(in), optional :: betafile
   real (kind = dp) :: smallnum = 1.0d-4
   real (kind = dp), dimension(ewn) :: grounded
-  real (kind = dp) :: alpha, beta, dx, thck_gl, betalow, betahigh, roughness
+  real (kind = dp) :: alpha, dx, thck_gl, betalow, betahigh, roughness
   integer :: ew, ns
 
   select case(whichbabc)
@@ -2786,8 +2799,8 @@ subroutine calcbetasquared (whichbabc,               &
 
             ! *sp* altered slightly so that phase of beta^2 is the same as that expected by 
             ! CISM ISMIP-HOM test suite
-            betasquared(ew,ns) = 1000 + 1000 * sin(2*pi/(lambda0*len0 )*(ns)*dns*len0) * &
-                                 sin(2*pi/(lambda0*len0)*(ew)*dew*len0)
+            betasquared(ew,ns) = 1000 + 1000 * sin(2*pi/(lambda0*len0 )*(real(ns)+0.0d0)*dns*len0) * &
+                                 sin(2*pi/(lambda0*len0)*(real(ew)+0.0d0)*dew*len0)
        end do; end do
 
     case(7)     ! circular ice shelf: set B^2 ~ 0 except for at center, where B^2 >> 0 to enforce u,v=0 there
@@ -2799,6 +2812,10 @@ subroutine calcbetasquared (whichbabc,               &
     case(8)    ! frozen (u=v=0) ice-bed interface
 
       betasquared = 1.0d10
+
+    case(9)    !*sfp* use value passed in externally from CISM (note that these are passed in diensional)
+
+      betasquared = beta
 
   end select
   
