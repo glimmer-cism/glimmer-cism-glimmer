@@ -1539,14 +1539,14 @@ contains
             coef(20) = dpara_dyz * dz_cen3 * (.5/dy)
           
             !Transposition of derivatives below
-            rhs =0 !RHOI * GRAV * dz_dpara(i,j) &
-                !- dperp_dx  * dfdy_3d(vel_perp,i,j,k,dx)&
-                !- dperp_dy  * dfdx_3d(vel_perp,i,j,k,dy)&
-                !- dperp_dz  * dfdz_3d_irregular(vel_perp,i,j,k,dz)&
-                !- dperp_dxy * d2fdxy_3d(vel_perp,i,j,k,dx,dy)&
-                !- dperp_dxz * d2fdyz_3d(vel_perp,i,j,k,dx,dz)&
-                !- dperp_dyz * d2fdxz_3d(vel_perp,i,j,k,dy,dz)&
-                !- dperp_dz2 * d2fdz2_3d_irregular(vel_perp,i,j,k,dz)
+            rhs =RHOI * GRAV * dz_dpara(i,j) &
+                - dperp_dx  * dfdy_3d(vel_perp,i,j,k,dx)&
+                - dperp_dy  * dfdx_3d(vel_perp,i,j,k,dy)&
+                - dperp_dz  * dfdz_3d_irregular(vel_perp,i,j,k,dz)&
+                - dperp_dxy * d2fdxy_3d(vel_perp,i,j,k,dx,dy)&
+                - dperp_dxz * d2fdyz_3d(vel_perp,i,j,k,dx,dz)&
+                - dperp_dyz * d2fdxz_3d(vel_perp,i,j,k,dy,dz)&
+                - dperp_dz2 * d2fdz2_3d_irregular(vel_perp,i,j,k,dz)
         end if
 
 #ifdef OUTPUT_SPARSE_MATRIX
