@@ -2781,8 +2781,13 @@ subroutine calcbetasquared (whichbabc,               &
 
         do ns=1,nsn-1; do ew=1,ewn-1
             ! units as in ismip-hom document ( Pa * a * m^-1 )
-            betasquared(ew,ns) = 1000 + 1000 * sin(2*pi/(lambda0*len0 )*(ns-1)*dns*len0) * &
-                                 sin(2*pi/(lambda0*len0)*(ew-1)*dew*len0)
+!            betasquared(ew,ns) = 1000 + 1000 * sin(2*pi/(lambda0*len0 )*(ns-1)*dns*len0) * &
+!                                 sin(2*pi/(lambda0*len0)*(ew-1)*dew*len0)
+
+            ! *sp* altered slightly so that phase of beta^2 is the same as that expected by 
+            ! CISM ISMIP-HOM test suite
+            betasquared(ew,ns) = 1000 + 1000 * sin(2*pi/(lambda0*len0 )*(ns)*dns*len0) * &
+                                 sin(2*pi/(lambda0*len0)*(ew)*dew*len0)
        end do; end do
 
     case(7)     ! circular ice shelf: set B^2 ~ 0 except for at center, where B^2 >> 0 to enforce u,v=0 there
