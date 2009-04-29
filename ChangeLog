@@ -1,3 +1,13 @@
+2009-04-29 Magnus Hagdorn
+ * Makefile.am: distribute bootstrap
+ * configure.in: use new macros to find netcdf and module include switch
+ * glimmer-config.in: rename variable
+ * m4macros/ax_f90_module_flag.m4: imported macro to find module inclusion
+   flag
+ * m4macros/hdf5.m4: new module to find hdf5 (might be required for netcdf)
+ * m4macros/netcdf.m4: new module for finding netCDF
+ * src/fortran/Makefile.am: renamed some flags
+
 2009-04-17 Magnus Hagdorn
  * INSTALL: mention how to customise SGE script
  * src/python/glide_launch.py: use popen instead of subprocess so it works

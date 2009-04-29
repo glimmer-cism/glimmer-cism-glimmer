@@ -89,7 +89,7 @@ test_integrate_SOURCES = test_integrate.F90 glimmer_global.F90 \
 test_commandline_SOURCES = test_commandline.F90 glimmer_commandline.F90
 test_writestats_SOURCES = test_writestats.F90 glimmer_writestats.F90 writestats.c writestats.h
 
-AM_FCFLAGS = $(NETCDF_FCFLAGS)
+AM_FCFLAGS = $(NETCDF_CPPFLAGS) $(HDF5_CPPFLAGS)
 LDADD = $(NETCDF_LIBS)
 AM_CFLAGS=$(CFORTRAN_CFLAGS)
 
