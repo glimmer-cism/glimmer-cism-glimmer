@@ -283,6 +283,7 @@ module glide_types
     !*FD \item[6] spatially periodic (ISMIP-HOM expt C)
     !*FD \item[7] circular ice shelf
     !*FD \item[8] frozen bed
+    !*FD \item[9] beta^2 field passed in from CISM
     !*FD \end{description}
 
     integer :: which_ho_efvs = 0
