@@ -136,11 +136,11 @@ contains
         real(dp), dimension(:,:), intent(in) :: dzdx
         real(dp), dimension(:,:), intent(in) :: dzdy
         real(dp), dimension(:),   intent(in) :: zeta
-        real(dp), dimension(:,:,:) :: ax
-        real(dp), dimension(:,:,:) :: ay
-        real(dp), dimension(:,:,:) :: bx
-        real(dp), dimension(:,:,:) :: by
-        real(dp), dimension(:,:,:) :: cxy
+        real(dp), dimension(:,:,:), intent(inout) :: ax
+        real(dp), dimension(:,:,:), intent(inout) :: ay
+        real(dp), dimension(:,:,:), intent(inout) :: bx
+        real(dp), dimension(:,:,:), intent(inout) :: by
+        real(dp), dimension(:,:,:), intent(inout) :: cxy
         
         real(dp), intent(in) :: dx
         real(dp), intent(in) :: dy
@@ -330,7 +330,7 @@ contains
     subroutine periodic_boundaries_stag(m, apply_to_x, apply_to_y)
         real(dp), dimension(:,:), intent(inout) :: m
         integer :: maxx, maxy
-        logical :: apply_to_x, apply_to_y
+        logical, intent(in) :: apply_to_x, apply_to_y
 
         maxx = size(m, 2)
         maxy = size(m, 1)
@@ -357,7 +357,7 @@ contains
     subroutine periodic_boundaries_3d(m, apply_to_x, apply_to_y)
         real(dp), dimension(:,:,:) :: m
         integer :: maxx, maxy, maxz , k
-        logical :: apply_to_x, apply_to_y
+        logical, intent(in) :: apply_to_x, apply_to_y
                 
         maxx = size(m,2)
         maxy = size(m,1)
@@ -372,7 +372,7 @@ contains
     subroutine periodic_boundaries_3d_stag(m,apply_to_x,apply_to_y)
         real(dp), dimension(:,:,:) :: m
         integer :: k
-        logical :: apply_to_x, apply_to_y
+        logical, intent(in) :: apply_to_x, apply_to_y
     
         do k=1, size(m, 3)
             call periodic_boundaries_stag(m(:,:,k),apply_to_x, apply_to_y)
@@ -393,23 +393,23 @@ contains
 
         INTEGER MAXY,MAXX,NZETA,MANIFOLD,PLASTIC
 
-        real(dp), dimension(:,:,:) :: mu
-        real(dp), dimension(:,:,:) :: uvel
-        real(dp), dimension(:,:,:) :: vvel
-        real(dp), dimension(:,:,:) :: arrh
-        real(dp), dimension(:,:) :: dzdx
-        real(dp), dimension(:,:) :: dzdy
-        real(dp), dimension(:,:) :: h
-        real(dp), dimension(:,:,:) :: ax
-        real(dp), dimension(:,:,:) :: ay
-        real(dp), dimension(:,:,:) :: bx
-        real(dp), dimension(:,:,:) :: by
-        real(dp), dimension(:,:,:) :: cxy
-        real(dp), dimension(:) :: zeta
-        real(dp), dimension(:,:) :: dhbdx
-        real(dp), dimension(:,:) :: dhbdy
-        real(dp), dimension(:,:) :: beta
-        real(dp) :: FLOWN,ZIP,VEL2ERR,TOLER,delta_x, delta_y
+        real(dp), dimension(:,:,:), intent(inout) :: mu
+        real(dp), dimension(:,:,:), intent(inout) :: uvel
+        real(dp), dimension(:,:,:), intent(inout) :: vvel
+        real(dp), dimension(:,:,:), intent(in) :: arrh
+        real(dp), dimension(:,:), intent(in) :: dzdx
+        real(dp), dimension(:,:), intent(in) :: dzdy
+        real(dp), dimension(:,:), intent(in) :: h
+        real(dp), dimension(:,:,:), intent(in) :: ax
+        real(dp), dimension(:,:,:), intent(in) :: ay
+        real(dp), dimension(:,:,:), intent(in) :: bx
+        real(dp), dimension(:,:,:), intent(in) :: by
+        real(dp), dimension(:,:,:), intent(in) :: cxy
+        real(dp), dimension(:), intent(in) :: zeta
+        real(dp), dimension(:,:), intent(in) :: dhbdx
+        real(dp), dimension(:,:), intent(in) :: dhbdy
+        real(dp), dimension(:,:), intent(in) :: beta
+        real(dp), intent(in) :: FLOWN,ZIP,VEL2ERR,TOLER,delta_x, delta_y
         logical, intent(in) :: STAGGERED !Whether the model is run on a staggered grid or a colocated grid.
                                          !This is passed so that corrections arising from averaging can be made.
         
@@ -425,12 +425,12 @@ contains
 
         !Contains NaN everywhere except where a kinematic boundary is to be
         !applied, in which case contains the value at the boundary
-        real(dp), dimension(:,:,:) :: kinematic_bc_u, kinematic_bc_v
+        real(dp), dimension(:,:,:), intent(in) :: kinematic_bc_u, kinematic_bc_v
         
         !Contains NaN everywhere except on the marine ice edge of an ice shelf,
         !where this should contain the angle of the normal to the marine edge,
         !in radians, with 0=12 o'clock, pi/2=3 o'clock, etc.
-        real(dp), dimension(:,:)   :: marine_bc_normal
+        real(dp), dimension(:,:), intent(in)   :: marine_bc_normal
 
         INTEGER l,lacc,m,maxiter,iter,DU1,DU2,DV1,DV2,ijktot
         real(dp) :: error,tot,teta
@@ -542,11 +542,6 @@ contains
         !call fill_radial_symmetry(uvel, 1000.0_dp, 1)
         !call fill_radial_symmetry(vvel, 1000.0_dp, 2)
         
-        !A zero in the flow law can be problematic, so where that happens we set
-        !it to the "standard" small flow law coefficient
-        where (arrh == 0)
-            arrh = 1d-17
-        end where
 #ifdef OUTPUT_PARTIAL_ITERATIONS        
         ncid_debug = begin_iteration_debug(maxx, maxy, nzeta)
         call iteration_debug_step(ncid_debug, 0, mu, uvel, vvel, geometry_mask)
@@ -886,49 +881,49 @@ contains
                     matrix, workspace, options, kinematic_bc_u, kinematic_bc_v,latbc_normal, &
                     direction_x, direction_y, STAGGERED)
         INTEGER IJKTOT,MAXY,MAXX,NZETA
-        real(dp), dimension(:,:,:) :: mu
-        real(dp), dimension(:,:) :: dzdx
-        real(dp), dimension(:,:) :: dzdy
-        real(dp), dimension(:,:,:) :: ax
-        real(dp), dimension(:,:,:) :: ay
-        real(dp), dimension(:,:,:) :: bx
-        real(dp), dimension(:,:,:) :: by
-        real(dp), dimension(:,:,:) :: cxy
-        real(dp), dimension(:,:) :: h
-        real(dp), dimension(:,:,:), target :: uvel
-        real(dp), dimension(:,:,:), target :: vvel
+        real(dp), dimension(:,:,:), intent(in) :: mu
+        real(dp), dimension(:,:), intent(in) :: dzdx
+        real(dp), dimension(:,:), intent(in) :: dzdy
+        real(dp), dimension(:,:,:), intent(in) :: ax
+        real(dp), dimension(:,:,:), intent(in) :: ay
+        real(dp), dimension(:,:,:), intent(in) :: bx
+        real(dp), dimension(:,:,:), intent(in) :: by
+        real(dp), dimension(:,:,:), intent(in) :: cxy
+        real(dp), dimension(:,:), intent(in) :: h
+        real(dp), dimension(:,:,:), intent(in), target :: uvel
+        real(dp), dimension(:,:,:), intent(in), target :: vvel
         
         real(dp), dimension(:,:,:), intent(in) :: dudx,dudy,dudz,dvdx,dvdy,dvdz
         
-        real(dp), dimension(:,:,:), target :: ustar
-        real(dp), dimension(:,:,:), target :: vstar
-        real(dp), dimension(:,:) :: dhbdx
-        real(dp), dimension(:,:) :: dhbdy
-        real(dp), dimension(:,:) :: beta
-        real(dp), dimension(:) :: zeta
-        integer, dimension(:,:) :: geometry_mask
-        real(dp), dimension(:,:,:), target :: kinematic_bc_u
-        real(dp), dimension(:,:,:), target :: kinematic_bc_v
-        real(dp), dimension(:,:)   :: latbc_normal !On the marine ice front, this is the angle of the normal to the ice front
-        real(dp) :: toler
-        real(dp) :: gridx
-        real(dp) :: gridy
-        real(dp) :: rhs
-        
+        real(dp), dimension(:,:,:), intent(out), target :: ustar
+        real(dp), dimension(:,:,:), intent(out), target :: vstar
+        real(dp), dimension(:,:), intent(in) :: dhbdx
+        real(dp), dimension(:,:), intent(in) :: dhbdy
+        real(dp), dimension(:,:), intent(in) :: beta
+        real(dp), dimension(:), intent(in) :: zeta
+        integer, dimension(:,:), intent(in) :: geometry_mask
+        real(dp), dimension(:,:,:), intent(in), target :: kinematic_bc_u
+        real(dp), dimension(:,:,:), intent(in), target :: kinematic_bc_v
+        real(dp), dimension(:,:), intent(in)   :: latbc_normal !On the marine ice front, this is the angle of the normal to the ice front
+        real(dp), intent(in) :: toler
+        real(dp), intent(in) :: gridx
+        real(dp), intent(in) :: gridy
         real(dp), dimension(:,:), intent(in) :: direction_x,direction_y
+
+        !Sparse matrix variables.  These are passed in so that allocation can be
+        !done once per velocity solve instead of once per iteration
+        type(sparse_matrix_type), intent(inout) :: matrix
+        type(sparse_solver_workspace), intent(inout) :: workspace
+        type(sparse_solver_options), intent(inout) :: options
+
         
         logical, intent(in)::STAGGERED
 
-
+        real(dp) :: rhs
+        
         INTEGER i,j,k,m,sparuv,iter, ierr
         real(dp) :: d(IJKTOT),x(IJKTOT),coef(STENCIL_SIZE),err
       
-        !Sparse matrix variables.  These are passed in so that allocation can be
-        !done once per velocity solve instead of once per iteration
-        type(sparse_matrix_type) :: matrix
-        type(sparse_solver_workspace) :: workspace
-        type(sparse_solver_options) :: options
-
         integer, dimension(:,:) :: point_mask
         
         integer :: stencil_center_idx
@@ -1101,7 +1096,8 @@ contains
       !Given a point and a stencil location,
       !the following three functions return the equivalent location
       function stencil_i(pos, i)
-        integer :: pos, i, stencil_i
+        integer, intent(in) :: pos, i
+        integer :: stencil_i
         if (pos <= 5) then
             stencil_i = i - 1
         else if (pos <= 16 .or. pos == 24 .or. pos == 25) then
@@ -1116,7 +1112,8 @@ contains
       end function
 
       function stencil_j(pos, j)
-        integer :: pos, j, stencil_j
+        integer, intent(in) :: pos, j
+        integer :: stencil_j
         select case(pos)
             case(1, 6, 7, 8, 17)
                 stencil_j = j - 1
@@ -1132,7 +1129,8 @@ contains
       end function
 
       function stencil_k(pos, k)
-        integer :: pos, k, stencil_k
+        integer, intent(in) :: pos, k
+        integer :: stencil_k
         select case(pos)
             case(2, 6, 10, 14, 18)
                 stencil_k = k - 1
@@ -1148,12 +1146,13 @@ contains
       end function
  !
       function csp_masked(pos, i, j, k, point_mask, nzeta)
-         integer :: pos
-         integer :: i !Y coordinate
-         integer :: j !X coordinate
-         integer :: k !Z coordinate
-         integer, dimension(:,:) :: point_mask
-         integer :: nzeta
+         integer, intent(in) :: pos
+         integer, intent(in) :: i !Y coordinate
+         integer, intent(in) :: j !X coordinate
+         integer, intent(in) :: k !Z coordinate
+         integer, dimension(:,:), intent(in) :: point_mask
+         integer, intent(in) :: nzeta
+
          integer :: csp_masked
 
          csp_masked = (point_mask(stencil_i(pos,i), stencil_j(pos,j)) - 1) * nzeta &
@@ -1163,9 +1162,10 @@ contains
       !Returns the coordinate without performing stencil lookups (this assumes
       !those have already been done)
       function csp_stenciled(si, sj, sk, point_mask, nzeta)
-            integer :: si, sj, sk
-            integer, dimension(:,:) :: point_mask
-            integer :: nzeta
+            integer, intent(in) :: si, sj, sk
+            integer, dimension(:,:), intent(in) :: point_mask
+            integer, intent(in) :: nzeta
+
             integer :: csp_stenciled
 
             csp_stenciled = (point_mask(si, sj) - 1)*nzeta + sk
@@ -1200,7 +1200,7 @@ contains
         dhbdx,dhbdy,beta,geometry_mask,latbc_normal,MAXX,MAXY,Ndz,&
         coef, rhs, direction_x, direction_y, STAGGERED)
 !
-        integer :: i,j,k, MAXY, MAXX, Ndz
+        integer, intent(in) :: i,j,k, MAXY, MAXX, Ndz
 
         !Output array
         real(dp), dimension(STENCIL_SIZE), intent(out) :: coef
@@ -1209,42 +1209,44 @@ contains
         real(dp), intent(out) :: rhs
 
         !Viscosity
-        real(dp), dimension(:,:,:) :: mu
+        real(dp), dimension(:,:,:), intent(in) :: mu
 
         real(dp), dimension(:,:,:), intent(in) :: dudx_field, dudy_field, dudz_field 
         real(dp), dimension(:,:,:), intent(in) :: dvdx_field, dvdy_field, dvdz_field
 
         !Surface Gradients
-        real(dp), dimension(:,:), target :: dzdx, dzdy
+        real(dp), dimension(:,:), target, intent(in) :: dzdx, dzdy
 
         !Rescaling Factors
-        real(dp), dimension(:,:,:), target :: ax, ay, bx, by, cxy
+        real(dp), dimension(:,:,:), target, intent(in) :: ax, ay, bx, by, cxy
         
         !Ice Thickness
-        real(dp), dimension(:,:) :: h
+        real(dp), dimension(:,:), intent(in) :: h
 
         !Grid Spacing (Z is an irregular grid)
-        real(dp) :: dx, dy
-        real(dp), dimension(:) :: dz
+        real(dp), intent(in) :: dx, dy
+        real(dp), dimension(:), intent(in) :: dz
 
         !Current velocities
-        real(dp), dimension(:,:,:), target :: uvel, vvel
+        real(dp), dimension(:,:,:), target, intent(in) :: uvel, vvel
 
         !Bedrock Gradients
-        real(dp), dimension(:,:), target :: dhbdx, dhbdy
+        real(dp), dimension(:,:), target, intent(in) :: dhbdx, dhbdy
 
         !Basal Traction
-        real(dp), dimension(:,:) :: beta
+        real(dp), dimension(:,:), intent(in) :: beta
 
-        integer, dimension(:,:) :: geometry_mask
+        integer, dimension(:,:), intent(in) :: geometry_mask
 
         !Contains the angle of the normal to the marine margine, NaN
         !everywhere not on the margin
-        real(dp), dimension(:,:) :: latbc_normal
+        real(dp), dimension(:,:), intent(in) :: latbc_normal
 
         logical, intent(in) :: STAGGERED
+ 
+        real(dp), dimension(:,:),intent(in) :: direction_x, direction_y
 
-        character(1) :: component
+        character(1), intent(in) :: component
 !
         !Temporary calculations done in the ABSOLUTE (using u/x, v/y) coordinate
         !system
@@ -1269,10 +1271,7 @@ contains
         !Cached difference calculations for the nonstaggered Z grid
         real(dp) dz_down1, dz_down2, dz_down3, dz_up1, dz_up2, dz_up3
         real(dp) dz_cen1, dz_cen2, dz_cen3, dz_sec1, dz_sec2, dz_sec3
-        
-        real(dp), dimension(:,:),intent(in) :: direction_x, direction_y
-
-        !call write_xls_3d("uvel.txt",uvel)
+               !call write_xls_3d("uvel.txt",uvel)
         !call write_xls_3d("vvel.txt",vvel)
         character(20) :: point_type
 
