@@ -45,13 +45,6 @@ implicit none
   integer, dimension(:,:), allocatable :: uindx
   integer, dimension(:,:), allocatable :: umask 
 
-   !*sfp* to be removed when mask is fixed
-!  integer, parameter :: mnbdy = 1, noice = 0
-!  integer, parameter :: boundarys = 2
-  
-  !*sfp* to be replaced/removed b.c. of new mask def.
-!  integer, dimension(2), parameter :: strdomain = (/ mnbdy, boundarys /)
-
   real (kind = dp), parameter :: effstrminsq = (1.0e-20_dp * tim0)**2
 
 ! *sfp** 'p' are later defined as variants on 'gn', or Glen's 'n'(=3),
@@ -174,7 +167,6 @@ subroutine glam_velo_fordsiapstr_init (ewn,   nsn,   upn,    &
 
 ! *sfp** determine constants used in various FD calculations associated with 'findcoefst'   
 ! NOTE: there is some question about the definitions here vs. in write-up (see notes in subroutine)
-
 !whl - moved from findcoefstr
      call calccoeffsinit(upn, dew, dns)
 
@@ -210,6 +202,9 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
 
   integer, intent(in) :: ewn, nsn, upn
   integer, dimension(:,:),   intent(inout)  :: umask  !*sfp* replaces the prev., internally calc. mask
+                                                      ! ... 'inout' status allows for a minor alteration
+                                                      ! to cism defined mask, which don't necessarily 
+                                                      ! associate all/any boundaries as a unique mask value.
   real (kind = dp), intent(in) :: dew, dns
 
   real (kind = dp), dimension(:),     intent(in)  :: sigma, stagsigma
@@ -263,35 +258,18 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
   call geom2derscros(dew, dns, usrf, stagthck, d2usrfdewdns)
 
   ! *sfp* These are passed a number of times below, but I don't think they are used anymore - remove?
-  valubbc = 0.0_dp
-  typebbc = 0.0_dp
+!  valubbc = 0.0_dp
+!  typebbc = 0.0_dp
 
   ! *sfp** make a 2d array identifying if the associated point has zero thickness,
   !      has non-zero thickness and is interior, or has non-zero thickness
   !      and is along a boundary
 
-
-
-   !*sfp* replacing the internally calc. mask w/ the one passed in, and calc. using CISM routines
-!  umask = maskvelostr(ewn, nsn, thck, stagthck)
-
-   !*sfp* fix to label mask w/ unique value for boundaries coincident w/ domain edge
-   ! ... consider re-using / re-naming the above function to do this hack?
-   do ns = 1,nsn-1; do ew = 1,ewn-1
-    if (all(stagthck(ew:ew+1,ns:ns+1) > 0.0_dp )) then
-      ! *sfp** if at the domain edges, define as a boundary
-      if (ew == 1 .or. ew == ewn-1) then
-        umask(ew,ns) = GLIDE_MASK_BOUNDARY 
-      else if (ns == 1 .or. ns == nsn-1) then
-        umask(ew,ns) = GLIDE_MASK_BOUNDARY
-      end if
-    else if (any(thck(ew:ew+1,ns:ns+1) > 0.0_dp )) then
-     umask(ew,ns) = GLIDE_MASK_BOUNDARY 
-    end if
-   end do; end do 
-
-
-
+   !*sfp* This subroutine has been altered from its original form (was a function, still included
+   ! below w/ subroutine but commented out) to allow for a tweak to the CISM calculated mask (adds
+   ! in an unique number for ANY arbritray boundary, be it land, water, or simply at the edge of
+   ! the calculation domain). 
+   call maskvelostr(ewn, nsn, thck, stagthck, umask)
 
   allocate(uindx(ewn-1,nsn-1))
 
@@ -490,8 +468,6 @@ function indxvelostr(ewn,  nsn,  upn,  &
 
   do ew = 1,ewn-1
       do ns = 1,nsn-1
-        !*sfp* to be replaced/removed b.c. of new mask def.
-        !if (any(strdomain == mask(ew,ns))) then
         if ( GLIDE_HAS_ICE( mask(ew,ns) ) ) then 
           indxvelostr(ew,ns) = pointno
           pointno = pointno + 1
@@ -698,32 +674,31 @@ end function getlocrange
 
 !***********************************************************************
 
-function getlocation(upn, indx)
-
 !whl - This function is not currently used.
 
-  implicit none
-
-  integer, intent(in) :: upn
-  integer, intent(in) :: indx
-  integer :: getlocation
-
-  getlocation = (indx - 1) * (upn + 2) + 1
-
-  return
-
-end function getlocation
+!function getlocation(upn, indx)
+!
+!
+!  implicit none
+!
+!  integer, intent(in) :: upn
+!  integer, intent(in) :: indx
+!  integer :: getlocation
+!
+!  getlocation = (indx - 1) * (upn + 2) + 1
+!
+!  return
+!
+!end function getlocation
 
 !***********************************************************************
 
 function getlocationarray(ewn, nsn, upn,  &
-!                          mask, mnbdy, boundarys) !*sfp* to be removed when mask fixed
                           mask )
     implicit none
 
     integer, intent(in) :: ewn, nsn, upn 
     integer, dimension(:,:), intent(in) :: mask
-!    integer, intent(in) :: mnbdy, boundarys    !*sfp* to be removed when mask fixed
     integer, dimension(ewn-1,nsn-1) :: getlocationarray, temparray
     integer :: cumsum, ew, ns
 
@@ -731,8 +706,6 @@ function getlocationarray(ewn, nsn, upn,  &
 
     do ew=1,ewn-1
         do ns=1,nsn-1
-        !*sfp** if in main body, there are upn+2 columns ...
-!        if ( mask(ew,ns) .eq. mnbdy .or. mask(ew,ns) .eq. boundarys ) then
         if ( mask(ew,ns) == GLIDE_MASK_INTERIOR .or. mask(ew,ns) == GLIDE_MASK_BOUNDARY ) then
             cumsum = cumsum + ( upn + 2 )
             getlocationarray(ew,ns) = cumsum
@@ -1026,12 +999,6 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
 
   ct = 1
 
-! *sfp* to be removed if/when mask is input from cism rather than defined internally
-! *sfp** read in mask to ID where to apply floating ice bc 
-!      open(unin,file=shlfmask,status='old')         
-!      read(unin,*) ((shelfmask(ew,ns), ew=1,ewn-1), ns=1,nsn-1)
-!      close(unin)
-
   ! *sfp** calculate/specify value of 'betasquared', to be input to subroutine 'bodyset', below
   call calcbetasquared (whichbabc,              &
                         dew,        dns,        &
@@ -1046,12 +1013,13 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
   do ns = 1,nsn-1
     do ew = 1,ewn-1 
 
-     ! *sfp** depth-ave rate factor, needed for ice shelf b.c. (below)
+     ! *sfp** depth-ave rate factor, needed for one of the ice shelf b.c. options (below)
 !     flwabar = sum( ( flwa(:,ew,ns) + flwa(:,ew,ns+1) + flwa(:,ew+1,ns) + flwa(:,ew+1,ns+1) ) / 4.0_dp, 1 ) / real(upn)    
      flwabar = 3.171d-24 / vis0    ! isothermal, temperate value 
 !     flwabar = 1.8075e-25 / vis0    ! EISMINT-ROSS test 3-4 value
 
-!     ! ...or, calculate the depth-averaged value (complicated code so as not to include funny values at boundaries)
+     ! *sfp* ...or, calculate the depth-averaged value (complicated code so as not to include funny values at boundaries)
+     ! *sfp* This is kind of a mess and could be redone or moded to a function/subroutine.
 !     flwabar = ( sum( flwa(:,ew,ns), 1, flwa(1,ew,ns)*vis0 < 1.0d-10 )/real(upn) + &
 !               sum( flwa(:,ew,ns+1), 1, flwa(1,ew,ns+1)*vis0 < 1.0d-10 )/real(upn)  + &
 !               sum( flwa(:,ew+1,ns), 1, flwa(1,ew+1,ns)*vis0 < 1.0d-10 )/real(upn)  + &
@@ -1062,15 +1030,14 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
 !               sum( flwa(:,ew+1,ns+1)/flwa(:,ew+1,ns+1), 1, flwa(1,ew+1,ns+1)*vis0 < 1.0d-10 )/real(upn) )
 
     if( ns == 1 .and. ew == 1 ) then
-           loc_array = getlocationarray(ewn, nsn, upn,  &
-!                                        mask, mnbdy,boundarys) !*sfp* to be removed when mask is fixed
-                                        mask )
+           loc_array = getlocationarray(ewn, nsn, upn, mask )
     end if
 
     loc(1) = loc_array(ew,ns)
 
-!    if (mnbdy == mask(ew,ns)) then
-    if ( GLIDE_MASK_INTERIOR == mask(ew,ns) ) then
+! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+    if ( GLIDE_MASK_INTERIOR == mask(ew,ns) ) then      ! If at interior point (sheet or shelf)
+! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
         call calccoeffs( upn,               sigma,              &
                          stagthck(ew,ns),                       &
@@ -1112,55 +1079,49 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
 
         end do  ! upn
 
-!   !*sfp** must be ACTIVE for test cases 
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-!    else if (boundarys == mask(ew,ns)) then
-!    elseif ( GLIDE_MASK_BOUNDARY == mask(ew,ns) ) then
-    elseif ( mask(ew,ns) == GLIDE_MASK_BOUNDARY  ) then
+    elseif ( mask(ew,ns) == GLIDE_MASK_BOUNDARY  ) then     ! If at boundary (sheet or shelf)
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-!!    else if (boundarys == mask(ew,ns) .and. shelfmask(ew,ns) == 1 )then
-!    if ( GLIDE_IS_CALVING( mask(ew,ns) ) ) then
-!
-!        call calccoeffs( upn,               sigma,              &
-!                         stagthck(ew,ns),                       &
-!                         dusrfdew(ew,ns),   dusrfdns(ew,ns),    &
-!                         dthckdew(ew,ns),   dthckdns(ew,ns),    &
-!                         d2usrfdew2(ew,ns), d2usrfdns2(ew,ns),  &
-!                         d2usrfdewdns(ew,ns),                   &
-!                         d2thckdew2(ew,ns), d2thckdns2(ew,ns),  &
-!                         d2thckdewdns(ew,ns))
-!
-!        do up = 1, upn
-!           lateralboundry = .true.
-!           shift = indshift(  1, ew, ns, up,                   &
-!                               ewn, nsn, upn,                  &
-!                               loc_array,                      & 
-!                               stagthck(ew-1:ew+1,ns-1:ns+1) )
-!
-!            call bodyset(ew,  ns,  up,        &
-!                         ewn, nsn, upn,       &
-!                         dew,      dns,       &
-!                         pt,       loc_array, &
-!                         loc,      stagthck,  &
-!                         thisdusrfdx,         &
-!                         dusrfdew, dusrfdns,  &
-!                         dlsrfdew, dlsrfdns,  &
-!                         efvs(up-1+shift(1):up+shift(1),ew:ew+1,ns:ns+1),  &
-!                         othervel(up-1+shift(1):up+1+shift(1),  &
-!                         ew-1+shift(2):ew+1+shift(2),  &
-!                         ns-1+shift(3):ns+1+shift(3)), &
-!                         betasquared(ew,ns), abar=flwabar )        
-!        end do
-!        lateralboundry = .false.
 
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+    if ( GLIDE_IS_CALVING( mask(ew,ns) ) ) then             ! If at ice shelf front
+! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-!     else 
-!     else if (boundarys == mask(ew,ns) .and. shelfmask(ew,ns) == 0 )then 
-!     else if (boundarys == mask(ew,ns) )then 
+        call calccoeffs( upn,               sigma,              &
+                         stagthck(ew,ns),                       &
+                         dusrfdew(ew,ns),   dusrfdns(ew,ns),    &
+                         dthckdew(ew,ns),   dthckdns(ew,ns),    &
+                         d2usrfdew2(ew,ns), d2usrfdns2(ew,ns),  &
+                         d2usrfdewdns(ew,ns),                   &
+                         d2thckdew2(ew,ns), d2thckdns2(ew,ns),  &
+                         d2thckdewdns(ew,ns))
 
-!    !*sfp** must be ACTIVE for test case OR commented OUT for ice shelf test case 
+        do up = 1, upn
+           lateralboundry = .true.
+           shift = indshift(  1, ew, ns, up,                   &
+                               ewn, nsn, upn,                  &
+                               loc_array,                      & 
+                               stagthck(ew-1:ew+1,ns-1:ns+1) )
+
+            call bodyset(ew,  ns,  up,        &
+                         ewn, nsn, upn,       &
+                         dew,      dns,       &
+                         pt,       loc_array, &
+                         loc,      stagthck,  &
+                         thisdusrfdx,         &
+                         dusrfdew, dusrfdns,  &
+                         dlsrfdew, dlsrfdns,  &
+                         efvs(up-1+shift(1):up+shift(1),ew:ew+1,ns:ns+1),  &
+                         othervel(up-1+shift(1):up+1+shift(1),  &
+                         ew-1+shift(2):ew+1+shift(2),  &
+                         ns-1+shift(3):ns+1+shift(3)), &
+                         betasquared(ew,ns), abar=flwabar )        
+        end do
+        lateralboundry = .false.
+
+! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+     else                                               ! all other cases (assigned vel or zero vel) 
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
         !*sfp** puts zeros on rhs, coincident w/ location of the additional equation for the HO sfc and basal bcs
@@ -1173,14 +1134,8 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
            call valueset( thisvel(up,ew,ns) )     ! *sfp** vel at margin set to specified value (default = 0) 
         end do
 
-! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-
-!     end if
-
-!   !*sfp** must be ACTIVE for test cases  
-! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+      end if
     end if
-! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
     end do;     ! ew 
   end do        ! ns
@@ -1311,6 +1266,16 @@ subroutine bodyset(ew,  ns,  up,           &
     ! Two options here, (1) use the 1d solution that involves the rate factor, 
     !                   (2) use the more general solution that involves the eff. visc.
     ! ... only one of these options should be active (comment the other lines out)
+
+    ! *sfp* NOTE: Some functionality could be added here to correct for thickness values on the
+    ! staggered grid being applied in the source term for the shelf bc. That is, the staggerd thickness
+    ! will generally be significantly less than the actual thickness that, presumably, we want to use
+    ! when applying this bc. The quick fix below is to add another factor of two (assuming that the stag
+    ! thickness at the boundary is 1/2 of the full thickness) into the source term. A better fix might
+    ! be to use the staggered thickness one cell 'back' from the boundary in the opposite direction of 
+    ! the boundary normal ... e.g. if the normal is pointing at 45 deg (one thirty) normal = 1/sqrt(2)*[1,1],
+    ! we would access stagthck(i-1,j-1) and apply that to the bc rather than stagthck(i,j). For a point
+    ! w/ a normal of 1/sqrt(2)*[1,-1], we would access stagthck(i-1,j+1), etc. 
 
     ! (1) 
     ! source term (strain rate at shelf/ocean boundary) from Weertman's analytical solution 
@@ -2630,9 +2595,41 @@ function indshift( which, ew, ns, up, ewn, nsn, upn, loc_array, thck )
 end function indshift
 
 !***********************************************************************
+!*sfp* This subroutine is a fix to the CISM derived mask so that each 
+! boundary point, be it at the domain edge or associated w/ the jump from
+! ice to no ice, is assigned an identifier GLIDE_MASK_BOUNDARY. This is not
+! done by default when the CISM mask is defined. Note that this is an altered
+! version of the original function 'maskvelostr', commented out below.
 
-! *sfp* to be removed when mask is fixed
-!!function maskvelostr(ewn,  nsn,   &
+subroutine maskvelostr( ewn, nsn, thck, stagthck, umask )
+
+  implicit none
+
+  integer, intent(in) :: ewn, nsn 
+  real (kind = dp), intent(in), dimension(:,:) :: thck, stagthck
+  integer, intent(inout), dimension(:,:) :: umask   
+
+  integer :: ew, ns
+
+   do ns = 1,nsn-1; do ew = 1,ewn-1
+    if (all(stagthck(ew:ew+1,ns:ns+1) > 0.0_dp )) then
+      ! *sfp** if at the domain edges, define as a boundary
+      if (ew == 1 .or. ew == ewn-1) then
+        umask(ew,ns) = GLIDE_MASK_BOUNDARY
+      else if (ns == 1 .or. ns == nsn-1) then
+        umask(ew,ns) = GLIDE_MASK_BOUNDARY
+      end if
+    else if (any(thck(ew:ew+1,ns:ns+1) > 0.0_dp )) then
+     umask(ew,ns) = GLIDE_MASK_BOUNDARY
+    end if
+   end do; end do
+
+   return
+
+end subroutine maskvelostr
+
+
+!function maskvelostr(ewn,  nsn,   &
 !                     thck, stagthck)
 !
 !! *sfp** make 2d array containing a '0' (no ice present in associated cell), 
