@@ -20,7 +20,7 @@ module glam_strs2
 
 use glimmer_paramets, only : dp
 use glimmer_physcon,  only : gn, rhoi, rhoo, grav, pi, scyr
-use glimmer_paramets, only : thk0, len0, vel0, vis0, tim0, tau0, lambda0, evs0, tau0_glam
+use glimmer_paramets, only : thk0, len0, vel0, vis0, vis0_glam, tim0, tau0, lambda0, evs0, tau0_glam
 use glimmer_log,      only : write_log
 use glide_mask
 
@@ -265,11 +265,29 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
   !      has non-zero thickness and is interior, or has non-zero thickness
   !      and is along a boundary
 
-   !*sfp* This subroutine has been altered from its original form (was a function, still included
-   ! below w/ subroutine but commented out) to allow for a tweak to the CISM calculated mask (adds
-   ! in an unique number for ANY arbritray boundary, be it land, water, or simply at the edge of
-   ! the calculation domain). 
-   call maskvelostr(ewn, nsn, thck, stagthck, umask)
+  !*sfp* This subroutine has been altered from its original form (was a function, still included
+  ! below w/ subroutine but commented out) to allow for a tweak to the CISM calculated mask (adds
+  ! in an unique number for ANY arbritray boundary, be it land, water, or simply at the edge of
+  ! the calculation domain). 
+  call maskvelostr(ewn, nsn, thck, stagthck, umask)
+
+
+
+  !!!!!!!!! *sfp* start debugging !!!!!!!!!!!!!!!!!!!!!!!!
+  umask(5:ewn-1,1) = 3; umask(5:ewn-1,nsn-1) = 3
+
+  umask(1:4,1) = -2; umask(1:4,nsn-1) = -2
+
+  umask(1:4,:) = 0
+
+  umask(5,:) = 3;
+
+  print *, 'mask = '
+  print *, umask
+  pause
+  !!!!!!!!! stop debugging !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
 
   allocate(uindx(ewn-1,nsn-1))
 
@@ -1015,19 +1033,19 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
 
      ! *sfp** depth-ave rate factor, needed for one of the ice shelf b.c. options (below)
 !     flwabar = sum( ( flwa(:,ew,ns) + flwa(:,ew,ns+1) + flwa(:,ew+1,ns) + flwa(:,ew+1,ns+1) ) / 4.0_dp, 1 ) / real(upn)    
-     flwabar = 3.171d-24 / vis0    ! isothermal, temperate value 
-!     flwabar = 1.8075e-25 / vis0    ! EISMINT-ROSS test 3-4 value
+     flwabar = 3.171d-24 / vis0_glam    ! isothermal, temperate value 
+!     flwabar = 1.8075e-25 / vis0_glam    ! EISMINT-ROSS test 3-4 value
 
      ! *sfp* ...or, calculate the depth-averaged value (complicated code so as not to include funny values at boundaries)
      ! *sfp* This is kind of a mess and could be redone or moded to a function/subroutine.
-!     flwabar = ( sum( flwa(:,ew,ns), 1, flwa(1,ew,ns)*vis0 < 1.0d-10 )/real(upn) + &
-!               sum( flwa(:,ew,ns+1), 1, flwa(1,ew,ns+1)*vis0 < 1.0d-10 )/real(upn)  + &
-!               sum( flwa(:,ew+1,ns), 1, flwa(1,ew+1,ns)*vis0 < 1.0d-10 )/real(upn)  + &
-!               sum( flwa(:,ew+1,ns+1), 1, flwa(1,ew+1,ns+1)*vis0 < 1.0d-10 )/real(upn) ) / &
-!               ( sum( flwa(:,ew,ns)/flwa(:,ew,ns), 1, flwa(1,ew,ns)*vis0 < 1.0d-10 )/real(upn) + &
-!               sum( flwa(:,ew,ns+1)/flwa(:,ew,ns+1), 1, flwa(1,ew,ns+1)*vis0 < 1.0d-10 )/real(upn) + &
+!     flwabar = ( sum( flwa(:,ew,ns), 1, flwa(1,ew,ns)*vis0_glam < 1.0d-10 )/real(upn) + &
+!               sum( flwa(:,ew,ns+1), 1, flwa(1,ew,ns+1)*vis0_glam < 1.0d-10 )/real(upn)  + &
+!               sum( flwa(:,ew+1,ns), 1, flwa(1,ew+1,ns)*vis0_glam < 1.0d-10 )/real(upn)  + &
+!               sum( flwa(:,ew+1,ns+1), 1, flwa(1,ew+1,ns+1)*vis0_glam < 1.0d-10 )/real(upn) ) / &
+!               ( sum( flwa(:,ew,ns)/flwa(:,ew,ns), 1, flwa(1,ew,ns)*vis0_glam < 1.0d-10 )/real(upn) + &
+!               sum( flwa(:,ew,ns+1)/flwa(:,ew,ns+1), 1, flwa(1,ew,ns+1)*vis0_glam < 1.0d-10 )/real(upn) + &
 !               sum( flwa(:,ew+1,ns)/flwa(:,ew+1,ns), 1, flwa(1,ew+1,ns)*vis0 < 1.0d-10 )/real(upn) + &
-!               sum( flwa(:,ew+1,ns+1)/flwa(:,ew+1,ns+1), 1, flwa(1,ew+1,ns+1)*vis0 < 1.0d-10 )/real(upn) )
+!               sum( flwa(:,ew+1,ns+1)/flwa(:,ew+1,ns+1), 1, flwa(1,ew+1,ns+1)*vis0_glam < 1.0d-10 )/real(upn) )
 
     if( ns == 1 .and. ew == 1 ) then
            loc_array = getlocationarray(ewn, nsn, upn, mask )
@@ -1036,7 +1054,9 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
     loc(1) = loc_array(ew,ns)
 
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-    if ( GLIDE_MASK_INTERIOR == mask(ew,ns) ) then      ! If at interior point (sheet or shelf)
+!    if ( mask(ew,ns) == GLIDE_MASK_INTERIOR ) then      ! If at interior point (sheet or shelf)
+    if ( mask(ew,ns) == 2 .or. mask(ew,ns) == 18 .or. mask(ew,ns) == 4 ) then
+    !print *, 'In main body ...'
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
         call calccoeffs( upn,               sigma,              &
@@ -1080,12 +1100,9 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
         end do  ! upn
 
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-    elseif ( mask(ew,ns) == GLIDE_MASK_BOUNDARY  ) then     ! If at boundary (sheet or shelf)
-! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-
-
-! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-    if ( GLIDE_IS_CALVING( mask(ew,ns) ) ) then             ! If at ice shelf front
+!    elseif ( GLIDE_IS_CALVING( mask(ew,ns) ) ) then 
+    elseif ( mask(ew,ns) == 388 ) then
+    !print *, 'At a SHELF boundary ...'
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
         call calccoeffs( upn,               sigma,              &
@@ -1121,7 +1138,9 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
         lateralboundry = .false.
 
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-     else                                               ! all other cases (assigned vel or zero vel) 
+!    elseif ( mask(ew,ns) == GLIDE_MASK_BOUNDARY ) then 
+    elseif ( mask(ew,ns) == 3 ) then
+    !print *, 'At a NON-SHELF boundary ...'
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
         !*sfp** puts zeros on rhs, coincident w/ location of the additional equation for the HO sfc and basal bcs
@@ -1134,7 +1153,6 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
            call valueset( thisvel(up,ew,ns) )     ! *sfp** vel at margin set to specified value (default = 0) 
         end do
 
-      end if
     end if
 
     end do;     ! ew 
@@ -1283,22 +1301,22 @@ subroutine bodyset(ew,  ns,  up,           &
     ! contains the 1d assumption that ice is not spreading lateraly !(assumes dv/dy = 0 for u along flow)
     ! Note that factor of 2 in front of 'stagthck' is NOT part of the standard bc. Here, it is used to 
     ! correct for the fact that the staggered thickness will be 1/2 of the normal thickness at a boundary 
-!    source = abar*vis0 * ( 1.0_dp/4.0_dp * rhoi * grav * 2.0d0 * stagthck(ew,ns)*thk0 * ( 1.0_dp - rhoi/rhoo))**3.0_dp
-!
-!    ! multiply by 4 so that case where v=0, du/dy = 0, LHS gives: du/dx = du/dx|_shelf 
-!    ! (i.e. LHS = 4*du/dx, requires 4*du/dx_shelf)
-!    source = source * 4.0_dp
-!
-!    ! split source based on the boundary normal orientation and non-dimensinoalize
-!    if( normal(1) .ne. 0.0d0 .and. normal(2) .ne. 0.0d0 )then
-!    ! *sfp** this necessary so that splitting of scalar source term on RHS is 1/2 to y-dir and 1/2 to x-dir 
-!    ! (rather than 1/sqrt(2) to each dir)
-!    ! Also note that this is not really appropriate to apply to 2d flow, since terms other than du/dx in 
-!    ! eff. strain rate are ignored. For 2d flow, should use option (2) below. 
-!       source = source * normal(pt) * 1 / sqrt( 2.0d0 ) * tim0
-!    else
-!       source = source * normal(pt) * tim0
-!    end if
+    source = abar*vis0_glam * ( 1.0_dp/4.0_dp * rhoi * grav * 2.0d0 * stagthck(ew,ns)*thk0 * ( 1.0_dp - rhoi/rhoo))**3.0_dp
+
+    ! multiply by 4 so that case where v=0, du/dy = 0, LHS gives: du/dx = du/dx|_shelf 
+    ! (i.e. LHS = 4*du/dx, requires 4*du/dx_shelf)
+    source = source * 4.0_dp
+
+    ! split source based on the boundary normal orientation and non-dimensinoalize
+    if( normal(1) .ne. 0.0d0 .and. normal(2) .ne. 0.0d0 )then
+    ! *sfp** this necessary so that splitting of scalar source term on RHS is 1/2 to y-dir and 1/2 to x-dir 
+    ! (rather than 1/sqrt(2) to each dir)
+    ! Also note that this is not really appropriate to apply to 2d flow, since terms other than du/dx in 
+    ! eff. strain rate are ignored. For 2d flow, should use option (2) below. 
+       source = source * normal(pt) * 1 / sqrt( 2.0d0 ) * tim0
+    else
+       source = source * normal(pt) * tim0
+    end if
 
 
     ! (2)
@@ -1306,19 +1324,19 @@ subroutine bodyset(ew,  ns,  up,           &
     ! As above, factor of 2 in front of 'stagthck' is not part of the formal solution but is used here to
     ! correct for the fact that the boundary thickness on the staggered grid will generally be ~1/2 of the 
     ! full thickness at the boundary (as a result of averaging to make 'stagthck' from 'thck'). 
-    source = rhoi * grav * 2.0d0 * stagthck(ew,ns) * thk0 / 2.0_dp * ( 1.0_dp - rhoi / rhoo )
-
-    ! terms after "/" below counter number of non-zero efvs cells ... needed for averaging efvs at boundary 
-    source = source / ( evs0 * sum(local_efvs, local_efvs .gt. 1.0d-10) / &
-             sum( local_efvs/local_efvs,local_efvs .gt. 1.0d-10 ) )
-
-    if( normal(1) .ne. 0.0d0 .and. normal(2) .ne. 0.0d0 )then
-    ! *sfp** this necessary so that splitting of scalar source term on RHS is 1/2 to y-dir and 1/2 to x-dir 
-    ! (rather than 1/sqrt(2) to each dir)
-       source = source * normal(pt) * 1 / sqrt( 2.0d0 ) * tim0
-    else
-       source = source * normal(pt) * tim0 ! non-dim
-    end if
+!    source = rhoi * grav * 2.0d0 * stagthck(ew,ns) * thk0 / 2.0_dp * ( 1.0_dp - rhoi / rhoo )
+!
+!    ! terms after "/" below count number of non-zero efvs cells ... needed for averaging efvs at boundary 
+!    source = source / ( evs0 * sum(local_efvs, local_efvs .gt. 1.0d-10) / &
+!             sum( local_efvs/local_efvs,local_efvs .gt. 1.0d-10 ) )
+!
+!    if( normal(1) .ne. 0.0d0 .and. normal(2) .ne. 0.0d0 )then
+!    ! *sfp** this necessary so that splitting of scalar source term on RHS is 1/2 to y-dir and 1/2 to x-dir 
+!    ! (rather than 1/sqrt(2) to each dir)
+!       source = source * normal(pt) * 1 / sqrt( 2.0d0 ) * tim0
+!    else
+!       source = source * normal(pt) * tim0 ! non-dim
+!    end if
                         
     g = normhorizmainbc_lat(dew,           dns,        &
                             slopex,        slopey,     &
@@ -2619,7 +2637,7 @@ subroutine maskvelostr( ewn, nsn, thck, stagthck, umask )
       else if (ns == 1 .or. ns == nsn-1) then
         umask(ew,ns) = GLIDE_MASK_BOUNDARY
       end if
-    else if (any(thck(ew:ew+1,ns:ns+1) > 0.0_dp )) then
+    else if (any(thck(ew:ew+1,ns:ns+1) > 0.0_dp .and. .not. GLIDE_IS_CALVING(umask(ew,ns)) ) ) then
      umask(ew,ns) = GLIDE_MASK_BOUNDARY
     end if
    end do; end do
@@ -2850,7 +2868,7 @@ subroutine calcbetasquared (whichbabc,               &
     case(9)    !*sfp* use value passed in externally from CISM (note that these are passed in diensional)
 
       betasquared = beta
-
+     
   end select
   
   ! convert to dimensional model units ( Pa * s * m^-1 ) and then non-dimensionalize
