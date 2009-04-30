@@ -505,7 +505,9 @@ contains
         call new_sparse_matrix(ijktot, ijktot*STENCIL_SIZE, matrix)
         call sparse_allocate_workspace(matrix, options, workspace, ijktot*STENCIL_SIZE)
 
-#if 0
+        call fill_shelf_info(geometry_mask, marine_bc_normal)
+
+#if 1
         call write_xls_3d("arrh.txt",arrh)
         call write_xls("dzdx.txt",dzdx)
         call write_xls("dzdy.txt",dzdy)
@@ -1384,7 +1386,7 @@ contains
         if (.not. IS_NAN(latbc_normal(i,j))) then !Marine margin dynamic (Neumann) boundary condition
             call sparse_marine_margin(component,i,j,k,h,latbc_normal, vel_perp, mu, dx, dy, ax, ay, dz,coef, rhs, &
                                       dudx_field,dudy_field,dudz_field,dvdx_field,dvdy_field,dvdz_field,&
-                                      direction_x, direction_y, STAGGERED)
+                                      direction_x, direction_y, geometry_mask, STAGGERED)
             point_type = "lateral"
         else if (k.eq.1) then !Upper boundary condition (stress-free surface)
             point_type = "surface"
@@ -1558,7 +1560,7 @@ contains
 
     !Computes finite differences for the marine margin
     subroutine sparse_marine_margin(component,i,j,k,h,normals, vel_perp, mu, dx, dy, ax, ay, zeta,coef, rhs, &
-                                    dudx,dudy,dudz,dvdx,dvdy,dvdz,direction_x,direction_y, STAGGERED)
+                                    dudx,dudy,dudz,dvdx,dvdy,dvdz,direction_x,direction_y, geometry_mask, STAGGERED)
         character(*), intent(in) :: component !*FD Either "u" or "v"
         integer, intent(in) :: i,j,k !*FD Point that the boundary condition is computed for
         real(dp), dimension(:,:), intent(in) :: h !*FD Ice thickness field
@@ -1577,6 +1579,8 @@ contains
         
         real(dp), dimension(:,:,:), intent(in) :: dudx,dudy,dudz,dvdx,dvdy,dvdz
         
+        integer, dimension(:,:), intent(in) :: geometry_mask
+
         real(dp),dimension(:,:) :: direction_x, direction_y
 
         logical, intent(in) :: STAGGERED
@@ -1733,15 +1737,27 @@ contains
         end if
 #endif
   
-        if (direction_y(i,j) > 0) then
+        if (direction_y(i,j) > 0 .or. &
+                (GLIDE_IS_CALVING(geometry_mask(i-1, j)) .and. .not. &
+                 GLIDE_IS_CALVING(geometry_mask(i+1, j)))) &
+        then
            downwind_y = .true.
-        else if (direction_y(i,j) < 0) then
+        else if (direction_y(i,j) < 0 .or. &
+                (GLIDE_IS_CALVING(geometry_mask(i+1, j)) .and. .not. &
+                 GLIDE_IS_CALVING(geometry_mask(i-1, j)))) &
+        then
             upwind_y = .true.
         end if
 
-        if (direction_x(i,j) > 0) then
+        if (direction_x(i,j) > 0 .or. &
+                (GLIDE_IS_CALVING(geometry_mask(i, j-1)) .and. .not. &
+                 GLIDE_IS_CALVING(geometry_mask(i, j+1)))) &
+        then
             downwind_x = .true.
-        else if (direction_x(i,j) < 0) then
+        else if (direction_x(i,j) < 0.or. &
+                (GLIDE_IS_CALVING(geometry_mask(i, j+1)) .and. .not. &
+                 GLIDE_IS_CALVING(geometry_mask(i, j-1)))) & 
+        then
             upwind_x = .true.
         end if
        
@@ -2369,6 +2385,53 @@ subroutine open_sparse_output(iteration, iunit)
     write(filename,*) "sparse"//istring//".txt"
     open(unit=iunit, file=filename)
 end subroutine
+
+    subroutine fill_shelf_info(geometry_mask, latbcnorms)
+        integer, dimension(:,:) :: geometry_mask
+        integer, dimension(size(geometry_mask,1),size(geometry_mask,2)) :: geometry_mask_copy
+        real(dp), dimension(:,:) :: latbcnorms
+
+        integer :: i, j, ny, nx
+        logical :: ip1, jp1, im1, jm1
+
+        ny = size(geometry_mask, 1)
+        nx = size(geometry_mask, 2)
+
+        geometry_mask_copy = geometry_mask
+
+        
+        do i = 2, ny-1
+            do j = 2, nx-1
+                if (GLIDE_HAS_ICE(geometry_mask(i,j)) .and. &
+                        .not. GLIDE_IS_CALVING(geometry_mask(i,j))) then
+                        
+                    ip1 = GLIDE_IS_CALVING(geometry_mask(i+1,j))
+                    jp1 = GLIDE_IS_CALVING(geometry_mask(i,j+1))
+                    im1 = GLIDE_IS_CALVING(geometry_mask(i-1,j))
+                    jm1 = GLIDE_IS_CALVING(geometry_mask(i,j-1))
+
+                    if (ip1 .and. jp1) then
+                        geometry_mask_copy(i,j) = ior(geometry_mask(i,j), GLIDE_MASK_MARINE_EDGE)
+                        latbcnorms(i,j) = 3*pi/4
+                    end if
+                    if (ip1 .and. jm1) then
+                        geometry_mask_copy(i,j) = ior(geometry_mask(i,j), GLIDE_MASK_MARINE_EDGE)
+                        latbcnorms(i,j) = 5*pi/4 !GOOD
+                    end if
+                    if (im1 .and. jm1) then
+                        geometry_mask_copy(i,j) = ior(geometry_mask(i,j), GLIDE_MASK_MARINE_EDGE)
+                        latbcnorms(i,j) = 7*pi/4 !GOOD
+                    end if
+                    if (im1 .and. jp1) then
+                        geometry_mask_copy(i,j) = ior(geometry_mask(i,j), GLIDE_MASK_MARINE_EDGE)
+                        latbcnorms(i,j) = pi/4
+                    end if
+                end if
+            end do
+        end do
+        
+        geometry_mask = geometry_mask_copy
+    end subroutine
 
 !
 !---------------------------------------------------
