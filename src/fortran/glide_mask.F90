@@ -176,7 +176,7 @@ contains
 
         do i = 1, size(mask, 1)
             do j = 1, size(mask, 2)
-                if (GLIDE_IS_SHELF_FRONT(mask(i,j))) then
+                if (GLIDE_IS_CALVING(mask(i,j))) then
                     marine_bc_normal(i,j) = calc_normal_45deg(thckWithBounds(i-1:i+1,j-1:j+1))
                 else
                     marine_bc_normal(i,j) = NaN
@@ -290,7 +290,7 @@ contains
         !Detect locations of the marine margin
         do i = 2, size(geometry_mask,1)-1
             do j = 2, size(geometry_mask,2)-1
-                if (GLIDE_IS_SHELF_FRONT(geometry_mask(i,j))) then
+                if (GLIDE_IS_CALVING(geometry_mask(i,j))) then
                     !Detect whether we need to upwind or downwind in the Y
                     !direction
                     if (.not. GLIDE_HAS_ICE(geometry_mask(i-1,j))) then
