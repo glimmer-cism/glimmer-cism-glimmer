@@ -322,7 +322,7 @@ contains
                     !points that are floating, and that works, but this doesn't work for two reasons:
                     !1. Boundary points are also floating
                     !2. Could fail for a very thin ice shelf
-#if 0
+#if 1
                     if (direction_x(i,j) == 0 .and. direction_y(i,j) == 0) then
                         if (GLIDE_IS_CALVING(geometry_mask(i-1,j)) .and. &
                             GLIDE_IS_FLOAT(geometry_mask(i+1, j))) then
@@ -334,13 +334,13 @@ contains
                                 direction_x(i,j) = -1
                         end if
 
-                        if (GLIDE_IS_CALVING(geometry_mask(i,j+1)) .and. &
-                            GLIDE_IS_FLOAT(geometry_mask(i, j-1))) then
+                        if (GLIDE_IS_CALVING(geometry_mask(i,j-1)) .and. &
+                            GLIDE_IS_FLOAT(geometry_mask(i, j+1))) then
                                 direction_y(i,j) = 1
                         end if
 
-                        if (GLIDE_IS_CALVING(geometry_mask(i,j-1)) .and. &
-                            GLIDE_IS_FLOAT(geometry_mask(i, j+1))) then
+                        if (GLIDE_IS_CALVING(geometry_mask(i,j+1)) .and. &
+                            GLIDE_IS_FLOAT(geometry_mask(i, j-1))) then
                                 direction_y(i,j) = -1
                         end if
                     end if

@@ -26,7 +26,7 @@
 
 !If defined, a vertically averaged pressure will be used across the ice front.
 !Otherwise, a vertically explicit pressure will be used.
-#define AVERAGED_PRESSURE
+!#define AVERAGED_PRESSURE
 
 !The maximum number of iterations to use in the unstable manifold loop
 #define NUMBER_OF_ITERATIONS 1000
