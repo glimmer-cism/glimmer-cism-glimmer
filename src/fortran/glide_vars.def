@@ -382,6 +382,14 @@ data:          data%velocity_hom%kinematic_bc_v(up,:,:)
 factor:        scale3d_f1
 load:          1
 
+[velnormhom]
+dimensions:    time, level, y1, x1
+units:         meter/year
+long_name:     ice surface velocity 
+data:          data%velocity_hom%velnorm(up,:,:)
+factor:        scale3d_f1
+coordinates:   lon lat
+
 #Vertical shear stresses, required for ISMIP-HOM intercomparison
 [tau_xz]
 dimensions: time, level, y0, x0

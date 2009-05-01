@@ -124,13 +124,7 @@ contains
     ! finding boundaries
     do ns=1,nsn
        do ew = 1,ewn
-          if (GLIDE_IS_FLOAT(MASK(ew,ns))) then
-             ! shelf front
-             if (GLIDE_IS_OCEAN(maskWithBounds(ew-1,ns)) .or. GLIDE_IS_OCEAN(maskWithBounds(ew+1,ns)) .or. &
-                  GLIDE_IS_OCEAN(maskWithBounds(ew,ns-1)) .or. GLIDE_IS_OCEAN(maskWithBounds(ew,ns+1))) then
-                MASK(ew,ns) = ior(MASK(ew,ns),GLIDE_MASK_SHELF_FRONT)
-             end if
-          else if (GLIDE_IS_GROUND(MASK(ew,ns))) then
+          if (GLIDE_IS_GROUND(MASK(ew,ns))) then
              ! land margin
              if (GLIDE_IS_LAND(maskWithBounds(ew-1,ns)) .or. GLIDE_IS_LAND(maskWithBounds(ew+1,ns)) .or. &
                   GLIDE_IS_LAND(maskWithBounds(ew,ns-1)) .or. GLIDE_IS_LAND(maskWithBounds(ew,ns+1))) then
@@ -144,12 +138,17 @@ contains
                 MASK(ew,ns) = ior(MASK(ew,ns),GLIDE_MASK_GROUNDING_LINE)
              end if
           end if
+
           ! Edge of marine ice, whether floating or not
+          ! *tb* A point is now masked even if it touches the ocean on one corner.
           if ((topg(ew,ns) .lt. eus .and. thck(ew,ns)>0.0).and. &
-               (GLIDE_IS_OCEAN(maskWithBounds(ew-1,ns)) .or. GLIDE_IS_OCEAN(maskWithBounds(ew+1,ns)) .or. &
-               GLIDE_IS_OCEAN(maskWithBounds(ew,ns-1)) .or. GLIDE_IS_OCEAN(maskWithBounds(ew,ns+1)))) then
+               (GLIDE_IS_OCEAN(maskWithBounds(ew-1,ns))   .or. GLIDE_IS_OCEAN(maskWithBounds(ew+1,ns))   .or. &
+                GLIDE_IS_OCEAN(maskWithBounds(ew,ns-1))   .or. GLIDE_IS_OCEAN(maskWithBounds(ew,ns+1))   .or. &
+                GLIDE_IS_OCEAN(maskWithBounds(ew-1,ns-1)) .or. GLIDE_IS_OCEAN(maskWithBounds(ew-1,ns+1)) .or. &
+                GLIDE_IS_OCEAN(maskWithBounds(ew+1,ns-1)) .or. GLIDE_IS_OCEAN(maskWithBounds(ew+1,ns+1)))) then
              MASK(ew,ns) = ior(MASK(ew,ns),GLIDE_MASK_MARINE_EDGE)
           end if
+
        end do
     end do
   end subroutine glide_set_mask
@@ -306,6 +305,46 @@ contains
                     else if (.not. GLIDE_HAS_ICE(geometry_mask(i,j+1))) then
                         direction_y(i,j) = -1
                     end if
+
+                    !If we are at a point that is "interior" to two other boundary points, 
+                    !such as the lower right of:
+                    !o b i
+                    !b b i
+                    !(o = ocean, b = boundary, i = interior), then we will not detect the need
+                    !to upwind or downwind.  However, we still should for consistency with other
+                    !mask points (in some cases, not doing so can lead to a singular calculation
+                    !at the marine ice front)
+                    !
+                    !We can think of this operation as avoiding calving points where there is 
+                    !a non-calving point to upwind into.
+                    !
+                    !TODO: We need a better way to detect interior points.  Right now I am just using
+                    !points that are floating, and that works, but this doesn't work for two reasons:
+                    !1. Boundary points are also floating
+                    !2. Could fail for a very thin ice shelf
+#if 0
+                    if (direction_x(i,j) == 0 .and. direction_y(i,j) == 0) then
+                        if (GLIDE_IS_CALVING(geometry_mask(i-1,j)) .and. &
+                            GLIDE_IS_FLOAT(geometry_mask(i+1, j))) then
+                                direction_x(i,j) = 1
+                        end if
+
+                        if (GLIDE_IS_CALVING(geometry_mask(i+1,j)) .and. &
+                            GLIDE_IS_FLOAT(geometry_mask(i-1, j))) then
+                                direction_x(i,j) = -1
+                        end if
+
+                        if (GLIDE_IS_CALVING(geometry_mask(i,j+1)) .and. &
+                            GLIDE_IS_FLOAT(geometry_mask(i, j-1))) then
+                                direction_y(i,j) = 1
+                        end if
+
+                        if (GLIDE_IS_CALVING(geometry_mask(i,j-1)) .and. &
+                            GLIDE_IS_FLOAT(geometry_mask(i, j+1))) then
+                                direction_y(i,j) = -1
+                        end if
+                    end if
+#endif           
                 end if
             end do
         end do

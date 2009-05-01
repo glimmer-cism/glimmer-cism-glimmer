@@ -17,7 +17,7 @@ module glide_velo_higher
     implicit none
     
     !TODO: Parameterize the following globals
-    real(dp), parameter :: VEL2ERR  = 1e-4
+    real(dp), parameter :: VEL2ERR  = 5e-3
     real(dp), parameter :: TOLER    = 1e-6
     integer,  parameter :: CONVT    = 4
     real(dp), parameter :: SHTUNE   = 1.D-16
@@ -151,7 +151,9 @@ contains
                                          model%velocity_hom%uvel, model%velocity_hom%vvel, &
                                          model%velocity_hom%is_velocity_valid)
         end if
-
+        !Compute the velocity norm - this is independant of the methods used to compute the u and v components so
+        !we put it out here
+        model%velocity_hom%velnorm = sqrt(model%velocity_hom%uvel**2 + model%velocity_hom%vvel**2)
         model%velocity_hom%is_velocity_valid = .true.
         
     end subroutine

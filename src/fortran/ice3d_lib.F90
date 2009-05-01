@@ -26,10 +26,10 @@
 
 !If defined, a vertically averaged pressure will be used across the ice front.
 !Otherwise, a vertically explicit pressure will be used.
-!#define AVERAGED_PRESSURE
+#define AVERAGED_PRESSURE
 
 !The maximum number of iterations to use in the unstable manifold loop
-#define NUMBER_OF_ITERATIONS 100
+#define NUMBER_OF_ITERATIONS 1000
 
 !If defined, the model uses 2nd order upwinded and downwinded finite
 !differences.
@@ -39,6 +39,8 @@
 !#define IGNORE_LAT_SIGMA
 
 !#define SIMULATE_C_GRID
+
+#define MASK_ADJUST
 
 module ice3d_lib
     use glimmer_global
@@ -59,6 +61,14 @@ module ice3d_lib
 
     logical, parameter :: sparverbose = .false.
 
+    !Mu is recomputed only when the error tolerance reaches this level
+    !This allows nonlinearities resulting from equation separation and 
+    !the beta^2 computation to "quiet down" before attempting another
+    !viscosity iteration.  Set to a very high number to turn this feature off
+    !entirely
+    real(dp) :: recompute_mu_toler = 1e10
+    real(dp) :: recompute_mu_adjust = 1
+    
     real(dp), dimension(:,:), allocatable :: normal_x
     real(dp), dimension(:,:), allocatable :: normal_y
 
@@ -485,6 +495,7 @@ contains
         lacc=0
         em = 0
         correction_vec = 0
+        tot = 0
         !Set up sparse matrix options
         call sparse_solver_default_options(options)
         options%tolerance=TOLER
@@ -504,8 +515,6 @@ contains
         !Create the sparse matrix
         call new_sparse_matrix(ijktot, ijktot*STENCIL_SIZE, matrix)
         call sparse_allocate_workspace(matrix, options, workspace, ijktot*STENCIL_SIZE)
-
-        call fill_shelf_info(geometry_mask, marine_bc_normal)
 
 #if 1
         call write_xls_3d("arrh.txt",arrh)
@@ -580,7 +589,7 @@ contains
                            delta_x, delta_y, zeta, .false., &
                            direction_x, direction_y, &
                            dudx, dudy, dudz, dvdx, dvdy, dvdz)
-#if 0
+#if 1
             call write_xls_3d("dudx.txt",dudx)
             call write_xls_3d("dudy.txt",dudy)
             call write_xls_3d("dudz.txt",dudz)
@@ -590,7 +599,12 @@ contains
 #endif
             !Compute viscosity
             if (WHICH_MU == HO_EFVS_FULL) then
-                call muterm(mu,arrh,h,ax,ay,FLOWN,ZIP,dudx, dudy, dudz, dvdx, dvdy, dvdz)
+                if (tot < recompute_mu_toler) then
+                    write(*,*)"Mu recomputed"
+                    call muterm(mu,arrh,h,ax,ay,FLOWN,ZIP,dudx, dudy, dudz, dvdx, dvdy, dvdz)
+                    recompute_mu_toler = recompute_mu_toler / recompute_mu_adjust
+                    recompute_mu_toler = max(recompute_mu_toler, error*2)
+                end if
             else if (WHICH_MU == HO_EFVS_CONSTANT) then
                 mu = 1d6
             end if
@@ -1041,6 +1055,7 @@ contains
                     end if !End mask check
                 end do !End j loop
             end do !End i loop
+
             call sparse_solver_preprocess(matrix, options, workspace)        
             ierr = sparse_solve(matrix, d, x, options, workspace,  err, iter, verbose=sparverbose)
             sparuv = sparuv + iter
@@ -1383,7 +1398,7 @@ contains
         end if
 #endif  
 
-        if (.not. IS_NAN(latbc_normal(i,j))) then !Marine margin dynamic (Neumann) boundary condition
+        if (GLIDE_IS_CALVING(geometry_mask(i,j))) then !Marine margin dynamic (Neumann) boundary condition
             call sparse_marine_margin(component,i,j,k,h,latbc_normal, vel_perp, mu, dx, dy, ax, ay, dz,coef, rhs, &
                                       dudx_field,dudy_field,dudz_field,dvdx_field,dvdy_field,dvdz_field,&
                                       direction_x, direction_y, geometry_mask, STAGGERED)
@@ -1514,7 +1529,7 @@ contains
 
             dperp_dpara = dmu_dperp2
             dperp_dperp = 2 * dmu_dpara2
-            dperp_dz  = 2 * a_perp(i,j,k) * dmu_dpara2 + 3*mu(i,j,k) * cxy(i,j,k) + a_para(i,j,k) * dmu_dperp2
+            dperp_dz  = 2 * a_perp(i,j,k) * dmu_dpara2  + a_para(i,j,k) * dmu_dperp2 + 3 * mu(i,j,k) * cxy(i,j,k) 
             dperp_dxy = 3 * mu(i,j,k)
             dperp_dxz = 3 * mu(i,j,k) * ay(i,j,k)
             dperp_dyz = 3 * mu(i,j,k) * ax(i,j,k)
@@ -1730,6 +1745,7 @@ contains
             dperp_dz = dudz(i,j,k)
         end if
 
+
 #ifdef SIMULATE_C_GRID
         !Discard the component opposite the flow if there are two components.
         if (abs(n_x) > SMALL  .and. abs(n_y) > SMALL) then !proper FP compare
@@ -1737,38 +1753,37 @@ contains
         end if
 #endif
   
-        if (direction_y(i,j) > 0 .or. &
-                (GLIDE_IS_CALVING(geometry_mask(i-1, j)) .and. .not. &
-                 GLIDE_IS_CALVING(geometry_mask(i+1, j)))) &
-        then
+        if (direction_y(i,j) > 0 &
+#ifdef MASK_ADJUST
+                .or. (GLIDE_IS_CALVING(geometry_mask(i-1, j)) .and. &
+                 GLIDE_IS_FLOAT(geometry_mask(i+1, j))) &
+#endif
+        ) then
            downwind_y = .true.
-        else if (direction_y(i,j) < 0 .or. &
-                (GLIDE_IS_CALVING(geometry_mask(i+1, j)) .and. .not. &
-                 GLIDE_IS_CALVING(geometry_mask(i-1, j)))) &
-        then
+        else if (direction_y(i,j) < 0 &
+#ifdef MASK_ADJUST
+                .or. (GLIDE_IS_CALVING(geometry_mask(i+1, j)) .and. &
+                 GLIDE_IS_FLOAT(geometry_mask(i-1, j))) &
+#endif
+        ) then
             upwind_y = .true.
         end if
 
-        if (direction_x(i,j) > 0 .or. &
-                (GLIDE_IS_CALVING(geometry_mask(i, j-1)) .and. .not. &
-                 GLIDE_IS_CALVING(geometry_mask(i, j+1)))) &
-        then
+        if (direction_x(i,j) > 0 &
+#ifdef MASK_ADJUST
+                .or. (GLIDE_IS_CALVING(geometry_mask(i, j-1)) .and. &
+                 GLIDE_IS_FLOAT(geometry_mask(i, j+1))) &
+#endif
+        ) then
             downwind_x = .true.
-        else if (direction_x(i,j) < 0.or. &
-                (GLIDE_IS_CALVING(geometry_mask(i, j+1)) .and. .not. &
-                 GLIDE_IS_CALVING(geometry_mask(i, j-1)))) & 
-        then
+        else if (direction_x(i,j) < 0 &
+#ifdef MASK_ADJUST
+                .or. (GLIDE_IS_CALVING(geometry_mask(i, j+1)) .and. &
+                 GLIDE_IS_FLOAT(geometry_mask(i, j-1))) & 
+#endif
+        ) then
             upwind_x = .true.
         end if
-       
-        !if (upwind_x .or. downwind_x) then
-        !     dperp_dx = dperp_dx*(-1)
-        !     write(*,*) "HI!"
-        !end if
-
-        !if (upwind_y .or. downwind_y) then
-        !    dperp_dy = dperp_dy*(-1)
-        !end if
        
         para_coeff = 4*n_para
         perp_coeff =   n_perp
@@ -1789,22 +1804,14 @@ contains
                 - 2*n_para*dperp_dperp & 
                 -   n_perp*dperp_dpara
 #endif
-        !if (n_para /= 0) then
-        !    perp_coeff = 0
-        !end if
-
-        !if (upwind_x .or. downwind_x) then
-        !     dx_coeff = dx_coeff*(-1)
-        !end if
-
-        !if (upwind_y .or. downwind_y) then
-        !     dy_coeff = dy_coeff*(-1)
-        !end if
  
 #ifndef IGNORE_LAT_SIGMA
         !Enter the z component into the finite difference scheme.
         !If we are on the top of bottom of the ice shelf, we will need
         !to upwind or downwind respectively
+        !These terms arise from the vertical rescaling of the system;
+        !any vertical explicitness of the system its self has been
+        !thrown out based on the assumption of plug flow.
         if (k==1) then !Top of the ice shelf
             !Finite difference coefficients for an irregular Z grid, downwinded
             dz_down1=(2.*zeta(k)-zeta(k+1)-zeta(k+2))/(zeta(k+1)-zeta(k))/(zeta(k+2)-zeta(k))
@@ -2385,53 +2392,6 @@ subroutine open_sparse_output(iteration, iunit)
     write(filename,*) "sparse"//istring//".txt"
     open(unit=iunit, file=filename)
 end subroutine
-
-    subroutine fill_shelf_info(geometry_mask, latbcnorms)
-        integer, dimension(:,:) :: geometry_mask
-        integer, dimension(size(geometry_mask,1),size(geometry_mask,2)) :: geometry_mask_copy
-        real(dp), dimension(:,:) :: latbcnorms
-
-        integer :: i, j, ny, nx
-        logical :: ip1, jp1, im1, jm1
-
-        ny = size(geometry_mask, 1)
-        nx = size(geometry_mask, 2)
-
-        geometry_mask_copy = geometry_mask
-
-        
-        do i = 2, ny-1
-            do j = 2, nx-1
-                if (GLIDE_HAS_ICE(geometry_mask(i,j)) .and. &
-                        .not. GLIDE_IS_CALVING(geometry_mask(i,j))) then
-                        
-                    ip1 = GLIDE_IS_CALVING(geometry_mask(i+1,j))
-                    jp1 = GLIDE_IS_CALVING(geometry_mask(i,j+1))
-                    im1 = GLIDE_IS_CALVING(geometry_mask(i-1,j))
-                    jm1 = GLIDE_IS_CALVING(geometry_mask(i,j-1))
-
-                    if (ip1 .and. jp1) then
-                        geometry_mask_copy(i,j) = ior(geometry_mask(i,j), GLIDE_MASK_MARINE_EDGE)
-                        latbcnorms(i,j) = 3*pi/4
-                    end if
-                    if (ip1 .and. jm1) then
-                        geometry_mask_copy(i,j) = ior(geometry_mask(i,j), GLIDE_MASK_MARINE_EDGE)
-                        latbcnorms(i,j) = 5*pi/4 !GOOD
-                    end if
-                    if (im1 .and. jm1) then
-                        geometry_mask_copy(i,j) = ior(geometry_mask(i,j), GLIDE_MASK_MARINE_EDGE)
-                        latbcnorms(i,j) = 7*pi/4 !GOOD
-                    end if
-                    if (im1 .and. jp1) then
-                        geometry_mask_copy(i,j) = ior(geometry_mask(i,j), GLIDE_MASK_MARINE_EDGE)
-                        latbcnorms(i,j) = pi/4
-                    end if
-                end if
-            end do
-        end do
-        
-        geometry_mask = geometry_mask_copy
-    end subroutine
 
 !
 !---------------------------------------------------
