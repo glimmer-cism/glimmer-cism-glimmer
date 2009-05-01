@@ -271,30 +271,28 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
   ! the calculation domain). 
   call maskvelostr(ewn, nsn, thck, stagthck, umask)
 
-
-
-  !!!!!!!!! *sfp* start debugging !!!!!!!!!!!!!!!!!!!!!!!!
-  umask(5:ewn-1,1) = 3; umask(5:ewn-1,nsn-1) = 3
-
-  umask(1:4,1) = -2; umask(1:4,nsn-1) = -2
-
-  umask(1:4,:) = 0
-
-  umask(5,:) = 3;
-
-  print *, 'mask = '
-  print *, umask
-  pause
-  !!!!!!!!! stop debugging !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
-
   allocate(uindx(ewn-1,nsn-1))
 
   ! *sfp** if a point from the 2d array 'mask' is associated with non-zero ice thickness,
   !      either a boundary or interior point, give it a unique number. If not, give it a zero			 
   uindx = indxvelostr(ewn, nsn, upn,  &
                       umask,pcgsize(1))
+
+
+  !!!!!!!!! *sfp* start debugging !!!!!!!!!!!!!!!!!!!!!!!!
+!  umask(5:ewn-1,1) = 3; umask(5:ewn-1,nsn-1) = 3
+!  umask(1:4,1) = -2; umask(1:4,nsn-1) = -2
+!  umask(1:4,:) = 0
+!  umask(5,2:nsn-2) = 132;
+!  print *, 'mask = '
+!  print *, umask
+!  print *, ' '
+!  pause
+!  print *, 'uindx = '
+!  print *, uindx
+!  pause
+  !!!!!!!!! stop debugging !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 
   allocate(tvel(upn,ewn-1,nsn-1)) 
 
@@ -724,7 +722,8 @@ function getlocationarray(ewn, nsn, upn,  &
 
     do ew=1,ewn-1
         do ns=1,nsn-1
-        if ( mask(ew,ns) == GLIDE_MASK_INTERIOR .or. mask(ew,ns) == GLIDE_MASK_BOUNDARY ) then
+!        if ( mask(ew,ns) == GLIDE_MASK_INTERIOR .or. mask(ew,ns) == GLIDE_MASK_BOUNDARY ) then
+        if ( mask(ew,ns) == 2 .or. mask(ew,ns) == 18 .or. mask(ew,ns) == 4 .or. mask(ew,ns) == 3 .or. mask(ew,ns) == 132 ) then
             cumsum = cumsum + ( upn + 2 )
             getlocationarray(ew,ns) = cumsum
             temparray(ew,ns) = upn + 2
@@ -1033,15 +1032,15 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
 
      ! *sfp** depth-ave rate factor, needed for one of the ice shelf b.c. options (below)
 !     flwabar = sum( ( flwa(:,ew,ns) + flwa(:,ew,ns+1) + flwa(:,ew+1,ns) + flwa(:,ew+1,ns+1) ) / 4.0_dp, 1 ) / real(upn)    
-     flwabar = 3.171d-24 / vis0_glam    ! isothermal, temperate value 
-!     flwabar = 1.8075e-25 / vis0_glam    ! EISMINT-ROSS test 3-4 value
+!     flwabar = 3.171d-24 / vis0_glam    ! isothermal, temperate value 
+     flwabar = 1.8075e-25 / vis0_glam    ! EISMINT-ROSS test 3-4 value
 
      ! *sfp* ...or, calculate the depth-averaged value (complicated code so as not to include funny values at boundaries)
      ! *sfp* This is kind of a mess and could be redone or moded to a function/subroutine.
 !     flwabar = ( sum( flwa(:,ew,ns), 1, flwa(1,ew,ns)*vis0_glam < 1.0d-10 )/real(upn) + &
 !               sum( flwa(:,ew,ns+1), 1, flwa(1,ew,ns+1)*vis0_glam < 1.0d-10 )/real(upn)  + &
 !               sum( flwa(:,ew+1,ns), 1, flwa(1,ew+1,ns)*vis0_glam < 1.0d-10 )/real(upn)  + &
-!               sum( flwa(:,ew+1,ns+1), 1, flwa(1,ew+1,ns+1)*vis0_glam < 1.0d-10 )/real(upn) ) / &
+!              sum( flwa(:,ew+1,ns+1), 1, flwa(1,ew+1,ns+1)*vis0_glam < 1.0d-10 )/real(upn) ) / &
 !               ( sum( flwa(:,ew,ns)/flwa(:,ew,ns), 1, flwa(1,ew,ns)*vis0_glam < 1.0d-10 )/real(upn) + &
 !               sum( flwa(:,ew,ns+1)/flwa(:,ew,ns+1), 1, flwa(1,ew,ns+1)*vis0_glam < 1.0d-10 )/real(upn) + &
 !               sum( flwa(:,ew+1,ns)/flwa(:,ew+1,ns), 1, flwa(1,ew+1,ns)*vis0 < 1.0d-10 )/real(upn) + &
@@ -1051,12 +1050,18 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
            loc_array = getlocationarray(ewn, nsn, upn, mask )
     end if
 
+  !!!!!!!!! *sfp* start debugging !!!!!!!!!!!!!!!!!!!!!!!!
+!    print *, 'loc_array = '
+!    print *, loc_array
+!    pause
+
+
     loc(1) = loc_array(ew,ns)
 
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 !    if ( mask(ew,ns) == GLIDE_MASK_INTERIOR ) then      ! If at interior point (sheet or shelf)
     if ( mask(ew,ns) == 2 .or. mask(ew,ns) == 18 .or. mask(ew,ns) == 4 ) then
-    !print *, 'In main body ...'
+!    print *, 'In main body ...'
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
         call calccoeffs( upn,               sigma,              &
@@ -1100,9 +1105,8 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
         end do  ! upn
 
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-!    elseif ( GLIDE_IS_CALVING( mask(ew,ns) ) ) then 
-    elseif ( mask(ew,ns) == 388 ) then
-    !print *, 'At a SHELF boundary ...'
+    elseif ( GLIDE_IS_CALVING( mask(ew,ns) ) ) then 
+!    print *, 'At a SHELF boundary ...'
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
         call calccoeffs( upn,               sigma,              &
@@ -1138,12 +1142,12 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
         lateralboundry = .false.
 
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-!    elseif ( mask(ew,ns) == GLIDE_MASK_BOUNDARY ) then 
-    elseif ( mask(ew,ns) == 3 ) then
-    !print *, 'At a NON-SHELF boundary ...'
+    elseif ( mask(ew,ns) == GLIDE_MASK_BOUNDARY ) then 
+!    print *, 'At a NON-SHELF boundary ...'
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-        !*sfp** puts zeros on rhs, coincident w/ location of the additional equation for the HO sfc and basal bcs
+        !*sfp** puts specified value for vel on rhs, coincident w/ location of the additional equation 
+        ! for the HO sfc and basal bcs (NOTE: this is NOT zero by default unless the initial guess is zero !!)
         locplusup = loc(1)
         call valueset(0.0_dp)
         locplusup = loc(1) + upn + 1
@@ -1151,6 +1155,7 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
         do up = 1,upn
            locplusup = loc(1) + up
            call valueset( thisvel(up,ew,ns) )     ! *sfp** vel at margin set to specified value (default = 0) 
+!           call valueset( 0.0_dp )  
         end do
 
     end if
@@ -1320,10 +1325,10 @@ subroutine bodyset(ew,  ns,  up,           &
 
 
     ! (2)
-    ! source term (strain rate at shelf/ocean boundary) from MacAyeal depth-ave solution. 
-    ! As above, factor of 2 in front of 'stagthck' is not part of the formal solution but is used here to
-    ! correct for the fact that the boundary thickness on the staggered grid will generally be ~1/2 of the 
-    ! full thickness at the boundary (as a result of averaging to make 'stagthck' from 'thck'). 
+!    ! source term (strain rate at shelf/ocean boundary) from MacAyeal depth-ave solution. 
+!    ! As above, factor of 2 in front of 'stagthck' is not part of the formal solution but is used here to
+!    ! correct for the fact that the boundary thickness on the staggered grid will generally be ~1/2 of the 
+!    ! full thickness at the boundary (as a result of averaging to make 'stagthck' from 'thck'). 
 !    source = rhoi * grav * 2.0d0 * stagthck(ew,ns) * thk0 / 2.0_dp * ( 1.0_dp - rhoi / rhoo )
 !
 !    ! terms after "/" below count number of non-zero efvs cells ... needed for averaging efvs at boundary 
@@ -2630,16 +2635,24 @@ subroutine maskvelostr( ewn, nsn, thck, stagthck, umask )
   integer :: ew, ns
 
    do ns = 1,nsn-1; do ew = 1,ewn-1
-    if (all(stagthck(ew:ew+1,ns:ns+1) > 0.0_dp )) then
+
+    if (all(thck(ew:ew+1,ns:ns+1) > 0.0_dp )) then
+
       ! *sfp** if at the domain edges, define as a boundary
       if (ew == 1 .or. ew == ewn-1) then
         umask(ew,ns) = GLIDE_MASK_BOUNDARY
       else if (ns == 1 .or. ns == nsn-1) then
         umask(ew,ns) = GLIDE_MASK_BOUNDARY
       end if
-    else if (any(thck(ew:ew+1,ns:ns+1) > 0.0_dp .and. .not. GLIDE_IS_CALVING(umask(ew,ns)) ) ) then
-     umask(ew,ns) = GLIDE_MASK_BOUNDARY
+
+    else if ( any(thck(ew:ew+1,ns:ns+1) > 0.0_dp ) ) then
+
+     if ( .not. GLIDE_IS_CALVING(umask(ew,ns) ) ) then
+      umask(ew,ns) = GLIDE_MASK_BOUNDARY
+     end if
+
     end if
+
    end do; end do
 
    return
@@ -2868,7 +2881,10 @@ subroutine calcbetasquared (whichbabc,               &
     case(9)    !*sfp* use value passed in externally from CISM (note that these are passed in diensional)
 
       betasquared = beta
-     
+      where ( betasquared /= betasquared )
+        betasquared = 1.0d10
+      end where    
+ 
   end select
   
   ! convert to dimensional model units ( Pa * s * m^-1 ) and then non-dimensionalize

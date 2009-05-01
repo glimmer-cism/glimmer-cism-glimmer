@@ -68,6 +68,8 @@ module glam
                              model%general%ewn, model%general%nsn, model%climate%eus, &
                              umask ) 
 
+
+
         ! Compute the higher-order velocities using the method of Payne and Price
 
         !whl - to do - Make sure that the sigma field passed to glam is consistent with glam numerics.
