@@ -98,6 +98,7 @@ module glide_types
   integer, parameter :: FLWA_PATTERSON_BUDD = 0
   integer, parameter :: FLWA_PATTERSON_BUDD_CONST_TEMP = 1
   integer, parameter :: FLWA_CONST_FLWA = 2
+  integer, parameter :: FLWA_CONST_EISMINT_ROSS = 3
 
   !...etc, don't have time to do all of these now
 
@@ -162,6 +163,7 @@ module glide_types
     !*FD with temperature set to $-10^{\circ}\mathrm{C}$ 
     !*FD \item[2] Set equal to $1\times 10^{-16}\,\mathrm{yr}^{-1}
     !*FD \,\mathrm{Pa}^{-n}$
+    !*FD \item[3] Set equal to the value required by EISMINT-ROSS experiments
     !*FD \end{description}
 
     integer :: whichbwat = 2

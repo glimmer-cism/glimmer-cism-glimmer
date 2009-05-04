@@ -1193,10 +1193,14 @@ contains
         end do
       end do
 
-    case default 
+    case(2) 
 
       flwa = default_flwa
   
+    case(3)
+
+      flwa = 5.70391437e-18 / (vis0*scyr)
+
     end select
 
   end subroutine calcflwa 

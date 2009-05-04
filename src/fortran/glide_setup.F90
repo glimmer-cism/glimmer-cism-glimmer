@@ -445,10 +445,11 @@ contains
     character(len=*), dimension(0:1), parameter :: temperature = (/ &
          'isothermal', &
          'full      '/)
-    character(len=*), dimension(0:2), parameter :: flow_law = (/ &
+    character(len=*), dimension(0:3), parameter :: flow_law = (/ &
          'Patterson and Budd               ', &
          'Patterson and Budd (temp=-10degC)', &
-         'const 1e-16a^-1Pa^-n             ' /)
+         'const 1e-16a^-1Pa^-n             ', &
+         'EISMINT-ROSS constant            ' /)
     character(len=*), dimension(0:2), parameter :: basal_water = (/ &
          'local water balance', &
          'local + const flux ', &
