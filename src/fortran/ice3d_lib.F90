@@ -21,26 +21,12 @@
 !Define to output a NetCDF file of the partial iterations
 #define OUTPUT_PARTIAL_ITERATIONS
 
-!Experimental feature that enforces plug flow in the interior of an ice shelf.
-!#define ENABLE_VERTAVG_SHELF
-
 !If defined, a vertically averaged pressure will be used across the ice front.
 !Otherwise, a vertically explicit pressure will be used.
 !#define AVERAGED_PRESSURE
 
 !The maximum number of iterations to use in the unstable manifold loop
 #define NUMBER_OF_ITERATIONS 1000
-
-!If defined, the model uses 2nd order upwinded and downwinded finite
-!differences.
-#define USE_ORD2_HORIZ_UPDOWN
-
-!If defined, then sigma gradients will be ignored in the lateral b.c.
-!#define IGNORE_LAT_SIGMA
-
-!#define SIMULATE_C_GRID
-
-#define MASK_ADJUST
 
 module ice3d_lib
     use glimmer_global
@@ -1386,18 +1372,6 @@ contains
             write(*,*)"FATAL ERROR: sparse_setup called with invalid component"
         end if
 
-
-#ifdef ENABLE_VERTAVG_SHELF
-        if (GLIDE_IS_FLOAT(geometry_mask(i,j)) .and. k > 1) then
-            !Interior of ice shelf and not the surface.  In this case, we
-            !just enforce plug flow
-            coef(I_J_K) = 1
-            coef(I_J_KM1) = -1
-            rhs = 0
-            return
-        end if
-#endif  
-
         if (GLIDE_IS_CALVING(geometry_mask(i,j))) then !Marine margin dynamic (Neumann) boundary condition
             call sparse_marine_margin(component,i,j,k,h,latbc_normal, vel_perp, mu, dx, dy, ax, ay, dz,coef, rhs, &
                                       dudx_field,dudy_field,dudz_field,dvdx_field,dvdy_field,dvdz_field,&
@@ -1745,67 +1719,28 @@ contains
             dperp_dz = dudz(i,j,k)
         end if
 
-
-#ifdef SIMULATE_C_GRID
-        !Discard the component opposite the flow if there are two components.
-        if (abs(n_x) > SMALL  .and. abs(n_y) > SMALL) then !proper FP compare
-            n_perp = 0
-        end if
-#endif
-  
-        if (direction_y(i,j) > 0 &
-#ifdef MASK_ADJUST
-                .or. (GLIDE_IS_CALVING(geometry_mask(i-1, j)) .and. &
-                 GLIDE_IS_FLOAT(geometry_mask(i+1, j))) &
-#endif
-        ) then
+        if (direction_y(i,j) > 0) then
            downwind_y = .true.
-        else if (direction_y(i,j) < 0 &
-#ifdef MASK_ADJUST
-                .or. (GLIDE_IS_CALVING(geometry_mask(i+1, j)) .and. &
-                 GLIDE_IS_FLOAT(geometry_mask(i-1, j))) &
-#endif
-        ) then
+        else if (direction_y(i,j) < 0) then
             upwind_y = .true.
         end if
 
-        if (direction_x(i,j) > 0 &
-#ifdef MASK_ADJUST
-                .or. (GLIDE_IS_CALVING(geometry_mask(i, j-1)) .and. &
-                 GLIDE_IS_FLOAT(geometry_mask(i, j+1))) &
-#endif
-        ) then
+        if (direction_x(i,j) > 0) then
             downwind_x = .true.
-        else if (direction_x(i,j) < 0 &
-#ifdef MASK_ADJUST
-                .or. (GLIDE_IS_CALVING(geometry_mask(i, j+1)) .and. &
-                 GLIDE_IS_FLOAT(geometry_mask(i, j-1))) & 
-#endif
-        ) then
+        else if (direction_x(i,j) < 0) then
             upwind_x = .true.
         end if
        
         para_coeff = 4*n_para
         perp_coeff =   n_perp
         
-#ifndef IGNORE_LAT_SIGMA
         dz_coeff   =   (4*a_para(i,j,k)*n_para + a_perp(i,j,k)*n_perp)
-#else
-        dz_coeff   = 0
-#endif
 
-#ifndef IGNORE_LAT_SIGMA
         rhs = pressure/ntot * n_para &
                 - 2*n_para*dperp_dperp & 
                 -   n_perp*dperp_dpara &
                 -   (2*a_para(i,j,k)*n_perp + a_perp(i,j,k)*n_para)*dperp_dz
-#else
-        rhs = pressure/ntot * n_para &
-                - 2*n_para*dperp_dperp & 
-                -   n_perp*dperp_dpara
-#endif
  
-#ifndef IGNORE_LAT_SIGMA
         !Enter the z component into the finite difference scheme.
         !If we are on the top of bottom of the ice shelf, we will need
         !to upwind or downwind respectively
@@ -1839,59 +1774,31 @@ contains
             coef(I_J_K)   = coef(I_J_K)   + dz_coeff*dz_cen2
             coef(I_J_KP1) = coef(I_J_KP1) + dz_coeff*dz_cen3
         end if
-#endif
+        
         !Apply finite difference approximations of the x and y derivatives.  The
         !coefficients have already been computed above, so we just need to make
         !sure to use the correct difference form (upwind or downwind, etc.)
         if (downwind_y) then
-
-#ifdef USE_ORD2_HORIZ_UPDOWN 
             coef(IP2_J_K) = coef(IP2_J_K) - 0.5 * dy_coeff/dy
             coef(IP1_J_K) = coef(IP1_J_K) + 2.0 * dy_coeff/dy
             coef(I_J_K)   = coef(I_J_K)   - 1.5 * dy_coeff/dy
-#else
-            coef(IP1_J_K) = coef(IP1_J_K) + dy_coeff/dy
-            coef(I_J_K)   = coef(I_J_K)   - dy_coeff/dy
-#endif
-
         else if (upwind_y) then
-
-#ifdef USE_ORD2_HORIZ_UPDOWN 
             coef(I_J_K)   = coef(I_J_K)   + 1.5 * dy_coeff/dy
             coef(IM1_J_K) = coef(IM1_J_K) - 2.0 * dy_coeff/dy
             coef(IM2_J_K) = coef(IM2_J_K) + 0.5 * dy_coeff/dy
-#else
-            coef(I_J_K)   = coef(I_J_K)   + dy_coeff/dy
-            coef(IM1_J_K) = coef(IM1_J_K) - dy_coeff/dy
-#endif
-
         else
             coef(IP1_J_K) = coef(IP1_J_K) + .5*dy_coeff/dy
             coef(IM1_J_K) = coef(IM1_J_K) - .5*dy_coeff/dy  
         end if
 
         if (downwind_x) then
-
-#ifdef USE_ORD2_HORIZ_UPDOWN 
             coef(I_JP2_K) = coef(I_JP2_K) - 0.5 * dx_coeff/dx
             coef(I_JP1_K) = coef(I_JP1_K) + 2.0 * dx_coeff/dx
             coef(I_J_K)   = coef(I_J_K)   - 1.5 * dx_coeff/dx 
-#else
-            coef(I_JP1_K) = coef(I_JP1_K) + dx_coeff/dx
-            coef(I_J_K)   = coef(I_J_K)   - dx_coeff/dx
-#endif
-
         else if (upwind_x) then
-
-#ifdef USE_ORD2_HORIZ_UPDOWN 
             coef(I_J_K)   = coef(I_J_K)   + 1.5 * dx_coeff/dx
             coef(I_JM1_K) = coef(I_JM1_K) - 2.0 * dx_coeff/dx
             coef(I_JM2_K) = coef(I_JM2_K) + 0.5 * dx_coeff/dx
-#else
-            coef(I_J_K)   = coef(I_J_K)   + dx_coeff/dx
-            coef(I_JM1_K) = coef(I_JM1_K) - dx_coeff/dx
-#endif
-
         else
             coef(I_JP1_K) = coef(I_JP1_K) + 0.5 * dx_coeff/dx
             coef(I_JM1_K) = coef(I_JM1_K) - 0.5 * dx_coeff/dx  
