@@ -100,6 +100,7 @@ module glide_types
   integer, parameter :: FLWA_CONST_FLWA = 2
   integer, parameter :: FLWA_CONST_EISMINT_ROSS = 3
 
+
   !...etc, don't have time to do all of these now
 
   integer, parameter :: EVOL_PSEUDO_DIFF = 0
@@ -135,6 +136,9 @@ module glide_types
   integer, parameter :: HO_EFVS_FULL = 0
   integer, parameter :: HO_EFVS_CONSTANT = 1
   integer, parameter :: HO_EFVS_MINIMUM = 2
+
+  integer, parameter :: HO_SOURCE_AVERAGED = 0
+  integer, parameter :: HO_SOURCE_EXPLICIT = 1
     !*FD Flag that indicates how effective viscosity is computed
     !*FD \begin{description}
     !*FD \item[0] compute from effective strain rate
@@ -163,7 +167,7 @@ module glide_types
     !*FD with temperature set to $-10^{\circ}\mathrm{C}$ 
     !*FD \item[2] Set equal to $1\times 10^{-16}\,\mathrm{yr}^{-1}
     !*FD \,\mathrm{Pa}^{-n}$
-    !*FD \item[3] Set equal to the value required by EISMINT-ROSS experiments
+    !*FD \item[3] EISMINT-ROSS value of ~5.7*10^-18 Pa/year
     !*FD \end{description}
 
     integer :: whichbwat = 2
@@ -301,6 +305,13 @@ module glide_types
     !*FD \item[0] maxval 
     !*FD \item[1] maxval ignoring basal velocity 
     !*FD \item[2] mean value
+
+    integer :: which_ho_source = 0
+    !*FD Flag that indicates how to compute the source term of an ice shelf
+    !*FD \begin{description}
+    !*FD \item[0] Vertically averaged formulation (uniform pressure applied regardless of depth)
+    !*FD \item[1] Vertically explicit formulation (pressue dependent on depth)
+    !*FD \end{description}
 
 !end whlmod
 

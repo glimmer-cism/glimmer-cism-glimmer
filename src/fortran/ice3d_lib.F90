@@ -382,7 +382,8 @@ contains
     SUBROUTINE veloc2(mu,uvel,vvel,arrh,dzdx,dzdy,h,ax,ay,&
                 zeta,bx,by,cxy,beta,&
                 dhbdx,dhbdy,FLOWN,ZIP,VEL2ERR,&
-                MANIFOLD,TOLER,PERIODIC_X, PERIODIC_Y, PLASTIC, WHICH_MU, STAGGERED, delta_x, delta_y, &
+                MANIFOLD,TOLER,PERIODIC_X, PERIODIC_Y, PLASTIC, WHICH_MU, WHICH_SOURCE, &
+                STAGGERED, delta_x, delta_y, &
                 point_mask, active_points, geometry_mask, kinematic_bc_u, kinematic_bc_v, &
                 marine_bc_normal)
                 
@@ -410,6 +411,7 @@ contains
                                          !This is passed so that corrections arising from averaging can be made.
         
         integer, intent(in) :: WHICH_MU
+        integer, intent(in) :: WHICH_SOURCE
 
         integer, dimension(:,:), intent(in) :: point_mask 
         !*FD Contains a unique nonzero number on each point of ice that should be computed or that is
@@ -586,7 +588,6 @@ contains
             !Compute viscosity
             if (WHICH_MU == HO_EFVS_FULL) then
                 if (tot < recompute_mu_toler) then
-                    write(*,*)"Mu recomputed"
                     call muterm(mu,arrh,h,ax,ay,FLOWN,ZIP,dudx, dudy, dudz, dvdx, dvdy, dvdz)
                     recompute_mu_toler = recompute_mu_toler / recompute_mu_adjust
                     recompute_mu_toler = max(recompute_mu_toler, error*2)
@@ -610,7 +611,7 @@ contains
             iter=sparuv(mu,dzdx,dzdy,ax,ay,bx,by,cxy,h,&
                 uvel,vvel,dudx,dudy,dudz,dvdx,dvdy,dvdz,&
                 ustar,vstar,tau,dhbdx,dhbdy,ijktot,MAXY,&
-                MAXX,NZETA,TOLER, delta_x, delta_y, zeta, point_mask, &
+                MAXX,NZETA,TOLER, WHICH_SOURCE, delta_x, delta_y, zeta, point_mask, &
                 geometry_mask,matrix, workspace, options, kinematic_bc_u, kinematic_bc_v, &
                 marine_bc_normal,direction_x,direction_y, STAGGERED)
 #ifdef OUTPUT_SPARSE_MATRIX
@@ -879,7 +880,7 @@ contains
 
     function sparuv(mu,dzdx,dzdy,ax,ay,bx,by,cxy,h,uvel,vvel,dudx,dudy,dudz,dvdx,dvdy,dvdz,&
                     ustar,vstar,beta,dhbdx,dhbdy,&
-                    IJKTOT,MAXY,MAXX,NZETA,TOLER,GRIDX,GRIDY,zeta, point_mask, geometry_mask,&
+                    IJKTOT,MAXY,MAXX,NZETA,TOLER,WHICH_SOURCE,GRIDX,GRIDY,zeta, point_mask, geometry_mask,&
                     matrix, workspace, options, kinematic_bc_u, kinematic_bc_v,latbc_normal, &
                     direction_x, direction_y, STAGGERED)
         INTEGER IJKTOT,MAXY,MAXX,NZETA
@@ -920,7 +921,7 @@ contains
 
         
         logical, intent(in)::STAGGERED
-
+        integer, intent(in)::WHICH_SOURCE
         real(dp) :: rhs
         
         INTEGER i,j,k,m,sparuv,iter, ierr
@@ -996,7 +997,8 @@ contains
                                 call sparse_setup(componentstr, i, j, k, mu, dzdx, dzdy, ax, ay, bx, by, cxy, &
                                      h, gridx, gridy, zeta, uvel, vvel, dudx, dudy, dudx, dvdx, dvdy, dvdz, &
                                      dhbdx, dhbdy, beta, geometry_mask, &
-                                     latbc_normal, maxx, maxy, Nzeta, coef, rhs, direction_x, direction_y, STAGGERED)
+                                     latbc_normal, maxx, maxy, Nzeta, coef, rhs, direction_x, direction_y, STAGGERED, &
+                                     WHICH_SOURCE)
                             endif
                             d(stencil_center_idx)=rhs
                             !Preliminary benchmarks indicate the we actually reach
@@ -1201,7 +1203,7 @@ contains
         h, dx, dy, dz, uvel, vvel, dudx_field, dudy_field, dudz_field, &
         dvdx_field, dvdy_field, dvdz_field, &
         dhbdx,dhbdy,beta,geometry_mask,latbc_normal,MAXX,MAXY,Ndz,&
-        coef, rhs, direction_x, direction_y, STAGGERED)
+        coef, rhs, direction_x, direction_y, STAGGERED, WHICH_SOURCE)
 !
         integer, intent(in) :: i,j,k, MAXY, MAXX, Ndz
 
@@ -1246,7 +1248,9 @@ contains
         real(dp), dimension(:,:), intent(in) :: latbc_normal
 
         logical, intent(in) :: STAGGERED
- 
+
+        integer, intent(in) :: WHICH_SOURCE
+
         real(dp), dimension(:,:),intent(in) :: direction_x, direction_y
 
         character(1), intent(in) :: component
@@ -1375,7 +1379,7 @@ contains
         if (GLIDE_IS_CALVING(geometry_mask(i,j))) then !Marine margin dynamic (Neumann) boundary condition
             call sparse_marine_margin(component,i,j,k,h,latbc_normal, vel_perp, mu, dx, dy, ax, ay, dz,coef, rhs, &
                                       dudx_field,dudy_field,dudz_field,dvdx_field,dvdy_field,dvdz_field,&
-                                      direction_x, direction_y, geometry_mask, STAGGERED)
+                                      direction_x, direction_y, geometry_mask, STAGGERED, WHICH_SOURCE)
             point_type = "lateral"
         else if (k.eq.1) then !Upper boundary condition (stress-free surface)
             point_type = "surface"
@@ -1549,7 +1553,8 @@ contains
 
     !Computes finite differences for the marine margin
     subroutine sparse_marine_margin(component,i,j,k,h,normals, vel_perp, mu, dx, dy, ax, ay, zeta,coef, rhs, &
-                                    dudx,dudy,dudz,dvdx,dvdy,dvdz,direction_x,direction_y, geometry_mask, STAGGERED)
+                                    dudx,dudy,dudz,dvdx,dvdy,dvdz,direction_x,direction_y, geometry_mask, STAGGERED, &
+                                    WHICH_SOURCE)
         character(*), intent(in) :: component !*FD Either "u" or "v"
         integer, intent(in) :: i,j,k !*FD Point that the boundary condition is computed for
         real(dp), dimension(:,:), intent(in) :: h !*FD Ice thickness field
@@ -1573,6 +1578,7 @@ contains
         real(dp),dimension(:,:) :: direction_x, direction_y
 
         logical, intent(in) :: STAGGERED
+        integer, intent(in) :: WHICH_SOURCE
 
         !Whether or not we need to upwind or downwind lateral derivatives
         !Upwind is for when there's no ice on positive side,
@@ -1583,8 +1589,8 @@ contains
         real(dp), target :: n_x, n_y
 
         !Hydrostatic pressure at this level
-        real(dp) :: pressure
-
+        real(dp) :: source
+        
         !Derivative of the perpendicular component (v if computing u and vice
         !versa) with respect to the parallel direction (x if computing u, y if
         !computing v)
@@ -1642,41 +1648,11 @@ contains
         !aligned with the axis.
         !ntot = abs(n_x) + abs(n_y)
 
-        !Determine the hydrostatic pressure at the current location
-        !If we are at the part of the ice shelf above the water, 
-        !then we are at 1ATM pressure which we just assume to be 0 
-        !throughout the model anyway
-
-        !Cryostatic component
-        pressure = rhoi * grav * h(i,j) * zeta(k)
-        !Hydrostatic component, only if we're below the surface
-        if (zeta(k) > (1 - rhoi/rhoo)) then
-            pressure = pressure + rhoo * grav * h(i,j) * (1 - rhoi/rhoo - zeta(k))
-        end if
-
-
-        !This line changes pressure to the vertically integrated hydrostatic
-        !pressure, and applies that throughout the ice column regardless even of
-        !whether the ice is underwater.
-        !This includes h, not h**2, because we divide by h to find the
-        !vertically averaged pressure rather than the vertically integrated
-        !pressure
-#ifdef AVERAGED_PRESSURE
-        pressure = .5 * rhoi * grav * h(i,j) * (1 - rhoi/rhoo)
-#endif
-
-        !If we are running on a staggered grid, then we need to correct for the averaging that has
-        !taken place on the boundary.  Since the thickness is, on average, halved, we double
-        !the source term
-        !(technique from Stephen Price)
-        if (STAGGERED) then
-            pressure = pressure * 2
-        end if
 
         !Divide the source term by viscosity, less error-prone to do it here
         !rather than multiply everything else by it (though it may give
         !iterative solvers more fits maybe?)
-        pressure = pressure/mu(i,j,k)
+        source = source_term(i, j, k, H, zeta, WHICH_SOURCE, STAGGERED)/mu(i,j,k)
 
         !Determine whether to use upwinded or downwinded derivatives for the
         !horizontal directions.
@@ -1736,7 +1712,7 @@ contains
         
         dz_coeff   =   (4*a_para(i,j,k)*n_para + a_perp(i,j,k)*n_perp)
 
-        rhs = pressure/ntot * n_para &
+        rhs = source/ntot * n_para &
                 - 2*n_para*dperp_dperp & 
                 -   n_perp*dperp_dpara &
                 -   (2*a_para(i,j,k)*n_perp + a_perp(i,j,k)*n_para)*dperp_dz
@@ -1804,6 +1780,69 @@ contains
             coef(I_JM1_K) = coef(I_JM1_K) - 0.5 * dx_coeff/dx  
         end if
     end subroutine
+
+    !Computes the source term for an ice shelf from hydrostatic and cryostatic pressure
+    function source_term(i, j, k, H, zeta, which_source, staggered)
+        integer, intent(in) :: i,j,k
+        real(dp),dimension(:,:), intent(in) :: H
+        real(dp), dimension(:), intent(in) :: zeta
+        
+        integer, intent(in) :: which_source
+        logical, intent(in) :: staggered
+
+        real(dp) :: source_term
+        
+        real(dp) :: integrate_from
+
+        !Determine the hydrostatic pressure at the current location
+        !If we are at the part of the ice shelf above the water, 
+        !then we are at 1ATM pressure which we just assume to be 0 
+        !throughout the model anyway
+
+
+        if (which_source == HO_SOURCE_AVERAGED) then
+            !Vertically averaged model
+            source_term = .5 * rhoi * grav * h(i,j) * (1 - rhoi/rhoo)
+        else if (which_source == HO_SOURCE_EXPLICIT) then
+#if 1
+            !In order to get the correct source term, I integrate from the level above this
+            !one to the current level so that all of the pressure is accounted for.
+            if (k == 1) then
+                source_term = 0
+            else
+                source_term = .5 * rhoi * grav * H(i,j) * (zeta(k)**2 - zeta(k-1)**2)
+
+                !When we consider the contribution of hydrostatic pressure to the 
+                !source term, we only want to integrate that part of the current
+                !layer that is below sea level.
+                integrate_from = max(1-rhoi/rhoo, zeta(k-1))
+
+                if (zeta(k) > (1 - rhoi/rhoo)) then
+                    source_term = source_term + rhoo * grav * H(i,j) * &
+                        ( ( 1-rhoi/rhoo) * (zeta(k) - integrate_from) - &
+                        .5*(zeta(k)**2 - integrate_from**2) )
+                end if
+                source_term = source_term / (zeta(k) - zeta(k-1))
+            end if
+#else
+            !Cryostatic component
+            source_term = rhoi * grav * h(i,j) * zeta(k)
+            !Hydrostatic component, only if we're below the surface
+            if (zeta(k) > (1 - rhoi/rhoo)) then
+                source_term = source_term + rhoo * grav * h(i,j) * (1 - rhoi/rhoo - zeta(k))
+            end if
+#endif
+        end if  
+
+        !If we are running on a staggered grid, then we need to correct for the averaging that has
+        !taken place on the boundary.  Since the thickness is, on average, halved, we double
+        !the source term
+        !(technique from Stephen Price)
+        if (staggered) then
+            source_term = source_term * 2
+        end if
+
+    end function
 
 !
 !

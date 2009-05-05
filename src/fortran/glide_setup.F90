@@ -426,12 +426,12 @@ contains
     call GetValue(section, 'prognostic_scheme',  model%options%which_ho_prognostic)
     call GetValue(section, 'basal_stress_input', model%options%which_ho_beta_in)
     call GetValue(section, 'basal_stress_type',  model%options%which_ho_bstress)
-    call GetValue(section, 'guess_specified', model%velocity_hom%is_velocity_valid)
-
+    call GetValue(section, 'guess_specified',    model%velocity_hom%is_velocity_valid)
+    call GetValue(section, 'which_ho_source',    model%options%which_ho_source)
 !whl - added Price-Payne higher-order (glam) options
-    call GetValue(section, 'which_ho_babc',  model%options%which_ho_babc)
-    call GetValue(section, 'which_ho_efvs',  model%options%which_ho_efvs)
-    call GetValue(section, 'which_ho_resid', model%options%which_ho_resid)
+    call GetValue(section, 'which_ho_babc',      model%options%which_ho_babc)
+    call GetValue(section, 'which_ho_efvs',      model%options%which_ho_efvs)
+    call GetValue(section, 'which_ho_resid',     model%options%which_ho_resid)
   end subroutine handle_ho_options
 
   subroutine print_options(model)
@@ -518,7 +518,9 @@ contains
          'max value               ', &
          'max value ignoring ubas ', &
          'mean value              ' /)
-
+    character(len=*), dimension(0:1), parameter :: ho_whichsource = (/ &
+         'vertically averaged     ', &
+         'vertically explicit     ' /)
     call write_log('GLIDE options')
     call write_log('-------------')
     write(message,*) 'I/O parameter file      : ',trim(model%funits%ncfile)
@@ -580,24 +582,34 @@ contains
     write(message,*) 'ho_diagnostic           :',model%options%which_ho_diagnostic, &
                        ho_diagnostic(model%options%which_ho_diagnostic)
     call write_log(message)
+    
     if (model%options%which_ho_prognostic < 0 .or. model%options%which_ho_prognostic >= size(ho_prognostic)) then
         call write_log('Error, prognostic_scheme out of range', GM_FATAL)
     end if
     write(message,*) 'ho_prognostic           :',model%options%which_ho_prognostic, &
                        ho_prognostic(model%options%which_ho_prognostic)
     call write_log(message)
+    
     if (model%options%which_ho_beta_in < 0 .or. model%options%which_ho_beta_in >= size(ho_beta_in)) then
         call write_log('Error, basal_stress_input out of range', GM_FATAL)
     end if
     write(message,*) 'basal_stress_input      :',model%options%which_ho_beta_in, &
                        ho_beta_in(model%options%which_ho_beta_in)
+    call write_log(message)
+
     if (model%options%which_ho_bstress < 0 .or. model%options%which_ho_bstress >= size(ho_bstress)) then
         call write_log('Error, basal_stress_input out of range', GM_FATAL)
     end if
     write(message,*) 'basal_stress_type       :',model%options%which_ho_bstress, &
                        ho_bstress(model%options%which_ho_bstress)
+    call write_log(message)
 
-    !TODO: which_ho_bstress
+    if (model%options%which_ho_source < 0 .or. model%options%which_ho_source >= size(ho_whichsource)) then
+        call write_log('Error, which_ho_source out of range', GM_FATAL)
+    end if
+    write(message,*) 'ice_shelf_source_term   :',model%options%which_ho_source, &
+                       ho_whichsource(model%options%which_ho_source)
+    call write_log(message)
 
 !whl - added Payne-Price higher-order (glam) options
     write(message,*) 'ho_whichbabc          :',model%options%which_ho_babc,  &
