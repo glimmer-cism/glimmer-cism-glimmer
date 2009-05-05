@@ -13,13 +13,13 @@
 #include <string.h>
 #include <fcntl.h>
 
-FCALLSCSUB2(gc_writestats,GF_WRITESTATS,gf_writestats,STRING,STRING)
+FCALLSCSUB3(gc_writestats,GF_WRITESTATS,gf_writestats,STRING,STRING,DOUBLE)
 
 #define CFG_LEN 35
 #define BUFFER_LEN 400
 #define PERM_FILE (S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
 
-void gc_writestats(const char *resname, const char *cfgname)
+void gc_writestats(const char *resname, const char *cfgname, double wallTime)
 {
   struct tms runtime; 
   clock_t clck;
@@ -53,9 +53,9 @@ void gc_writestats(const char *resname, const char *cfgname)
   }
 
   /* construct output line */
-  snprintf(outBuffer,BUFFER_LEN,"%*s %9.2f %8.2f %s %-10s %-6s %-10s \"%s\"\n",-CFG_LEN,cfgname, userTime, sysTime, dateStr, \
+  snprintf(outBuffer,BUFFER_LEN,"%*s %9.2f %9.2f %8.2f %s %-10s %-6s %-10s \"%s\"\n",-CFG_LEN,cfgname, wallTime, userTime, sysTime, dateStr, \
 	   unameData.nodename, unameData.machine, VERSION, GLIMMER_FCFLAGS);
-  snprintf(hdrBuffer,BUFFER_LEN,"%*s %9s %-8s %-16s %-10s %-6s %-10s %s\n",-CFG_LEN,"#cfg_file","usr_time","sys_time","date","host","arch","version","FCFLAGS");
+  snprintf(hdrBuffer,BUFFER_LEN,"%*s %9s %9s %-8s %-16s %-10s %-6s %-10s %s\n",-CFG_LEN,"#cfg_file","wall_time","usr_time","sys_time","date","host","arch","version","FCFLAGS");
 
   /* open output file */
   if ((fd = open(resname, O_CREAT|O_WRONLY|O_SYNC,PERM_FILE)) == -1) {
