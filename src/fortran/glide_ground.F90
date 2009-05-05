@@ -194,7 +194,7 @@ contains
      implicit none
      type(glide_global_type) :: model        !*FD model instance
      integer ns1,ew1,ns2,ew2,slot_ns,slot_ew !grounding line in ns/ew direction
-     real appr_ground !grounding line
+     real appr_ground,get_ground_line !grounding line
      
      if (ns1 .eq. ns2) then
          slot_ew = min(ew1,ew2)
@@ -203,6 +203,7 @@ contains
          slot_ns = min(ns1,ns2)
          appr_ground = model%ground%gl_ew(ew1,slot_ns)
      end if
+     get_ground_line = appr_ground
      return
   end function get_ground_line
     
@@ -241,6 +242,7 @@ contains
      real(sp) :: fj                        !f at grid pnt j
      real(sp) :: fj_1                      !f evaluated at j (+/-) 1
      real(sp) :: df                        !delta f of fj,jf_1
+     real lin_reg_xg
      if (ew .eq. j1ew) then
         dx = model%numerics%dns
         xj = ns*dx
@@ -253,6 +255,7 @@ contains
      fj_1 = (model%climate%eus - model%geometry%topg(j1ew,j1ns))*rhoo/(rhoi*model%geometry%thck(j1ew,j1ns))
      df = (fj_1 - fj)/dx                
      xg = (1 - fj + df*xj)/df
+     lin_reg_xg = xg
      return 
   end function lin_reg_xg
 !-------------------------------------------------------------------------
@@ -315,6 +318,7 @@ contains
      real(sp) ::  x0
      real(sp) ::  y1                        
      real(sp) ::  y0
+     real get_ground_thck
      !using lin. interpolation to find top at grounding line
      if (ns1 .eq. ns2) then
          min_ew = min(ew1,ew2)
@@ -343,6 +347,7 @@ contains
      ig = y0 + (xg - x0)*((y1 - y0)/(x1 - x0))
      !thickness
      hg = ig - tg
+     get_ground_thck = hg
      return
   end function get_ground_thck
 !---------------------------------------------------------------------------
