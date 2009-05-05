@@ -448,6 +448,27 @@ contains
             delta(2)-delta(1),model%numerics%dns*len0
        call write_log(message,type=GM_FATAL)
     end if
+  
+  ! Check that the number of vertical layers is the same, though it's asking for trouble
+  ! to check whether the spacing is the same (don't want to put that burden on setup,
+  ! plus f.p. compare has been known to cause problems here)
+  status = nf90_inq_dimid(NCI%id,'level',dimid)
+  ! If we couldn't find the 'level' dimension fail with a warning.
+  ! We don't want to throw an error, as input files are only required to have it if they
+  ! include 3D data fields.
+  if (status == NF90_NOERR) then
+        status = nf90_inquire_dimension(NCI%id, dimid, len=dimsize)
+        call nc_errorhandle(__FILE__, __LINE__, status)
+        if (dimsize.ne.model%general%upn) then
+            write(message,*) 'Dimension level of file '//trim(process_path(NCI%filename))//&
+                ' does not match with config dimension: ', &
+                dimsize, model%general%upn
+            call write_log(message,type=GM_FATAL)
+        end if
+  else
+        call write_log("Input file contained no level dimension.  This is not necessarily a problem.", type=GM_WARNING)
+  end if
+  
   end subroutine glimmer_nc_openfile
 
   subroutine glimmer_nc_checkread(infile,model,time)
