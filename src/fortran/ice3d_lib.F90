@@ -28,6 +28,10 @@
 !The maximum number of iterations to use in the unstable manifold loop
 #define NUMBER_OF_ITERATIONS 1000
 
+!#define DISABLE_SHELF_FRONT
+
+!#define VERY_VERBOSE
+
 module ice3d_lib
     use glimmer_global
     use glimmer_physcon, only: pi, grav, rhoi, rhoo, scyr
@@ -44,8 +48,11 @@ module ice3d_lib
 
     real(dp) :: plastic_bed_regularization = 1e-2
 
+#ifdef VERY_VERBOSE
+    logical, parameter :: sparverbose = .true.
+#else
     logical, parameter :: sparverbose = .false.
-
+#endif
     !Mu is recomputed only when the error tolerance reaches this level
     !This allows nonlinearities resulting from equation separation and 
     !the beta^2 computation to "quiet down" before attempting another
@@ -53,9 +60,6 @@ module ice3d_lib
     !entirely
     real(dp) :: recompute_mu_toler = 1e10
     real(dp) :: recompute_mu_adjust = 1
-    
-    real(dp), dimension(:,:), allocatable :: normal_x
-    real(dp), dimension(:,:), allocatable :: normal_y
 
     integer, parameter :: ITER_UNIT = 42
 !------------------------------------------------------
@@ -520,6 +524,8 @@ contains
         call write_xls_3d("kinematic_bc_v.txt",kinematic_bc_v)
         call write_xls("marine_bc_norms.txt",marine_bc_normal)
         call write_xls_direction_guide("direction_guide.txt",3,3)
+        call write_xls("normal_x.txt", sin(marine_bc_normal))
+        call write_xls("normal_y.txt", -cos(marine_bc_normal))
         write(*,*) "ZETA=",zeta
 #endif
 
@@ -960,13 +966,17 @@ contains
             d=0
             x=0
             call sparse_clear(matrix)
+#ifdef VERY_VERBOSE
+            write(*,*)"Begin Matrix Assembly"
+#endif
             do i=1,MAXY
                 do j=1,MAXX
                     if (point_mask(i,j) /= 0) then
                         do k=1,NZETA
                             coef = 0
                             stencil_center_idx = csp_masked(I_J_K,i,j,k,point_mask,NZETA) 
-                            if (.not. GLIDE_HAS_ICE(geometry_mask(i,j))) then
+                            if (.not. GLIDE_HAS_ICE( geometry_mask(i,j) ) .or. &
+                                      GLIDE_IS_THIN( geometry_mask(i,j) ) ) then
                                 !No ice - "pass through"
                                 coef(I_J_K)=1.
                                 !Normally, we use uvel(i,j,k) as our initial guess.
@@ -1007,6 +1017,10 @@ contains
                             !x=csp(I_J_K,i,j,k,MAXX,NZETA))=uvel(i,j,k) !Use current velocity as guess of solution
                             if (abs(coef(I_J_K)) < SMALL) then
                                 write(*,*) "WARNING: 0 on diagonal at position",i,j,k
+                                write(*,*) "component:",componentstr
+                                write(*,*) "Thickness at this point:", h(i,j)
+                                write(*,*) "Mask at this point:", geometry_mask(i,j)
+                                stop
                             end if
 
                             do m=1,STENCIL_SIZE
@@ -1023,7 +1037,7 @@ contains
                                                 write(*,*) "component:",componentstr
                                                 write(*,*) "location:",i,j,k
                                                 write(*,*) "stencil:",si,sj,sk
-                                                write(*,*) "stencil pos:", m, coef(m)
+                                                write(*,*) "position and coefficient in stencil:", m, coef(m)
                                                 write(*,*) "h for stencil center and bad point:",h(i,j),h(si,sj)
                                                 write(*,*) "Mask for stencil center and bad point:",&
                                                            geometry_mask(i,j), geometry_mask(si,sj)
@@ -1040,14 +1054,19 @@ contains
                     end if !End mask check
                 end do !End j loop
             end do !End i loop
-
+#ifdef VERY_VERBOSE
+            write(*,*)"End Matrix Assembly"
+            write(*,*)"Begin Matrix Solve"
+#endif
             call sparse_solver_preprocess(matrix, options, workspace)        
             ierr = sparse_solve(matrix, d, x, options, workspace,  err, iter, verbose=sparverbose)
             sparuv = sparuv + iter
         
             call handle_sparse_error(matrix, options, ierr, __FILE__, __LINE__)      
             call sparse_solver_postprocess(matrix, options, workspace)
-
+#ifdef VERY_VERBOSE
+            write(*,*)"End Matrix Solve"
+#endif
             call write_xls("normal_x.txt", normal_x)
             call write_xls("normal_y.txt", normal_y)
             !Delinearize the solution
@@ -1372,13 +1391,15 @@ contains
         else
             write(*,*)"FATAL ERROR: sparse_setup called with invalid component"
         end if
-
+#ifndef DISABLE_SHELF_FRONT
         if (GLIDE_IS_CALVING(geometry_mask(i,j))) then !Marine margin dynamic (Neumann) boundary condition
             call sparse_marine_margin(component,i,j,k,h,latbc_normal, vel_perp, mu, dx, dy, ax, ay, dz,coef, rhs, &
                                       dudx_field,dudy_field,dudz_field,dvdx_field,dvdy_field,dvdz_field,&
                                       direction_x, direction_y, geometry_mask, STAGGERED, WHICH_SOURCE)
             point_type = "lateral"
-        else if (k.eq.1) then !Upper boundary condition (stress-free surface)
+        else &
+#endif        
+        if (k.eq.1) then !Upper boundary condition (stress-free surface)
             point_type = "surface"
             !Finite difference coefficients for an irregular Z grid, downwinded
             dz_down1=(2.*dz(k)-dz(k+1)-dz(k+2))/(dz(k+1)-dz(k))/(dz(k+2)-dz(k))
@@ -1393,13 +1414,13 @@ contains
             dperp_dperp = 2*dz_dpara(i,j)
             dperp_dz = 2.*a_perp(i,j,k)*dz_dpara(i,j)+a_para(i,j,k)*dz_dperp(i,j)
 
-            coef(3) = -.5*dpara_dy/dy
-            coef(7) = -.5*dpara_dx/dx
-            coef(11) = dpara_dz*dz_down1
-            coef(12) = dpara_dz*dz_down2
-            coef(13) = dpara_dz*dz_down3
-            coef(15) = dpara_dx*.5/dx
-            coef(19) = dpara_dy*.5/dy
+            coef(IM1_J_K) = -.5*dpara_dy/dy
+            coef(I_JM1_K) = -.5*dpara_dx/dx
+            coef(I_J_K) = dpara_dz*dz_down1
+            coef(I_J_KP1) = dpara_dz*dz_down2
+            coef(I_J_KP2) = dpara_dz*dz_down3
+            coef(I_JP1_K) = dpara_dx*.5/dx
+            coef(IP1_J_K) = dpara_dy*.5/dy
             !Note the transposition below (dfdx => dfdy, vice versa)
             rhs = -dperp_dx * dfdy_3d(vel_perp,i,j,k,dx) &
                 -  dperp_dy * dfdx_3d(vel_perp,i,j,k,dy) &
@@ -1447,13 +1468,13 @@ contains
                    dperp_dz = dperp_dz*mu(i,j,k)
                 end if
 
-                coef(3) = -.5*dpara_dy/dy
-                coef(7) = -.5*dpara_dx/dx
-                coef(9) = dpara_dz*dz_up1
-                coef(10)= dpara_dz*dz_up2
-                coef(11)= dpara_dz*dz_up3
-                coef(15)= .5*dpara_dx/dx
-                coef(19)= .5*dpara_dy/dy
+                coef(IM1_J_K) = -.5*dpara_dy/dy
+                coef(I_JM1_K) = -.5*dpara_dx/dx
+                coef(I_J_KM2) = dpara_dz*dz_up1
+                coef(I_J_KM1) = dpara_dz*dz_up2
+                coef(I_J_K)   = dpara_dz*dz_up3
+                coef(I_JP1_K) = .5*dpara_dx/dx
+                coef(IP1_J_K) = .5*dpara_dy/dy
                 !Transposition of derivatives below
                 rhs = -dperp_dx * dfdy_3d(vel_perp, i, j, k, dx) &
                     -  dperp_dy * dfdx_3d(vel_perp, i, j, k, dy) &
@@ -1510,25 +1531,25 @@ contains
             dperp_dyz = 3 * mu(i,j,k) * ax(i,j,k)
             dperp_dz2 = 3 * mu(i,j,k) * ax(i,j,k)*ay(i,j,k)
 
-            coef(2)  = dpara_dyz*dz_cen1*(-.5/dy)
-            coef(3)  = (dpara_dyz*dz_cen2 + dpara_dy)*(-.5/dy) + dpara_dy2/(dy**2)
-            coef(4)  = dpara_dyz*dz_cen3*(-.5/dy)
+            coef(IM1_J_KM1)  = dpara_dyz*dz_cen1*(-.5/dy)
+            coef(IM1_J_K)  = (dpara_dyz*dz_cen2 + dpara_dy)*(-.5/dy) + dpara_dy2/(dy**2)
+            coef(IM1_J_KP1)  = dpara_dyz*dz_cen3*(-.5/dy)
           
-            coef(6)  = dpara_dxz*dz_cen1*(-.5/dx)
-            coef(7)  = (dpara_dx + dpara_dxz*dz_cen2)*(-.5/dx) + dpara_dx2 / dx**2
-            coef(8)  = dpara_dxz*dz_cen3*(-.5/dx)
+            coef(I_JM1_KM1)  = dpara_dxz*dz_cen1*(-.5/dx)
+            coef(I_JM1_K)  = (dpara_dx + dpara_dxz*dz_cen2)*(-.5/dx) + dpara_dx2 / dx**2
+            coef(I_JM1_KP1)  = dpara_dxz*dz_cen3*(-.5/dx)
           
-            coef(10) = dpara_dz*dz_cen1 + dpara_dz2*dz_sec1
-            coef(11) = dpara_dz*dz_cen2 + dpara_dz2*dz_sec2 + dpara_dx2*(-2/dx**2) + dpara_dy2*(-2/dy**2)
-            coef(12) = dpara_dz*dz_cen3 + dpara_dz2*dz_sec3
+            coef(I_J_KM1) = dpara_dz*dz_cen1 + dpara_dz2*dz_sec1
+            coef(I_J_K) = dpara_dz*dz_cen2 + dpara_dz2*dz_sec2 + dpara_dx2*(-2/dx**2) + dpara_dy2*(-2/dy**2)
+            coef(I_J_KP1) = dpara_dz*dz_cen3 + dpara_dz2*dz_sec3
           
-            coef(14) = dpara_dxz * dz_cen1 * (.5/dx)
-            coef(15) = (dpara_dx + dpara_dxz*dz_cen2) * (.5/dx) + dpara_dx2 / dx**2
-            coef(16) = dpara_dxz * dz_cen3 * (.5/dx)
+            coef(I_JP1_KM1) = dpara_dxz * dz_cen1 * (.5/dx)
+            coef(I_JP1_K) = (dpara_dx + dpara_dxz*dz_cen2) * (.5/dx) + dpara_dx2 / dx**2
+            coef(I_JP1_KP1) = dpara_dxz * dz_cen3 * (.5/dx)
           
-            coef(18) = dpara_dyz * dz_cen1 * (.5/dy)
-            coef(19) = (dpara_dyz*dz_cen2 + dpara_dy) * (.5/dy) + dpara_dy2 / dy**2
-            coef(20) = dpara_dyz * dz_cen3 * (.5/dy)
+            coef(IP1_J_KM1) = dpara_dyz * dz_cen1 * (.5/dy)
+            coef(IP1_J_K) = (dpara_dyz*dz_cen2 + dpara_dy) * (.5/dy) + dpara_dy2 / dy**2
+            coef(IP1_J_KP1) = dpara_dyz * dz_cen3 * (.5/dy)
           
             !Transposition of derivatives below
             rhs =RHOI * GRAV * dz_dpara(i,j) &
@@ -1624,9 +1645,6 @@ contains
 
         n_x = sin(normals(i,j))
         n_y = -cos(normals(i,j))
-
-        normal_x(i,j) = n_x
-        normal_y(i,j) = n_y
 
        !Clamp n_x and n_y so that small values register as zero
         !(The need to do this arises from the fact that, sin(k*pi)
@@ -1776,6 +1794,14 @@ contains
             coef(I_JP1_K) = coef(I_JP1_K) + 0.5 * dx_coeff/dx
             coef(I_JM1_K) = coef(I_JM1_K) - 0.5 * dx_coeff/dx  
         end if
+
+#if 0
+        write(*,*) &
+                   "im1jm1 im1km1 im1 im1kp1 im1jp1 jm1km1 jm1 jm1kp1 ", &
+                   "km2 km1 center kp1 kp2 jp1km1 jp1 jp1kp1 ", &
+                   "ip1jm1 ip1km1 ip1 ip1kp1 ip1jp1 im2 ip2 jm2 jp2 rhs "
+        write(*,*)coef,rhs 
+#endif
     end subroutine
 
     !Computes the source term for an ice shelf from hydrostatic and cryostatic pressure
@@ -2239,7 +2265,12 @@ subroutine iteration_debug_step(ncid, iter, mu, uvel, vvel, geometry_mask)
             end do
         end do
     end do
-    
+   
+    !Close and open the dataset so that changes get written to it
+    call end_debug_iteration(ncid)
+
+    err = nf90_open("iterdebug.nc", ior(NF90_WRITE,NF90_SHARE), ncid)
+    call nc_errorhandle(__FILE__, __LINE__, err)
 
 end subroutine
 
