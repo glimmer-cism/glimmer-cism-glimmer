@@ -93,7 +93,7 @@ contains
       if (.not. include_adjacent) then
         ! Include only points with ice in the mask
 
-        if ( ca(2,2) > 0.0d0 .or. cb > 0.0) then
+        if ( ca(2,2) > thklim .or. cb > thklim) then
           thckcrit = .true.
         else
           thckcrit = .false.
@@ -105,7 +105,7 @@ contains
         ! or the mass balance is positive, thckcrit is .true.
         ! This means that the mask includes points that have no
         ! ice but are adjacent to points that do have ice
-        if ( any((ca(:,:) > 0.0d0)) .or. cb > 0.0 ) then
+        if ( any((ca(:,:) > thklim)) .or. cb > thklim ) then
           thckcrit = .true.
         else
           thckcrit = .false.
