@@ -535,7 +535,8 @@ contains
         !Force a radially symmetric initial guess
         !call fill_radial_symmetry(uvel, 1000.0_dp, 1)
         !call fill_radial_symmetry(vvel, 1000.0_dp, 2)
-        
+       
+        call comp_type(kinematic_bc_u(:,:,1), geometry_mask, point_mask)
 #ifdef OUTPUT_PARTIAL_ITERATIONS        
         ncid_debug = begin_iteration_debug(maxx, maxy, nzeta)
         call iteration_debug_step(ncid_debug, 0, mu, uvel, vvel, geometry_mask)
@@ -658,6 +659,29 @@ contains
       write(*,*) "Pattyn higher-order solve took",solve_end_time - solve_start_time
       return
       END subroutine
+
+      subroutine comp_type(kinematic_bc, geometry_mask, point_mask)
+            real(dp), dimension(:,:) :: kinematic_bc
+            integer,  dimension(:,:) :: geometry_mask, point_mask
+
+            integer, dimension(size(kinematic_bc,1), size(kinematic_bc,2)) :: types
+
+            types = 1
+
+            where(.not. IS_NAN(kinematic_bc))
+                types = 2
+            endwhere
+
+            where(point_mask == 0)
+                types = 0
+            endwhere
+
+            where(GLIDE_IS_CALVING(geometry_mask))
+                types = 4
+            endwhere
+
+            call write_xls_int("computation_types.txt", types)
+      end subroutine
   
 !----------------------------------------------------------------------------------------
 ! BOP
