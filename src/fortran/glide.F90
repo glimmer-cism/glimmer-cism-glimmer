@@ -293,7 +293,8 @@ contains
     call glide_maskthck(&
          model%geometry% thck,      &
          model%climate%  acab,      &
-         .true.,&
+         .true.,                    &
+         model%numerics%thklim,     &
          model%geometry% dom,       &
          model%geometry% mask,      &
          model%geometry% totpts,    &

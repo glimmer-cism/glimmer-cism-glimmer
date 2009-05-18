@@ -95,8 +95,8 @@ contains
             stagmassb = 0
 
             
-            call glide_maskthck(model%geomderv%stagthck, stagmassb, .true., model%geometry%dom, &
-                                model%velocity_hom%velmask, totpts, empty)
+            call glide_maskthck(model%geomderv%stagthck, stagmassb, .true., model%numerics%thklim,&
+                                model%geometry%dom, model%velocity_hom%velmask, totpts, empty)
                  
             !Compute the "geometry mask" (type of square) for the staggered grid
 

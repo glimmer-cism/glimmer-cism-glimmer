@@ -3,7 +3,7 @@
 module glide_thckmask
    implicit none
 contains
-  subroutine glide_maskthck(thck,massb,include_adjacent,dom,pointno,totpts,empty)
+  subroutine glide_maskthck(thck,massb,include_adjacent,thklim,dom,pointno,totpts,empty)
     
     !*FD Calculates the contents of the mask array.
 
@@ -18,6 +18,8 @@ contains
     logical,                intent(in)  :: include_adjacent 
     !*FD If true, points with no ice but that are adjacent to points with ice 
     !*FD are included in the mask
+    real(dp),               intent(in)  :: thklim
+    !*FD Ice dynamics thickness limit, set to 0 to include all ice.
     integer, dimension(:),  intent(out) :: dom        
     integer, dimension(:,:),intent(out) :: pointno    !*FD Output mask
     integer,                intent(out) :: totpts     !*FD Total number of points
