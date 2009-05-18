@@ -426,8 +426,8 @@ contains
     ! depth, depending on value of whichmarn
     ! ------------------------------------------------------------------------ 
     call glide_marinlim(model%options%whichmarn, &
-         model%geometry% thck,      &
-         model%isos% relx,      &
+         model%geometry%thck,      &
+         model%isos%relx,      &
          model%geometry%topg,   &
          model%temper%flwa,   &
          model%numerics%sigma,   &
@@ -442,9 +442,16 @@ contains
          model%numerics%dns, &
          model%climate%backstressmap, &
          model%climate%sigmabout, &
-         model%climate%sigmabin)
+         model%climate%sigmabin, &
+         model%ground, &
+         model%general%nsn, &
+         model%general%ewn, &
+         model%geometry%usrf)
 
-
+    !issues with ice shelf, calling it again fixes the mask
+    call glide_set_mask(model%numerics, model%geometry%thck, model%geometry%topg, &
+         model%general%ewn, model%general%nsn, model%climate%eus, &
+         model%geometry%thkmask, model%geometry%ivol, model%geometry%iarea)
 
 
     ! ------------------------------------------------------------------------
