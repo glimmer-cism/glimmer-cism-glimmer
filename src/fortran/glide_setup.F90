@@ -454,13 +454,14 @@ contains
          'local water balance', &
          'local + const flux ', &
          'none               ' /)
-    character(len=*), dimension(0:5), parameter :: marine_margin = (/ &
+    character(len=*), dimension(0:6), parameter :: marine_margin = (/ &
          'ignore            ', &
          'no ice shelf      ', &
          'threshold         ', &
          'const calving rate', &
          'edge threshold    ', &
-         'van der Veen      '/)
+         'van der Veen      ', &
+         'Pattyn Grnd Line  '/)
     character(len=*), dimension(0:5), parameter :: slip_coeff = (/ &
          'zero        ', &
          'const       ', &
