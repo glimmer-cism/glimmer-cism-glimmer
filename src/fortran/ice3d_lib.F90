@@ -475,12 +475,6 @@ contains
         nzeta = size(mu,3)
         ijktot = active_points*nzeta
 
-        allocate(normal_x(maxy, maxx))
-        allocate(normal_y(maxy, maxx))
-
-        normal_x = NaN
-        normal_y = NaN
-
         maxiter=NUMBER_OF_ITERATIONS
         error=VEL2ERR
         m=1
@@ -1067,8 +1061,6 @@ contains
 #ifdef VERY_VERBOSE
             write(*,*)"End Matrix Solve"
 #endif
-            call write_xls("normal_x.txt", normal_x)
-            call write_xls("normal_y.txt", normal_y)
             !Delinearize the solution
             do i=1,MAXY
                 do j=1,MAXX
