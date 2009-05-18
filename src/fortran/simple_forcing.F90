@@ -107,6 +107,8 @@ contains
     case(3)
        climate%nmsb(1) = climate%nmsb(1) / (acc0 * scyr)
        climate%nmsb(2) = climate%nmsb(2) / (acc0 * scyr)
+    case(4)
+       climate%nmsb(1) = climate%nmsb(1) / (acc0 * scyr)
     end select
        
   end subroutine simple_initialise
@@ -189,7 +191,25 @@ contains
     if (associated(section)) then
     	return
     end if
-
+    !mismip tests
+    call GetSection(config,section,'MISMIP-1')
+    if (associated(section)) then
+       climate%eismint_type = 4
+       dummy=>NULL()
+       call GetValue(section,'temperature',dummy,2)
+       if (associated(dummy)) then
+           climate%airt = dummy
+           deallocate(dummy)
+           dummy=>NULL()
+       end if
+       call GetValue(section,'massbalance',dummy,3)
+       if (associated(dummy)) then
+           climate%nmsb = dummy
+           deallocate(dummy)
+           dummy=>NULL()
+       end if
+       return
+    end if
     call write_log('No EISMINT forcing selected',GM_FATAL)
   end subroutine simple_readconfig
 
@@ -305,7 +325,11 @@ contains
              dist = grid * sqrt(periodic_bc*(real(ew) - ewct)**2 + (real(ns) - nsct)**2)
              model%climate%acab(ew,ns) = min(climate%nmsb(1), climate%nmsb(2) * (rel - dist))
           end do
-       end do       
+       end do
+    case(4)
+       !mismip 1
+       model%climate%acab = climate%nmsb(1)
+           
     end select
   end subroutine simple_massbalance
 
@@ -356,7 +380,9 @@ contains
              dist = grid * sqrt(periodic_bc*(real(ew) - ewct)**2 + (real(ns) - nsct)**2)
              model%climate%artm(ew,ns) = climate%airt(1)+climate%airt(2) * dist
           end do
-       end do       
+       end do
+    case(4)
+        model%climate%artm = climate%airt(1)
     end select
   end subroutine simple_surftemp
 end module simple_forcing
