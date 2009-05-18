@@ -679,7 +679,7 @@ contains
                 
                 if (j == 1) then
                     d2fdy2(i,j) = d2fdy2_2d_downwind(f,i,j,deltax)
-                else if (j == size(f,1)) then
+                else if (j == size(f,2)) then
                     d2fdy2(i,j) = d2fdy2_2d_upwind(f,i,j,deltax)
                 else
                     d2fdy2(i,j) = d2fdy2_2d(f,i,j,deltax)

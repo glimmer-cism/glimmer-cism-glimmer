@@ -1,30 +1,30 @@
-module glimmer_sparse_solver
-    !*FD This module builds on the glimmer_sparse module to provide an easy
+module glimmer_sparse_slap
+    !*FD This module builds on the glimmer_slap module to provide an easy
     !*FD interface to SLAP.  The SLAP interface is intended to be both
     !*FD usable and a guide to implementing other interfaces
     
-    use glimmer_sparse
+    use glimmer_sparse_type
     use glimmer_global, only: dp, size_t
     use glimmer_log
     implicit none
 
-    type sparse_solver_workspace
-        !*FD This type contains any working memory needed for the sparse solver.
+    type slap_solver_workspace
+        !*FD This type contains any working memory needed for the slap solver.
         !*FD It is used to store states between calls to the solver
         !*FD In the SLAP implementation, it is used to store the SLAP workspace
         !*FD This module must have this type, but its contents should be opaque
         !*FD to the user (e.g. client code should only manipulate the
-        !*FD sparse_solver_workspace as a whole and should never touch its members)
+        !*FD slap_solver_workspace as a whole and should never touch its members)
         real(kind=dp), dimension(:), pointer :: rwork => NULL()
         integer, dimension(:), pointer :: iwork => NULL()
         integer :: max_nelt !*FD Maximum number of nonzeroes allowed given the allocated workspace
-    end type sparse_solver_workspace
+    end type slap_solver_workspace
 
-    type sparse_solver_options
-        !*FD This type holds options that are passed to the sparse solver, such
+    type slap_solver_options
+        !*FD This type holds options that are passed to the slap solver, such
         !*FD as preconditioner type, error tolerances, etc.  At a minimum, it
         !*FD must define the tolerance and maxiters field, as these will be
-        !*FD common to any iterative sparse linear solver.  Other options
+        !*FD common to any iterative slap linear solver.  Other options
         !*FD can be defined as necessary.
         !*FD
         !*FD Design note: the options are seperated from the workspace because
@@ -33,28 +33,27 @@ module glimmer_sparse_solver
         !*FD exist as long as the matrix does, the options could persist
         !*FD throughout the entire program)
         integer :: itol !*FD Tolerance code, see SLAP documentation
-        real(kind=dp) :: tolerance !*FD Error tolerance
-        integer :: maxiters !*FD Max iterations before giving up
         logical :: use_gmres !*FD Whether to use the GMRES method instead of Biconjugate Gradient
         integer :: gmres_saved_vectors !*FD How many vectors to save while performing GMRES iteration
-    end type sparse_solver_options
+        type(sparse_solver_options_base), pointer :: base => null() !*FD Pointer to basic options
+    end type slap_solver_options
 
 contains
-    subroutine sparse_solver_default_options(opt)
-        !*FD Populates a sparse_solver_options (defined above) with default
+    subroutine slap_default_options(opt, base)
+        !*FD Populates a slap_solver_options (defined above) with default
         !*FD options.  This is necessary because different solvers may define
         !*FD different options beyond the required fields defined above.
         !*FD Filling them in this function allows client code to pick "good"
         !*FD values in a generic way.
-        type(sparse_solver_options), intent(out) :: opt
+        type(slap_solver_options), intent(out) :: opt
+        type(sparse_solver_options_base), intent(in), target :: base
         opt%itol = 2
-        opt%tolerance  = 5e-5
-        opt%maxiters = 2000
         opt%use_gmres = .false.
         opt%gmres_saved_vectors = 20
-    end subroutine sparse_solver_default_options
+        opt%base => base
+    end subroutine slap_default_options
 
-    subroutine sparse_allocate_workspace(matrix, options, workspace, max_nonzeros_arg)
+    subroutine slap_allocate_workspace(matrix, options, workspace, max_nonzeros_arg)
         !*FD Allocate solver workspace.  This needs to be done once
         !*FD (when the maximum number of nonzero entries is first known)
         !*FD This function need not be safe to call on already allocated memory
@@ -62,8 +61,8 @@ contains
         !*FD Note that the max_nonzeros argument must be optional, and if
         !*FD it is not supplied the current number of nonzeroes must be used.
         type(sparse_matrix_type) :: matrix
-        type(sparse_solver_options) :: options
-        type(sparse_solver_workspace) :: workspace
+        type(slap_solver_options) :: options
+        type(slap_solver_workspace) :: workspace
         integer, optional :: max_nonzeros_arg
         integer :: max_nonzeros
         integer(kind=size_t) :: lenrw
@@ -104,34 +103,34 @@ contains
             !memory in the future
             workspace%max_nelt = max_nonzeros
         end if
-    end subroutine sparse_allocate_workspace
+    end subroutine slap_allocate_workspace
 
-    subroutine sparse_solver_preprocess(matrix, options, workspace)
-        !*FD Performs any preprocessing needed to be performed on the sparse
+    subroutine slap_solver_preprocess(matrix, options, workspace)
+        !*FD Performs any preprocessing needed to be performed on the slap
         !*FD matrix.  Workspace must have already been allocated. 
         !*FD This function should be safe to call more than once.
         !*FD
         !*FD It is an error to call this function on a workspace without
         !*FD allocated memory
         !*FD
-        !*FD In general sparse_allocate_workspace should perform any actions
-        !*FD that depend on the *size* of the sparse matrix, and
+        !*FD In general slap_allocate_workspace should perform any actions
+        !*FD that depend on the *size* of the slap matrix, and
         !*FD sprase_solver_preprocess should perform any actions that depend
-        !*FD upon the *contents* of the sparse matrix.
+        !*FD upon the *contents* of the slap matrix.
         type(sparse_matrix_type) :: matrix
-        type(sparse_solver_options) :: options
-        type(sparse_solver_workspace) :: workspace
-    end subroutine sparse_solver_preprocess
+        type(slap_solver_options) :: options
+        type(slap_solver_workspace) :: workspace
+    end subroutine slap_solver_preprocess
 
-    function sparse_solve(matrix, rhs, solution, options, workspace,err,niters, verbose)
-        !*FD Solves the sparse linear system, and reports status information.
+    function slap_solve(matrix, rhs, solution, options, workspace,err,niters, verbose)
+        !*FD Solves the slap linear system, and reports status information.
         !*FD This function returns an error code that should be zero if the
         !*FD call succeeded and nonzero if it failed.  No additional error codes
         !*FD are defined.  Although this function reports back the final error
         !*FD and the number of iterations needed to converge, these should *not*
-        !*FD be relied upon as not every sparse linear solver may report them.
+        !*FD be relied upon as not every slap linear solver may report them.
         type(sparse_matrix_type), intent(inout) :: matrix 
-        !*FD Sparse matrix to solve.  This is inout because the sparse solver
+        !*FD Sparse matrix to solve.  This is inout because the slap solver
         !*FD may have to do some re-arranging of the matrix.
         
         real(kind=dp), dimension(:), intent(inout) :: rhs 
@@ -140,10 +139,10 @@ contains
         real(kind=dp), dimension(:), intent(inout) :: solution 
         !*FD Solution vector, containing an initial guess.
 
-        type(sparse_solver_options), intent(in) :: options
+        type(slap_solver_options), intent(in) :: options
         !*FD Options such as convergence criteria
         
-        type(sparse_solver_workspace), intent(inout) :: workspace
+        type(slap_solver_workspace), intent(inout) :: workspace
         !*FD Internal solver workspace
         
         real(kind=dp), intent(out) :: err
@@ -156,7 +155,7 @@ contains
         !*FD If present and true, this argument may cause diagnostic information
         !*FD to be printed by the solver (not every solver may implement this).
         
-        integer :: sparse_solve
+        integer :: slap_solve
 
         integer :: ierr !SLAP-provided error code
         integer :: iunit !Unit number to print verbose output to (6=stdout, 0=no output)
@@ -169,7 +168,7 @@ contains
         if (present(verbose)) then
             if(verbose) then
                 iunit=6
-                write(*,*) 'Tolerance=',options%tolerance
+                write(*,*) 'Tolerance=',options%base%tolerance
             end if
         end if
 
@@ -198,42 +197,46 @@ contains
                            GM_WARNING, __FILE__, __LINE__)        
         else
             !Set up SLAP if it hasn't been already
-            call sparse_solver_preprocess(matrix, options, workspace)
+            call slap_solver_preprocess(matrix, options, workspace)
 
             if (options%use_gmres) then
-                call dslugm(matrix%order, rhs, solution, matrix%nonzeros, matrix%row, matrix%col, matrix%val, &
-                            isym, options%gmres_saved_vectors, options%itol, options%tolerance, options%maxiters, &
+                call dslugm(matrix%order, rhs, solution, matrix%nonzeros, &
+                            matrix%row, matrix%col, matrix%val, &
+                            isym, options%gmres_saved_vectors, options%itol, &
+                            options%base%tolerance, options%base%maxiters, &
                             niters, err, ierr, iunit, &
                             workspace%rwork, size(workspace%rwork), workspace%iwork, size(workspace%iwork))
             else
-                call dslucs(matrix%order, rhs, solution, matrix%nonzeros, matrix%row, matrix%col, matrix%val, &
-                            isym, options%itol, options%tolerance, options%maxiters, niters, err, ierr, iunit, &
+                call dslucs(matrix%order, rhs, solution, matrix%nonzeros, &
+                            matrix%row, matrix%col, matrix%val, &
+                            isym, options%itol, options%base%tolerance, options%base%maxiters,&
+                            niters, err, ierr, iunit, &
                             workspace%rwork, size(workspace%rwork), workspace%iwork, size(workspace%iwork))
             end if
         end if
-        sparse_solve = ierr
-    end function sparse_solve
+        slap_solve = ierr
+    end function slap_solve
 
-    subroutine sparse_solver_postprocess(matrix, options, workspace)
+    subroutine slap_solver_postprocess(matrix, options, workspace)
         type(sparse_matrix_type) :: matrix
-        type(sparse_solver_options) :: options
-        type(sparse_solver_workspace) :: workspace
+        type(slap_solver_options) :: options
+        type(slap_solver_workspace) :: workspace
     end subroutine
 
-    subroutine sparse_destroy_workspace(matrix, options, workspace)
-        !*FD Deallocates all working memory for the sparse linear solver.
+    subroutine slap_destroy_workspace(matrix, options, workspace)
+        !*FD Deallocates all working memory for the slap linear solver.
         !*FD This need *not* be safe to call of an unallocated workspace
-        !*FD No sparse solver should call this automatically.
+        !*FD No slap solver should call this automatically.
         type(sparse_matrix_type) :: matrix
-        type(sparse_solver_options) :: options
-        type(sparse_solver_workspace) :: workspace
+        type(slap_solver_options) :: options
+        type(slap_solver_workspace) :: workspace
         !Deallocate all of the working memory
         deallocate(workspace%rwork)
         deallocate(workspace%iwork)
-    end subroutine sparse_destroy_workspace
+    end subroutine slap_destroy_workspace
 
-    subroutine sparse_interpret_error(error_code, error_string)
-        !*FD takes an error code output from sparse_solve and interprets it.
+    subroutine slap_interpret_error(error_code, error_string)
+        !*FD takes an error code output from slap_solve and interprets it.
         !*FD error_string must be an optional argument.
         !*FD If it is not provided, the error is printed to standard out
         !*FD instead of being put in the string
@@ -266,5 +269,5 @@ contains
         else
             write(*,*) tmp_error_string
         endif
-    end subroutine sparse_interpret_error
-end module glimmer_sparse_solver
+    end subroutine slap_interpret_error
+end module glimmer_sparse_slap

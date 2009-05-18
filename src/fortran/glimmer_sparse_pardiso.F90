@@ -39,8 +39,6 @@ module glimmer_sparse_solver
         !*FD lifecycles for each could be different (a workspace need only
         !*FD exist as long as the matrix does, the options could persist
         !*FD throughout the entire program)
-        real(kind=dp) :: tolerance !*FD Error tolerance
-        integer :: maxiters !*FD Max iterations before giving up
     end type sparse_solver_options
 
 contains
@@ -51,8 +49,6 @@ contains
         !*FD Filling them in this function allows client code to pick "good"
         !*FD values in a generic way.
         type(sparse_solver_options), intent(out) :: opt
-        opt%tolerance  = 1e-5
-        opt%maxiters = 2000
     end subroutine sparse_solver_default_options
 
     subroutine sparse_allocate_workspace(matrix, options, workspace, max_nonzeros_arg)

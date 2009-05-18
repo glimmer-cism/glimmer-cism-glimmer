@@ -33,9 +33,8 @@ module ice3d_lib
     use glimmer_physcon, only: pi, grav, rhoi, rhoo, scyr
     use glide_deriv
     use glide_types
+    use glimmer_sparse_type
     use glimmer_sparse
-    use glimmer_sparse_solver
-    use glimmer_sparse_util
     use glimmer_log
     use xls
     implicit none
@@ -383,7 +382,7 @@ contains
                 zeta,bx,by,cxy,beta,&
                 dhbdx,dhbdy,FLOWN,ZIP,VEL2ERR,&
                 MANIFOLD,TOLER,PERIODIC_X, PERIODIC_Y, PLASTIC, WHICH_MU, WHICH_SOURCE, &
-                STAGGERED, delta_x, delta_y, &
+                WHICH_SPARSE, STAGGERED, delta_x, delta_y, &
                 point_mask, active_points, geometry_mask, kinematic_bc_u, kinematic_bc_v, &
                 marine_bc_normal)
                 
@@ -412,6 +411,7 @@ contains
         
         integer, intent(in) :: WHICH_MU
         integer, intent(in) :: WHICH_SOURCE
+        integer, intent(in) :: WHICH_SPARSE
 
         integer, dimension(:,:), intent(in) :: point_mask 
         !*FD Contains a unique nonzero number on each point of ice that should be computed or that is
@@ -485,21 +485,16 @@ contains
         correction_vec = 0
         tot = 0
         !Set up sparse matrix options
-        call sparse_solver_default_options(options)
-        options%tolerance=TOLER
-!If we've compiled with the SLAP solver, we want to configure to use the GMRES method instead of the BiCG method.
-!GMRES works much better for the HO solves
-
+        call sparse_solver_default_options(WHICH_SPARSE, options)
+        options%base%tolerance=TOLER
+        options%base%maxiters  = 100000
+        
         if (WHICH_MU == 1) then
             write(*,*) "Using linear rheology"
         else
             write(*,*) "Using full stress calculation"
         end if
 
-#if SPARSE_SOLVER==slap
-        !options%use_gmres = .true.
-        options%maxiters  = 100000
-#endif
         !Create the sparse matrix
         call new_sparse_matrix(ijktot, ijktot*STENCIL_SIZE, matrix)
         call sparse_allocate_workspace(matrix, options, workspace, ijktot*STENCIL_SIZE)
@@ -638,7 +633,9 @@ contains
                                                 tot, teta)    
             call cpu_time(iter_end_time)
 #if DEBUG 
-            write(*,*) l, iter, tot, teta, iter_end_time - iter_start_time
+            write(*,*) l, iter, tot, teta, &
+                       max( maxval(abs(ustar)), maxval(abs(vstar)) ),&
+                       iter_end_time - iter_start_time
 #endif
             !Check whether we have reached convergance
             if (.not. cont) exit nonlinear_iteration
@@ -1048,7 +1045,7 @@ contains
             ierr = sparse_solve(matrix, d, x, options, workspace,  err, iter, verbose=sparverbose)
             sparuv = sparuv + iter
         
-            call handle_sparse_error(matrix, ierr, __FILE__, __LINE__)      
+            call handle_sparse_error(matrix, options, ierr, __FILE__, __LINE__)      
             call sparse_solver_postprocess(matrix, options, workspace)
 
             call write_xls("normal_x.txt", normal_x)
@@ -1716,7 +1713,7 @@ contains
                 - 2*n_para*dperp_dperp & 
                 -   n_perp*dperp_dpara &
                 -   (2*a_para(i,j,k)*n_perp + a_perp(i,j,k)*n_para)*dperp_dz
- 
+
         !Enter the z component into the finite difference scheme.
         !If we are on the top of bottom of the ice shelf, we will need
         !to upwind or downwind respectively

@@ -60,7 +60,7 @@ module glide_types
   !*FD variables.
  
   use glimmer_sparse
-  use glimmer_sparse_solver
+  use glimmer_sparse_type
   use glimmer_global
   use glimmer_ncdf
   use isostasy_types
@@ -305,6 +305,16 @@ module glide_types
     !*FD \item[0] maxval 
     !*FD \item[1] maxval ignoring basal velocity 
     !*FD \item[2] mean value
+    !*FD \begin{description}
+
+    integer :: which_ho_sparse = 0
+    !*FD Flag that indicates method for solving the sparse linear system
+    !*FD that arises from the higher-order solver
+    !*FD \begin{description}
+    !*FD \item[0] Biconjugate Gradient, Incomplete LU Preconditioner
+    !*FD \item[1] GMRES, Incomplete LU Preconditioner
+    !*FD \item[2] Unsymmetric multifrontal direct solver
+    !*FD \end{description}
 
     integer :: which_ho_source = 0
     !*FD Flag that indicates how to compute the source term of an ice shelf

@@ -148,13 +148,11 @@ AC_LANG_PUSH(C)
 AC_CHECK_LIB([],[main])
 AC_LANG_POP(C)
 
-if test "$ac_cv_umfpack_prefix" != "" -a "$ac_cv_pardiso_prefix" != ""; then
-    AC_MSG_ERROR(Only one of --with-umfpack or --with-pardiso may be defined.)
-else
-    if test "$ac_cv_umfpack_prefix" != ""; then
+#UMFPACK
+if test "$ac_cv_umfpack_prefix" != ""; then
         AC_MSG_RESULT([Using Umfpack to solve sparse linear systems (located at $ac_cv_umfpack_prefix)])
-        FCFLAGS="$FCFLAGS -DSPARSE_SOLVER=umfpack"
         LDFLAGS="$LDFLAGS -L$ac_cv_umfpack_prefix/lib"
+        FCFLAGS="$FCFLAGS -DHAVE_UMFPACK" 
         
         if test "$ac_cv_haveblas" == 0; then
             AC_MSG_ERROR([
@@ -193,10 +191,10 @@ libumfpack.  This is not done with a standard UMFPACK install.
 If you downloaded a binary distribution of Umfpack, you may 
 need to obtain the source at: 
 http://www.cise.ufl.edu/research/sparse/umfpack.])])
+fi
 
-        sparsesolver=umfpack
-    else
-        if test "$ac_cv_pardiso_prefix" != ""; then
+#PARDISO
+if test "$ac_cv_pardiso_prefix" != ""; then
             AC_MSG_RESULT([Using Pardiso to solve sparse linear systems, (located at $ac_cv_pardiso_prefix)])
             if test "$ac_cv_haveblas" == 0; then
                 AC_MSG_ERROR([
@@ -220,21 +218,13 @@ If the following Pardiso check fails, please use the --with-gomp flag and try ag
 
 
             AC_MSG_CHECKING(for Pardiso)
-            FCFLAGS="$FCFLAGS -DSPARSE_SOLVER=pardiso"
+            FCFLAGS="$FCFLAGS -DHAVE_PARDISO"
             LDFLAGS="$LDFLAGS -lpardiso"
             AC_CHECK_LIB([pardiso],[pardiso], , AC_MSG_ERROR([Libpardiso not found.]),[-lblas])
-            sparsesolver=pardiso
-        else
-            AC_MSG_RESULT([Using default sparse linear solver (SLAP)])
-            FCFLAGS="$FCFLAGS -DSPARSE_SOLVER=slap"
-            sparsesolver=slap
-        fi
-    fi
 fi
 
-AM_CONDITIONAL(SLAP, test x$sparsesolver = xslap)
-AM_CONDITIONAL(UMFPACK, test x$sparsesolver = xumfpack)
-AM_CONDITIONAL(PARDISO, test x$sparsesolver = xpardiso)
+AM_CONDITIONAL(UMFPACK, test "$ac_cv_umfpack_prefix" != "")
+AM_CONDITIONAL(PARDISO, test "$ac_cv_pardiso_prefix" != "")
 
 #AC_LANG_POP(Fortran)
 

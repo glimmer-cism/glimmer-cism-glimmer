@@ -24,6 +24,7 @@ CLEANFILES = $(BUILT_SOURCES) glimmer_vers.F90 f90_dep.mak *.mod
 RESTART_CODE = glide_types.F90 glimmer_config.F90 glimmer_coordinates.F90 \
                   glimmer_daily_pdd.F90 glimmer_map_types.F90 glimmer_ncdf.F90 \
                   glimmer_pdd.F90 glimmer_searchcircle.F90 glimmer_sparse.F90 \
+                  glimmer_sparse_slap.F90 \
                   glimmer_ts.F90 glint_main.F90 glint_global_grid.F90 glint_interp.F90 \
                   glint_mbal_coupling.F90 glint_mbal.F90 glint_smb.F90 glint_type.F90 \
                   isostasy_types.F90 profile.F90 simple_forcing.F90 glimmer_paramets.F90 \
@@ -35,7 +36,8 @@ libglimmer_a_SOURCES = glimmer_vers.F90 \
                        glimmer_paramets.F90 glimmer_physcon.F90 kelvin.F90 \
                        profile.F90 glimmer_pdd.F90 glimmer_routing.F90 \
                        glimmer_daily_pdd.F90 glint_global_interp.F90 \
-                       glimmer_sparse.F90 glimmer_sparse_util.F90 \
+                       glimmer_sparse_type.F90 glimmer_sparse.F90 \
+                       glimmer_sparse_slap.F90 \
 		       glimmer_coordinates.F90 \
                        glimmer_integrate.F90 ncdf_utils.F90 \
                        glimmer_map_CFproj.F90 glimmer_map_proj4.F90 \
@@ -79,26 +81,15 @@ libclimate_a_SOURCES = eismint3_forcing.F90 eismint3_types.F90 \
 #Select which sparse solver code file to compile based conditionally on
 #what solver was specified in the configure script.  The flags used
 #in the if statements (SLAP, UMFPACK, etc) are defined in <glimmer_root_dir>/configure.in
-if SLAP
-RESTART_CODE +=  glimmer_sparse_slap.F90
-libglimmer_a_SOURCES += glimmer_sparse_slap.F90
-else
-
 if UMFPACK
 RESTART_CODE += glimmer_sparse_umfpack.F90
 libglimmer_a_SOURCES += glimmer_sparse_umfpack.F90
-else
+endif UMFPACK
 
 if PARDISO
 RESTART_CODE += glimmer_sparse_pardiso.F90
 libglimmer_a_SOURCES += glimmer_sparse_pardiso.F90
 endif PARDISO
-
-endif !UMFPACK
-
-endif !SLAP
-
-
 
 eismint3_glide_SOURCES = eismint3_glide.F90
 eismint3_glide_LDADD = libclimate.a libglide.a libglimmer.a \

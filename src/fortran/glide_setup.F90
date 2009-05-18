@@ -432,6 +432,7 @@ contains
     call GetValue(section, 'which_ho_babc',      model%options%which_ho_babc)
     call GetValue(section, 'which_ho_efvs',      model%options%which_ho_efvs)
     call GetValue(section, 'which_ho_resid',     model%options%which_ho_resid)
+    call GetValue(section, 'which_ho_sparse',    model%options%which_ho_sparse)
   end subroutine handle_ho_options
 
   subroutine print_options(model)
@@ -522,6 +523,10 @@ contains
     character(len=*), dimension(0:1), parameter :: ho_whichsource = (/ &
          'vertically averaged     ', &
          'vertically explicit     ' /)
+    character(len=*), dimension(0:2), parameter :: ho_whichsparse = (/ &
+         'BiCG with LU precondition  ', &
+         'GMRES with LU precondition ', &
+         'Unsymmetric Multifrontal   ' /)
     call write_log('GLIDE options')
     call write_log('-------------')
     write(message,*) 'I/O parameter file      : ',trim(model%funits%ncfile)
@@ -631,6 +636,14 @@ contains
     if (model%options%which_ho_resid < 0 .or. model%options%which_ho_resid >= size(ho_whichresid)) then
         call write_log('Error, HO residual input out of range', GM_FATAL)
     end if
+
+    write(message,*) 'ho_whichsparse        :',model%options%which_ho_sparse,  &
+                      ho_whichsparse(model%options%which_ho_sparse)
+    call write_log(message)
+    if (model%options%which_ho_sparse < 0 .or. model%options%which_ho_sparse >= size(ho_whichsparse)) then
+        call write_log('Error, HO sparse solver input out of range', GM_FATAL)
+    end if
+
 
     call write_log('')
   end subroutine print_options
