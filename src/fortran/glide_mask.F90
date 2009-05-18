@@ -154,29 +154,73 @@ contains
   end subroutine glide_set_mask
 
     subroutine glide_marine_margin_normal(thck, mask, marine_bc_normal)
+        use glimmer_physcon, only:pi
+        implicit none
         !*FD This subroutine derives from the given mask the normal to an ice shelf
         !*FD each point on the marine margin.
         real(dp), dimension(:,:), intent(in) :: thck
         integer, dimension(:,:), intent(in) :: mask
         real(dp), dimension(:,:), intent(out) :: marine_bc_normal
 
-        integer :: i, j
+        integer :: i, j, dx, dy, k
 
-        real(dp), dimension(0:size(thck,1)+1, 0:size(thck,2)+1) :: thckWithBounds
+        real(dp), dimension(size(thck,1), size(thck,2)) :: direction_x, direction_y
         
+        real(dp), dimension(-1:1, -1:1) :: angle_lookup
+
+                !direction_y =    -1       0       1        !direction_x = 
+        angle_lookup(-1, :) = (/ 3*pi/4,   pi/2,   pi/4 /)  !-1
+        angle_lookup( 0, :) = (/   pi,     0D0,  2*pi   /)  ! 0
+        angle_lookup( 1, :) = (/ 5*pi/4, 3*pi/2, 7*pi/4 /)  ! 1
+        call upwind_from_mask(mask, direction_x, direction_y)
+
         !Set up a thickness variable with "ghost cells" so that we don't go out
         !of bounds with the vectorized operation below
-        thckWithBounds(1:size(thck,1), 1:size(thck,2)) = thck
-        thckWithBounds(:,0) = thckWithBounds(:,1)
-        thckWithBounds(0,:) = thckWithBounds(1,:)
-        thckWithBounds(size(thck,1)+1,:) = thckWithBounds(size(thck,1),:)
-        thckWithBounds(:,size(thck,2)+1) = thckWithBounds(:,size(thck,2))
-
-
+        !thckWithBounds(1:size(thck,1), 1:size(thck,2)) = thck
+        !thckWithBounds(:,0) = thckWithBounds(:,1)
+        !thckWithBounds(0,:) = thckWithBounds(1,:)
+        !thckWithBounds(size(thck,1)+1,:) = thckWithBounds(size(thck,1),:)
+        !thckWithBounds(:,size(thck,2)+1) = thckWithBounds(:,size(thck,2))
         do i = 1, size(mask, 1)
             do j = 1, size(mask, 2)
                 if (GLIDE_IS_CALVING(mask(i,j))) then
-                    marine_bc_normal(i,j) = calc_normal_45deg(thckWithBounds(i-1:i+1,j-1:j+1))
+                    dx = int(direction_x(i,j))
+                    dy = int(direction_y(i,j))
+                    if (dx == 0 .and. dy == 0) then
+                        write(*,*)"A shelf front point has been identified at:"
+                        write(*,*)"x = ",i
+                        write(*,*)"y = ",j
+                        write(*,*)"But neither x nor y derivatives have been marked as upwinded."
+                        write(*,*)"This should never happen, if this error appears it is a bug"
+                        write(*,*)"and should be reported."
+                        write(*,*)"The mask around this point follows:"
+                        write(*,*)"--------------------------"
+
+                        !Write a header row with a * in the column corresponding to the center
+                        do k = -4, 4
+                            if (k==0) then
+                                write(*,"(A)",advance="no")"           *"
+                            else if (i+k > 0 .and. i+k <= size(mask,1)) then
+                                write(*,"(A)",advance="no")"            "
+                            end if
+                        end do 
+                        write(*,*)
+
+                        do k=4, -4, -1
+                            if (j+k > 0 .and. j+k <= size(mask, 2)) then
+                                if (k == 0) then
+                                    write(*,*) "*", mask(max(1,i-4):min(size(mask,1),i+4),j+k)
+                                else
+                                    write(*,*) " ", mask(max(1,i-4):min(size(mask,1),i+4),j+k)
+                                end  if
+                            end if
+                        end do
+                        write(*,*)"--------------------------"
+                        write(*,*)"Have a nice day!"
+                        !stop
+                    end if
+                    marine_bc_normal(i,j) = angle_lookup(dx, dy) 
+                    !marine_bc_normal(i,j) = calc_normal_45deg(thckWithBounds(i-1:i+1,j-1:j+1))
                 else
                     marine_bc_normal(i,j) = NaN
                 end if
@@ -322,29 +366,21 @@ contains
                     !points that are floating, and that works, but this doesn't work for two reasons:
                     !1. Boundary points are also floating
                     !2. Could fail for a very thin ice shelf
-#if 1
-                    if (direction_x(i,j) == 0 .and. direction_y(i,j) == 0) then
-                        if (GLIDE_IS_CALVING(geometry_mask(i-1,j)) .and. &
-                            GLIDE_IS_FLOAT(geometry_mask(i+1, j))) then
-                                direction_x(i,j) = 1
-                        end if
-
-                        if (GLIDE_IS_CALVING(geometry_mask(i+1,j)) .and. &
-                            GLIDE_IS_FLOAT(geometry_mask(i-1, j))) then
-                                direction_x(i,j) = -1
-                        end if
-
-                        if (GLIDE_IS_CALVING(geometry_mask(i,j-1)) .and. &
-                            GLIDE_IS_FLOAT(geometry_mask(i, j+1))) then
-                                direction_y(i,j) = 1
-                        end if
-
-                        if (GLIDE_IS_CALVING(geometry_mask(i,j+1)) .and. &
-                            GLIDE_IS_FLOAT(geometry_mask(i, j-1))) then
-                                direction_y(i,j) = -1
+                    if (int(direction_x(i,j)) == 0 .and. int(direction_y(i,j)) == 0) then
+                        if (.not. GLIDE_HAS_ICE(geometry_mask(i-1, j-1))) then
+                            direction_x(i,j) = 1
+                            direction_y(i,j) = 1
+                        else if (.not. GLIDE_HAS_ICE(geometry_mask(i-1, j+1))) then
+                            direction_x(i,j) = 1
+                            direction_y(i,j) = -1
+                        else if (.not. GLIDE_HAS_ICE(geometry_mask(i+1, j-1))) then
+                            direction_x(i,j) = -1
+                            direction_y(i,j) = 1
+                        else if (.not. GLIDE_HAS_ICE(geometry_mask(i+1, j+1))) then
+                            direction_x(i,j) = -1
+                            direction_y(i,j) = -1
                         end if
                     end if
-#endif           
                 end if
             end do
         end do
