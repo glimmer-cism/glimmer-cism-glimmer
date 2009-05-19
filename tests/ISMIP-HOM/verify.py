@@ -15,12 +15,13 @@ import intercomparison
 #Parse command line arguments
 optlist, args = gnu_getopt(sys.argv, intercomparison.ExperimentOptionsShort, 
          intercomparison.ExperimentOptionsLong + 
-         ["format-only","horiz-grid-size=","vert-grid-size=","vert-grid-spacing=","prefix=","diagnostic-type="])
+         ["format-only","horiz-grid-size=","vert-grid-size=","vert-grid-spacing=","prefix=","diagnostic-type=", "no-visuals", "glide="])
 
 optdict = dict(optlist)
 
 #Determine whether to actually run Glimmer or just prepare the input files
 formatOnly = ("--format-only",'') in optlist
+createVisuals = ("--no-visuals",'') not in optlist
 
 #Determine which experiments and domain sizes to run
 experiments, domainSizes = intercomparison.getExperimentsToRun(optlist)
@@ -47,6 +48,12 @@ if "--diagnostic-type" in optdict:
     diagnosticSchemeOverride = optdict["--diagnostic-type"]
 else:
     diagnosticSchemeOverride = None
+
+if "--glide" in optdict:
+    glidePath = optdict["--glide"]
+else:
+    glidePath = "simple_glide"
+
 #Determine the prefix to use for the ISMIP-HOM format output files
 if "--prefix" in optdict:
     ismipHomOutputPrefix = optdict["--prefix"]
@@ -76,10 +83,10 @@ for experiment in experiments:
         os.system(ncScript + " " + newConfigFile)
         if not formatOnly:
             #Run Glimmer
-            os.system("echo " + newConfigFile + "|simple_glide")
+            os.system("echo " + newConfigFile + "|" + glidePath)
             #Reformat the output as the ISMIP-HOM format
             os.system(sys.executable + " formatData.py " + experiment + " " + ncOutputFilename + " " + intercompareOutputFilename)
 
 #If intercomparisons were run, create the output visuals
-if not formatOnly:
+if (not formatOnly) and createVisuals:
     os.system(sys.executable + " createVisuals.py " + " ".join(sys.argv[1:]))
