@@ -37,6 +37,7 @@ libglimmer_a_SOURCES = glimmer_vers.F90 \
                        profile.F90 glimmer_pdd.F90 glimmer_routing.F90 \
                        glimmer_daily_pdd.F90 glint_global_interp.F90 \
                        glimmer_sparse_type.F90 glimmer_sparse.F90 \
+                       glimmer_sparse_umfpack.F90 \
                        glimmer_sparse_slap.F90 \
 		       glimmer_coordinates.F90 \
                        glimmer_integrate.F90 ncdf_utils.F90 \
@@ -77,15 +78,6 @@ libclimate_a_SOURCES = eismint3_forcing.F90 eismint3_types.F90 \
                        eismint3_io.F90 spin_forcing.F90 spin_mb.F90 \
                        spin_temp.F90 spin_slc.F90 spin_io.F90 \
                        spin_types.F90 
-
-#Select which sparse solver code file to compile based conditionally on
-#what solver was specified in the configure script.  The flags used
-#in the if statements (SLAP, UMFPACK, etc) are defined in <glimmer_root_dir>/configure.in
-if UMFPACK
-RESTART_CODE += glimmer_sparse_umfpack.F90
-libglimmer_a_SOURCES += glimmer_sparse_umfpack.F90
-endif UMFPACK
-
 if PARDISO
 RESTART_CODE += glimmer_sparse_pardiso.F90
 libglimmer_a_SOURCES += glimmer_sparse_pardiso.F90
