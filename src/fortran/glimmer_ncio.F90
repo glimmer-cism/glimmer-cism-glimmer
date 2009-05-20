@@ -459,7 +459,7 @@ contains
   if (status == NF90_NOERR) then
         status = nf90_inquire_dimension(NCI%id, dimid, len=dimsize)
         call nc_errorhandle(__FILE__, __LINE__, status)
-        if (dimsize.ne.model%general%upn) then
+        if (dimsize.ne.model%general%upn .and. dimsize .ne. 1) then
             write(message,*) 'Dimension level of file '//trim(process_path(NCI%filename))//&
                 ' does not match with config dimension: ', &
                 dimsize, model%general%upn
