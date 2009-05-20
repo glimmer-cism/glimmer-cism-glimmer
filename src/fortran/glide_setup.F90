@@ -412,6 +412,7 @@ contains
     call GetValue(section,'diagnostic_run',model%options%diagnostic_run)
     call GetValue(section,'sigmabin',model%climate%sigmabin)
     call GetValue(section,'sigmabout',model%climate%sigmabout)
+    call GetValue(section,'sliding_constant',model%climate%slidconst)
   end subroutine handle_options
   
   !Higher order options

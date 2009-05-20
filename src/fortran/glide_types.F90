@@ -557,7 +557,8 @@ module glide_types
                                                              !*FD Van der veen grounding line scheme
      logical, dimension(:,:),pointer :: backstressmap => null() !*FD map of the backstress on the first time step
      real(sp) :: sigmabin = 0.92                                
-     real(sp) :: sigmabout = 0.80                                 
+     real(sp) :: sigmabout = 0.80
+     real(sp) :: slidconst = 0.0
      real(sp) :: tempanmly                                  !*FD Temperature anomaly 
   end type glide_climate
 

@@ -898,7 +898,7 @@ contains
     !*FD Calculate the value of $B$ used for basal sliding calculations.
     use glimmer_global, only : dp 
     use glimmer_physcon, only : rhoo, rhoi
-    use glimmer_paramets, only : len0, thk0
+    use glimmer_paramets, only : len0, thk0, scyr, vel0
     implicit none
 
     type(glide_global_type) :: model        !*FD model instance
@@ -918,6 +918,7 @@ contains
     
     !scaling
     real :: tau_factor = 1e-3*thk0*thk0/len0
+    !real :: tau_factor = 1.0
     !------------------------------------------------------------------------------------
 
 
@@ -925,7 +926,7 @@ contains
     nsn=model%general%nsn
 
     !------------------------------------------------------------------------------------
-
+    Asl = model%climate%slidconst
     select case(flag)
     case(1)
        ! constant everywhere
@@ -972,32 +973,32 @@ contains
     case(5)
        ! increases with the third power of the basal shear stress, from
        ! Huybrechts
-       
        do ns = 1, nsn-1
-          do ew = 1, ewn-1
-             if((model%geometry%topg(ew,ns)*thk0) > (model%climate%eus*thk0)) then
-               Z = model%geometry%thck(ew,ns)*thk0
+         do ew = 1, ewn-1
+           if ((model%geomderv%stagthck(ew,ns) * thk0) > model%numerics%thklim) then 
+             if((model%geomderv%stagtopg(ew,ns)*thk0) > (model%climate%eus*thk0)) then
+               Z = model%geomderv%stagthck(ew,ns)*thk0
              else  
-               Z = model%geometry%thck(ew,ns)*thk0 + &
-               rhoi*((model%geometry%topg(ew,ns) *thk0 &
+               Z = model%geomderv%stagthck(ew,ns)*thk0 + rhoi*((model%geomderv%stagtopg(ew,ns) *thk0 &
                    - model%climate%eus*thk0)/ rhoo)
+   
              end if 
-             if(Z <= 1.0) then !avoid division by zero
-                Z = 1.0
-             end if 
-             
+              
+            if(Z <= model%numerics%thklim) then !avoid division by zero
+                Z = model%numerics%thklim
+            end if 
+            
              tau = ((tau_factor*model%velocity%tau_x(ew,ns))**2 +&
              (model%velocity%tau_y(ew,ns)*tau_factor)**2)**(1.0/2.0)
-             
              
              btrc(ew,ns) = (Asl*(tau)**2)/Z !assuming that that btrc is later
                                              !multiplied again by the basal shear stress
        
-             
+           end if  
           end do
        
        end do
-    
+
     case default
        ! zero everywhere
        btrc = 0.0d0

@@ -18,22 +18,23 @@ module glide_ground
 contains
   
 !-------------------------------------------------------------------------------  
-  subroutine glide_initialise_backstress(thck,backstressmap,backstress,sigmabin)
+  subroutine glide_initialise_backstress(thck,backstressmap,backstress,sigmabin,sigmabout)
   
      implicit none
      
      real(dp), dimension(:,:), intent(in) :: thck !*FD Ice thickness
      logical, dimension(:,:), intent(inout) :: backstressmap !*FD Backstress map
      real(sp), dimension(:,:), intent(inout):: backstress !*FD Backstress
-     real(sp) :: sigmabin
+     real(sp) :: sigmabin,sigmabout
      backstress = 0.0
      backstressmap = .False. 
      where(thck > 0.0) 
          backstressmap = .True. 
      end where
-
      where (thck > 0.0)
          backstress = sigmabin
+     elsewhere
+         backstress = sigmabout
      end where
   end subroutine glide_initialise_backstress
 !-------------------------------------------------------------------------
@@ -91,12 +92,10 @@ contains
     logical, dimension(:,:), intent(in)   :: backstressmap !*FD map of the
                                                            !*FD backstresses for the initial map
     integer ew,ns
-    real(dp) :: sigmab
     real(sp) :: sigmabout,sigmabin
     type(glide_grnd) :: ground        !*FD ground instance
     !---------------------------------------------------------------------
 
-    sigmab = 0.95
 
     ablation_field=0.0
 
@@ -189,6 +188,40 @@ contains
     
         call update_ground_line(ground, topg, thck, eus, dew, dns, ewn, nsn, mask)
        
+       
+       do ns = 2,size(thck,2)-1
+          do ew = 2,size(thck,1)-1
+             if (GLIDE_IS_GROUNDING_LINE(mask(ew,ns))) then
+                call vertint_output2d(flwa(:,ew-1:ew,ns-1:ns),A, levels * thck(ew,ns))
+                ablation_field(ew,ns)= ((dew*dns)/(50.0d3)**2)* theta * A(2,2) * (sigmaxx * &
+                thck(ew,ns)  * (1 - backstress(ew,ns))) ** gn
+                if ((thck(ew,ns) - ablation_field(ew,ns)) >= 0.0) then
+                  thck(ew,ns) = thck(ew,ns) - ablation_field(ew,ns) 
+                else 
+                  thck(ew,ns) = 0.0d0
+                end if
+            end if
+          end do
+       end do
+      
+      where (GLIDE_IS_FLOAT(mask).and.relx<mlimit+eus)
+          ablation_field=thck
+          thck = 0.0d0
+       end where
+      do ns = 2,size(thck,2)-1
+         do ew = 2,size(thck,1)-1
+           if (GLIDE_IS_FLOAT(mask(ew,ns)) .and. .not. backstressmap(ew,ns))then 
+      
+             if ((.not. GLIDE_IS_GROUNDING_LINE(mask(ew-1,ns))) &
+              .and. (.not. GLIDE_IS_GROUNDING_LINE(mask(ew+1,ns))) .and. &
+              (.not. GLIDE_IS_GROUNDING_LINE(mask(ew,ns-1))) .and. &
+              (.not. GLIDE_IS_GROUNDING_LINE(mask(ew,ns+1)))) then
+                   ablation_field = thck(ew,ns)
+                   thck(ew,ns) = 0.0d0
+             end if
+           end if
+         end do
+       end do
         where (GLIDE_IS_FLOAT(mask))
         ablation_field=thck
         thck = 0.0d0

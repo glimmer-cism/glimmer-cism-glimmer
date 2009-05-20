@@ -155,6 +155,7 @@ contains
     ! load sigma file
     call glide_load_sigma(model,dummyunit)
 
+    
     ! open all input files
     call openall_in(model)
     ! and read first time slice
@@ -187,7 +188,8 @@ contains
     call glide_initialise_backstress(model%geometry%thck,&
                                      model%climate%backstressmap,&
                                      model%climate%backstress, &
-                                     model%climate%sigmabin)
+                                     model%climate%sigmabin, &
+                                     model%climate%sigmabout)
     if (model%options%gthf.gt.0) then
        call init_lithot(model)
     end if
@@ -235,7 +237,7 @@ contains
     ! calculate mask
     call glide_set_mask(model%numerics, model%geometry%thck, model%geometry%topg, &
                         model%general%ewn, model%general%nsn, model%climate%eus, &
-                        model%geometry%thkmask, model%geometry%ivol, model%geometry%iarea)
+                        model%geometry%thkmask, model%geometry%iarea, model%geometry%ivol)
 
     !calculate the normal at the marine margin
     call glide_marine_margin_normal(model%geometry%thck, model%geometry%thkmask, model%geometry%marine_bc_normal)
@@ -413,7 +415,7 @@ contains
 #endif
     call glide_set_mask(model%numerics, model%geometry%thck, model%geometry%topg, &
                         model%general%ewn, model%general%nsn, model%climate%eus, &
-                        model%geometry%thkmask, model%geometry%ivol, model%geometry%iarea)
+                        model%geometry%thkmask, model%geometry%iarea, model%geometry%ivol)
 #ifdef PROFILING
     call glide_prof_stop(model,model%glide_prof%ice_mask2)
 #endif
@@ -449,11 +451,11 @@ contains
          model%general%ewn, &
          model%geometry%usrf)
 
+
     !issues with ice shelf, calling it again fixes the mask
     call glide_set_mask(model%numerics, model%geometry%thck, model%geometry%topg, &
-         model%general%ewn, model%general%nsn, model%climate%eus, &
-         model%geometry%thkmask, model%geometry%ivol, model%geometry%iarea)
-
+                        model%general%ewn, model%general%nsn, model%climate%eus, &
+                        model%geometry%thkmask, model%geometry%iarea, model%geometry%ivol)
 
     ! ------------------------------------------------------------------------
     ! update ice/water load if necessary
