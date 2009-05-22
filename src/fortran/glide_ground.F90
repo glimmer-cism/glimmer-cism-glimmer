@@ -185,47 +185,12 @@ contains
              end do
            end do
     case(6)
-    
-        call update_ground_line(ground, topg, thck, eus, dew, dns, ewn, nsn, mask)
-       
-       
-       do ns = 2,size(thck,2)-1
-          do ew = 2,size(thck,1)-1
-             if (GLIDE_IS_GROUNDING_LINE(mask(ew,ns))) then
-                call vertint_output2d(flwa(:,ew-1:ew,ns-1:ns),A, levels * thck(ew,ns))
-                ablation_field(ew,ns)= ((dew*dns)/(50.0d3)**2)* theta * A(2,2) * (sigmaxx * &
-                thck(ew,ns)  * (1 - backstress(ew,ns))) ** gn
-                if ((thck(ew,ns) - ablation_field(ew,ns)) >= 0.0) then
-                  thck(ew,ns) = thck(ew,ns) - ablation_field(ew,ns) 
-                else 
-                  thck(ew,ns) = 0.0d0
-                end if
-            end if
-          end do
-       end do
-      
-      where (GLIDE_IS_FLOAT(mask).and.relx<mlimit+eus)
-          ablation_field=thck
-          thck = 0.0d0
-       end where
-      do ns = 2,size(thck,2)-1
-         do ew = 2,size(thck,1)-1
-           if (GLIDE_IS_FLOAT(mask(ew,ns)) .and. .not. backstressmap(ew,ns))then 
-      
-             if ((.not. GLIDE_IS_GROUNDING_LINE(mask(ew-1,ns))) &
-              .and. (.not. GLIDE_IS_GROUNDING_LINE(mask(ew+1,ns))) .and. &
-              (.not. GLIDE_IS_GROUNDING_LINE(mask(ew,ns-1))) .and. &
-              (.not. GLIDE_IS_GROUNDING_LINE(mask(ew,ns+1)))) then
-                   ablation_field = thck(ew,ns)
-                   thck(ew,ns) = 0.0d0
-             end if
-           end if
-         end do
-       end do
-        where (GLIDE_IS_FLOAT(mask))
+       call update_ground_line(ground, topg, thck, eus, dew, dns, ewn, nsn, mask)
+       where (GLIDE_IS_FLOAT(mask))
         ablation_field=thck
         thck = 0.0d0
-      end where
+       end where
+      
     end select
   end subroutine glide_marinlim
   
@@ -238,7 +203,7 @@ contains
      implicit none
      type(glide_grnd) :: ground       !*FD glide ground instance
      integer ns1,ew1,ns2,ew2,slot_ns,slot_ew !grounding line in ns/ew direction
-     real appr_ground,get_ground_line !grounding line
+     real appr_ground !grounding line
      
      if (ns1 .eq. ns2) then
          slot_ew = min(ew1,ew2)
@@ -290,7 +255,6 @@ contains
      real(sp) :: fj                        !f at grid pnt j
      real(sp) :: fj_1                      !f evaluated at j (+/-) 1
      real(sp) :: df                        !delta f of fj,jf_1
-     real lin_reg_xg
      
      if (ew .eq. j1ew) then
         dx = dns 
@@ -378,7 +342,6 @@ contains
      real(sp) ::  x0
      real(sp) ::  y1                        
      real(sp) ::  y0
-     real get_ground_thck
      !using lin. interpolation to find top at grounding line
      if (ns1 .eq. ns2) then
          min_ew = min(ew1,ew2)
