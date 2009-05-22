@@ -122,8 +122,7 @@ contains
     !*FD the model instance
 
     ! local variables
-    integer :: status,timedimid,ntime,timeid
-    real(sp),dimension(1) :: last_time
+    integer :: status,timedimid,ntime
     character(len=msglen) :: message
 
     ! open existing netCDF file

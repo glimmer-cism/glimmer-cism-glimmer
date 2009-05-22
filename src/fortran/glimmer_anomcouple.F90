@@ -157,7 +157,7 @@ contains
              end do
           end do
        else
-          anomprcp=max(rawprcp-prcpm+prcpr,0.0)
+          anomprcp=max(rawprcp-prcpm+prcpr,0D0)
        end if
     else
        anomprcp=rawprcp

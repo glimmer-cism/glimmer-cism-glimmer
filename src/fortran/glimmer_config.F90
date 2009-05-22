@@ -680,7 +680,7 @@ contains
     end if
     return
     
-10  call write_log('Array error in config file - check syntax',GM_FATAL)
+  call write_log('Array error in config file - check syntax',GM_FATAL)
 
   end subroutine GetValueCharArray
 

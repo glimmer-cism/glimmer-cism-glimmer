@@ -472,11 +472,11 @@ contains
          '~basal melt ', &
          'taub^3      ' /)
     character(len=*), dimension(0:5), parameter :: evolution = (/ &
-         'pseudo-diffusion               ', &
-         'ADI scheme                     ', &
-         'iterated diffusion             ', &
-         'remap thickness                ', &
-         'remap thickness and temperature', &
+         'pseudo-diffusion                      ', &
+         'ADI scheme                            ', &
+         'iterated diffusion                    ', &
+         'remap thickness                       ', &
+         'remap thickness and temperature       ', &
          'remap thickness (Payne-Price dynamics)' /)    !*sfp* added
     character(len=*), dimension(0:1), parameter :: vertical_integration = (/ &
          'standard     ', &
@@ -512,7 +512,7 @@ contains
          'spatially periodic      ', &
          'circular ice shelf      ', &
          'frozen bed              ', &
-         'B^2 passed from CISM   ' /)
+         'B^2 passed from CISM    ' /)
     character(len=*), dimension(0:2), parameter :: ho_whichefvs = (/ &
          'from eff strain rate    ', &
          'constant value          ', &

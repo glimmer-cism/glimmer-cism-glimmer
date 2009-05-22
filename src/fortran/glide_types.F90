@@ -494,13 +494,13 @@ module glide_types
   end type glide_velocity
   
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    type glide_tensor
-  	real(dp), dimension(:,:,:), pointer :: scalar => null()
-  	real(dp), dimension(:,:,:), pointer :: xz => null()
-  	real(dp), dimension(:,:,:), pointer :: yz => null()
-  	real(dp), dimension(:,:,:), pointer :: xx => null()
-  	real(dp), dimension(:,:,:), pointer :: yy => null()
-  	real(dp), dimension(:,:,:), pointer :: xy => null()
+  type glide_tensor
+    real(dp), dimension(:,:,:), pointer :: scalar => null()
+    real(dp), dimension(:,:,:), pointer :: xz => null()
+    real(dp), dimension(:,:,:), pointer :: yz => null()
+    real(dp), dimension(:,:,:), pointer :: xx => null()
+    real(dp), dimension(:,:,:), pointer :: yy => null()
+    real(dp), dimension(:,:,:), pointer :: xy => null()
   end type glide_tensor
   
   type glide_velocity_hom

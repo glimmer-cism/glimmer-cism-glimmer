@@ -153,6 +153,11 @@ contains
     end do
   end subroutine glide_set_mask
 
+    subroutine fix_kinematicbc(mask, kinematic_bc)
+        integer, dimension(:,:), intent(inout) :: mask
+        real(dp), dimension(:,:), intent(in) :: kinematic_bc
+    end subroutine
+
     subroutine glide_marine_margin_normal(thck, mask, marine_bc_normal)
         use glimmer_physcon, only:pi
         implicit none

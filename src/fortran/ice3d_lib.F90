@@ -41,6 +41,7 @@ module ice3d_lib
     use glimmer_sparse
     use glimmer_log
     use xls
+    use glide_nonlin
     implicit none
     real(dp) :: small, zip, toler_adjust_factor
     PARAMETER(SMALL=1.D-10,ZIP=1.D-30)
@@ -623,12 +624,12 @@ contains
 
 #ifdef OUTPUT_PARTIAL_ITERATIONS
             call iteration_debug_step(ncid_debug, l, mu, ustar, vstar, geometry_mask)
-            call iteration_debug_write_vel_derivs(ncid_debug, l, dudx, dudy, dvdx, dvdy)
+            call iterdebug_vel_derivs(ncid_debug, l, dudx, dudy, dvdx, dvdy)
 #endif
 
             !Apply unstable manifold correction.  This function returns
             !true if we need to keep iterating, false if we reached convergence
-            cont = unstable_manifold_correction_hov(ustar, uvel, &
+            cont = umc_correct_vels(ustar, uvel, &
                                                 vstar, vvel, correction_vec, &
                                                 maxy, maxx, nzeta, error, &
                                                 tot, teta)    
@@ -668,16 +669,21 @@ contains
 
             types = 1
 
-            where(.not. IS_NAN(kinematic_bc))
-                types = 2
-            endwhere
-
             where(point_mask == 0)
                 types = 0
             endwhere
 
+            where(.not. IS_NAN(kinematic_bc))
+                types = 2
+            endwhere
+
             where(GLIDE_IS_CALVING(geometry_mask))
                 types = 4
+            endwhere
+            
+            where(GLIDE_IS_CALVING(geometry_mask) &
+            .and. .not. IS_NAN(kinematic_bc))
+                types = 6
             endwhere
 
             call write_xls_int("computation_types.txt", types)
@@ -689,13 +695,12 @@ contains
 ! !IROUTINE: unstable_manifold_correction
 !
 ! !INTERFACE:
-    function unstable_manifold_correction_hov(u_new, u_old, &
+    function umc_correct_vels(u_new, u_old, &
                                           v_new, v_old, vec_correction, &
                                           maxy, maxx, nzeta, toler, &
                                           tot_out, theta_out)
-        use glide_nonlin
-! !RETURN VALUE:
-        logical :: unstable_manifold_correction_hov !whether another iteration step is needed
+        ! !RETURN VALUE:
+        logical :: umc_correct_vels !whether another iteration step is needed
  
 ! !PARAMETERS:
         real(dp), dimension(:,:,:), intent(in) :: u_new  !Computed u component from this iteration
@@ -720,14 +725,14 @@ contains
         call linearize_3d(vec_old, linearize_idx, v_old)
 
 
-        unstable_manifold_correction_hov = unstable_manifold_correction(vec_new, &
+        umc_correct_vels = unstable_manifold_correction(vec_new, &
                 vec_old, vec_correction, maxy*maxx*nzeta*2, toler, tot_out, theta_out)
 
         linearize_idx = 1
         call delinearize_3d(vec_old, linearize_idx, u_old)
         call delinearize_3d(vec_old, linearize_idx, v_old)
         
-    end function unstable_manifold_correction_hov
+    end function umc_correct_vels
 
 
     !Reduces a 3d higher order velocity estimate to a 2d velocity field.
@@ -818,12 +823,15 @@ contains
         !propegate.
         uvel_test = uvel
         vvel_test = vvel
+
+#if 0
         do k=1,size(uvel,3)
             where(.not. GLIDE_HAS_ICE(geometry_mask))
                 uvel_test(:,:,k) = NaN
                 vvel_test(:,:,k) = NaN
             endwhere
         end do
+#endif
 
         !TODO: Implement option for upstream differencing
         if (UPSTREAM) then
@@ -1576,6 +1584,8 @@ contains
                 - dperp_dxz * d2fdyz_3d(vel_perp,i,j,k,dx,dz)&
                 - dperp_dyz * d2fdxz_3d(vel_perp,i,j,k,dy,dz)&
                 - dperp_dz2 * d2fdz2_3d_irregular(vel_perp,i,j,k,dz)
+        
+            point_type = "interior"
         end if
 
 #ifdef OUTPUT_SPARSE_MATRIX
@@ -2290,7 +2300,7 @@ subroutine iteration_debug_step(ncid, iter, mu, uvel, vvel, geometry_mask)
 
 end subroutine
 
-subroutine iteration_debug_write_vel_derivs(ncid, iter, dudx, dudy, dvdx, dvdy)
+subroutine iterdebug_vel_derivs(ncid, iter, dudx, dudy, dvdx, dvdy)
     use netcdf
     use glimmer_ncdf, only: nc_errorhandle
 

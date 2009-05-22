@@ -1,5 +1,5 @@
-
-#include "glide_mask.inc"       !*sfp* include macros for glide mask definitions
+!*sfp* include macros for glide mask definitions
+#include "glide_mask.inc"       
 
 module glam_strs2
 
