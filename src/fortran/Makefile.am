@@ -7,7 +7,7 @@ RESTART_COMMON=glimmer_restart_common.F90 glimmer_restart_pointarr.F90 \
 
 lib_LIBRARIES = libglide.a libglimmer.a libglint.a libclimate.a
 bin_PROGRAMS  =  simple_glide eis_glide glint_example glex_ebm eismint3_glide \
-                nc2config spin_glide
+                nc2config spin_glide glide_thermal_equib
 check_PROGRAMS = test_config test_setup test_ts test_lithot test_integrate glimmer_unittest
 
 variable_DATA = glide_vars.def eis_vars.def glint_vars.def time_vars.def \
@@ -111,6 +111,9 @@ test_integrate_SOURCES = test_integrate.F90 glimmer_global.F90 \
 
 glimmer_unittest_SOURCES = unittest.F90 unittest_glide_deriv.F90 unittest_ice3d_lib.F90
 glimmer_unittest_LDADD = libglide.a libglimmer.a SLAP_library/libslap.a
+
+glide_thermal_equib_SOURCES = thermal_equib.F90
+glide_thermal_equib_LDADD = libclimate.a libglide.a libglimmer.a SLAP_library/libslap.a
 
 ALL_SRC=$(test_integrage_SOURCES) $(test_lithot_SOURCES) $(test_ts_SOURCES) $(test_setup_SOURCES) \
         $(test_config_SOURCES) $(nc2config_SOURCES) $(glex_ebm_SOURCES) $(glint_example_SOURCES) \
