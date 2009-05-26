@@ -428,21 +428,20 @@ contains
 
         !Contains NaN everywhere except where a kinematic boundary is to be
         !applied, in which case contains the value at the boundary
-        real(dp), dimension(:,:,:), intent(in) :: kinematic_bc_u, kinematic_bc_v
+        real(dp), dimension(:,:,:), intent(inout) :: kinematic_bc_u, kinematic_bc_v
         
         !Contains NaN everywhere except on the marine ice edge of an ice shelf,
         !where this should contain the angle of the normal to the marine edge,
         !in radians, with 0=12 o'clock, pi/2=3 o'clock, etc.
         real(dp), dimension(:,:), intent(in)   :: marine_bc_normal
 
-        INTEGER l,lacc,m,maxiter,iter,DU1,DU2,DV1,DV2,ijktot
+        INTEGER l,lacc,m,maxiter,iter,DU1,DU2,DV1,DV2,ijktot,k
         real(dp) :: error,tot,teta
 
         logical :: periodic_x, periodic_y
         PARAMETER (DU1=1,DU2=2,DV1=3,DV2=4)
 
         real(dp), dimension(4,size(mu,1)*size(mu,2)*size(mu,3)) :: em
-
 
         real(dp), dimension(2*size(mu,1)*size(mu,2)*size(mu,3)) :: correction_vec
         !Velocity estimates computed for the *current* iteration.  uvel and
@@ -536,8 +535,17 @@ contains
         !Force a radially symmetric initial guess
         !call fill_radial_symmetry(uvel, 1000.0_dp, 1)
         !call fill_radial_symmetry(vvel, 1000.0_dp, 2)
-       
-        call comp_type(kinematic_bc_u(:,:,1), geometry_mask, point_mask)
+        
+        call comp_type(kinematic_bc_u(:,:,1), geometry_mask, point_mask, "comp_type_before.txt")
+        call mask_out_edges(geometry_mask, point_mask, kinematic_bc_u, kinematic_bc_v)
+        do k=1,nzeta
+            where (h > 0 .and. point_mask == 0)
+                kinematic_bc_u(:,:,k) = 0
+                kinematic_bc_v(:,:,k) = 0
+            endwhere
+        end do
+        call comp_type(kinematic_bc_u(:,:,1), geometry_mask, point_mask, "comp_type_after.txt")
+
 #ifdef OUTPUT_PARTIAL_ITERATIONS        
         ncid_debug = begin_iteration_debug(maxx, maxy, nzeta)
         call iteration_debug_step(ncid_debug, 0, mu, uvel, vvel, geometry_mask)
@@ -661,9 +669,10 @@ contains
       return
       END subroutine
 
-      subroutine comp_type(kinematic_bc, geometry_mask, point_mask)
+      subroutine comp_type(kinematic_bc, geometry_mask, point_mask, outfilename)
             real(dp), dimension(:,:) :: kinematic_bc
             integer,  dimension(:,:) :: geometry_mask, point_mask
+            character(*) outfilename
 
             integer, dimension(size(kinematic_bc,1), size(kinematic_bc,2)) :: types
 
@@ -686,7 +695,7 @@ contains
                 types = 6
             endwhere
 
-            call write_xls_int("computation_types.txt", types)
+            call write_xls_int(outfilename, types)
       end subroutine
   
 !----------------------------------------------------------------------------------------
@@ -2391,6 +2400,76 @@ subroutine open_sparse_output(iteration, iunit)
     write(istring, '(i2)') iteration
     write(filename,*) "sparse"//istring//".txt"
     open(unit=iunit, file=filename)
+end subroutine
+
+!Detects locations that are surrounded entirely by 
+subroutine mask_out_edges(geometry_mask, point_mask, uvelbc, vvelbc)
+    integer, dimension(:,:), intent(in) :: geometry_mask
+    integer, dimension(:,:), intent(in) :: point_mask
+    real(dp), dimension(:,:,:), intent(inout) :: uvelbc, vvelbc
+    
+    logical, dimension(size(uvelbc, 1), size(uvelbc, 2)) :: is_potential_point
+
+    integer :: i, j
+
+    !PASS 1: Look for points that potentially need to be masked out (i.e. surrounded by no ice
+    !or by dirichlet boundary)
+    do i = 2, size(uvelbc, 1)-1
+        do j = 2, size(uvelbc, 1)-1
+            is_potential_point(i,j) = needs_mask(i,j,1)
+        end do
+    end do
+
+    !PASS 2: If a point is surrounded entirely by points that might need to be masked out,
+    !points with no ice, or dirichlet boundary conditions, then set a 0-value dirichlet
+    !condition there as it should not contribute to the solution.
+    do i = 2, size(uvelbc, 1)-1
+        do j = 2, size(uvelbc, 1)-1
+            if (needs_mask(i,j,2)) then
+                uvelbc(i,j,:) = 0
+                vvelbc(i,j,:) = 0
+            end if
+        end do
+    end do
+contains
+    function needs_mask(i,j,pass)
+        integer, intent(in) :: i, j
+        integer, intent(in) :: pass
+
+        integer :: i2, j2
+        
+        integer, dimension(-1:1, -1:1) :: local
+
+        logical :: needs_mask
+
+        local = 0
+        do i2 = -1, 1
+            do j2 = -1, 1
+                if (i2 /= 0 .and. j2 /= 0) then
+                    if (.not. IS_NAN(uvelbc(i+i2, j+j2,1))) then
+                        local(i2, j2) = 1
+                    end if
+
+                    if (point_mask(i+i2, j+j2) == 0) then
+                        local(i2, j2) = 1
+                    end if
+                end if
+
+                if (pass == 2 .and. is_potential_point(i+i2, j+j2)) then
+                    local(i2, j2) = 1
+                end if
+            end do
+        end do
+
+        needs_mask = .false.
+        if (pass == 1 .and. sum(local) > 0) then
+            needs_mask = .true.
+        end if
+
+        if (pass == 2 .and. sum(local) == 9) then
+            needs_mask = .true.
+        end if
+    end function
 end subroutine
 
 !
