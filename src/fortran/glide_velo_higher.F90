@@ -179,14 +179,14 @@ contains
         real(dp), intent(in) :: dns
         real(dp), dimension(:), intent(in) :: sigma !*FD Sigma coord for rescaled Z dimension
         real(dp), dimension(:,:), intent(in) :: thck !*FD Thickness, on staggered grid
-	real(dp), dimension(:,:), intent(in) :: usrf !*FD Upper surface profile
+        real(dp), dimension(:,:), intent(in) :: usrf !*FD Upper surface profile
         real(dp), dimension(:,:), intent(in) :: lsrf !*FD Lower surface profile
-	real(dp), dimension(:,:), intent(in) :: dthckdew !*FD X thickness gradient
-	real(dp), dimension(:,:), intent(in) :: dthckdns !*FD Y thickness gradient
-	real(dp), dimension(:,:), intent(in) :: dusrfdew !*FD X surface gradient
-	real(dp), dimension(:,:), intent(in) :: dusrfdns !*FD Y surface gradient
-	real(dp), dimension(:,:), intent(in) :: dlsrfdew !*FD X bed gradient
-	real(dp), dimension(:,:), intent(in) :: dlsrfdns !*FD Y bed gradient
+        real(dp), dimension(:,:), intent(in) :: dthckdew !*FD X thickness gradient
+        real(dp), dimension(:,:), intent(in) :: dthckdns !*FD Y thickness gradient
+        real(dp), dimension(:,:), intent(in) :: dusrfdew !*FD X surface gradient
+        real(dp), dimension(:,:), intent(in) :: dusrfdns !*FD Y surface gradient
+        real(dp), dimension(:,:), intent(in) :: dlsrfdew !*FD X bed gradient
+        real(dp), dimension(:,:), intent(in) :: dlsrfdns !*FD Y bed gradient
         real(dp), dimension(:,:), intent(in) :: d2zdx2, d2zdy2, d2hdx2, d2hdy2
         integer,  dimension(:,:), intent(in) :: point_mask     !*FD Numbers points in the staggered grid that are included in computation
         integer, intent(in) :: totpts
@@ -368,17 +368,17 @@ contains
         integer, intent(in)  :: nsn !*FD Number of cells Y
         integer, intent(in)  :: upn !*FD Number of cells Z
         real(dp), intent(in) :: dew !*FD Grid spacing X
-	real(dp), intent(in) :: dns !*FD Grid spacing Y
-	real(dp), dimension(:), intent(in) :: sigma !*FD Sigma coord for rescaled Z dimension
-	real(dp), dimension(:,:), intent(in) :: thck !*FD Thickness, on non-staggered grid
-	real(dp), dimension(:,:), intent(in) :: usrf !*FD Upper surface profile
+        real(dp), intent(in) :: dns !*FD Grid spacing Y
+        real(dp), dimension(:), intent(in) :: sigma !*FD Sigma coord for rescaled Z dimension
+        real(dp), dimension(:,:), intent(in) :: thck !*FD Thickness, on non-staggered grid
+        real(dp), dimension(:,:), intent(in) :: usrf !*FD Upper surface profile
         real(dp), dimension(:,:), intent(in) :: lsrf !*FD Lower surface profile
-	real(dp), dimension(:,:), intent(in) :: dthckdew !*FD X thickness gradient
-	real(dp), dimension(:,:), intent(in) :: dthckdns !*FD Y thickness gradient
-	real(dp), dimension(:,:), intent(in) :: dusrfdew !*FD X surface gradient
-	real(dp), dimension(:,:), intent(in) :: dusrfdns !*FD Y surface gradient
-	real(dp), dimension(:,:), intent(in) :: dlsrfdew !*FD X bed gradient
-	real(dp), dimension(:,:), intent(in) :: dlsrfdns !*FD Y bed gradient
+        real(dp), dimension(:,:), intent(in) :: dthckdew !*FD X thickness gradient
+        real(dp), dimension(:,:), intent(in) :: dthckdns !*FD Y thickness gradient
+        real(dp), dimension(:,:), intent(in) :: dusrfdew !*FD X surface gradient
+        real(dp), dimension(:,:), intent(in) :: dusrfdns !*FD Y surface gradient
+        real(dp), dimension(:,:), intent(in) :: dlsrfdew !*FD X bed gradient
+        real(dp), dimension(:,:), intent(in) :: dlsrfdns !*FD Y bed gradient
         real(dp), dimension(:,:), intent(in) :: d2zdx2, d2zdy2, d2hdx2, d2hdy2
         integer,  dimension(:,:), intent(in) :: point_mask     !*FD Numbers points in the staggered grid that are included in computation
         integer, intent(in) :: totpts
