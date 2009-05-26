@@ -98,14 +98,17 @@ program simple_glide
 
   iter = 0
 
-  allocate(old_temp(model%general%upn, model%general%ewn, model%general%nsn))
+  allocate(old_temp(size(model%temper%temp, 1), size(model%temper%temp, 2), size(model%temper%temp, 3)))
   old_temp = -10
   model%temper%temp = -10 !Begin the temperature iteration as isothermal
 
   !Force a non-diagnostic run!
   model%options%diagnostic_run = 0
 
-  do while(time.le.model%numerics%tend)
+  write(*,*) shape(old_temp)
+  write(*,*) shape(model%temper%temp)
+
+  do while(iter < 100)
      !We want to base temperature calculations off of the higher-order uvel and vvel
      !rather than the SIA uvel and vvel.  I'll hack this in for now by reassigning
      !the pointers in glide_types to trick the module into thinking it's using
@@ -137,8 +140,8 @@ program simple_glide
      
      err = maxval(abs(model%temper%temp - old_temp)/(old_temp + 1e-10))
      old_temp = model%temper%temp
-     if (err < 1e-2) exit
      write(*,*) "TEMPERATURE ITERATION: iter = ", iter, ", err = ", err
+     if (err < 1e-2) exit
      iter = iter + 1
 
      call simple_massbalance(climate,model,time)
