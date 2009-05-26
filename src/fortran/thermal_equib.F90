@@ -66,6 +66,9 @@ program simple_glide
   real(dp), dimension(:,:,:), pointer :: uvel_sia
   real(dp), dimension(:,:,:), pointer :: vvel_sia
   real(dp), dimension(:,:), pointer :: orig_thck
+  real(dp), dimension(:,:,:), pointer :: old_temp
+  real(dp) :: err
+  integer :: iter
 
   write(*,*) 'Enter name of GLIDE configuration file to be read'
   read(*,*) fname
@@ -92,6 +95,15 @@ program simple_glide
   call simple_massbalance(climate,model,time)
   call simple_surftemp(climate,model,time)
   call spinup_lithot(model)
+
+  iter = 0
+
+  allocate(old_temp(model%general%upn, model%general%ewn, model%general%nsn))
+  old_temp = -10
+  model%temper%temp = -10 !Begin the temperature iteration as isothermal
+
+  !Force a non-diagnostic run!
+  model%options%diagnostic_run = 0
 
   do while(time.le.model%numerics%tend)
      !We want to base temperature calculations off of the higher-order uvel and vvel
@@ -122,6 +134,13 @@ program simple_glide
      call glide_tstep_p3(model)
      ! override masking stuff for now
      time = time + model%numerics%tinc
+     
+     err = maxval(abs(model%temper%temp - old_temp)/(old_temp + 1e-10))
+     old_temp = model%temper%temp
+     if (err < 1e-2) exit
+     write(*,*) "TEMPERATURE ITERATION: iter = ", iter, ", err = ", err
+     iter = iter + 1
+
      call simple_massbalance(climate,model,time)
      call simple_surftemp(climate,model,time)     
   end do
