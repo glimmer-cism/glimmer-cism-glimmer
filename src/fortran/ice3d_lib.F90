@@ -49,6 +49,8 @@ module ice3d_lib
 
     real(dp) :: plastic_bed_regularization = 1e-2
 
+    integer, dimension(:,:), allocatable :: pointtype
+
 #ifdef VERY_VERBOSE
     logical, parameter :: sparverbose = .true.
 #else
@@ -468,6 +470,8 @@ contains
 
         call cpu_time(solve_start_time)
 
+        allocate(pointtype(size(mu, 1), size(mu, 2)))
+
         !Get the sizes from the mu field.  Calling code must make sure that
         !these all agree.
         maxy = size(mu,1)
@@ -619,6 +623,7 @@ contains
                 MAXX,NZETA,TOLER, WHICH_SOURCE, delta_x, delta_y, zeta, point_mask, &
                 geometry_mask,matrix, workspace, options, kinematic_bc_u, kinematic_bc_v, &
                 marine_bc_normal,direction_x,direction_y, STAGGERED)
+
 #ifdef OUTPUT_SPARSE_MATRIX
            close(ITER_UNIT)
 #endif
@@ -678,7 +683,7 @@ contains
 
             types = 1
 
-            where(point_mask == 0)
+            where(.not. GLIDE_HAS_ICE(geometry_mask))
                 types = 0
             endwhere
 
@@ -972,6 +977,8 @@ contains
         real(dp), dimension(:,:,:), pointer :: velpara, velperp, velpara_star, kinematic_bc_para
         integer :: whichcomponent
         character(1) :: componentstr
+
+        pointtype = 0
 !
 !-------  velocity u
 !
@@ -1010,8 +1017,7 @@ contains
                         do k=1,NZETA
                             coef = 0
                             stencil_center_idx = csp_masked(I_J_K,i,j,k,point_mask,NZETA) 
-                            if (.not. GLIDE_HAS_ICE( geometry_mask(i,j) ) .or. &
-                                      GLIDE_IS_THIN( geometry_mask(i,j) ) ) then
+                            if (.not. GLIDE_HAS_ICE( geometry_mask(i,j) )) then
                                 !No ice - "pass through"
                                 coef(I_J_K)=1.
                                 !Normally, we use uvel(i,j,k) as our initial guess.
@@ -1019,12 +1025,14 @@ contains
                                 !should be 0, so we'll replace our uvel with that
                                 velpara(i,j,k) = 0
                                 rhs = 0
+                                pointtype(i,j) = 1
                             else if (.not. IS_NAN(kinematic_bc_para(i,j,k))) then
                                 !If a kinematic boundary condition was specified
                                 !for this location, hold the location at the
                                 !specified value.
                                 coef(I_J_K)=1.
                                 rhs = kinematic_bc_para(i,j,k)
+                                pointtype(i,j) = 2
                             else if ((i.eq.1).or.(i.eq.MAXY).or.(j.eq.1).or.(j.eq.MAXX)) then
 
                                 !Boundary condition at the edges of the domain.
@@ -1034,8 +1042,9 @@ contains
                                 !handle it in sparse_setup rather than here.
                                 coef(I_J_K)=1.
                                 rhs=velpara(i,j,k)
+                                pointtype(i,j) = 3
                             else
-
+                                pointtype(i,j) = 4
                                 call sparse_setup(componentstr, i, j, k, mu, dzdx, dzdy, ax, ay, bx, by, cxy, &
                                      h, gridx, gridy, zeta, uvel, vvel, dudx, dudy, dudx, dvdx, dvdy, dvdz, &
                                      dhbdx, dhbdy, beta, geometry_mask, &
@@ -1093,6 +1102,8 @@ contains
             write(*,*)"End Matrix Assembly"
             write(*,*)"Begin Matrix Solve"
 #endif
+
+            call write_xls_int("point_type.txt", pointtype)
             call sparse_solver_preprocess(matrix, options, workspace)        
             ierr = sparse_solve(matrix, d, x, options, workspace,  err, iter, verbose=sparverbose)
             sparuv = sparuv + iter
@@ -1710,6 +1721,8 @@ contains
         upwind_y = .false.
         downwind_x = .false.
         downwind_y = .false.
+
+        pointtype(i,j) = 5
 
         if (component=="u") then
             n_para => n_x
