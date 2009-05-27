@@ -109,7 +109,9 @@ program simple_glide
   allocate(vec_new(vec_size))
   allocate(vec_old(vec_size))
   allocate(vec_correction(vec_size))
-
+  vec_new = 0
+  vec_old = -10
+  vec_correction = 0
   old_temp = -10
   model%temper%temp = -10 !Begin the temperature iteration as isothermal
 
