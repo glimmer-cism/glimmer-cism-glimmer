@@ -155,10 +155,10 @@ program simple_glide
      ! override masking stuff for now
      time = time + model%numerics%tinc
      
-     call linearize_3d(vec_new, 0, model%temper%temp)
+     call linearize_3d(vec_new, 1, model%temper%temp)
      umc_continue = unstable_manifold_correction(vec_new, vec_old, vec_correction, &
                                                  vec_size, 1d-2, err)
-     call delinearize_3d(vec_new, 0, model%temper%temp)
+     call delinearize_3d(vec_new, 1, model%temper%temp)
 
      write(*,*) "TEMPERATURE ITERATION: iter = ", iter, ", err = ", err
      if (err < 1e-2) exit
