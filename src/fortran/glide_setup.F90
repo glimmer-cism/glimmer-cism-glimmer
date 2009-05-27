@@ -429,6 +429,7 @@ contains
     call GetValue(section, 'basal_stress_type',  model%options%which_ho_bstress)
     call GetValue(section, 'guess_specified',    model%velocity_hom%is_velocity_valid)
     call GetValue(section, 'which_ho_source',    model%options%which_ho_source)
+    call GetValue(section, 'include_thin_ice',   model%options%ho_include_thinice)
 !whl - added Price-Payne higher-order (glam) options
     call GetValue(section, 'which_ho_babc',      model%options%which_ho_babc)
     call GetValue(section, 'which_ho_efvs',      model%options%which_ho_efvs)

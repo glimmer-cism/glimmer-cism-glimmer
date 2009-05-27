@@ -324,6 +324,9 @@ module glide_types
     !*FD \item[1] Vertically explicit formulation (pressue dependent on depth)
     !*FD \end{description}
 
+    logical :: ho_include_thinice = .true.
+    !*FD Whether or not to include thin ice in the higher order computation
+
 !end whlmod
 
     logical :: periodic_ew = .false.

@@ -616,7 +616,7 @@ contains
                 MAXX,NZETA,TOLER, options%which_ho_source, delta_x, delta_y, zeta, point_mask, &
                 geometry_mask,matrix, matrix_workspace, matrix_options, &
                 kinematic_bc_u, kinematic_bc_v, &
-                marine_bc_normal,direction_x,direction_y, STAGGERED)
+                marine_bc_normal,direction_x,direction_y, STAGGERED, options%ho_include_thinice)
 
 #ifdef OUTPUT_SPARSE_MATRIX
            close(ITER_UNIT)
@@ -916,7 +916,7 @@ contains
                     ustar,vstar,beta,dhbdx,dhbdy,&
                     IJKTOT,MAXY,MAXX,NZETA,TOLER,WHICH_SOURCE,GRIDX,GRIDY,zeta, point_mask, geometry_mask,&
                     matrix, matrix_workspace, matrix_options, kinematic_bc_u, kinematic_bc_v,latbc_normal, &
-                    direction_x, direction_y, STAGGERED)
+                    direction_x, direction_y, STAGGERED, INCLUDE_THIN)
         INTEGER IJKTOT,MAXY,MAXX,NZETA
         real(dp), dimension(:,:,:), intent(in) :: mu
         real(dp), dimension(:,:), intent(in) :: dzdx
@@ -956,6 +956,7 @@ contains
         
         logical, intent(in)::STAGGERED
         integer, intent(in)::WHICH_SOURCE
+        logical, intent(in)::INCLUDE_THIN
         real(dp) :: rhs
         
         INTEGER i,j,k,m,sparuv,iter, ierr
@@ -1008,7 +1009,9 @@ contains
                         do k=1,NZETA
                             coef = 0
                             stencil_center_idx = csp_masked(I_J_K,i,j,k,point_mask,NZETA) 
-                            if (.not. GLIDE_HAS_ICE( geometry_mask(i,j) )) then
+                            if (.not. GLIDE_HAS_ICE( geometry_mask(i,j) ) .or. &
+                                      GLIDE_IS_THIN( geometry_mask(i,j) ) &
+                                         .and. .not. INCLUDE_THIN) then
                                 !No ice - "pass through"
                                 coef(I_J_K)=1.
                                 !Normally, we use uvel(i,j,k) as our initial guess.
