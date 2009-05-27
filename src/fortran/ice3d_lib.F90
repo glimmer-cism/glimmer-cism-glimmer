@@ -19,7 +19,7 @@
 !#define OUTPUT_SPARSE_MATRIX
 
 !Define to output a NetCDF file of the partial iterations
-#define OUTPUT_PARTIAL_ITERATIONS
+!#define OUTPUT_PARTIAL_ITERATIONS
 
 !If defined, a vertically averaged pressure will be used across the ice front.
 !Otherwise, a vertically explicit pressure will be used.
@@ -534,13 +534,13 @@ contains
         !call fill_radial_symmetry(vvel, 1000.0_dp, 2)
         
         call comp_type(kinematic_bc_u(:,:,1), geometry_mask, point_mask, "comp_type_before.txt")
-        call mask_out_edges(geometry_mask, point_mask, kinematic_bc_u, kinematic_bc_v)
-        do k=1,nzeta
-            where (h > 0 .and. point_mask == 0)
-                kinematic_bc_u(:,:,k) = 0
-                kinematic_bc_v(:,:,k) = 0
-            endwhere
-        end do
+        !call mask_out_edges(geometry_mask, point_mask, kinematic_bc_u, kinematic_bc_v)
+        !do k=1,nzeta
+        !    where (h > 0 .and. point_mask == 0)
+        !        kinematic_bc_u(:,:,k) = 0
+        !        kinematic_bc_v(:,:,k) = 0
+        !    endwhere
+        !end do
         call comp_type(kinematic_bc_u(:,:,1), geometry_mask, point_mask, "comp_type_after.txt")
 
 #ifdef OUTPUT_PARTIAL_ITERATIONS        
@@ -660,7 +660,7 @@ contains
       call del_sparse_matrix(matrix) 
 
       call cpu_time(solve_end_time)
-
+      deallocate(pointtype)
       write(*,*) "Pattyn higher-order solve took",solve_end_time - solve_start_time
       return
       END subroutine
@@ -1079,7 +1079,7 @@ contains
                                                 write(*,*) "h for stencil center and bad point:",h(i,j),h(si,sj)
                                                 write(*,*) "Mask for stencil center and bad point:",&
                                                            geometry_mask(i,j), geometry_mask(si,sj)
-                                                stop
+                                                write(*,*) "Coefficient:", coef(m)
                                             end if
                                             call sparse_insert_val(matrix, &
                                                     stencil_center_idx, &

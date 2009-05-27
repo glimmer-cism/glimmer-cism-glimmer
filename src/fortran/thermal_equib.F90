@@ -73,7 +73,7 @@ program simple_glide
 
   ! For unstable manifold correction
   real(dp), dimension(:), pointer :: vec_new, vec_old, vec_correction
-  integer :: vec_size
+  integer :: vec_size, lin_start
   logical :: umc_continue
 
   write(*,*) 'Enter name of GLIDE configuration file to be read'
@@ -154,11 +154,14 @@ program simple_glide
       
      ! override masking stuff for now
      time = time + model%numerics%tinc
-     
-     call linearize_3d(vec_new, 1, model%temper%temp)
+    
+     lin_start = 1
+     call linearize_3d(vec_new, lin_start, model%temper%temp)
      umc_continue = unstable_manifold_correction(vec_new, vec_old, vec_correction, &
                                                  vec_size, 1d-2, err)
-     call delinearize_3d(vec_new, 1, model%temper%temp)
+
+     lin_start = 1
+     call delinearize_3d(vec_new, lin_start, model%temper%temp)
 
      write(*,*) "TEMPERATURE ITERATION: iter = ", iter, ", err = ", err
      if (err < 1e-2) exit
