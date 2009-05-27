@@ -55,6 +55,7 @@ program simple_glide
   use simple_forcing
   use glimmer_log
   use glimmer_config
+  use glide_nonlin
   implicit none
 
   type(glide_global_type) :: model        ! model instance
@@ -69,6 +70,11 @@ program simple_glide
   real(dp), dimension(:,:,:), pointer :: old_temp
   real(dp) :: err
   integer :: iter
+
+  ! For unstable manifold correction
+  real(dp), dimension(:), pointer :: vec_new, vec_old, vec_correction
+  integer :: vec_size
+  logical :: umc_continue
 
   write(*,*) 'Enter name of GLIDE configuration file to be read'
   read(*,*) fname
@@ -99,6 +105,11 @@ program simple_glide
   iter = 0
 
   allocate(old_temp(size(model%temper%temp, 1), size(model%temper%temp, 2), size(model%temper%temp, 3)))
+  vec_size = size(model%temper%temp, 1)*size(model%temper%temp, 2)*size(model%temper%temp,3)
+  allocate(vec_new(vec_size))
+  allocate(vec_old(vec_size))
+  allocate(vec_correction(vec_size))
+
   old_temp = -10
   model%temper%temp = -10 !Begin the temperature iteration as isothermal
 
@@ -142,8 +153,11 @@ program simple_glide
      ! override masking stuff for now
      time = time + model%numerics%tinc
      
-     err = maxval(abs(model%temper%temp - old_temp)/(old_temp + 1e-10))
-     old_temp = model%temper%temp
+     call linearize_3d(vec_new, 0, model%temper%temp)
+     umc_continue = unstable_manifold_correction(vec_new, vec_old, vec_correction, &
+                                                 vec_size, 1d-2, err)
+     call delinearize_3d(vec_new, 0, model%temper%temp)
+
      write(*,*) "TEMPERATURE ITERATION: iter = ", iter, ", err = ", err
      if (err < 1e-2) exit
      iter = iter + 1
