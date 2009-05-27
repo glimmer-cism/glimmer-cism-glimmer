@@ -107,8 +107,17 @@ program simple_glide
 
   write(*,*) shape(old_temp)
   write(*,*) shape(model%temper%temp)
+  
+  call glide_tstep_p1(model,time)
 
   do while(iter < 100)
+     !Because this is not a "normal" simulation and is instead meant to
+     !equilibriate temperatures, I will run thickness first then temperature,
+     !and completely ignore isostasy.  This is backwards from what is normally
+     !done.
+     call glide_tstep_p2(model)
+     call reset_thck(model, orig_thck) 
+     
      !We want to base temperature calculations off of the higher-order uvel and vvel
      !rather than the SIA uvel and vvel.  I'll hack this in for now by reassigning
      !the pointers in glide_types to trick the module into thinking it's using
@@ -129,12 +138,7 @@ program simple_glide
      !Put the pointers back the way they were
      model%velocity%uvel => uvel_sia
      model%velocity%vvel => vvel_sia
-     
-     call glide_tstep_p2(model)
-     call reset_thck(model, orig_thck) 
-     !We need to 
-     
-     call glide_tstep_p3(model)
+      
      ! override masking stuff for now
      time = time + model%numerics%tinc
      
