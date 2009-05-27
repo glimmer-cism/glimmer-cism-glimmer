@@ -521,9 +521,10 @@ contains
          'max value               ', &
          'max value ignoring ubas ', &
          'mean value              ' /)
-    character(len=*), dimension(0:1), parameter :: ho_whichsource = (/ &
+    character(len=*), dimension(0:2), parameter :: ho_whichsource = (/ &
          'vertically averaged     ', &
-         'vertically explicit     ' /)
+         'vertically explicit     ', &
+         'shelf front disabled    '/)
     character(len=*), dimension(0:2), parameter :: ho_whichsparse = (/ &
          'BiCG with LU precondition  ', &
          'GMRES with LU precondition ', &

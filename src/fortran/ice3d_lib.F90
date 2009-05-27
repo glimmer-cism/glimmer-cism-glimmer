@@ -28,8 +28,6 @@
 !The maximum number of iterations to use in the unstable manifold loop
 #define NUMBER_OF_ITERATIONS 1000
 
-!#define DISABLE_SHELF_FRONT
-
 !#define VERY_VERBOSE
 
 module ice3d_lib
@@ -1435,15 +1433,14 @@ contains
         else
             write(*,*)"FATAL ERROR: sparse_setup called with invalid component"
         end if
-#ifndef DISABLE_SHELF_FRONT
-        if (GLIDE_IS_CALVING(geometry_mask(i,j))) then !Marine margin dynamic (Neumann) boundary condition
+        
+        if (GLIDE_IS_CALVING(geometry_mask(i,j)) .and. &
+            WHICH_SOURCE /= HO_SOURCE_DISABLED) then !Marine margin dynamic (Neumann) boundary condition
             call sparse_marine_margin(component,i,j,k,h,latbc_normal, vel_perp, mu, dx, dy, ax, ay, dz,coef, rhs, &
                                       dudx_field,dudy_field,dudz_field,dvdx_field,dvdy_field,dvdz_field,&
                                       direction_x, direction_y, geometry_mask, STAGGERED, WHICH_SOURCE)
             point_type = "lateral"
-        else &
-#endif        
-        if (k.eq.1) then !Upper boundary condition (stress-free surface)
+        else if (k.eq.1) then !Upper boundary condition (stress-free surface)
             point_type = "surface"
             !Finite difference coefficients for an irregular Z grid, downwinded
             dz_down1=(2.*dz(k)-dz(k+1)-dz(k+2))/(dz(k+1)-dz(k))/(dz(k+2)-dz(k))

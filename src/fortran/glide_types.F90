@@ -139,6 +139,7 @@ module glide_types
 
   integer, parameter :: HO_SOURCE_AVERAGED = 0
   integer, parameter :: HO_SOURCE_EXPLICIT = 1
+  integer, parameter :: HO_SOURCE_DISABLED = 2
     !*FD Flag that indicates how effective viscosity is computed
     !*FD \begin{description}
     !*FD \item[0] compute from effective strain rate
