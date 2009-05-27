@@ -320,7 +320,7 @@ contains
                model%climate% acab)
        end select
        ! apply periodic ew BC
-       if (model%options%periodic_ew.eq.1) then
+       if (model%options%periodic_ew) then
           call wvel_ew(model)
        end if
 
@@ -458,7 +458,7 @@ contains
        end do
 
        ! apply periodic ew BC
-       if (model%options%periodic_ew.eq.1) then
+       if (model%options%periodic_ew) then
           model%temper%temp(:,0,:) = model%temper%temp(:,model%general%ewn-2,:)
           model%temper%temp(:,1,:) = model%temper%temp(:,model%general%ewn-1,:)
           model%temper%temp(:,model%general%ewn,:) = model%temper%temp(:,2,:)
@@ -897,7 +897,7 @@ contains
     end do
 
     ! apply periodic BC
-    if (model%options%periodic_ew.eq.1) then
+    if (model%options%periodic_ew) then
        do ns = 2,model%general%nsn-1
           bmlt(1,ns) = bmlt(model%general%ewn-1,ns)
           bmlt(model%general%ewn,ns) = bmlt(2,ns)

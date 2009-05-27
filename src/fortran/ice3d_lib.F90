@@ -386,8 +386,7 @@ contains
     SUBROUTINE veloc2(mu,uvel,vvel,arrh,dzdx,dzdy,h,ax,ay,&
                 zeta,bx,by,cxy,beta,&
                 dhbdx,dhbdy,FLOWN,ZIP,VEL2ERR,&
-                MANIFOLD,TOLER,PERIODIC_X, PERIODIC_Y, PLASTIC, WHICH_MU, WHICH_SOURCE, &
-                WHICH_SPARSE, STAGGERED, delta_x, delta_y, &
+                MANIFOLD,TOLER, options, STAGGERED, delta_x, delta_y, &
                 point_mask, active_points, geometry_mask, kinematic_bc_u, kinematic_bc_v, &
                 marine_bc_normal)
                 
@@ -410,14 +409,11 @@ contains
         real(dp), dimension(:,:), intent(in) :: dhbdx
         real(dp), dimension(:,:), intent(in) :: dhbdy
         real(dp), dimension(:,:), intent(in) :: beta
+        type(glide_options), intent(in) :: options 
         real(dp), intent(in) :: FLOWN,ZIP,VEL2ERR,TOLER,delta_x, delta_y
         logical, intent(in) :: STAGGERED !Whether the model is run on a staggered grid or a colocated grid.
                                          !This is passed so that corrections arising from averaging can be made.
         
-        integer, intent(in) :: WHICH_MU
-        integer, intent(in) :: WHICH_SOURCE
-        integer, intent(in) :: WHICH_SPARSE
-
         integer, dimension(:,:), intent(in) :: point_mask 
         !*FD Contains a unique nonzero number on each point of ice that should be computed or that is
         !*FD ajdacent to a point that should be computed. Other numbers contain
@@ -438,7 +434,6 @@ contains
         INTEGER l,lacc,m,maxiter,iter,DU1,DU2,DV1,DV2,ijktot,k
         real(dp) :: error,tot,teta
 
-        logical :: periodic_x, periodic_y
         PARAMETER (DU1=1,DU2=2,DV1=3,DV2=4)
 
         real(dp), dimension(4,size(mu,1)*size(mu,2)*size(mu,3)) :: em
@@ -457,8 +452,8 @@ contains
         logical :: cont
 
         type(sparse_matrix_type) :: matrix
-        type(sparse_solver_workspace) :: workspace
-        type(sparse_solver_options) :: options
+        type(sparse_solver_workspace) :: matrix_workspace
+        type(sparse_solver_options) :: matrix_options
 
 #ifdef OUTPUT_PARTIAL_ITERATIONS 
         integer :: ncid_debug
@@ -485,11 +480,11 @@ contains
         correction_vec = 0
         tot = 0
         !Set up sparse matrix options
-        call sparse_solver_default_options(WHICH_SPARSE, options)
-        options%base%tolerance=TOLER
-        options%base%maxiters  = 100000
+        call sparse_solver_default_options(options%which_ho_sparse, matrix_options)
+        matrix_options%base%tolerance=TOLER
+        matrix_options%base%maxiters  = 100000
         
-        if (WHICH_MU == 1) then
+        if (options%which_ho_efvs == 1) then
             write(*,*) "Using linear rheology"
         else
             write(*,*) "Using full stress calculation"
@@ -497,7 +492,7 @@ contains
 
         !Create the sparse matrix
         call new_sparse_matrix(ijktot, ijktot*STENCIL_SIZE, matrix)
-        call sparse_allocate_workspace(matrix, options, workspace, ijktot*STENCIL_SIZE)
+        call sparse_allocate_workspace(matrix, matrix_options, matrix_workspace, ijktot*STENCIL_SIZE)
 
 #if 1
         call write_xls_3d("arrh.txt",arrh)
@@ -530,8 +525,8 @@ contains
         vstar=vvel
 
         !Deal with periodic boundary conditions
-        call periodic_boundaries_3d_stag(uvel,periodic_x,periodic_y)
-        call periodic_boundaries_3d_stag(vvel,periodic_x,periodic_y)
+        call periodic_boundaries_3d_stag(uvel,options%periodic_ew,options%periodic_ns)
+        call periodic_boundaries_3d_stag(vvel,options%periodic_ew,options%periodic_ns)
         !Compute basal traction
 
         !Force a radially symmetric initial guess
@@ -593,19 +588,19 @@ contains
             call write_xls_3d("dvdz.txt",dvdz)
 #endif
             !Compute viscosity
-            if (WHICH_MU == HO_EFVS_FULL) then
+            if (options%which_ho_efvs == HO_EFVS_FULL) then
                 if (tot < recompute_mu_toler) then
                     call muterm(mu,arrh,h,ax,ay,FLOWN,ZIP,dudx, dudy, dudz, dvdx, dvdy, dvdz)
                     recompute_mu_toler = recompute_mu_toler / recompute_mu_adjust
                     recompute_mu_toler = max(recompute_mu_toler, error*2)
                 end if
-            else if (WHICH_MU == HO_EFVS_CONSTANT) then
+            else if (options%which_ho_efvs == HO_EFVS_CONSTANT) then
                 mu = 1d6
             end if
 
             call write_xls_3d("mu.txt",mu)
             !Apply periodic boundary conditions to the viscosity
-            call periodic_boundaries_3d_stag(mu,periodic_x,periodic_y)
+            call periodic_boundaries_3d_stag(mu,options%periodic_ew,options%periodic_ns)
             !call write_xls_3d("mu.txt",mu)
             
             !Sparse matrix routine for determining velocities.  The new
@@ -618,8 +613,9 @@ contains
             iter=sparuv(mu,dzdx,dzdy,ax,ay,bx,by,cxy,h,&
                 uvel,vvel,dudx,dudy,dudz,dvdx,dvdy,dvdz,&
                 ustar,vstar,tau,dhbdx,dhbdy,ijktot,MAXY,&
-                MAXX,NZETA,TOLER, WHICH_SOURCE, delta_x, delta_y, zeta, point_mask, &
-                geometry_mask,matrix, workspace, options, kinematic_bc_u, kinematic_bc_v, &
+                MAXX,NZETA,TOLER, options%which_ho_source, delta_x, delta_y, zeta, point_mask, &
+                geometry_mask,matrix, matrix_workspace, matrix_options, &
+                kinematic_bc_u, kinematic_bc_v, &
                 marine_bc_normal,direction_x,direction_y, STAGGERED)
 
 #ifdef OUTPUT_SPARSE_MATRIX
@@ -627,11 +623,8 @@ contains
 #endif
 
             !Apply periodic boundary conditions to the computed velocity
-            call periodic_boundaries_3d_stag(ustar,periodic_x,periodic_y)
-            call periodic_boundaries_3d_stag(vstar,periodic_x,periodic_y)
-            !call enforce_plug_flow(ustar, vstar, geometry_mask)
-
-            !call artificial_diffuse_latbc(ustar, vstar, geometry_mask)
+            call periodic_boundaries_3d_stag(ustar,options%periodic_ew,options%periodic_ns)
+            call periodic_boundaries_3d_stag(vstar,options%periodic_ew,options%periodic_ns)
 
 #ifdef OUTPUT_PARTIAL_ITERATIONS
             call iteration_debug_step(ncid_debug, l, mu, ustar, vstar, geometry_mask)
@@ -663,7 +656,7 @@ contains
       call write_xls("uvel_surf.txt",uvel(:,:,1))
       call write_xls("vvel_surf.txt",vvel(:,:,1))
 #endif
-      call sparse_destroy_workspace(matrix, options, workspace)
+      call sparse_destroy_workspace(matrix, matrix_options, matrix_workspace)
       call del_sparse_matrix(matrix) 
 
       call cpu_time(solve_end_time)
@@ -922,7 +915,7 @@ contains
     function sparuv(mu,dzdx,dzdy,ax,ay,bx,by,cxy,h,uvel,vvel,dudx,dudy,dudz,dvdx,dvdy,dvdz,&
                     ustar,vstar,beta,dhbdx,dhbdy,&
                     IJKTOT,MAXY,MAXX,NZETA,TOLER,WHICH_SOURCE,GRIDX,GRIDY,zeta, point_mask, geometry_mask,&
-                    matrix, workspace, options, kinematic_bc_u, kinematic_bc_v,latbc_normal, &
+                    matrix, matrix_workspace, matrix_options, kinematic_bc_u, kinematic_bc_v,latbc_normal, &
                     direction_x, direction_y, STAGGERED)
         INTEGER IJKTOT,MAXY,MAXX,NZETA
         real(dp), dimension(:,:,:), intent(in) :: mu
@@ -957,8 +950,8 @@ contains
         !Sparse matrix variables.  These are passed in so that allocation can be
         !done once per velocity solve instead of once per iteration
         type(sparse_matrix_type), intent(inout) :: matrix
-        type(sparse_solver_workspace), intent(inout) :: workspace
-        type(sparse_solver_options), intent(inout) :: options
+        type(sparse_solver_workspace), intent(inout) :: matrix_workspace
+        type(sparse_solver_options), intent(inout) :: matrix_options
 
         
         logical, intent(in)::STAGGERED
@@ -1102,12 +1095,12 @@ contains
 #endif
 
             call write_xls_int("point_type.txt", pointtype)
-            call sparse_solver_preprocess(matrix, options, workspace)        
-            ierr = sparse_solve(matrix, d, x, options, workspace,  err, iter, verbose=sparverbose)
+            call sparse_solver_preprocess(matrix, matrix_options, matrix_workspace)        
+            ierr = sparse_solve(matrix, d, x, matrix_options, matrix_workspace,  err, iter, verbose=sparverbose)
             sparuv = sparuv + iter
         
-            call handle_sparse_error(matrix, options, ierr, __FILE__, __LINE__)      
-            call sparse_solver_postprocess(matrix, options, workspace)
+            call handle_sparse_error(matrix, matrix_options, ierr, __FILE__, __LINE__)      
+            call sparse_solver_postprocess(matrix, matrix_options, matrix_workspace)
 #ifdef VERY_VERBOSE
             write(*,*)"End Matrix Solve"
 #endif

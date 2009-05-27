@@ -393,7 +393,7 @@ contains
     end do
 
     !left and right BC
-    if (model%options%periodic_ew.eq.1) then
+    if (model%options%periodic_ew) then
        do ns=2,model%general%nsn-1
           ew = 1
           if (model%geometry%mask(ew,ns) /= 0) then

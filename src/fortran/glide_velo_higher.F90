@@ -118,12 +118,7 @@ contains
                                  model%velocity_hom%velmask, totpts, &
                                  geom_mask_stag, &
                                  model%temper%flwa, real(gn, dp), model%velocity_hom%beta, &
-                                 model%options%which_ho_bstress,&
-                                 model%options%which_ho_efvs, &
-                                 model%options%which_ho_source, &
-                                 model%options%which_ho_sparse, &
-                                 model%options%periodic_ew .eq. 1, &
-                                 model%options%periodic_ns .eq. 1,&
+                                 model%options, &
                                  model%velocity_hom%kinematic_bc_u, model%velocity_hom%kinematic_bc_v, &
                                  latbc_norms_stag,&
                                  model%velocity_hom%uvel, model%velocity_hom%vvel, &
@@ -144,12 +139,7 @@ contains
                                          model%geometry%mask, model%geometry%totpts, &
                                          model%geometry%thkmask, &
                                          model%temper%flwa, real(gn, dp), &
-                                         model%velocity_hom%beta, model%options%which_ho_bstress, &
-                                         model%options%which_ho_efvs, &
-                                         model%options%which_ho_source, &
-                                         model%options%which_ho_sparse, &
-                                         model%options%periodic_ew .eq. 1, &
-                                         model%options%periodic_ns .eq. 1, &
+                                         model%velocity_hom%beta, model%options, &
                                          model%velocity_hom%kinematic_bc_u, model%velocity_hom%kinematic_bc_v, &
                                          model%geometry%marine_bc_normal, &
                                          model%velocity_hom%uvel, model%velocity_hom%vvel, &
@@ -167,8 +157,7 @@ contains
                                dlsrfdew, dlsrfdns, &
                                d2zdx2, d2zdy2, d2hdx2, d2hdy2, &
                                point_mask, totpts, geometry_mask, flwa, flwn, btrc, &
-                               which_sliding_law, which_efvs, which_source, which_sparse, &
-                               periodic_ew, periodic_ns, kinematic_bc_u, kinematic_bc_v, &
+                               options, kinematic_bc_u, kinematic_bc_v, &
                                marine_bc_normal, &
                                uvel, vvel, valid_initial_guess, uflx, vflx, efvs, tau, gdsx, gdsy)
                            
@@ -196,12 +185,7 @@ contains
         real(dp), dimension(:,:,:), intent(in)   :: kinematic_bc_u, kinematic_bc_v
         real(dp), dimension(:,:), intent(in)   :: marine_bc_normal
         real(dp), intent(in) :: flwn !*FD Exponent in Glenn power law
-        integer, intent(in) :: which_sliding_law
-        integer, intent(in) :: which_efvs
-        integer, intent(in) :: which_source
-        integer, intent(in) :: which_sparse
-        logical, intent(in) :: periodic_ew !*Whether to use periodic boundary conditions
-        logical, intent(in) :: periodic_ns
+        type(glide_options), intent(in) :: options
         real(dp), dimension(:,:,:), intent(inout) :: uvel 
         real(dp), dimension(:,:,:), intent(inout) :: vvel
         logical, intent(in) :: valid_initial_guess !*Whether or not the given uvel or vvel are appropriate initial guesses.  If not we'll have to roll our own.
@@ -285,15 +269,14 @@ contains
         !have a good initial guess
         if (.not. valid_initial_guess) then
             call veloc1(dusrfdew_t, dusrfdns_t, stagthck_t, flwa_t_stag, sigma, uvel_t, vvel_t, u, v, nsn-1, ewn-1, upn, &
-                        FLWN, periodic_ew, periodic_ns)
+                        FLWN, options%periodic_ew, options%periodic_ns)
             !If we are performing the plastic bed iteration, the SIA is not
             !enough and we need to spin up a better estimate by shoehorning the
             !tau0 values into a linear bed estimate
-            if (which_sliding_law == 1) then
+            if (options%which_ho_bstress == HO_BSTRESS_PLASTIC) then
                 call veloc2(mu_t, uvel_t, vvel_t, flwa_t_stag, dusrfdew_t, dusrfdns_t, stagthck_t, ax, ay, &
                         sigma, bx, by, cxy, btrc_t/100, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, MANIFOLD,&
-                        TOLER, periodic_ew, periodic_ns, 0, which_efvs, which_source, &
-                        which_sparse, .true., dew, dns,point_mask_t, &
+                        TOLER, options, .true., dew, dns,point_mask_t, &
                         totpts,geometry_mask_t, &
                         kinematic_bc_u_t, kinematic_bc_v_t, marine_bc_normal_t)
             end if
@@ -307,13 +290,12 @@ contains
         !that they normally would.
         call veloc2(mu_t, uvel_t, vvel_t, flwa_t, dusrfdew_t, dusrfdns_t, stagthck_t, ax, ay, &
                     sigma, bx, by, cxy, btrc_t, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, MANIFOLD,&
-                    TOLER, periodic_ew,periodic_ns, which_sliding_law, which_efvs, which_source, &
-                    which_sparse, .true., dew, dns, &
+                    TOLER, options, .true., dew, dns, &
                     point_mask_t,totpts, geometry_mask_t, kinematic_bc_u_t, kinematic_bc_v_t, marine_bc_normal_t)
        
         !Final computation of stress field for output
         call stressf(mu_t, uvel_t, vvel_t, flwa_t, stagthck_t, ax, ay, dew, dns, sigma, & 
-                     tau_xz_t, tau_yz_t, tau_xx_t, tau_yy_t, tau_xy_t, flwn, zip, periodic_ew, periodic_ns) 
+                     tau_xz_t, tau_yz_t, tau_xx_t, tau_yy_t, tau_xy_t, flwn, zip, options%periodic_ew, options%periodic_ns) 
     
         !Transpose from the ice3d coordinate system (y,x,z) to the glimmer
         !coordinate system (z,x,y).  We need to do this for all the 3D outputs
@@ -360,8 +342,7 @@ contains
     subroutine velo_hom_pattyn_nonstag(ewn, nsn, upn, dew, dns, sigma, thck, usrf, lsrf, &
                               dusrfdew, dusrfdns, dthckdew, dthckdns, dlsrfdew, dlsrfdns, &
                               d2zdx2, d2zdy2, d2hdx2, d2hdy2, point_mask, totpts, geometry_mask, &
-                              flwa, flwn, btrc, which_sliding_law, which_efvs, which_source, &
-                              which_sparse, periodic_ew, periodic_ns, kinematic_bc_u, kinematic_bc_v, marine_bc_normal,&
+                              flwa, flwn, btrc, options, kinematic_bc_u, kinematic_bc_v, marine_bc_normal,&
                               uvel, vvel, valid_initial_guess)
                             
         integer, intent(in)  :: ewn !*FD Number of cells X
@@ -388,12 +369,7 @@ contains
         real(dp), dimension(:,:,:), intent(in)   :: kinematic_bc_u, kinematic_bc_v
         real(dp), dimension(:,:), intent(in)   :: marine_bc_normal
         real(dp), intent(in) :: flwn !*FD Exponent in Glenn power law
-        integer, intent(in) :: which_sliding_law
-        integer, intent(in) :: which_efvs
-        integer, intent(in) :: which_source
-        integer, intent(in) :: which_sparse
-        logical, intent(in) :: periodic_ew !*Whether to use periodic boundary conditions
-        logical :: periodic_ns
+        type(glide_options), intent(in) :: options 
         real(dp), dimension(:,:,:), intent(out) :: uvel 
         real(dp), dimension(:,:,:), intent(out) :: vvel
         logical, intent(in) :: valid_initial_guess !*Whether or not the given uvel or vvel are appropriate initial guesses.  If not we'll have to roll our own.
@@ -470,11 +446,11 @@ contains
 
         call glimToIce3d_3d(flwa,flwa_t,ewn,nsn,upn)
       
-        call unstagger_field_3d(vvel_t, uvel_t_unstag, periodic_ew, periodic_ns)
-        call unstagger_field_3d(vvel_t, uvel_t_unstag, periodic_ew, periodic_ns)
+        call unstagger_field_3d(vvel_t, uvel_t_unstag, options%periodic_ew, options%periodic_ns)
+        call unstagger_field_3d(vvel_t, uvel_t_unstag, options%periodic_ew, options%periodic_ns)
        
-        call unstagger_field_3d(kinematic_bc_u_t,kinematic_bc_u_t_unstag, periodic_ew, periodic_ns)
-        call unstagger_field_3d(kinematic_bc_v_t,kinematic_bc_v_t_unstag, periodic_ew, periodic_ns)
+        call unstagger_field_3d(kinematic_bc_u_t,kinematic_bc_u_t_unstag, options%periodic_ew, options%periodic_ns)
+        call unstagger_field_3d(kinematic_bc_v_t,kinematic_bc_v_t_unstag, options%periodic_ew, options%periodic_ns)
         
         !In unstaggering the boundary condition fields, we need to remove points
         !that aren't on the boundary
@@ -489,7 +465,7 @@ contains
         !    end do
         !end do
 
-        call unstagger_field_2d(btrc_t, btrc_t_unstag, periodic_ew, periodic_ns)
+        call unstagger_field_2d(btrc_t, btrc_t_unstag, options%periodic_ew, options%periodic_ns)
 
         !Compute rescaled coordinate parameters (needed because Pattyn uses an
         !irregular Z grid and scales so that 0 is the surface, 1 is the bed)
@@ -501,15 +477,14 @@ contains
         !have a good initial guess
         if (.not. valid_initial_guess) then
             call veloc1(dusrfdew_t, dusrfdns_t, thck_t, flwa_t, sigma, uvel_t_unstag, vvel_t_unstag, u, v, nsn, ewn, upn, &
-                        FLWN, periodic_ew, periodic_ns)
+                        FLWN, options%periodic_ew, options%periodic_ns)
             !If we are performing the plastic bed iteration, the SIA is not
             !enough and we need to spin up a better estimate by shoehorning the
             !tau0 values into a linear bed estimate
-            if (which_sliding_law == 1) then
+            if (options%which_ho_bstress == HO_BSTRESS_PLASTIC) then
                 call veloc2(mu_t, uvel_t, vvel_t, flwa_t, dusrfdew_t, dusrfdns_t, thck_t, ax, ay, &
                         sigma, bx, by, cxy, btrc_t_unstag, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, MANIFOLD,&
-                        TOLER, periodic_ew,periodic_ns, 0, which_efvs, which_source, &
-                        which_sparse, .false., dew, dns,point_mask_t,totpts,geometry_mask_t,&
+                        TOLER, options, .false., dew, dns,point_mask_t,totpts,geometry_mask_t,&
                         kinematic_bc_u_t_unstag, kinematic_bc_v_t_unstag, marine_bc_normal_t)
             end if
         end if
@@ -522,8 +497,7 @@ contains
         !that they normally would.
         call veloc2(mu_t, uvel_t_unstag, vvel_t_unstag, flwa_t, dusrfdew_t, dusrfdns_t, thck_t, ax, ay, &
                     sigma, bx, by, cxy, btrc_t_unstag, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, MANIFOLD,&
-                    TOLER, periodic_ew,periodic_ns, which_sliding_law, which_efvs, which_source, &
-                    which_sparse, .false., dew, dns, &
+                    TOLER, options, .false., dew, dns, &
                     point_mask_t,totpts,geometry_mask_t,kinematic_bc_u_t_unstag, kinematic_bc_v_t_unstag, marine_bc_normal_t)
        
         !Final computation of stress field for output

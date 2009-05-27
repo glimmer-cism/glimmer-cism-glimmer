@@ -571,7 +571,7 @@ contains
     if (model%options%whichrelaxed.eq.1) then
        call write_log('First topo time slice is relaxed')
     end if
-    if (model%options%periodic_ew.eq.1) then
+    if (model%options%periodic_ew) then
        if (model%options%whichevol .eq. EVOL_ADI) then
           call write_log('Periodic boundary conditions not implemented in ADI scheme',GM_FATAL)
        end if

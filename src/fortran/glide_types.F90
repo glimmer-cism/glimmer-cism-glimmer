@@ -326,13 +326,13 @@ module glide_types
 
 !end whlmod
 
-    integer :: periodic_ew = 0
+    logical :: periodic_ew = .false.
     !*FD \begin{description}
     !*FD \item[0] no periodic EW boundary conditions
     !*FD \item[1] periodic EW boundary conditions
     !*FD \end{description}
 
-    integer :: periodic_ns = 0
+    logical :: periodic_ns = .false.
 
     integer :: gthf = 0
     !*FD \begin{description}

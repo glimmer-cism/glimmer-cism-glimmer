@@ -62,7 +62,7 @@ contains
           end do
        end do
        ! apply periodic BC
-       if (model%options%periodic_ew.eq.1) then
+       if (model%options%periodic_ew) then
           do ns = 2,model%general%nsn-1
              call smooth_bwat(model%general%ewn-1,1,2,ns-1,ns,ns+1)
              call smooth_bwat(model%general%ewn-1,model%general%ewn,2,ns-1,ns,ns+1)

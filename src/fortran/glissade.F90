@@ -548,7 +548,7 @@
           !------------------------------------------------------------
           ! Apply periodic ew BC to temperature field 
           !------------------------------------------------------------
-          if (model%options%periodic_ew.eq.1) then 
+          if (model%options%periodic_ew) then 
              model%temper%temp(:,0,:)     = model%temper%temp(:,ewn-2,:)
              model%temper%temp(:,1,:)     = model%temper%temp(:,ewn-1,:)
              model%temper%temp(:,ewn,:)   = model%temper%temp(:,2,:)

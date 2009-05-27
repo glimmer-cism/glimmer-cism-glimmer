@@ -226,7 +226,7 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
   integer, intent(in) :: whichbabc
   integer, intent(in) :: whichefvs
   integer, intent(in) :: whichresid
-  integer, intent(in) :: periodic_ew, periodic_ns
+  logical, intent(in) :: periodic_ew, periodic_ns
 
   real (kind = dp), dimension(:,:,:), intent(out) :: uvel, vvel
   real (kind = dp), dimension(:,:),   intent(out) :: uflx, vflx
@@ -359,11 +359,11 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
 
 ! implement periodic boundary conditions in V (if flagged)
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-    if( periodic_ns .eq. 1 )then
+    if( periodic_ns )then
         tvel(:,1:ewn-1,nsn-1) = tvel(:,1:ewn-1,2)
         tvel(:,1:ewn-2,1) = tvel(:,1:ewn-2,nsn-2)
     end if
-    if( periodic_ew .eq. 1 )then
+    if( periodic_ew )then
         tvel(:,ewn-1,1:nsn-1) = tvel(:,2,1:nsn-1)
         tvel(:,1,1:nsn-1) = tvel(:,ewn-2,1:nsn-1)
     end if
@@ -412,11 +412,11 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
 
 ! implement periodic boundary conditions in U (if flagged)
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-    if( periodic_ns .eq. 1 )then
+    if( periodic_ns )then
         uvel(:,1:ewn-1,nsn-1) = uvel(:,1:ewn-1,2)
         uvel(:,1:ewn-2,1) = uvel(:,1:ewn-2,nsn-2)
     end if
-    if( periodic_ew .eq. 1 )then
+    if( periodic_ew )then
         uvel(:,ewn-1,1:nsn-1) = uvel(:,2,1:nsn-1)
         uvel(:,1,1:nsn-1) = uvel(:,ewn-2,1:nsn-1)
     end if
