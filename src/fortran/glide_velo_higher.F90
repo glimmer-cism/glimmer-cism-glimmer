@@ -3,6 +3,7 @@
 #endif
 
 #include "glide_nan.inc"
+#include "glide_mask.inc"
 
 #define shapedbg(x) write(*,*) "x", shape(x)
 
@@ -275,7 +276,7 @@ contains
             !tau0 values into a linear bed estimate
             if (options%which_ho_bstress == HO_BSTRESS_PLASTIC) then
                 call veloc2(mu_t, uvel_t, vvel_t, flwa_t_stag, dusrfdew_t, dusrfdns_t, stagthck_t, ax, ay, &
-                        sigma, bx, by, cxy, btrc_t/100, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, MANIFOLD,&
+                        sigma, bx, by, cxy, btrc_t/100, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, &
                         TOLER, options, .true., dew, dns,point_mask_t, &
                         totpts,geometry_mask_t, &
                         kinematic_bc_u_t, kinematic_bc_v_t, marine_bc_normal_t)
@@ -289,7 +290,7 @@ contains
         !passes maxy in *first*, so these really get passed in the same order
         !that they normally would.
         call veloc2(mu_t, uvel_t, vvel_t, flwa_t, dusrfdew_t, dusrfdns_t, stagthck_t, ax, ay, &
-                    sigma, bx, by, cxy, btrc_t, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, MANIFOLD,&
+                    sigma, bx, by, cxy, btrc_t, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, &
                     TOLER, options, .true., dew, dns, &
                     point_mask_t,totpts, geometry_mask_t, kinematic_bc_u_t, kinematic_bc_v_t, marine_bc_normal_t)
        
@@ -403,6 +404,8 @@ contains
 
         real(dp), dimension(nsn,ewn) :: marine_bc_normal_t
 
+        integer :: i,j 
+
         !Determine whether to upwind or downwind derivatives at points on the
         !interior of the model domain (this is mainly important for the marine
         !margin
@@ -467,6 +470,22 @@ contains
 
         call unstagger_field_2d(btrc_t, btrc_t_unstag, options%periodic_ew, options%periodic_ns)
 
+
+#if 0
+        do i = 1, nsn
+            do j = 1, ewn
+                if ((i >= 33 .or. j >= 127) .and. &
+                GLIDE_IS_CALVING(geometry_mask_t(i,j))) then
+                    geometry_mask_t(i,j) = 4
+                end if
+            end do
+        end do
+        geometry_mask_t(32, 42) = 4
+        geometry_mask_t(32, 30) = 4
+        geometry_mask_t(32, 13) = 4
+        geometry_mask_t(3, 127) = 132
+#endif
+
         !Compute rescaled coordinate parameters (needed because Pattyn uses an
         !irregular Z grid and scales so that 0 is the surface, 1 is the bed)
         call init_rescaled_coordinates(dthckdew_t,dlsrfdew_t,dthckdns_t,dlsrfdns_t,usrf_t,thck_t,lsrf_t,&
@@ -483,7 +502,7 @@ contains
             !tau0 values into a linear bed estimate
             if (options%which_ho_bstress == HO_BSTRESS_PLASTIC) then
                 call veloc2(mu_t, uvel_t, vvel_t, flwa_t, dusrfdew_t, dusrfdns_t, thck_t, ax, ay, &
-                        sigma, bx, by, cxy, btrc_t_unstag, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, MANIFOLD,&
+                        sigma, bx, by, cxy, btrc_t_unstag, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, &
                         TOLER, options, .false., dew, dns,point_mask_t,totpts,geometry_mask_t,&
                         kinematic_bc_u_t_unstag, kinematic_bc_v_t_unstag, marine_bc_normal_t)
             end if
@@ -496,10 +515,12 @@ contains
         !passes maxy in *first*, so these really get passed in the same order
         !that they normally would.
         call veloc2(mu_t, uvel_t_unstag, vvel_t_unstag, flwa_t, dusrfdew_t, dusrfdns_t, thck_t, ax, ay, &
-                    sigma, bx, by, cxy, btrc_t_unstag, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, MANIFOLD,&
+                    sigma, bx, by, cxy, btrc_t_unstag, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, &
                     TOLER, options, .false., dew, dns, &
                     point_mask_t,totpts,geometry_mask_t,kinematic_bc_u_t_unstag, kinematic_bc_v_t_unstag, marine_bc_normal_t)
-       
+        
+        
+
         !Final computation of stress field for output
         !call stressf(mu_t, uvel_t, vvel_t, flwa_t, stagthck_t, ax, ay, dew, dns, sigma, & 
         !             tau_xz_t, tau_yz_t, tau_xx_t, tau_yy_t, tau_xy_t, flwn, zip, periodic_ew, periodic_ns) 

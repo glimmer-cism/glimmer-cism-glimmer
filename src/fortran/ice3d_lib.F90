@@ -19,7 +19,7 @@
 !#define OUTPUT_SPARSE_MATRIX
 
 !Define to output a NetCDF file of the partial iterations
-!#define OUTPUT_PARTIAL_ITERATIONS
+#define OUTPUT_PARTIAL_ITERATIONS
 
 !If defined, a vertically averaged pressure will be used across the ice front.
 !Otherwise, a vertically explicit pressure will be used.
@@ -156,7 +156,7 @@ contains
         stop
 #endif
 
-#if 1
+#if 0
         call write_xls("h.txt",h)
         call write_xls("hb.txt",hb)
         call write_xls("surf.txt",surf)
@@ -386,7 +386,7 @@ contains
     SUBROUTINE veloc2(mu,uvel,vvel,arrh,dzdx,dzdy,h,ax,ay,&
                 zeta,bx,by,cxy,beta,&
                 dhbdx,dhbdy,FLOWN,ZIP,VEL2ERR,&
-                MANIFOLD,TOLER, options, STAGGERED, delta_x, delta_y, &
+                TOLER, options, STAGGERED, delta_x, delta_y, &
                 point_mask, active_points, geometry_mask, kinematic_bc_u, kinematic_bc_v, &
                 marine_bc_normal)
                 
@@ -471,6 +471,9 @@ contains
         maxx = size(mu,2)
         nzeta = size(mu,3)
         ijktot = active_points*nzeta
+
+        uvel = 0
+        vvel = 0
 
         maxiter=NUMBER_OF_ITERATIONS
         error=VEL2ERR
@@ -579,7 +582,7 @@ contains
                            delta_x, delta_y, zeta, .false., &
                            direction_x, direction_y, &
                            dudx, dudy, dudz, dvdx, dvdy, dvdz)
-#if 1
+#if 0
             call write_xls_3d("dudx.txt",dudx)
             call write_xls_3d("dudy.txt",dudy)
             call write_xls_3d("dudz.txt",dudz)
@@ -1096,7 +1099,6 @@ contains
             write(*,*)"End Matrix Assembly"
             write(*,*)"Begin Matrix Solve"
 #endif
-
             call write_xls_int("point_type.txt", pointtype)
             call sparse_solver_preprocess(matrix, matrix_options, matrix_workspace)        
             ierr = sparse_solve(matrix, d, x, matrix_options, matrix_workspace,  err, iter, verbose=sparverbose)
