@@ -48,6 +48,7 @@ program simple_glide
   !*FD This is a simple GLIDE test driver. It can be used to run
   !*FD the EISMINT test cases
   use glimmer_global, only:rk
+  use glimmer_utils, only : glimmer_ReportNumThreads
   use glide
   use simple_forcing
   use glimmer_log
@@ -68,6 +69,8 @@ program simple_glide
   ! start logging
   call open_log(unit=50, fname=logname(commandline_configname))
   
+  call  glimmer_ReportNumThreads()
+
   ! read configuration
   call ConfigRead(commandline_configname,config)
 

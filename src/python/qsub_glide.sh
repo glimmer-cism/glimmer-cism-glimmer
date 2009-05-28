@@ -2,6 +2,8 @@
 # tell SGE to change into current working directory
 #$-cwd
 
-echo Launching $1 on $HOSTNAME
+export OMP_NUM_THREADS=$NSLOTS
+
+echo Launching $1 on $HOSTNAME using $NSLOTS slots
 
 $*

@@ -38,6 +38,9 @@ FFLAGS=$glimmer_FFLAGS
 AC_LANG(Fortran)
 AC_FC_SRCEXT(f90)
 AX_F90_MODULE_FLAG
+AC_ARG_ENABLE(openmp, AS_HELP_STRING([--enable-openmp],[turn on OpenMP shared memory parallelisation]),
+   [AX_OPENMP([],[AC_MSG_WARN([OpenMP requested, but not found])])],[])
+AC_SUBST(OPENMP_FCFLAGS)
 
 # checking for f2003 command line parser
 AC_MSG_CHECKING([for f2003 command line parser])

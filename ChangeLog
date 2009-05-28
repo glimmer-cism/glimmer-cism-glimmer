@@ -1,3 +1,19 @@
+2009-05-28 Magnus Hagdorn
+ * configure.in: check if we should compile with OpenMP support
+ * m4macros/ax_openmp.m4: add macro to find OpenMP
+ * src/fortran/Makefile.am: add OpenMP flags
+ * src/fortran/eis_glide.F90: report number of threads
+ * src/fortran/eismint3_glide.F90: ditto
+ * src/fortran/glex_ebm.F90: ditto
+ * src/fortran/glint_example.F90: ditto
+ * src/fortran/simple_glide.F90: ditto
+ * src/fortran/glide_temp.F90: parallelise some of the spatial loops
+ * src/fortran/glide_velo.F90: ditto
+ * src/fortran/glimmer_utils.F90: check and report the number of threads. This
+   still needs some fixing
+ * src/python/glide_launch.py: set OpenMP number of threads
+ * src/python/qsub_glide.sh: ditto
+
 2009-05-05 Magnus Hagdorn
  * src/fortran/eis_glide.F90: get elapsed wall clock time
  * src/fortran/eismint3_glide.F90: ditto

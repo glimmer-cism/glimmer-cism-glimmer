@@ -149,6 +149,10 @@ contains
 
     upn=size(flwa,1) ; ewn=size(flwa,2) ; nsn=size(flwa,3)
 
+    !$OMP PARALLEL DEFAULT(NONE) &
+    !$OMP  PRIVATE(ns,ew,up,hrzflwa,intflwa) &
+    !$OMP  SHARED(nsn,ewn,upn,stagthck,flwa,velowk)
+    !$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
     do ns = 1,nsn-1
        do ew = 1,ewn-1
           if (stagthck(ew,ns) /= 0.0d0) then
@@ -169,6 +173,9 @@ contains
           end if
        end do
     end do
+    !$OMP END DO
+    !$OMP END PARALLEL
+  
   end subroutine velo_integrate_flwa
 
   !*****************************************************************************
@@ -229,6 +236,10 @@ contains
 
     upn=size(flwa,1) ; ewn=size(stagthck,1) ; nsn=size(stagthck,2)
     
+    !$OMP PARALLEL DEFAULT(NONE) &
+    !$OMP  PRIVATE(ns,ew,up,hrzflwa,factor,const) &
+    !$OMP  SHARED(nsn,ewn,upn,stagthck,vflx,uflx,diffu,dusrfdns,vbas,dusrfdew,ubas,uvel,vvel,flwa,velowk)
+    !$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
     do ns = 1,nsn
        do ew = 1,ewn
           if (stagthck(ew,ns) /= 0.0d0) then
@@ -266,6 +277,9 @@ contains
           end if
        end do
     end do
+    !$OMP END DO
+    !$OMP END PARALLEL
+
   end subroutine velo_calc_velo
 
   !*****************************************************************************
@@ -409,6 +423,10 @@ contains
     select case(flag)
     case(0)
 
+       !$OMP PARALLEL DEFAULT(NONE) &
+       !$OMP  PRIVATE(ns,ew,up,hrzflwa,const) &
+       !$OMP  SHARED(nsn,ewn,upn,stagthck,uvel,vvel,flwa,dusrfdew,dusrfdns,velowk,diffu,ubas,vbas,uflx,vflx)
+       !$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
       do ns = 1,nsn
         do ew = 1,ewn
 
@@ -462,9 +480,15 @@ contains
 
         end do
       end do
+       !$OMP END DO
+       !$OMP END PARALLEL
 
     case(1)
 
+       !$OMP PARALLEL DEFAULT(NONE) &
+       !$OMP  PRIVATE(ns,ew,up,hrzflwa,intflwa) &
+       !$OMP  SHARED(nsn,ewn,upn,stagthck,velowk,flwa)
+       !$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
       do ns = 1,nsn
         do ew = 1,ewn
           if (stagthck(ew,ns) /= 0.0d0) then
@@ -485,6 +509,8 @@ contains
           end if
         end do
       end do
+       !$OMP END DO
+       !$OMP END PARALLEL
 
     case(2)
 
@@ -496,6 +522,10 @@ contains
 
     case(3)
 
+       !$OMP PARALLEL DEFAULT(NONE) &
+       !$OMP  PRIVATE(ns,ew,up,hrzflwa,const) &
+       !$OMP  SHARED(nsn,ewn,upn,stagthck,velowk,flwa,uflx,vflx,diffu,dusrfdns,dusrfdew,ubas,vbas,uvel,vvel)
+       !$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
       do ns = 1,nsn
         do ew = 1,ewn
           if (stagthck(ew,ns) /= 0.0d0) then
@@ -532,6 +562,8 @@ contains
           end if
         end do
       end do
+       !$OMP END DO
+       !$OMP END PARALLEL
 
     end select
 
@@ -586,6 +618,10 @@ contains
 
     ewn=size(wgrd,2) ; nsn=size(wgrd,3)
 
+    !$OMP PARALLEL DEFAULT(NONE) &
+    !$OMP  PRIVATE(ns,ew) &
+    !$OMP  SHARED(nsn,ewn,thck,thklim,wgrd,geomderv,sigma,uvel,vvel)
+    !$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
     do ns = 2,nsn-1
       do ew = 2,ewn-1
         if (thck(ew,ns) > thklim) then
@@ -601,6 +637,8 @@ contains
         end if
       end do
     end do
+    !$OMP END DO
+    !$OMP END PARALLEL
 
   end subroutine gridwvel
 
@@ -656,6 +694,7 @@ contains
     real(dp),dimension(6) :: cons   ! Holds temporary local values of derivatives
     integer :: ns,ew,up             ! Loop indicies
     integer :: nsn,ewn,upn          ! Domain sizes
+    real(dp), dimension(size(uvel,1)) :: suvel,svvel ! horiz velos on ice grid
 
     !------------------------------------------------------------------------------------
     ! Get some values for the domain size by checking sizes of input arrays
@@ -673,6 +712,10 @@ contains
     ! Main loop over each grid-box
     ! ----------------------------------------------------------------------------------
 
+    !$OMP PARALLEL DEFAULT(NONE) &
+    !$OMP  PRIVATE(ns,ew,cons,suvel,svvel,up) &
+    !$OMP  SHARED(nsn,ewn,upn,thck,numerics,uvel,vvel,wvel,wgrd,bmlt,velowk,dew16,dns16,geomderv)
+    !$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
     do ns = 2,nsn
       do ew = 2,ewn
         if (thck(ew,ns) > numerics%thklim) then
@@ -695,17 +738,17 @@ contains
           !cons(5) = (thck(ew-1,ns)+2.0d0*thck(ew,ns)+thck(ew+1,ns)) * dew16
           !cons(6) = (thck(ew,ns-1)+2.0d0*thck(ew,ns)+thck(ew,ns+1)) * dns16
 
-          velowk%suvel = hsum4(uvel(:,ew-1:ew,ns-1:ns))
-          velowk%svvel = hsum4(vvel(:,ew-1:ew,ns-1:ns))
+          suvel = hsum4(uvel(:,ew-1:ew,ns-1:ns))
+          svvel = hsum4(vvel(:,ew-1:ew,ns-1:ns))
 
           ! Loop over each model level, starting from the bottom ----------------------
 
           do up = upn-1, 1, -1
             wvel(up,ew,ns) = wvel(up+1,ew,ns) &
-                       - velowk%dupsw(up) * cons(5) * (sum(uvel(up:up+1,ew,ns-1:ns))  - sum(uvel(up:up+1,ew-1,ns-1:ns))) &
-                       - velowk%dupsw(up) * cons(6) * (sum(vvel(up:up+1,ew-1:ew,ns))  - sum(vvel(up:up+1,ew-1:ew,ns-1))) &
-                       - (velowk%suvel(up+1) - velowk%suvel(up)) * (cons(1) - velowk%depthw(up) * cons(2)) &
-                       - (velowk%svvel(up+1) - velowk%svvel(up)) * (cons(3) - velowk%depthw(up) * cons(4)) 
+                  - velowk%dupsw(up) * cons(5) * (sum(uvel(up:up+1,ew,ns-1:ns))  - sum(uvel(up:up+1,ew-1,ns-1:ns))) &
+                  - velowk%dupsw(up) * cons(6) * (sum(vvel(up:up+1,ew-1:ew,ns))  - sum(vvel(up:up+1,ew-1:ew,ns-1))) &
+                  - (suvel(up+1) - suvel(up)) * (cons(1) - velowk%depthw(up) * cons(2)) &
+                  - (svvel(up+1) - svvel(up)) * (cons(3) - velowk%depthw(up) * cons(4)) 
           end do
         else 
 
@@ -716,6 +759,9 @@ contains
         end if
       end do
     end do
+    !$OMP END DO
+    !$OMP END PARALLEL
+
 
   end subroutine wvelintg
 
@@ -786,6 +832,10 @@ contains
 
       ! This is the Paterson and Budd relationship
 
+       !$OMP PARALLEL DEFAULT(NONE) &
+       !$OMP  PRIVATE(ns,ew,tempcor) &
+       !$OMP  SHARED(nsn,ewn,thck,numerics,temp,flwa,velowk,fiddle)
+       !$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
       do ns = 1,nsn
         do ew = 1,ewn
           if (thck(ew,ns) > numerics%thklim) then
@@ -803,24 +853,33 @@ contains
           end if
         end do
       end do
+       !$OMP END DO
+       !$OMP END PARALLEL
 
     case(1)
 
       ! This is the Paterson and Budd relationship, but with the temperature held constant
       ! at -5 deg C
 
-      do ns = 1,nsn
+       tempcor = (/(contemp, up=1,upn)/)
+       !$OMP PARALLEL DEFAULT(NONE) &
+       !$OMP  PRIVATE(ns,ew) &
+       !$OMP  SHARED(nsn,ewn,thck,numerics,tempcor,flwa,velowk,fiddle)
+       !$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
+     do ns = 1,nsn
         do ew = 1,ewn
           if (thck(ew,ns) > numerics%thklim) then
 
             ! Calculate Glenn's A with a fixed temperature.
 
-            call patebudd((/(contemp, up=1,upn)/),flwa(:,ew,ns),velowk%fact) 
+            call patebudd(tempcor,flwa(:,ew,ns),velowk%fact) 
           else
             flwa(:,ew,ns) = fiddle
           end if
         end do
       end do
+       !$OMP END DO
+       !$OMP END PARALLEL
 
     case default 
 
@@ -878,7 +937,11 @@ contains
 
     ! Loop over all grid-boxes ----------------------------------------------------------
 
-    do ns = 2,nsn-1
+    !$OMP PARALLEL DEFAULT(NONE) &
+    !$OMP  PRIVATE(ns,ew,wchk,tempcoef) &
+    !$OMP  SHARED(nsn,ewn,thck,numerics,wvel,geomderv,acab,uvel,vvel)
+    !$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
+   do ns = 2,nsn-1
       do ew = 2,ewn-1
          if (thck(ew,ns) > numerics%thklim .and. wvel(1,ew,ns).ne.0) then
 
@@ -895,6 +958,8 @@ contains
          end if
       end do
     end do
+    !$OMP END DO
+    !$OMP END PARALLEL
 
   end subroutine chckwvel
 

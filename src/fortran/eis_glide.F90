@@ -47,6 +47,7 @@
 program eis_glide
   !*FD This is the Edinburgh Ice Sheet GLIDE driver
   use glimmer_global, only:rk
+  use glimmer_utils, only : glimmer_ReportNumThreads
   use glide
   use eis_forcing
   use eis_io
@@ -69,6 +70,8 @@ program eis_glide
   
   ! start logging
   call open_log(unit=50, fname=logname(commandline_configname))
+
+  call  glimmer_ReportNumThreads()
 
   ! read configuration
   call ConfigRead(commandline_configname,config)

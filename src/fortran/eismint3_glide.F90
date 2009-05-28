@@ -50,6 +50,7 @@ program eismint3_glide
   !*FD the EISMINT 3 Greenland test case. Adapted from simple_glide.f90
 
   use glimmer_global, only:rk,fname_length
+  use glimmer_utils, only : glimmer_ReportNumThreads
   use glide
   use glimmer_log
   use glimmer_config
@@ -70,6 +71,8 @@ program eismint3_glide
   
   ! start logging
   call open_log(unit=50, fname=logname(commandline_configname))
+
+  call  glimmer_ReportNumThreads()
 
   ! read configuration
   call ConfigRead(commandline_configname,config)

@@ -52,6 +52,7 @@ program glint_example
 
   use glint_main
   use glimmer_log
+  use glimmer_utils, only : glimmer_ReportNumThreads
   use glint_global_interp
   use glint_example_clim
   use glint_commandline
@@ -129,6 +130,8 @@ program glint_example
 
   ! start logging
   call open_log(unit=101)  
+
+  call  glimmer_ReportNumThreads()
 
   ! Allocate arrays appropriately
 

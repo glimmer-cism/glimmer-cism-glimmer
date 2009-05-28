@@ -21,6 +21,11 @@
 # a handy python script which will launch glide and record the execution time of the model
 
 import os,sys,ConfigParser,os.path,optparse
+haveSubprocess=True
+try:
+    import subprocess
+except:
+    haveSubprocess=False
 
 usage = """%prog [options] config_file
 launch glide and record execution time of the model. The model binary can be
@@ -115,12 +120,18 @@ if __name__ == '__main__':
         if not os.path.isfile(sge_script):
             sys.stderr.write("Cannot find model submission script %s"%sge_script)
             sys.exit(0)
-        prog = "qsub %s %s %s"%(options.submit_options,sge_script,prog)
+        prog = "qsub -pe OpenMP %s %s %s %s"%(options.num_threads,options.submit_options,sge_script,prog)
 
-#    try:
-#        retcode = subprocess.call(prog,shell=True)
-#        if retcode < 0:
-#            sys.stderr.write("glide model %s was terminated by signal %d\n"%(model,-retcode))
-#    except OSError, e:
-#        sys.stderr.write("Execution failed: %s\n"%e)
-    print os.popen(prog,'r').read()
+    if haveSubprocess:
+        env=os.environ
+        env['OMP_NUM_THREADS']=str(options.num_threads)
+        try:
+            retcode = subprocess.call(prog,shell=True,env=env)
+            if retcode < 0:
+                sys.stderr.write("glide model %s was terminated by signal %d\n"%(model,-retcode))
+        except OSError, e:
+            sys.stderr.write("Execution failed: %s\n"%e)
+    else:
+        if options.num_threads!=1 and not options.submit_sge:
+            print 'Warning, cannot set number of threads since an old version of python is used'
+        print os.popen(prog,'r').read()

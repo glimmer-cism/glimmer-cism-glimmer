@@ -344,12 +344,18 @@ contains
             model%temper%flwa)
 
        ! translate velo field
+       !$OMP PARALLEL DEFAULT(NONE) &
+       !$OMP  PRIVATE(ns,ew) &
+       !$OMP  SHARED(model)
+       !$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
        do ns = 2,model%general%nsn-1
           do ew = 2,model%general%ewn-1
              model%tempwk%hadv_u(:,ew,ns) = model%tempwk%advconst(1) * hsum4(model%velocity%uvel(:,ew-1:ew,ns-1:ns))
              model%tempwk%hadv_v(:,ew,ns) = model%tempwk%advconst(2) * hsum4(model%velocity%vvel(:,ew-1:ew,ns-1:ns))
           end do
        end do
+       !$OMP END DO
+       !$OMP END PARALLEL
 
        call hadvall(model, &
             model%temper%temp, &
@@ -358,6 +364,11 @@ contains
        ! zeroth iteration
        iter = 0
        tempresid = 0.0d0
+       !$OMP PARALLEL DEFAULT(NONE) &
+       !$OMP  PRIVATE(ns,ew, weff, iteradvt, diagadvt, subd, diag, supd, rhsd, prevtemp) &
+       !$OMP  SHARED(model) &
+       !$OMP  REDUCTION(max:tempresid)
+       !$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
        do ns = 2,model%general%nsn-1
           do ew = 2,model%general%ewn-1
              if(model%geometry%thck(ew,ns)>model%numerics%thklim) then
@@ -400,10 +411,17 @@ contains
              endif
           end do
        end do
+       !$OMP END DO
+       !$OMP END PARALLEL
 
        do while (tempresid.gt.tempthres .and. iter.le.mxit)
           tempresid = 0.0d0
 
+          !$OMP PARALLEL DEFAULT(NONE) &
+          !$OMP  PRIVATE(ns,ew, weff, iteradvt, diagadvt, subd, diag, supd, rhsd, prevtemp) &
+          !$OMP  SHARED(model) &
+          !$OMP  REDUCTION(max:tempresid)
+          !$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
           do ns = 2,model%general%nsn-1
              do ew = 2,model%general%ewn-1
                 if(model%geometry%thck(ew,ns)>model%numerics%thklim) then
@@ -442,6 +460,8 @@ contains
                 endif
              end do
           end do
+          !$OMP END DO
+          !$OMP END PARALLEL          
 
           iter = iter + 1
        end do
@@ -805,6 +825,10 @@ contains
 
     model%tempwk%dissip = 0.0d0
     
+    !$OMP PARALLEL DEFAULT(NONE) &
+    !$OMP  PRIVATE(ns,ew,c2) &
+    !$OMP  SHARED(model,thck,stagthck,dusrfdew,dusrfdns,flwa)
+    !$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
     do ns = 2, model%general%nsn-1
        do ew = 2, model%general%ewn-1
           if (thck(ew,ns) > model%numerics%thklim) then
@@ -819,6 +843,8 @@ contains
           end if
        end do
     end do
+    !$OMP END DO
+    !$OMP END PARALLEL
 
   end subroutine finddisp
 
@@ -842,6 +868,10 @@ contains
     integer :: ewp, nsp,up,ew,ns
 
 
+    !$OMP PARALLEL DEFAULT(NONE) &
+    !$OMP  PRIVATE(ns,ew, pmptemp,slterm,nsp,ewp,newmlt,up) &
+    !$OMP  SHARED(model,thck,floater,temp,stagthck,dusrfdew,ubas,dusrfdns,vbas,bmlt)
+    !$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
     do ns = 2, model%general%nsn-1
        do ew = 2, model%general%ewn-1
           if (thck(ew,ns) > model%numerics%thklim .and. .not. floater(ew,ns)) then
@@ -897,6 +927,8 @@ contains
           end if
        end do
     end do
+    !$OMP END DO
+    !$OMP END PARALLEL
 
     ! apply periodic BC
     if (model%options%periodic_ew.eq.1) then

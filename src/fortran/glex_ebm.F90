@@ -53,6 +53,7 @@ program glint_ebm_ex
 
   use glint_main
   use glimmer_log
+  use glimmer_utils, only : glimmer_ReportNumThreads
   use glint_global_interp
   use glex_ebm_clim
   use glint_commandline
@@ -137,6 +138,8 @@ program glint_ebm_ex
 
   ! start logging
   call open_log(unit=101)  
+
+  call  glimmer_ReportNumThreads()
 
   ! Allocate arrays appropriately
 

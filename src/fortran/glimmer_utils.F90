@@ -344,4 +344,29 @@ contains
 
   end subroutine tridiag
 
+  !> report the number of OpenMP threads
+  !!
+  !! \author Magnus Hagdorn
+  !! \date May 2009
+  subroutine glimmer_ReportNumThreads()
+    use glimmer_log
+    implicit none
+
+#ifdef HAVE_OPENMP
+    integer numThread
+    character(len=200) :: msg
+    integer, external :: omp_get_num_procs
+
+    numThread = omp_get_num_procs()
+    write(msg,'(a,i0,a)') 'Using ',numThread,' OpenMP thread'
+    if (numThread>1) then
+       write(msg,'(a,a)') trim(msg),'s'
+    end if
+    call write_log(msg)
+#else
+    call write_log("OpenMP not enabled")
+#endif
+
+  end subroutine glimmer_ReportNumThreads
+
 end module glimmer_utils
