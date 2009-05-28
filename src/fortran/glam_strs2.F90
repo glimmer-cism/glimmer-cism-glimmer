@@ -196,7 +196,8 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
                                  beta,                   & 
                                  uvel,     vvel,         &
                                  uflx,     vflx,         &
-                                 efvs )
+                                 efvs,                   &
+                                 uvel_bc, vvel_bc )
 
   implicit none
 
@@ -215,6 +216,7 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
   real (kind = dp), dimension(:,:),   intent(in)  :: stagthck
   real (kind = dp), dimension(:,:),   intent(in)  :: minTauf
   real (kind = dp), dimension(:,:,:), intent(in)  :: flwa
+  real (kind = dp), dimension(:,:,:), intent(in), optional  :: uvel_bc, vvel_bc
 
   !*sfp* This is the betasquared field from CISM (externally specified), and should eventually
   ! take the place of the subroutine 'calcbetasquared' below (for now, using this value instead
@@ -297,6 +299,29 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
   allocate(tvel(upn,ewn-1,nsn-1)) 
 
   tvel = 0.0_dp 
+  
+  ! *sfp* If boundary kinematic boundary condition fields were passed, fill in the current guess
+  ! in the uvel, vvel fields with those values which are NOT 'NaN'. This is a bit clumsy and could
+  ! probably be done more efficiently, but works for now. 
+  if ( present(uvel_bc) ) then
+   do ns = 1,nsn-1
+    do ew = 1,ewn-1 
+     if ( abs( sum( uvel_bc(:,ew,ns) ) ) > 0.0_dp ) then
+      uvel(:,ew,ns) = uvel_bc(:,ew,ns)
+     end if
+    end do
+   end do
+  end if
+  
+  if ( present(vvel_bc) ) then
+   do ns = 1,nsn-1
+    do ew = 1,ewn-1 
+     if ( abs( sum( vvel_bc(:,ew,ns) ) ) > 0.0_dp ) then
+      vvel(:,ew,ns) = vvel_bc(:,ew,ns)
+     end if
+    end do
+   end do
+  end if
 
   ! *sfp** allocate space for variables used by 'mindcrash' function
   allocate(corr(upn,ewn-1,nsn-1,2,2),usav(upn,ewn-1,nsn-1,2))

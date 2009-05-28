@@ -100,6 +100,9 @@ module glam
                                     model%velocity_hom%uvel, model%velocity_hom%vvel,           &
                                     model%velocity_hom%uflx, model%velocity_hom%vflx,           &
                                     model%velocity_hom%efvs )
+                                    !model%velocity_hom%efvs,                                    & 
+                                    !model%velocity_hom%kinematic_bc_u,                          &
+                                    !model%velocity_hom%kinematic_bc_v )
 
         ! *sfp** put necessary variables in format for inc. remapping
 
