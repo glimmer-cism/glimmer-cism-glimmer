@@ -44,6 +44,8 @@
 #include <config.inc>
 #endif
 
+#include "glide_mask.inc"
+
 module glide
   !*FD the top-level GLIDE module
 
@@ -124,6 +126,8 @@ contains
 
     implicit none
     type(glide_global_type) :: model        !*FD model instance
+
+    integer :: i,j
 
     call write_log(glimmer_version)
 

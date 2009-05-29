@@ -470,22 +470,6 @@ contains
 
         call unstagger_field_2d(btrc_t, btrc_t_unstag, options%periodic_ew, options%periodic_ns)
 
-
-#if 0
-        do i = 1, nsn
-            do j = 1, ewn
-                if ((i >= 33 .or. j >= 127) .and. &
-                GLIDE_IS_CALVING(geometry_mask_t(i,j))) then
-                    geometry_mask_t(i,j) = 4
-                end if
-            end do
-        end do
-        geometry_mask_t(32, 42) = 4
-        geometry_mask_t(32, 30) = 4
-        geometry_mask_t(32, 13) = 4
-        geometry_mask_t(3, 127) = 132
-#endif
-
         !Compute rescaled coordinate parameters (needed because Pattyn uses an
         !irregular Z grid and scales so that 0 is the surface, 1 is the bed)
         call init_rescaled_coordinates(dthckdew_t,dlsrfdew_t,dthckdns_t,dlsrfdns_t,usrf_t,thck_t,lsrf_t,&
