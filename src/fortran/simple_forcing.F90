@@ -189,8 +189,9 @@ contains
     
     call GetSection(config,section,'ISMIP-HOM-A')
     if (associated(section)) then
-    	return
+        return
     end if
+
     !mismip tests
     call GetSection(config,section,'MISMIP-1')
     if (associated(section)) then
@@ -205,6 +206,19 @@ contains
        call GetValue(section,'massbalance',dummy,3)
        if (associated(dummy)) then
            climate%nmsb = dummy
+           deallocate(dummy)
+           dummy=>NULL()
+       end if
+       return
+    end if
+    !exact verification
+    call GetSection(config,section,'EXACT')
+    if (associated(section)) then
+       climate%eismint_type = 5
+       dummy=>NULL()
+       call GetValue(section,'temperature',dummy,2)
+       if (associated(dummy)) then
+           climate%airt = dummy
            deallocate(dummy)
            dummy=>NULL()
        end if
@@ -333,7 +347,9 @@ contains
     case(4)
        !mismip 1
        model%climate%acab = climate%nmsb(1)
-           
+    case(5)
+       !verification
+       call exact_mass(climate,model,time,climate%airt(2))
     end select
   end subroutine simple_massbalance
 
@@ -390,7 +406,76 @@ contains
           end do
        end do
     case(4)
-        model%climate%artm = climate%airt(1)
+       model%climate%artm = climate%airt(1)
+    case(5)
+       call exact_surf(climate,model,time,climate%airt(2))
     end select
   end subroutine simple_surftemp
+  
+  subroutine exact_surf(climate,model,time,which_test)
+    use glide_types
+    use testsFG
+    implicit none
+    type(simple_climate) :: climate         !*FD structure holding climate info
+    type(glide_global_type) :: model        !*FD model instance
+    real(kind=rk), intent(in) :: time                !*FD current time
+    real(4), intent(in) :: which_test                !*FD  Which exact test (F=0,G=1)
+    integer  :: ns,ew
+    !verification
+    real(8) ::  t, r, z, x, y                       !in variables
+    real(8) ::  H, TT, U, w, Sig, M, Sigc        !out variables
+    integer center
+    center = (model%general%ewn - 1)*.5
+    !point by point call to the function 
+    do ns = 1,model%general%nsn
+       do ew = 1,model%general%ewn
+          x = (ew - center)*model%general%ewn
+          y = (ns - center)*model%general%nsn
+          r = sqrt(x**2 + y**2)
+          z = model%geometry%thck(ew,ns)
+          if(r>0.0 .and. r<L) then
+              if (which_test .eq. 0.0) then
+                  call testF(r,z,H,TT,U,w,Sig,M,Sigc)
+              else
+                  call testG(time,r,z,H,TT,U,w,Sig,M,Sigc)
+              end if
+              model%climate%artm = Sigc*SperA*1.0e3  !m/a
+          end if
+       end do
+    end do
+  end subroutine exact_surf
+  
+  subroutine exact_mass(climate,model,time,which_test)
+    use glide_types
+    use testsFG
+    implicit none
+    type(simple_climate) :: climate         !*FD structure holding climate info
+    type(glide_global_type) :: model        !*FD model instance
+    real(kind=rk), intent(in) :: time                !*FD current time
+    real(4), intent(in) :: which_test                !*FD  Which exact test (F=0,G=1)
+    integer  :: ns,ew
+    !verification
+    real(8) :: t, r, z, x, y                       !in variables
+    real(8) :: H, TT, U, w, Sig, M, Sigc        !out variables
+    integer center
+    center = (model%general%ewn - 1)*.5
+    !point by point call to the function 
+    do ns = 1,model%general%nsn
+       do ew = 1,model%general%ewn
+          x = (ew - center)*model%general%ewn
+          y = (ns - center)*model%general%nsn
+          r = sqrt(x**2 + y**2)
+          z = model%geometry%thck(ew,ns)
+          if(r>0.0 .and. r<L) then
+              if (which_test .eq. 0.0) then
+                  call testF(r,z,H,TT,U,w,Sig,M,Sigc)
+              else
+                  call testG(time,r,z,H,TT,U,w,Sig,M,Sigc)
+              end if
+              model%climate%artm = Sigc*SperA*1.0e3  !m/a
+          end if
+       end do
+    end do
+  end subroutine exact_mass
+  
 end module simple_forcing
