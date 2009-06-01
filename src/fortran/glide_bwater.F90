@@ -3,17 +3,18 @@ module glide_bwater
    use glide_types
 
 contains
-  subroutine calcbwat(model,which,bmlt,bwat,thck,topg,btem,floater,wphi)
+  subroutine calcbwat(model,which,bmlt,bwat,bwatflx,thck,topg,btem,floater,wphi)
 
     use glimmer_global, only : dp 
     use glimmer_paramets, only : thk0
     use glide_thck
     use glide_grids, only: stagvarb
+
     implicit none
 
     type(glide_global_type),intent(inout) :: model
     integer, intent(in) :: which
-    real(dp), dimension(:,:), intent(inout) :: bwat, wphi
+    real(dp), dimension(:,:), intent(inout) :: bwat, wphi, bwatflx
     real(dp), dimension(:,:), intent(in) :: bmlt, thck, topg, btem
     logical, dimension(:,:), intent(in) :: floater
 
@@ -27,15 +28,19 @@ contains
     real(dp),  dimension(model%general%ewn,model%general%nsn) :: N, flux, lakes
     real(dp) :: c_effective_pressure,c_flux_to_depth,p_flux_to_depth,q_flux_to_depth
 
-    ! Will have to move these declarations into a parameters derrived type
-    c_effective_pressure = 1.0d0
-    c_flux_to_depth = 1.0d0
-    p_flux_to_depth = 1.0d0
-    q_flux_to_depth = 1.0d0
+    ! TODO: move these declarations into a parameters derived type
+    c_effective_pressure = 0.0d0       ! For now estimated with c/w
+    c_flux_to_depth = 1./(1.8d-3*12.0d0)  ! 
+    p_flux_to_depth = 2.0d0            ! exponent on the depth
+    q_flux_to_depth = 1.0d0            ! exponent on the potential gradient
 
     select case (which)
 
-    case(0)
+    ! which = BWATER_LOCAL Completely local, bwat_new = c1 * melt_rate + c2 * bwat_old
+    ! which = BWATER_FLUX Flux based calculation
+    ! which = BWATER_NONE Nothing, basal water = 0.
+
+    case(BWATER_LOCAL)
 
        do t_wat = 1, model%tempwk%nwat
           do ns = 1,model%general%nsn
@@ -73,11 +78,11 @@ contains
 
     ! Case added by Jesse Johnson 11/15/08
     ! Steady state routing of basal water using flux calculation
-    case(1)
+    case(BWATER_FLUX)
       call effective_pressure(bwat,c_effective_pressure,N)
       call pressure_wphi(thck,topg,N,wphi,model%numerics%thklim,floater)
-      call route_basal_water(wphi,bmlt,model%numerics%dew,model%numerics%dns,flux,lakes)
-      call flux_to_depth(flux,wphi,c_flux_to_depth,p_flux_to_depth,q_flux_to_depth,bwat)
+      call route_basal_water(wphi,bmlt,model%numerics%dew,model%numerics%dns,bwatflx,lakes)
+      call flux_to_depth(bwatflx,wphi,c_flux_to_depth,p_flux_to_depth,q_flux_to_depth,model%numerics%dew,model%numerics%dns,bwat)
     case default
       bwat = 0.0d0
     end select
@@ -123,7 +128,7 @@ contains
     !*FD of water along the route. Water flow direction is determined according
     !*FD to the gradient of a wphi elevation field. For the algorithm to 
     !*FD function properly depressions in the wphi surface must be filled.
-    !*FD this results in the lakes field, which is the differency between the
+    !*FD this results in the lakes field, which is the difference between the
     !*FD filled surface and the original wphi.
     !*FD The method used is by Quinn et. al. (1991).
     !*FD
@@ -132,7 +137,7 @@ contains
 
     implicit none
 
-    real(rk),dimension(:,:),intent(in)  :: wphi    !*FD Input potetial surface
+    real(rk),dimension(:,:),intent(in)  :: wphi    !*FD Input potential surface
     real(rk),dimension(:,:),intent(in)  :: melt    !*FD Input melting field
     real(rk),               intent(in)  :: dx      !*FD Input $x$ grid-spacing
     real(rk),               intent(in)  :: dy      !*FD Input $y$ grid-spacing
@@ -246,22 +251,49 @@ contains
   end subroutine route_basal_water
 
 !==============================================================
-  subroutine flux_to_depth(flux,wphi,c,p,q,bwat)
+  subroutine flux_to_depth(flux,wphi,c,p,q,dew,dns,bwat)
   !*FD Assuming that the flow is steady state, this function simply solves
   !*FD              flux = depth * velocity
   !*FD for the depth, assuming that the velocity is a function of depth,
-  !*FD and pressure potenital. This amounts to assuming a Weertman film,
+  !*FD and pressure potential. This amounts to assuming a Weertman film,
   !*FD or Manning flow, both of which take the form of a constant times water
   !*FD depth to a power, times pressure wphi to a power.
+
+    use glide_deriv, only: df_field_2d              ! Find grad_wphi
+    use glimmer_physcon, only : scyr                ! Seconds per year
 
     real(dp),dimension(:,:),intent(in) :: flux      ! Basal water flux
     real(dp),dimension(:,:),intent(in) :: wphi      ! Pressure wphi
     real(dp)               ,intent(in) ::  c        ! Constant of proportionality
     real(dp)               ,intent(in) ::  p        ! Exponent of the water depth
     real(dp)               ,intent(in) ::  q        ! Exponent of the pressure pot.
+    real(dp)               ,intent(in) ::  dew      ! Grid spacing, ew direction
+    real(dp)               ,intent(in) ::  dns      ! Grid spacing, ns direction
     real(dp),dimension(:,:),intent(out)::  bwat     ! Water Depth
 
-    bwat = c * flux ** (1./p) * wphi ** (1./q)
+    ! Internal variables 
+    real(rk),dimension(:,:),allocatable :: grad_wphi, dwphidx, dwphidy
+
+    integer nx,ny
+
+    ! Set up grid dimensions ----------------------------------
+    nx=size(flux,1) ; ny=size(flux,2)
+    nn=nx*ny
+
+    ! Allocate internal arrays and copy data ------------------
+    allocate(dwphidx(nx,ny),dwphidy(nx,ny),grad_wphi(nx,ny))
+
+    ! Compute the gradient of the potential field.
+    call df_field_2d(wphi,dew,dns,dwphidx,dwphidy,.FALSE.,.FALSE.)
+
+    grad_wphi = sqrt(dwphidx**2 + dwphidy**2)
+
+    where (grad_wphi.NE.0.) 
+        bwat = ( flux / (c * scyr *  dns * grad_wphi ** q) ) ** (1./(p+1.))
+    elsewhere
+        bwat = 0.d0
+    endwhere
+       
 
   end subroutine flux_to_depth
 
@@ -275,7 +307,7 @@ contains
         N = c / bwat
     elsewhere
         N = 0.d0
-    end where
+    endwhere
   end subroutine effective_pressure
 !==============================================================
   subroutine pressure_wphi(thck,topg,N,wphi,thicklim,floater)

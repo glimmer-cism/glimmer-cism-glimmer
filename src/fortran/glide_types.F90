@@ -114,6 +114,10 @@ module glide_types
   integer, parameter :: SIGMA_BUILTIN_EVEN = 1 !Use an evenly spaced Sigma coordinate
   integer, parameter :: SIGMA_BUILTIN_PATTYN = 2 !Use Pattyn's sigma coordinates
 
+  integer, parameter :: BWATER_LOCAL = 0
+  integer, parameter :: BWATER_FLUX  = 1
+  integer, parameter :: BWATER_NONE  = 2
+
   integer, parameter :: HO_DIAG_NONE = 0
   integer, parameter :: HO_DIAG_PATTYN_UNSTAGGERED = 1
   integer, parameter :: HO_DIAG_PATTYN_STAGGERED = 2
@@ -176,7 +180,7 @@ module glide_types
     !*FD Basal water depth: 
     !*FD \begin{description} 
     !*FD \item[0] Calculated from local basal water balance 
-    !*FD \item[1] as {\bf 0}, including constant horizontal flow 
+    !*FD \item[1] Compute the basal water flux, then find depth via calculation
     !*FD \item[2] Set to zero everywhere 
     !*FD \end{description}
 
@@ -574,6 +578,7 @@ module glide_types
     real(dp),dimension(:,:),  pointer :: bheatflx => null() !*FD basal heat flux
     real(dp),dimension(:,:,:),pointer :: flwa => null() !*FD Glenn's $A$.
     real(dp),dimension(:,:),  pointer :: bwat => null() !*FD Basal water depth
+    real(dp),dimension(:,:),  pointer :: bwatflx => null() !*FD Basal water flux 
     real(dp),dimension(:,:),  pointer :: stagbwat => null() !*FD Basal water depth in velo grid
     real(dp),dimension(:,:),  pointer :: bmlt => null() !*FD Basal melt-rate
     real(dp),dimension(:,:),  pointer :: bmlt_tavg => null() !*FD Basal melt-rate
@@ -943,6 +948,7 @@ contains
     call coordsystem_allocate(model%general%ice_grid, upn, model%temper%flwa)
     call coordsystem_allocate(model%general%ice_grid, model%temper%bheatflx)
     call coordsystem_allocate(model%general%ice_grid, model%temper%bwat)
+    call coordsystem_allocate(model%general%ice_grid, model%temper%bwatflx)
     call coordsystem_allocate(model%general%velo_grid, model%temper%stagbwat)
     call coordsystem_allocate(model%general%ice_grid, model%temper%bmlt)
     call coordsystem_allocate(model%general%ice_grid, model%temper%bmlt_tavg)
@@ -1106,6 +1112,7 @@ contains
     deallocate(model%temper%flwa)
     deallocate(model%temper%bheatflx)
     deallocate(model%temper%bwat)
+    deallocate(model%temper%bwatflx)
     deallocate(model%temper%stagbwat)
     deallocate(model%temper%bmlt)
     deallocate(model%temper%bmlt_tavg)

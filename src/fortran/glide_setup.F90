@@ -453,9 +453,10 @@ contains
          'Patterson and Budd (temp=-10degC)', &
          'const 1e-16a^-1Pa^-n             ', &
          'EISMINT-ROSS constant            ' /)
-    character(len=*), dimension(0:2), parameter :: basal_water = (/ &
+    character(len=*), dimension(0:3), parameter :: basal_water = (/ &
          'local water balance', &
          'local + const flux ', &
+         'flux calculation', &
          'none               ' /)
     character(len=*), dimension(0:6), parameter :: marine_margin = (/ &
          'ignore            ', &

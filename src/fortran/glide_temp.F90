@@ -484,6 +484,7 @@ contains
             model%options%whichbwat, &
             model%temper%bmlt, &
             model%temper%bwat, &
+            model%temper%bwatflx, &
             model%geometry%thck, &
             model%geometry%topg, &
             model%temper%temp(model%general%upn,:,:), &
