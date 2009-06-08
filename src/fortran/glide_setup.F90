@@ -456,7 +456,7 @@ contains
     character(len=*), dimension(0:3), parameter :: basal_water = (/ &
          'local water balance', &
          'local + const flux ', &
-         'flux calculation', &
+         'flux calculation   ', &
          'none               ' /)
     character(len=*), dimension(0:6), parameter :: marine_margin = (/ &
          'ignore            ', &
