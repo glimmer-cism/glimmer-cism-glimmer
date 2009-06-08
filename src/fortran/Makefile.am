@@ -77,7 +77,7 @@ libclimate_a_SOURCES = eismint3_forcing.F90 eismint3_types.F90 \
                        glimmer_searchcircle.F90 eis_io.F90 eis_types.F90 \
                        eismint3_io.F90 spin_forcing.F90 spin_mb.F90 \
                        spin_temp.F90 spin_slc.F90 spin_io.F90 \
-                       spin_types.F90 
+                       testsfg.F90 spin_types.F90 
 if PARDISO
 RESTART_CODE += glimmer_sparse_pardiso.F90
 libglimmer_a_SOURCES += glimmer_sparse_pardiso.F90
