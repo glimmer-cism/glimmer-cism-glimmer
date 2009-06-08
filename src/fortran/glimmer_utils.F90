@@ -355,9 +355,13 @@ contains
 #ifdef HAVE_OPENMP
     integer numThread
     character(len=200) :: msg
-    integer, external :: omp_get_num_procs
 
-    numThread = omp_get_num_procs()
+
+    numThread = 0
+    !$omp parallel
+    !$omp atomic
+    numThread = numThread + 1
+    !$omp end parallel
     write(msg,'(a,i0,a)') 'Using ',numThread,' OpenMP thread'
     if (numThread>1) then
        write(msg,'(a,a)') trim(msg),'s'

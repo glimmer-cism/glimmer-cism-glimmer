@@ -1,3 +1,10 @@
+2009-06-08 Magnus Hagdorn
+ * src/fortran/Makefile.am: add new test
+ * src/fortran/glimmer_utils.F90: change the way the number of
+   threads is found
+ * src/fortran/test_ReportNumThreads.F90: test procedure which
+   finds the number of threads
+
 2009-05-28 Magnus Hagdorn
  * configure.in: check if we should compile with OpenMP support
  * m4macros/ax_openmp.m4: add macro to find OpenMP

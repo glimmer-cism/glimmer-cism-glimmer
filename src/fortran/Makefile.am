@@ -7,7 +7,8 @@ RESTART_COMMON=glimmer_restart_common.F90 glimmer_restart_pointarr.F90 \
 
 lib_LIBRARIES = libglimmer.a libglide.a libglint.a libclimate.a
 bin_PROGRAMS  =  simple_glide eis_glide glint_example glex_ebm eismint3_glide nc2config
-check_PROGRAMS = test_config test_setup test_ts test_lithot test_integrate test_commandline test_writestats
+check_PROGRAMS = test_config test_setup test_ts test_lithot test_integrate test_commandline test_writestats \
+                 test_ReportNumThreads
 
 variable_DATA = glide_vars.def eis_vars.def glint_vars.def time_vars.def \
                 glint_mbal_vars.def eismint3_vars.def ncdf_template.F90.in
@@ -86,6 +87,7 @@ test_lithot_SOURCES = test_lithot.F90
 test_lithot_LDADD = libclimate.a libglide.a libglimmer.a SLAP_library/libslap.a $(BLAS_LIBS) $(NETCDF_LDFLAGS) $(NETCDF_LIBS)
 test_integrate_SOURCES = test_integrate.F90 glimmer_global.F90 \
                          glimmer_physcon.F90 glimmer_integrate.F90
+test_ReportNumThreads_SOURCES = test_ReportNumThreads.F90 glimmer_utils.F90 glimmer_log.F90
 test_commandline_SOURCES = test_commandline.F90 glimmer_commandline.F90
 test_writestats_SOURCES = test_writestats.F90 glimmer_writestats.F90 writestats.c writestats.h
 
