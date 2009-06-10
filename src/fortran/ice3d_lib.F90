@@ -391,7 +391,7 @@ contains
                 marine_bc_normal)
                 
 
-        INTEGER MAXY,MAXX,NZETA,MANIFOLD,PLASTIC
+        INTEGER MAXY,MAXX,NZETA,MANIFOLD
 
         real(dp), dimension(:,:,:), intent(inout) :: mu
         real(dp), dimension(:,:,:), intent(inout) :: uvel
@@ -571,7 +571,7 @@ contains
             !Compute the basal traction.  This is done by either passing through
             !the beta parameter, or by using Shoof's plastic bed model (Schoof
             !2004).
-            if (PLASTIC == 0) then
+            if (options%which_ho_bstress == HO_BSTRESS_LINEAR) then
                 tau = beta
             else
                 call plastic_bed(tau, beta, uvel(:,:,nzeta), vvel(:,:,nzeta))
