@@ -349,7 +349,7 @@ contains
        model%climate%acab = climate%nmsb(1)
     case(5)
        !verification
-       call exact_mass(climate,model,time,climate%airt(2))
+       call exact_surfmass(climate,model,time,1.0,climate%airt(2))
     end select
   end subroutine simple_massbalance
 
@@ -408,11 +408,11 @@ contains
     case(4)
        model%climate%artm = climate%airt(1)
     case(5)
-       call exact_surf(climate,model,time,climate%airt(2))
+       call exact_surfmass(climate,model,time,0.0,climate%airt(2))
     end select
   end subroutine simple_surftemp
   
-  subroutine exact_surf(climate,model,time,which_test)
+  subroutine exact_surfmass(climate,model,time,which_call, which_test)
     use glide_types
     use testsFG
     implicit none
@@ -420,6 +420,7 @@ contains
     type(glide_global_type) :: model        !*FD model instance
     real(kind=rk), intent(in) :: time                !*FD current time
     real(4), intent(in) :: which_test                !*FD  Which exact test (F=0,G=1)
+    real(4), intent(in) :: which_call                !*FD  0 = surface temp, 1= mass balance
     integer  :: ns,ew
     !verification
     real(8) ::  t, r, z, x, y                       !in variables
@@ -429,8 +430,8 @@ contains
     !point by point call to the function 
     do ns = 1,model%general%nsn
        do ew = 1,model%general%ewn
-          x = (ew - center)*model%general%ewn
-          y = (ns - center)*model%general%nsn
+          x = (ew - center)*model%numerics%dew
+          y = (ns - center)*model%numerics%dns
           r = sqrt(x**2 + y**2)
           z = model%geometry%thck(ew,ns)
           if(r>0.0 .and. r<L) then
@@ -439,43 +440,17 @@ contains
               else
                   call testG(time,r,z,H,TT,U,w,Sig,M,Sigc)
               end if
-              model%climate%artm = Sigc*SperA*1.0e3  !m/a
-          end if
-       end do
-    end do
-  end subroutine exact_surf
-  
-  subroutine exact_mass(climate,model,time,which_test)
-    use glide_types
-    use testsFG
-    implicit none
-    type(simple_climate) :: climate         !*FD structure holding climate info
-    type(glide_global_type) :: model        !*FD model instance
-    real(kind=rk), intent(in) :: time                !*FD current time
-    real(4), intent(in) :: which_test                !*FD  Which exact test (F=0,G=1)
-    integer  :: ns,ew
-    !verification
-    real(8) :: t, r, z, x, y                       !in variables
-    real(8) :: H, TT, U, w, Sig, M, Sigc        !out variables
-    integer center
-    center = (model%general%ewn - 1)*.5
-    !point by point call to the function 
-    do ns = 1,model%general%nsn
-       do ew = 1,model%general%ewn
-          x = (ew - center)*model%general%ewn
-          y = (ns - center)*model%general%nsn
-          r = sqrt(x**2 + y**2)
-          z = model%geometry%thck(ew,ns)
-          if(r>0.0 .and. r<L) then
-              if (which_test .eq. 0.0) then
-                  call testF(r,z,H,TT,U,w,Sig,M,Sigc)
+              if (which_call .eq. 0.0) then
+                  model%climate%artm(ew,ns) = Sigc*SperA*1.0e3  !m/a
               else
-                  call testG(time,r,z,H,TT,U,w,Sig,M,Sigc)
+                  model%climate%acab(ew,ns) = M*SperA  !m/a
               end if
-              model%climate%artm = Sigc*SperA*1.0e3  !m/a
+          else
+              model%climate%artm(ew,ns) = 0.0
+              model%climate%acab(ew,ns) = 0.0
           end if
        end do
     end do
-  end subroutine exact_mass
+  end subroutine exact_surfmass
   
 end module simple_forcing
