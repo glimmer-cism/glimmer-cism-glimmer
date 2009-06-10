@@ -169,14 +169,14 @@ contains
 
    function p3(x)
       real(kind), intent(in) :: x
-      real(kind)             :: p3
+      !real(kind)             :: p3
       ! p_3=x^3-3*x^2+6*x-6, using Horner's
       p3 = -6 + x*(6 + x*(-3 + x))
    end function p3
 
    function p4(x)
       real(kind), intent(in) :: x
-      real(kind)             :: p4
+      !real(kind)             :: p4
       ! p_4=x^4-4*x^3+12*x^2-24*x+24, using Horner's
       p4 = 24 + x*(-24 + x*(12 + x*(-4 + x)))
    end function p4
