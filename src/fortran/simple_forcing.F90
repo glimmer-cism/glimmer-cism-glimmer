@@ -441,13 +441,13 @@ contains
                   call testG(time,r,z,H,TT,U,w,Sig,M,Sigc)
               end if
               if (which_call .eq. 0.0) then
-                  model%climate%artm(ew,ns) = Sigc*SperA*1.0e3  !m/a
+                  model%temper%bheatflx(ew,ns) = -Sigc*SperA*1.0e3  !m/a
               else
                   model%climate%acab(ew,ns) = M*SperA  !m/a
               end if
           else
-              model%climate%artm(ew,ns) = 0.0
-              model%climate%acab(ew,ns) = 0.0
+              model%temper%bheatflx(ew,ns) = 0.0
+              model%climate%acab(ew,ns) = -1.0
           end if
        end do
     end do
