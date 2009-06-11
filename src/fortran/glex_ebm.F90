@@ -114,7 +114,7 @@ program glint_ebm_ex
   integer :: i,j    ! Array index counters
   integer :: time   ! Current time (hours)
   real(kind=dp) t1,t2
-  integer clock,clock_rate
+  integer clock,clock_rate,numThreads
   integer :: ierr
 
   ! -------------------------------------------------------------------------------------
@@ -139,7 +139,7 @@ program glint_ebm_ex
   ! start logging
   call open_log(unit=101)  
 
-  call  glimmer_ReportNumThreads()
+   numThreads = glimmer_ReportNumThreads()
 
   ! Allocate arrays appropriately
 
@@ -224,7 +224,7 @@ program glint_ebm_ex
   call end_glint(ice_sheet)
   call system_clock(clock,clock_rate)
   t2 = real(clock,kind=dp)/real(clock_rate,kind=dp)
-  call glimmer_writestats(commandline_resultsname,commandline_configname,t2-t1)
+  call glimmer_writestats(commandline_resultsname,commandline_configname,t2-t1,numThreads)
 
 100 format(f9.5)
 101 format(e12.5)

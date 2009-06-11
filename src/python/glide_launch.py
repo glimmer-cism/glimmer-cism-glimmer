@@ -74,6 +74,7 @@ if __name__ == '__main__':
     parser.add_option("-m", "--model", help="name of model binary to be launched", metavar="BINARY")
     parser.add_option("-r", "--results", help="name of file where timing info is stored (default: results)", metavar="RESULTS", default="results")
     parser.add_option("-s", "--submit-sge",action="store_true",default=False,help="submit job to Sun Grid Engine")
+    parser.add_option("-n", "--num-threads",default=1,type="int",help="the number of OpenMP threads (default:1)")
     parser.add_option("-o", "--submit-options",default="",help="set additional options for cluster submission")
     parser.add_option("--prefix",help="GLIMMER prefix",metavar="PFX")
     parser.add_option("--src",action="store_true",default=False,help="assume prefix is source directory")

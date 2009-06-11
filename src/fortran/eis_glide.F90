@@ -62,16 +62,14 @@ program eis_glide
   type(ConfigSection), pointer :: config  ! configuration stuff
   real(kind=rk) time
   real(kind=dp) t1,t2
-  integer clock,clock_rate
-  
-
+  integer clock,clock_rate, numThreads
 
   call glimmer_GetCommandline()
   
   ! start logging
   call open_log(unit=50, fname=logname(commandline_configname))
 
-  call  glimmer_ReportNumThreads()
+  numThreads = glimmer_ReportNumThreads()
 
   ! read configuration
   call ConfigRead(commandline_configname,config)
@@ -106,7 +104,7 @@ program eis_glide
   call glide_finalise(model)
   call system_clock(clock,clock_rate)
   t2 = real(clock,kind=dp)/real(clock_rate,kind=dp)
-  call glimmer_writestats(commandline_resultsname,commandline_configname,t2-t1)
+  call glimmer_writestats(commandline_resultsname,commandline_configname,t2-t1,numThreads)
   call close_log
 
 end program eis_glide

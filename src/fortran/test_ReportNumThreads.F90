@@ -43,6 +43,7 @@
 program test_ReportNumThreads
   use glimmer_utils, only : glimmer_ReportNumThreads
   implicit none
+  integer numThreads
 
-  call glimmer_ReportNumThreads
+   numThreads = glimmer_ReportNumThreads()
 end program test_ReportNumThreads

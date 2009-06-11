@@ -348,29 +348,31 @@ contains
   !!
   !! \author Magnus Hagdorn
   !! \date May 2009
-  subroutine glimmer_ReportNumThreads()
+  function glimmer_ReportNumThreads()
     use glimmer_log
     implicit none
 
+    integer :: glimmer_ReportNumThreads
+
 #ifdef HAVE_OPENMP
-    integer numThread
     character(len=200) :: msg
 
 
-    numThread = 0
+    glimmer_ReportNumThreads = 0
     !$omp parallel
     !$omp atomic
-    numThread = numThread + 1
+    glimmer_ReportNumThreads = glimmer_ReportNumThreads + 1
     !$omp end parallel
-    write(msg,'(a,i0,a)') 'Using ',numThread,' OpenMP thread'
-    if (numThread>1) then
+    write(msg,'(a,i0,a)') 'Using ',glimmer_ReportNumThreads,' OpenMP thread'
+    if (glimmer_ReportNumThreads>1) then
        write(msg,'(a,a)') trim(msg),'s'
     end if
     call write_log(msg)
 #else
     call write_log("OpenMP not enabled")
+    glimmer_ReportNumThreads = 1
 #endif
 
-  end subroutine glimmer_ReportNumThreads
+  end function glimmer_ReportNumThreads
 
 end module glimmer_utils

@@ -1,3 +1,19 @@
+2009-06-11 Magnus Hagdorn
+ * src/fortran/eis_glide.F90: report number of threads in results file
+ * src/fortran/eismint3_glide.F90: ditto
+ * src/fortran/glex_ebm.F90: ditto
+ * src/fortran/glint_example.F90: ditto
+ * src/fortran/simple_glide.F90: ditto
+ * src/fortran/test_writestats.F90: ditto
+ * src/fortran/glimmer_utils.F90: turn glimmer_ReportNumThreads into a function
+   that returns the number of threads
+ * src/fortran/glimmer_writestats.F90: add extra argument to pass the number
+   of threads around
+ * src/fortran/test_ReportNumThreads.F90: adjust API
+ * src/fortran/writestats.c: write number of threads to file
+ * src/fortran/writestats.h: adjust API
+ * src/python/glide_launch.py: add option to change the number of threads
+
 2009-06-08 Magnus Hagdorn
  * src/fortran/Makefile.am: add new test
  * src/fortran/glimmer_utils.F90: change the way the number of
