@@ -299,6 +299,5 @@ fi
 AC_SUBST(GLIMMER_CVS_VERS)
 AM_CONDITIONAL([HAVE_CVS],[test "$have_cvs_entries" == "yes"])
 
-AC_CONFIG_FILES([Makefile m4macros/Makefile src/Makefile src/python/Makefile src/fortran/Makefile src/fortran/SLAP_library/Makefile \
-		tests/Makefile])
+AC_CONFIG_FILES([Makefile m4macros/Makefile src/Makefile src/python/Makefile src/fortran/Makefile src/fortran/SLAP_library/Makefile])
 AC_OUTPUT([glimmer-config src/fortran/glimmer_vers.F90.in])
