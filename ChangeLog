@@ -1,3 +1,8 @@
+2009-06-12 Magnus Hagdorn
+ * src/fortran/glide_temp.F90: replace nested parallel loops witha linearised
+   loop
+ * src/fortran/glide_velo.F90: ditto
+
 2009-06-11 Magnus Hagdorn
  * src/fortran/eis_glide.F90: report number of threads in results file
  * src/fortran/eismint3_glide.F90: ditto

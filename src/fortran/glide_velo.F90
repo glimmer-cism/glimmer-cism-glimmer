@@ -145,33 +145,34 @@ contains
     ! Internal variables
     !------------------------------------------------------------------------------------
     real(dp),dimension(size(flwa,1)) :: hrzflwa, intflwa 
-    integer :: ew,ns,up,ewn,nsn,upn
+    integer :: ew,ns,nsew,up,ewn,nsn,upn
 
     upn=size(flwa,1) ; ewn=size(flwa,2) ; nsn=size(flwa,3)
 
+    
     !$OMP PARALLEL DEFAULT(NONE) &
-    !$OMP  PRIVATE(ns,ew,up,hrzflwa,intflwa) &
+    !$OMP  PRIVATE(nsew,ns,ew,up,hrzflwa,intflwa) &
     !$OMP  SHARED(nsn,ewn,upn,stagthck,flwa,velowk)
-    !$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
-    do ns = 1,nsn-1
-       do ew = 1,ewn-1
-          if (stagthck(ew,ns) /= 0.0d0) then
-             
-             hrzflwa = hsum4(flwa(:,ew:ew+1,ns:ns+1))  
-             intflwa(upn) = 0.0d0
+    !$OMP DO SCHEDULE(STATIC)
+    do nsew=0,(nsn-1)*(ewn-1)-1
+       ns = 1+nsew/(ewn-1)
+       ew = 1+mod(nsew,ewn-1)
+       if (stagthck(ew,ns) /= 0.0d0) then
+          
+          hrzflwa = hsum4(flwa(:,ew:ew+1,ns:ns+1))  
+          intflwa(upn) = 0.0d0
 
-             do up = upn-1, 1, -1
-                intflwa(up) = intflwa(up+1) + velowk%depth(up) * (hrzflwa(up)+hrzflwa(up+1))
-             end do
+          do up = upn-1, 1, -1
+             intflwa(up) = intflwa(up+1) + velowk%depth(up) * (hrzflwa(up)+hrzflwa(up+1))
+          end do
+          
+          velowk%dintflwa(ew,ns) = c * vertintg(velowk,intflwa)
+          
+       else 
 
-             velowk%dintflwa(ew,ns) = c * vertintg(velowk,intflwa)
+          velowk%dintflwa(ew,ns) = 0.0d0
 
-          else 
-
-             velowk%dintflwa(ew,ns) = 0.0d0
-
-          end if
-       end do
+       end if
     end do
     !$OMP END DO
     !$OMP END PARALLEL
@@ -232,50 +233,50 @@ contains
     real(dp),dimension(size(flwa,1)) :: hrzflwa
     real(dp) :: factor
     real(dp),dimension(3)           :: const
-    integer :: ew,ns,up,ewn,nsn,upn
+    integer :: ew,ns,nsew,up,ewn,nsn,upn
 
     upn=size(flwa,1) ; ewn=size(stagthck,1) ; nsn=size(stagthck,2)
-    
+
     !$OMP PARALLEL DEFAULT(NONE) &
-    !$OMP  PRIVATE(ns,ew,up,hrzflwa,factor,const) &
+    !$OMP  PRIVATE(nsew,ns,ew,up,hrzflwa,factor,const) &
     !$OMP  SHARED(nsn,ewn,upn,stagthck,vflx,uflx,diffu,dusrfdns,vbas,dusrfdew,ubas,uvel,vvel,flwa,velowk)
-    !$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
-    do ns = 1,nsn
-       do ew = 1,ewn
-          if (stagthck(ew,ns) /= 0.0d0) then
+    !$OMP DO SCHEDULE(STATIC)
+    do nsew=0,nsn*ewn-1
+       ns = 1+nsew/ewn
+       ew = 1+mod(nsew,ewn)
+       if (stagthck(ew,ns) /= 0.0d0) then
 
-             vflx(ew,ns) = diffu(ew,ns) * dusrfdns(ew,ns) + vbas(ew,ns) * stagthck(ew,ns)
-             uflx(ew,ns) = diffu(ew,ns) * dusrfdew(ew,ns) + ubas(ew,ns) * stagthck(ew,ns)
+          vflx(ew,ns) = diffu(ew,ns) * dusrfdns(ew,ns) + vbas(ew,ns) * stagthck(ew,ns)
+          uflx(ew,ns) = diffu(ew,ns) * dusrfdew(ew,ns) + ubas(ew,ns) * stagthck(ew,ns)
 
-             uvel(upn,ew,ns) = ubas(ew,ns)
-             vvel(upn,ew,ns) = vbas(ew,ns)
+          uvel(upn,ew,ns) = ubas(ew,ns)
+          vvel(upn,ew,ns) = vbas(ew,ns)
 
-             hrzflwa = hsum4(flwa(:,ew:ew+1,ns:ns+1))  
+          hrzflwa = hsum4(flwa(:,ew:ew+1,ns:ns+1))  
 
-             factor = velowk%dintflwa(ew,ns)*stagthck(ew,ns)
-             if (factor /= 0.0d0) then
-                const(2) = c * diffu(ew,ns) / factor
-                const(3) = const(2) * dusrfdns(ew,ns)  
-                const(2) = const(2) * dusrfdew(ew,ns) 
-             else
-                const(2:3) = 0.0d0
-             end if
-
-             do up = upn-1, 1, -1
-                const(1) = velowk%depth(up) * (hrzflwa(up)+hrzflwa(up+1))
-                uvel(up,ew,ns) = uvel(up+1,ew,ns) + const(1) * const(2)
-                vvel(up,ew,ns) = vvel(up+1,ew,ns) + const(1) * const(3) 
-             end do
-
-          else 
-
-             uvel(:,ew,ns) = 0.0d0
-             vvel(:,ew,ns) = 0.0d0
-             uflx(ew,ns) = 0.0d0
-             vflx(ew,ns) = 0.0d0 
-
+          factor = velowk%dintflwa(ew,ns)*stagthck(ew,ns)
+          if (factor /= 0.0d0) then
+             const(2) = c * diffu(ew,ns) / factor
+             const(3) = const(2) * dusrfdns(ew,ns)  
+             const(2) = const(2) * dusrfdew(ew,ns) 
+          else
+             const(2:3) = 0.0d0
           end if
-       end do
+
+          do up = upn-1, 1, -1
+             const(1) = velowk%depth(up) * (hrzflwa(up)+hrzflwa(up+1))
+             uvel(up,ew,ns) = uvel(up+1,ew,ns) + const(1) * const(2)
+             vvel(up,ew,ns) = vvel(up+1,ew,ns) + const(1) * const(3) 
+          end do
+
+       else 
+
+          uvel(:,ew,ns) = 0.0d0
+          vvel(:,ew,ns) = 0.0d0
+          uflx(ew,ns) = 0.0d0
+          vflx(ew,ns) = 0.0d0 
+
+       end if
     end do
     !$OMP END DO
     !$OMP END PARALLEL
@@ -407,11 +408,11 @@ contains
     ! Internal variables
     !------------------------------------------------------------------------------------
 
-    
+
     real(dp),dimension(size(sigma)) :: hrzflwa, intflwa 
     real(dp),dimension(3)           :: const
 
-    integer :: ew,ns,up,ewn,nsn,upn
+    integer :: ew,ns,nsew,up,ewn,nsn,upn
 
     !------------------------------------------------------------------------------------
 
@@ -424,144 +425,145 @@ contains
     case(0)
 
        !$OMP PARALLEL DEFAULT(NONE) &
-       !$OMP  PRIVATE(ns,ew,up,hrzflwa,const) &
+       !$OMP  PRIVATE(nsew,ns,ew,up,hrzflwa,const) &
        !$OMP  SHARED(nsn,ewn,upn,stagthck,uvel,vvel,flwa,dusrfdew,dusrfdns,velowk,diffu,ubas,vbas,uflx,vflx)
-       !$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
-      do ns = 1,nsn
-        do ew = 1,ewn
+       !$OMP DO SCHEDULE(STATIC)
+       do nsew=0,nsn*ewn-1
+          ns = 1+nsew/ewn
+          ew = 1+mod(nsew,ewn)
 
           if (stagthck(ew,ns) /= 0.0d0) then
 
-            ! Set velocity to zero at base of column
+             ! Set velocity to zero at base of column
 
-            uvel(upn,ew,ns) = 0.0d0
-            vvel(upn,ew,ns) = 0.0d0
+             uvel(upn,ew,ns) = 0.0d0
+             vvel(upn,ew,ns) = 0.0d0
 
-            ! Get column profile of Glenn's A
+             ! Get column profile of Glenn's A
 
-            hrzflwa = hsum4(flwa(:,ew:ew+1,ns:ns+1))
+             hrzflwa = hsum4(flwa(:,ew:ew+1,ns:ns+1))
 
-            ! Calculate coefficient for integration
+             ! Calculate coefficient for integration
 
-            const(1) = c * stagthck(ew,ns)**p1 * sqrt(dusrfdew(ew,ns)**2 + dusrfdns(ew,ns)**2)**p2  
+             const(1) = c * stagthck(ew,ns)**p1 * sqrt(dusrfdew(ew,ns)**2 + dusrfdns(ew,ns)**2)**p2  
 
-            ! Do first step of finding u according to (8) in Payne and Dongelmans 
+             ! Do first step of finding u according to (8) in Payne and Dongelmans 
 
-            do up = upn-1, 1, -1
-              uvel(up,ew,ns) = uvel(up+1,ew,ns) + const(1) * &
-                    velowk%depth(up) * sum(hrzflwa(up:up+1)) 
-            end do
+             do up = upn-1, 1, -1
+                uvel(up,ew,ns) = uvel(up+1,ew,ns) + const(1) * &
+                     velowk%depth(up) * sum(hrzflwa(up:up+1)) 
+             end do
 
-            ! Calculate u diffusivity (?)
+             ! Calculate u diffusivity (?)
 
-            diffu(ew,ns) = vertintg(velowk,uvel(:,ew,ns)) * stagthck(ew,ns)
+             diffu(ew,ns) = vertintg(velowk,uvel(:,ew,ns)) * stagthck(ew,ns)
 
-            ! Complete calculation of u and v
+             ! Complete calculation of u and v
 
-            vvel(:,ew,ns) = uvel(:,ew,ns) * dusrfdns(ew,ns) + vbas(ew,ns)
-            uvel(:,ew,ns) = uvel(:,ew,ns) * dusrfdew(ew,ns) + ubas(ew,ns)
+             vvel(:,ew,ns) = uvel(:,ew,ns) * dusrfdns(ew,ns) + vbas(ew,ns)
+             uvel(:,ew,ns) = uvel(:,ew,ns) * dusrfdew(ew,ns) + ubas(ew,ns)
 
-            ! Calculate ice fluxes
+             ! Calculate ice fluxes
 
-            uflx(ew,ns) = diffu(ew,ns) * dusrfdew(ew,ns) + ubas(ew,ns) * stagthck(ew,ns)
-            vflx(ew,ns) = diffu(ew,ns) * dusrfdns(ew,ns) + vbas(ew,ns) * stagthck(ew,ns)
+             uflx(ew,ns) = diffu(ew,ns) * dusrfdew(ew,ns) + ubas(ew,ns) * stagthck(ew,ns)
+             vflx(ew,ns) = diffu(ew,ns) * dusrfdns(ew,ns) + vbas(ew,ns) * stagthck(ew,ns)
 
           else 
 
-            ! Where there is no ice, set everything to zero.
+             ! Where there is no ice, set everything to zero.
 
-            uvel(:,ew,ns) = 0.0d0
-            vvel(:,ew,ns) = 0.0d0
-            uflx(ew,ns)   = 0.0d0
-            vflx(ew,ns)   = 0.0d0
-            diffu(ew,ns)  = 0.0d0
+             uvel(:,ew,ns) = 0.0d0
+             vvel(:,ew,ns) = 0.0d0
+             uflx(ew,ns)   = 0.0d0
+             vflx(ew,ns)   = 0.0d0
+             diffu(ew,ns)  = 0.0d0
 
           end if
 
-        end do
-      end do
+
+       end do
        !$OMP END DO
        !$OMP END PARALLEL
 
     case(1)
 
        !$OMP PARALLEL DEFAULT(NONE) &
-       !$OMP  PRIVATE(ns,ew,up,hrzflwa,intflwa) &
+       !$OMP  PRIVATE(nsew,ns,ew,up,hrzflwa,intflwa) &
        !$OMP  SHARED(nsn,ewn,upn,stagthck,velowk,flwa)
-       !$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
-      do ns = 1,nsn
-        do ew = 1,ewn
+       !$OMP DO SCHEDULE(STATIC)
+       do nsew=0,nsn*ewn-1
+          ns = 1+nsew/ewn
+          ew = 1+mod(nsew,ewn)
           if (stagthck(ew,ns) /= 0.0d0) then
 
-            hrzflwa = hsum4(flwa(:,ew:ew+1,ns:ns+1))  
-            intflwa(upn) = 0.0d0
+             hrzflwa = hsum4(flwa(:,ew:ew+1,ns:ns+1))  
+             intflwa(upn) = 0.0d0
 
-            do up = upn-1, 1, -1
-               intflwa(up) = intflwa(up+1) + velowk%depth(up) * sum(hrzflwa(up:up+1)) 
-            end do
+             do up = upn-1, 1, -1
+                intflwa(up) = intflwa(up+1) + velowk%depth(up) * sum(hrzflwa(up:up+1)) 
+             end do
 
-            velowk%dintflwa(ew,ns) = c * vertintg(velowk,intflwa)
+             velowk%dintflwa(ew,ns) = c * vertintg(velowk,intflwa)
 
           else 
 
-            velowk%dintflwa(ew,ns) = 0.0d0
+             velowk%dintflwa(ew,ns) = 0.0d0
 
           end if
-        end do
-      end do
+       end do
        !$OMP END DO
        !$OMP END PARALLEL
 
     case(2)
 
-      where (0.0d0 /= stagthck)
-        diffu = velowk%dintflwa * stagthck**p4 * sqrt(dusrfdew**2 + dusrfdns**2)**p2 
-      elsewhere
-        diffu = 0.0d0
-      end where
+       where (0.0d0 /= stagthck)
+          diffu = velowk%dintflwa * stagthck**p4 * sqrt(dusrfdew**2 + dusrfdns**2)**p2 
+       elsewhere
+          diffu = 0.0d0
+       end where
 
     case(3)
 
        !$OMP PARALLEL DEFAULT(NONE) &
-       !$OMP  PRIVATE(ns,ew,up,hrzflwa,const) &
+       !$OMP  PRIVATE(nsew,ns,ew,up,hrzflwa,const) &
        !$OMP  SHARED(nsn,ewn,upn,stagthck,velowk,flwa,uflx,vflx,diffu,dusrfdns,dusrfdew,ubas,vbas,uvel,vvel)
-       !$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
-      do ns = 1,nsn
-        do ew = 1,ewn
+       !$OMP DO SCHEDULE(STATIC)
+       do nsew=0,nsn*ewn-1
+          ns = 1+nsew/ewn
+          ew = 1+mod(nsew,ewn)
           if (stagthck(ew,ns) /= 0.0d0) then
 
-            vflx(ew,ns) = diffu(ew,ns) * dusrfdns(ew,ns) + vbas(ew,ns) * stagthck(ew,ns)
-            uflx(ew,ns) = diffu(ew,ns) * dusrfdew(ew,ns) + ubas(ew,ns) * stagthck(ew,ns)
+             vflx(ew,ns) = diffu(ew,ns) * dusrfdns(ew,ns) + vbas(ew,ns) * stagthck(ew,ns)
+             uflx(ew,ns) = diffu(ew,ns) * dusrfdew(ew,ns) + ubas(ew,ns) * stagthck(ew,ns)
 
-            uvel(upn,ew,ns) = ubas(ew,ns)
-            vvel(upn,ew,ns) = vbas(ew,ns)
+             uvel(upn,ew,ns) = ubas(ew,ns)
+             vvel(upn,ew,ns) = vbas(ew,ns)
 
-            hrzflwa = hsum4(flwa(:,ew:ew+1,ns:ns+1))  
+             hrzflwa = hsum4(flwa(:,ew:ew+1,ns:ns+1))  
 
-            if (velowk%dintflwa(ew,ns) /= 0.0d0) then
-               const(2) = c * diffu(ew,ns) / velowk%dintflwa(ew,ns)/stagthck(ew,ns)
-               const(3) = const(2) * dusrfdns(ew,ns)  
-               const(2) = const(2) * dusrfdew(ew,ns) 
-            else
-               const(2:3) = 0.0d0
-            end if
+             if (velowk%dintflwa(ew,ns) /= 0.0d0) then
+                const(2) = c * diffu(ew,ns) / velowk%dintflwa(ew,ns)/stagthck(ew,ns)
+                const(3) = const(2) * dusrfdns(ew,ns)  
+                const(2) = const(2) * dusrfdew(ew,ns) 
+             else
+                const(2:3) = 0.0d0
+             end if
 
-            do up = upn-1, 1, -1
-              const(1) = velowk%depth(up) * sum(hrzflwa(up:up+1)) 
-              uvel(up,ew,ns) = uvel(up+1,ew,ns) + const(1) * const(2)
-              vvel(up,ew,ns) = vvel(up+1,ew,ns) + const(1) * const(3) 
-            end do
+             do up = upn-1, 1, -1
+                const(1) = velowk%depth(up) * sum(hrzflwa(up:up+1)) 
+                uvel(up,ew,ns) = uvel(up+1,ew,ns) + const(1) * const(2)
+                vvel(up,ew,ns) = vvel(up+1,ew,ns) + const(1) * const(3) 
+             end do
 
           else 
 
-            uvel(:,ew,ns) = 0.0d0
-            vvel(:,ew,ns) = 0.0d0
-            uflx(ew,ns) = 0.0d0
-            vflx(ew,ns) = 0.0d0 
+             uvel(:,ew,ns) = 0.0d0
+             vvel(:,ew,ns) = 0.0d0
+             uflx(ew,ns) = 0.0d0
+             vflx(ew,ns) = 0.0d0 
 
           end if
-        end do
-      end do
+       end do
        !$OMP END DO
        !$OMP END PARALLEL
 
@@ -591,51 +593,51 @@ contains
     !------------------------------------------------------------------------------------
 
     real(dp),dimension(:),    intent(in)  :: sigma     !*FD Array holding values of sigma
-                                                       !*FD at each vertical level
+    !*FD at each vertical level
     real(dp),                 intent(in)  :: thklim    !*FD Minimum thickness to be considered
-                                                       !*FD when calculating the grid velocity.
-                                                       !*FD This is in m, divided by \texttt{thk0}.
+    !*FD when calculating the grid velocity.
+    !*FD This is in m, divided by \texttt{thk0}.
     real(dp),dimension(:,:,:),intent(in)  :: uvel      !*FD The $x$-velocity field (scaled). Velocity
-                                                       !*FD is on the staggered grid
+    !*FD is on the staggered grid
     real(dp),dimension(:,:,:),intent(in)  :: vvel      !*FD The $y$-velocity field (scaled). Velocity
-                                                       !*FD is on the staggered grid
+    !*FD is on the staggered grid
     type(glide_geomderv),   intent(in)  :: geomderv  !*FD Derived type holding temporal
-                                                       !*FD and horizontal derivatives of
-                                                       !*FD ice-sheet thickness and upper
-                                                       !*FD surface elevation
+    !*FD and horizontal derivatives of
+    !*FD ice-sheet thickness and upper
+    !*FD surface elevation
     real(dp),dimension(:,:),  intent(in)  :: thck      !*FD Ice-sheet thickness (divided by 
-                                                       !*FD \texttt{thk0})
+    !*FD \texttt{thk0})
     real(dp),dimension(:,:,:),intent(out) :: wgrd      !*FD The grid velocity at each point. This
-                                                       !*FD is the output.
+    !*FD is the output.
 
     !------------------------------------------------------------------------------------
     ! Internal variables
     !------------------------------------------------------------------------------------
 
-    integer :: ns,ew,nsn,ewn
+    integer :: ns,ew,nsew,nsn,ewn
 
     !------------------------------------------------------------------------------------
 
     ewn=size(wgrd,2) ; nsn=size(wgrd,3)
 
     !$OMP PARALLEL DEFAULT(NONE) &
-    !$OMP  PRIVATE(ns,ew) &
+    !$OMP  PRIVATE(nsew,ns,ew) &
     !$OMP  SHARED(nsn,ewn,thck,thklim,wgrd,geomderv,sigma,uvel,vvel)
-    !$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
-    do ns = 2,nsn-1
-      do ew = 2,ewn-1
-        if (thck(ew,ns) > thklim) then
+    !$OMP DO SCHEDULE(STATIC)
+    do nsew=0,(nsn-2)*(ewn-2)-1
+       ns = 2+nsew/(ewn-2)
+       ew = 2+mod(nsew,ewn-2)
+       if (thck(ew,ns) > thklim) then
           wgrd(:,ew,ns) = geomderv%dusrfdtm(ew,ns) - sigma * geomderv%dthckdtm(ew,ns) + & 
-                      (hsum4(uvel(:,ew-1:ew,ns-1:ns)) * &
-                      (sum(geomderv%dusrfdew(ew-1:ew,ns-1:ns)) - sigma * &
-                       sum(geomderv%dthckdew(ew-1:ew,ns-1:ns))) + &
-                       hsum4(vvel(:,ew-1:ew,ns-1:ns)) * &
-                      (sum(geomderv%dusrfdns(ew-1:ew,ns-1:ns)) - sigma * &
-                       sum(geomderv%dthckdns(ew-1:ew,ns-1:ns)))) / 16.0d0
-        else
+               (hsum4(uvel(:,ew-1:ew,ns-1:ns)) * &
+               (sum(geomderv%dusrfdew(ew-1:ew,ns-1:ns)) - sigma * &
+               sum(geomderv%dthckdew(ew-1:ew,ns-1:ns))) + &
+               hsum4(vvel(:,ew-1:ew,ns-1:ns)) * &
+               (sum(geomderv%dusrfdns(ew-1:ew,ns-1:ns)) - sigma * &
+               sum(geomderv%dthckdns(ew-1:ew,ns-1:ns)))) / 16.0d0
+       else
           wgrd(:,ew,ns) = 0.0d0
-        end if
-      end do
+       end if
     end do
     !$OMP END DO
     !$OMP END PARALLEL
@@ -665,25 +667,25 @@ contains
     !------------------------------------------------------------------------------------
 
     real(dp),dimension(:,:,:), intent(in)    :: uvel      !*FD The $x$-velocity on the
-                                                          !*FD staggered grid (scaled)
+    !*FD staggered grid (scaled)
     real(dp),dimension(:,:,:), intent(in)    :: vvel      !*FD The $y$-velocity on the
-                                                          !*FD staggered grid (scaled)
+    !*FD staggered grid (scaled)
     real(dp),dimension(:,:),   intent(in)    :: thck      !*FD The ice thickness, divided
-                                                          !*FD by \texttt{thk0}
+    !*FD by \texttt{thk0}
     type(glide_geomderv),    intent(in)    :: geomderv  !*FD Derived type holding the
-                                                          !*FD horizontal and temporal derivatives
-                                                          !*FD of the thickness and upper surface
-                                                          !*FD elevation.
+    !*FD horizontal and temporal derivatives
+    !*FD of the thickness and upper surface
+    !*FD elevation.
     type(glide_numerics),    intent(in)    :: numerics  !*FD Derived type holding numerical
-                                                          !*FD parameters, including sigma values.
+    !*FD parameters, including sigma values.
     type(glide_velowk),      intent(inout) :: velowk    !*FD Derived type holding working arrays
-                                                          !*FD used by the subroutine
+    !*FD used by the subroutine
     real(dp),dimension(:,:),   intent(in)    :: wgrd      !*FD The grid vertical velocity at
-                                                          !*FD the lowest model level.
+    !*FD the lowest model level.
     real(dp),dimension(:,:),   intent(in)    :: bmlt      !*FD Basal melt-rate (scaled?) This
-                                                          !*FD is required in the basal boundary
-                                                          !*FD condition. See {\em Payne and Dongelmans}
-                                                          !*FD equation 14.
+    !*FD is required in the basal boundary
+    !*FD condition. See {\em Payne and Dongelmans}
+    !*FD equation 14.
     real(dp),dimension(:,:,:), intent(out)   :: wvel      !*FD The vertical velocity field.
 
     !------------------------------------------------------------------------------------
@@ -692,7 +694,7 @@ contains
 
     real(dp) :: dew16, dns16        ! The grid-spacings multiplied by 16
     real(dp),dimension(6) :: cons   ! Holds temporary local values of derivatives
-    integer :: ns,ew,up             ! Loop indicies
+    integer :: ns,ew,up,nsew        ! Loop indicies
     integer :: nsn,ewn,upn          ! Domain sizes
     real(dp), dimension(size(uvel,1)) :: suvel,svvel ! horiz velos on ice grid
 
@@ -713,13 +715,14 @@ contains
     ! ----------------------------------------------------------------------------------
 
     !$OMP PARALLEL DEFAULT(NONE) &
-    !$OMP  PRIVATE(ns,ew,cons,suvel,svvel,up) &
+    !$OMP  PRIVATE(nsew,ns,ew,cons,suvel,svvel,up) &
     !$OMP  SHARED(nsn,ewn,upn,thck,numerics,uvel,vvel,wvel,wgrd,bmlt,velowk,dew16,dns16,geomderv)
-    !$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
-    do ns = 2,nsn
-      do ew = 2,ewn
-        if (thck(ew,ns) > numerics%thklim) then
-  
+    !$OMP DO SCHEDULE(STATIC)
+    do nsew=0,(nsn-1)*(ewn-1)-1
+       ns = 2+nsew/(ewn-1)
+       ew = 2+mod(nsew,ewn-1)
+       if (thck(ew,ns) > numerics%thklim) then
+
           ! Set the bottom boundary condition ------------------------------------------
 
           wvel(upn,ew,ns) = wgrd(ew,ns) - bmlt(ew,ns)
@@ -744,20 +747,19 @@ contains
           ! Loop over each model level, starting from the bottom ----------------------
 
           do up = upn-1, 1, -1
-            wvel(up,ew,ns) = wvel(up+1,ew,ns) &
+             wvel(up,ew,ns) = wvel(up+1,ew,ns) &
                   - velowk%dupsw(up) * cons(5) * (sum(uvel(up:up+1,ew,ns-1:ns))  - sum(uvel(up:up+1,ew-1,ns-1:ns))) &
                   - velowk%dupsw(up) * cons(6) * (sum(vvel(up:up+1,ew-1:ew,ns))  - sum(vvel(up:up+1,ew-1:ew,ns-1))) &
                   - (suvel(up+1) - suvel(up)) * (cons(1) - velowk%depthw(up) * cons(2)) &
                   - (svvel(up+1) - svvel(up)) * (cons(3) - velowk%depthw(up) * cons(4)) 
           end do
-        else 
+       else 
 
           ! If there isn't enough ice, set velocities to zero ----------------------------
 
           wvel(:,ew,ns) = 0.0d0  
 
-        end if
-      end do
+       end if
     end do
     !$OMP END DO
     !$OMP END PARALLEL
@@ -794,16 +796,16 @@ contains
     !------------------------------------------------------------------------------------
 
     type(glide_numerics),     intent(in)    :: numerics  !*FD Derived type containing
-                                                           !*FD model numerics parameters
+    !*FD model numerics parameters
     type(glide_velowk),       intent(inout) :: velowk    !*FD Derived type containing
-                                                           !*FD work arrays for this module
+    !*FD work arrays for this module
     real(dp),                   intent(in)    :: fiddle    !*FD Tuning parameter for the
-                                                           !*FD Paterson-Budd relationship
+    !*FD Paterson-Budd relationship
     real(dp),dimension(:,:,:),  intent(out)   :: flwa      !*FD The calculated values of $A$
     real(dp),dimension(:,0:,0:),intent(in)    :: temp      !*FD The 3D temperature field
     real(dp),dimension(:,:),    intent(in)    :: thck      !*FD The ice thickness
     integer,                    intent(in)    :: flag      !*FD Flag to select the method
-                                                           !*FD of calculation:
+    !*FD of calculation:
     !*FD \begin{description}
     !*FD \item[0] {\em Paterson and Budd} relationship.
     !*FD \item[1] {\em Paterson and Budd} relationship, with temperature set to
@@ -819,10 +821,10 @@ contains
     real(dp), parameter :: contemp = -5.0d0  
     real(dp), dimension(size(numerics%sigma)) :: tempcor
 
-    integer :: ew,ns,up,ewn,nsn,upn
+    integer :: ew,ns,nsew,up,ewn,nsn,upn
 
     !------------------------------------------------------------------------------------
-    
+
     upn=size(flwa,1) ; ewn=size(flwa,2) ; nsn=size(flwa,3)
 
     !------------------------------------------------------------------------------------
@@ -830,68 +832,69 @@ contains
     select case(flag)
     case(0)
 
-      ! This is the Paterson and Budd relationship
+       ! This is the Paterson and Budd relationship
 
        !$OMP PARALLEL DEFAULT(NONE) &
-       !$OMP  PRIVATE(ns,ew,tempcor) &
+       !$OMP  PRIVATE(nsew,ns,ew,tempcor) &
        !$OMP  SHARED(nsn,ewn,thck,numerics,temp,flwa,velowk,fiddle)
-       !$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
-      do ns = 1,nsn
-        do ew = 1,ewn
+       !$OMP DO SCHEDULE(STATIC)
+       do nsew=0,nsn*ewn-1
+          ns = 1+nsew/ewn
+          ew = 1+mod(nsew,ewn)
+
           if (thck(ew,ns) > numerics%thklim) then
-            
-            ! Calculate the corrected temperature
 
-            tempcor = min(0.0d0, temp(:,ew,ns) + thck(ew,ns) * fact * numerics%sigma)
-            tempcor = max(-50.0d0, tempcor)
+             ! Calculate the corrected temperature
 
-            ! Calculate Glenn's A
+             tempcor = min(0.0d0, temp(:,ew,ns) + thck(ew,ns) * fact * numerics%sigma)
+             tempcor = max(-50.0d0, tempcor)
 
-            call patebudd(tempcor,flwa(:,ew,ns),velowk%fact) 
+             ! Calculate Glenn's A
+
+             call patebudd(tempcor,flwa(:,ew,ns),velowk%fact) 
           else
-            flwa(:,ew,ns) = fiddle
+             flwa(:,ew,ns) = fiddle
           end if
-        end do
-      end do
+       end do
        !$OMP END DO
        !$OMP END PARALLEL
 
+
     case(1)
 
-      ! This is the Paterson and Budd relationship, but with the temperature held constant
-      ! at -5 deg C
-
+       ! This is the Paterson and Budd relationship, but with the temperature held constant
+       ! at -5 deg C
        tempcor = (/(contemp, up=1,upn)/)
        !$OMP PARALLEL DEFAULT(NONE) &
-       !$OMP  PRIVATE(ns,ew) &
+       !$OMP  PRIVATE(nsew,ns,ew) &
        !$OMP  SHARED(nsn,ewn,thck,numerics,tempcor,flwa,velowk,fiddle)
-       !$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
-     do ns = 1,nsn
-        do ew = 1,ewn
+       !$OMP DO SCHEDULE(STATIC)
+       do nsew=0,nsn*ewn-1
+          ns = 1+nsew/ewn
+          ew = 1+mod(nsew,ewn)
           if (thck(ew,ns) > numerics%thklim) then
 
-            ! Calculate Glenn's A with a fixed temperature.
+             ! Calculate Glenn's A with a fixed temperature.
 
-            call patebudd(tempcor,flwa(:,ew,ns),velowk%fact) 
+             call patebudd(tempcor,flwa(:,ew,ns),velowk%fact) 
           else
-            flwa(:,ew,ns) = fiddle
+             flwa(:,ew,ns) = fiddle
           end if
-        end do
-      end do
+       end do
        !$OMP END DO
        !$OMP END PARALLEL
 
     case default 
 
-      ! Set A equal to the value of fiddle. According to the documentation, this
-      ! option means A=10^-16 yr^-1 Pa^-n, but I'm not sure how this squares with
-      ! the value of fiddle, which is currently set to three.
+       ! Set A equal to the value of fiddle. According to the documentation, this
+       ! option means A=10^-16 yr^-1 Pa^-n, but I'm not sure how this squares with
+       ! the value of fiddle, which is currently set to three.
 
-      flwa = fiddle
-  
+       flwa = fiddle
+
     end select
 
-  end subroutine calcflwa 
+  end subroutine calcflwa
 
 !------------------------------------------------------------------------------------------
 
@@ -926,7 +929,7 @@ contains
 
     real(dp) :: wchk
     real(dp) :: tempcoef
-    integer  :: ns,ew,nsn,ewn
+    integer  :: ns,ew,nsn,ewn,nsew
 
     ! Get array sizes -------------------------------------------------------------------
 
@@ -936,27 +939,26 @@ contains
 
 
     ! Loop over all grid-boxes ----------------------------------------------------------
-
     !$OMP PARALLEL DEFAULT(NONE) &
-    !$OMP  PRIVATE(ns,ew,wchk,tempcoef) &
+    !$OMP  PRIVATE(nsew,ns,ew,wchk,tempcoef) &
     !$OMP  SHARED(nsn,ewn,thck,numerics,wvel,geomderv,acab,uvel,vvel)
-    !$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
-   do ns = 2,nsn-1
-      do ew = 2,ewn-1
-         if (thck(ew,ns) > numerics%thklim .and. wvel(1,ew,ns).ne.0) then
-
-            wchk = geomderv%dusrfdtm(ew,ns) &
-                 - acab(ew,ns) &
-                 + (sum(uvel(ew-1:ew,ns-1:ns)) * sum(geomderv%dusrfdew(ew-1:ew,ns-1:ns)) &
-                 +  sum(vvel(ew-1:ew,ns-1:ns)) * sum(geomderv%dusrfdns(ew-1:ew,ns-1:ns))) &
-                 / 16.0d0
+    !$OMP DO SCHEDULE(STATIC)
+    do nsew=0,(nsn-2)*(ewn-2)-1
+       ns = 2+nsew/(ewn-2)
+       ew = 2+mod(nsew,ewn-2)
+       if (thck(ew,ns) > numerics%thklim .and. wvel(1,ew,ns).ne.0) then
+          
+          wchk = geomderv%dusrfdtm(ew,ns) &
+               - acab(ew,ns) &
+               + (sum(uvel(ew-1:ew,ns-1:ns)) * sum(geomderv%dusrfdew(ew-1:ew,ns-1:ns)) &
+               +  sum(vvel(ew-1:ew,ns-1:ns)) * sum(geomderv%dusrfdns(ew-1:ew,ns-1:ns))) &
+               / 16.0d0
 
             
-            tempcoef = wchk - wvel(1,ew,ns)
+          tempcoef = wchk - wvel(1,ew,ns)
 
-            wvel(:,ew,ns) = wvel(:,ew,ns) + tempcoef * (1.0d0 - numerics%sigma) 
-         end if
-      end do
+          wvel(:,ew,ns) = wvel(:,ew,ns) + tempcoef * (1.0d0 - numerics%sigma) 
+       end if
     end do
     !$OMP END DO
     !$OMP END PARALLEL

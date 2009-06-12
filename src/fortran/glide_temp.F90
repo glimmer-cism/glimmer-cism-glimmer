@@ -224,7 +224,7 @@ contains
     real(dp) :: tempresid
 
     integer :: iter
-    integer :: ew,ns
+    integer :: ew,ns,nsew
 
     real(dp),parameter :: tempthres = 0.001d0, floatlim = 10.0d0 / thk0
     integer, parameter :: mxit = 100
@@ -345,14 +345,14 @@ contains
 
        ! translate velo field
        !$OMP PARALLEL DEFAULT(NONE) &
-       !$OMP  PRIVATE(ns,ew) &
+       !$OMP  PRIVATE(nsew,ns,ew) &
        !$OMP  SHARED(model)
-       !$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
-       do ns = 2,model%general%nsn-1
-          do ew = 2,model%general%ewn-1
-             model%tempwk%hadv_u(:,ew,ns) = model%tempwk%advconst(1) * hsum4(model%velocity%uvel(:,ew-1:ew,ns-1:ns))
-             model%tempwk%hadv_v(:,ew,ns) = model%tempwk%advconst(2) * hsum4(model%velocity%vvel(:,ew-1:ew,ns-1:ns))
-          end do
+       !$OMP DO SCHEDULE(STATIC)
+       do nsew=0,(model%general%nsn-2)*(model%general%ewn-2)-1
+          ns=2+nsew/(model%general%ewn-2)
+          ew=2+mod(nsew,model%general%ewn-2)
+          model%tempwk%hadv_u(:,ew,ns) = model%tempwk%advconst(1) * hsum4(model%velocity%uvel(:,ew-1:ew,ns-1:ns))
+          model%tempwk%hadv_v(:,ew,ns) = model%tempwk%advconst(2) * hsum4(model%velocity%vvel(:,ew-1:ew,ns-1:ns))
        end do
        !$OMP END DO
        !$OMP END PARALLEL
@@ -365,12 +365,67 @@ contains
        iter = 0
        tempresid = 0.0d0
        !$OMP PARALLEL DEFAULT(NONE) &
-       !$OMP  PRIVATE(ns,ew, weff, iteradvt, diagadvt, subd, diag, supd, rhsd, prevtemp) &
+       !$OMP  PRIVATE(nsew,ns,ew, weff, iteradvt, diagadvt, subd, diag, supd, rhsd, prevtemp) &
        !$OMP  SHARED(model) &
        !$OMP  REDUCTION(max:tempresid)
-       !$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
-       do ns = 2,model%general%nsn-1
-          do ew = 2,model%general%ewn-1
+       !$OMP DO SCHEDULE(STATIC)
+       do nsew=0,(model%general%nsn-2)*(model%general%ewn-2)-1
+          ns=2+nsew/(model%general%ewn-2)
+          ew=2+mod(nsew,model%general%ewn-2)
+          if(model%geometry%thck(ew,ns)>model%numerics%thklim) then
+
+             weff = model%velocity%wvel(:,ew,ns) - model%velocity%wgrd(:,ew,ns)
+             if (maxval(abs(weff)) > model%tempwk%wmax) then
+                weff = 0.0d0
+             end if
+
+             call hadvpnt(iteradvt,                               &
+                  diagadvt,                               &
+                  model%temper%temp(:,ew-2:ew+2,ns),      &
+                  model%temper%temp(:,ew,ns-2:ns+2),      &
+                  model%tempwk%hadv_u(:,ew,ns), &
+                  model%tempwk%hadv_v(:,ew,ns))
+               
+             call findvtri(model,ew,ns,subd,diag,supd,diagadvt, &
+                  weff, &
+                  is_float(model%geometry%thkmask(ew,ns)))
+
+             call findvtri_init(model,ew,ns,subd,diag,supd,weff,model%temper%temp(:,ew,ns), &
+                  model%geometry%thck(ew,ns),is_float(model%geometry%thkmask(ew,ns)))
+
+             call findvtri_rhs(model,ew,ns,model%climate%artm(ew,ns),iteradvt,rhsd, &
+                  is_float(model%geometry%thkmask(ew,ns)))
+                
+             prevtemp = model%temper%temp(:,ew,ns)
+
+             call tridiag(subd(1:model%general%upn), &
+                  diag(1:model%general%upn), &
+                  supd(1:model%general%upn), &
+                  model%temper%temp(1:model%general%upn,ew,ns), &
+                  rhsd(1:model%general%upn))
+
+             call corrpmpt(model%temper%temp(:,ew,ns),model%geometry%thck(ew,ns),model%temper%bwat(ew,ns), &
+                  model%numerics%sigma,model%general%upn)
+
+             
+             tempresid = max(tempresid,maxval(abs(model%temper%temp(:,ew,ns)-prevtemp(:))))
+          endif
+       end do
+       !$OMP END DO
+       !$OMP END PARALLEL
+       
+
+       do while (tempresid.gt.tempthres .and. iter.le.mxit)
+          tempresid = 0.0d0
+          
+          !$OMP PARALLEL DEFAULT(NONE) &
+          !$OMP  PRIVATE(nsew,ns,ew, weff, iteradvt, diagadvt, subd, diag, supd, rhsd, prevtemp) &
+          !$OMP  SHARED(model) &
+          !$OMP  REDUCTION(max:tempresid)
+          !$OMP DO SCHEDULE(STATIC)
+          do nsew=0,(model%general%nsn-2)*(model%general%ewn-2)-1
+             ns=2+nsew/(model%general%ewn-2)
+             ew=2+mod(nsew,model%general%ewn-2)
              if(model%geometry%thck(ew,ns)>model%numerics%thklim) then
 
                 weff = model%velocity%wvel(:,ew,ns) - model%velocity%wgrd(:,ew,ns)
@@ -388,10 +443,7 @@ contains
                 call findvtri(model,ew,ns,subd,diag,supd,diagadvt, &
                      weff, &
                      is_float(model%geometry%thkmask(ew,ns)))
-
-                call findvtri_init(model,ew,ns,subd,diag,supd,weff,model%temper%temp(:,ew,ns), &
-                     model%geometry%thck(ew,ns),is_float(model%geometry%thkmask(ew,ns)))
-
+                
                 call findvtri_rhs(model,ew,ns,model%climate%artm(ew,ns),iteradvt,rhsd, &
                      is_float(model%geometry%thkmask(ew,ns)))
                 
@@ -406,59 +458,8 @@ contains
                 call corrpmpt(model%temper%temp(:,ew,ns),model%geometry%thck(ew,ns),model%temper%bwat(ew,ns), &
                      model%numerics%sigma,model%general%upn)
 
-
                 tempresid = max(tempresid,maxval(abs(model%temper%temp(:,ew,ns)-prevtemp(:))))
              endif
-          end do
-       end do
-       !$OMP END DO
-       !$OMP END PARALLEL
-
-       do while (tempresid.gt.tempthres .and. iter.le.mxit)
-          tempresid = 0.0d0
-
-          !$OMP PARALLEL DEFAULT(NONE) &
-          !$OMP  PRIVATE(ns,ew, weff, iteradvt, diagadvt, subd, diag, supd, rhsd, prevtemp) &
-          !$OMP  SHARED(model) &
-          !$OMP  REDUCTION(max:tempresid)
-          !$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
-          do ns = 2,model%general%nsn-1
-             do ew = 2,model%general%ewn-1
-                if(model%geometry%thck(ew,ns)>model%numerics%thklim) then
-
-                   weff = model%velocity%wvel(:,ew,ns) - model%velocity%wgrd(:,ew,ns)
-                   if (maxval(abs(weff)) > model%tempwk%wmax) then
-                      weff = 0.0d0
-                   end if
-
-                   call hadvpnt(iteradvt,                               &
-                        diagadvt,                               &
-                        model%temper%temp(:,ew-2:ew+2,ns),      &
-                        model%temper%temp(:,ew,ns-2:ns+2),      &
-                        model%tempwk%hadv_u(:,ew,ns), &
-                        model%tempwk%hadv_v(:,ew,ns))
-
-                   call findvtri(model,ew,ns,subd,diag,supd,diagadvt, &
-                        weff, &
-                        is_float(model%geometry%thkmask(ew,ns)))
-
-                   call findvtri_rhs(model,ew,ns,model%climate%artm(ew,ns),iteradvt,rhsd, &
-                        is_float(model%geometry%thkmask(ew,ns)))
-
-                   prevtemp = model%temper%temp(:,ew,ns)
-
-                   call tridiag(subd(1:model%general%upn), &
-                        diag(1:model%general%upn), &
-                        supd(1:model%general%upn), &
-                        model%temper%temp(1:model%general%upn,ew,ns), &
-                        rhsd(1:model%general%upn))
-
-                   call corrpmpt(model%temper%temp(:,ew,ns),model%geometry%thck(ew,ns),model%temper%bwat(ew,ns), &
-                        model%numerics%sigma,model%general%upn)
-
-                   tempresid = max(tempresid,maxval(abs(model%temper%temp(:,ew,ns)-prevtemp(:))))
-                endif
-             end do
           end do
           !$OMP END DO
           !$OMP END PARALLEL          
@@ -813,7 +814,7 @@ contains
     real(dp), dimension(:,:,:), intent(in) :: flwa
 
     integer, parameter :: p1 = gn + 1  
-    integer :: ew,ns
+    integer :: ew,ns,nsew
 
     real(dp) :: c2
 
@@ -824,24 +825,24 @@ contains
 
 
     model%tempwk%dissip = 0.0d0
-    
+
     !$OMP PARALLEL DEFAULT(NONE) &
-    !$OMP  PRIVATE(ns,ew,c2) &
+    !$OMP  PRIVATE(nsew,ns,ew,c2) &
     !$OMP  SHARED(model,thck,stagthck,dusrfdew,dusrfdns,flwa)
-    !$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
-    do ns = 2, model%general%nsn-1
-       do ew = 2, model%general%ewn-1
-          if (thck(ew,ns) > model%numerics%thklim) then
-             
-             c2 = (0.25*sum(stagthck(ew-1:ew,ns-1:ns)) * dsqrt((0.25*sum(dusrfdew(ew-1:ew,ns-1:ns)))**2 &
-                  + (0.25*sum(dusrfdns(ew-1:ew,ns-1:ns)))**2))**p1
-             
-             model%tempwk%dissip(:,ew,ns) = c2 * model%tempwk%c1 * ( &
-                  flwa(:,ew-1,ns-1) + flwa(:,ew-1,ns+1) + flwa(:,ew+1,ns+1) + flwa(:,ew+1,ns-1) + &
-                  2*(flwa(:,ew-1,ns)+flwa(:,ew+1,ns)+flwa(:,ew,ns-1)+flwa(:,ew,ns+1)) + &
-                  4*flwa(:,ew,ns))             
-          end if
-       end do
+    !$OMP DO SCHEDULE(STATIC)
+    do nsew=0,(model%general%nsn-2)*(model%general%ewn-2)-1
+       ns=2+nsew/(model%general%ewn-2)
+       ew=2+mod(nsew,model%general%ewn-2)
+       if (thck(ew,ns) > model%numerics%thklim) then
+
+          c2 = (0.25*sum(stagthck(ew-1:ew,ns-1:ns)) * sqrt((0.25*sum(dusrfdew(ew-1:ew,ns-1:ns)))**2 &
+               + (0.25*sum(dusrfdns(ew-1:ew,ns-1:ns)))**2))**p1
+
+          model%tempwk%dissip(:,ew,ns) = c2 * model%tempwk%c1 * ( &
+               flwa(:,ew-1,ns-1) + flwa(:,ew-1,ns+1) + flwa(:,ew+1,ns+1) + flwa(:,ew+1,ns-1) + &
+               2*(flwa(:,ew-1,ns)+flwa(:,ew+1,ns)+flwa(:,ew,ns-1)+flwa(:,ew,ns+1)) + &
+               4*flwa(:,ew,ns))             
+       end if
     end do
     !$OMP END DO
     !$OMP END PARALLEL
@@ -865,59 +866,54 @@ contains
     real(dp), dimension(size(model%numerics%sigma)) :: pmptemp
     real(dp) :: slterm, newmlt
 
-    integer :: ewp, nsp,up,ew,ns
+    integer :: ewp, nsp,up,ew,ns,nsew
 
 
     !$OMP PARALLEL DEFAULT(NONE) &
-    !$OMP  PRIVATE(ns,ew, pmptemp,slterm,nsp,ewp,newmlt,up) &
+    !$OMP  PRIVATE(nsew,ns,ew, pmptemp,slterm,nsp,ewp,newmlt,up) &
     !$OMP  SHARED(model,thck,floater,temp,stagthck,dusrfdew,ubas,dusrfdns,vbas,bmlt)
-    !$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
-    do ns = 2, model%general%nsn-1
-       do ew = 2, model%general%ewn-1
-          if (thck(ew,ns) > model%numerics%thklim .and. .not. floater(ew,ns)) then
+    !$OMP DO SCHEDULE(STATIC)
+    do nsew=0,(model%general%nsn-2)*(model%general%ewn-2)-1
+       ns=2+nsew/(model%general%ewn-2)
+       ew=2+mod(nsew,model%general%ewn-2)
+       if (thck(ew,ns) > model%numerics%thklim .and. .not. floater(ew,ns)) then
 
-             call calcpmpt(pmptemp,thck(ew,ns),model%numerics%sigma)
+          call calcpmpt(pmptemp,thck(ew,ns),model%numerics%sigma)
 
-             if (abs(temp(model%general%upn,ew,ns)-pmptemp(model%general%upn)) .lt. 0.001) then
+          if (abs(temp(model%general%upn,ew,ns)-pmptemp(model%general%upn)) .lt. 0.001) then
 
-                slterm = 0.0d0
+             slterm = 0.0d0
 
-                do nsp = ns-1,ns
-                   do ewp = ew-1,ew
-                      slterm = slterm - stagthck(ewp,nsp) * &
-                           (dusrfdew(ewp,nsp) * ubas(ewp,nsp) + dusrfdns(ewp,nsp) * vbas(ewp,nsp))
-                   end do
+             do nsp = ns-1,ns
+                do ewp = ew-1,ew
+                   slterm = slterm - stagthck(ewp,nsp) * &
+                        (dusrfdew(ewp,nsp) * ubas(ewp,nsp) + dusrfdns(ewp,nsp) * vbas(ewp,nsp))
                 end do
+             end do
 
-                bmlt(ew,ns) = 0.0d0
-                newmlt = model%tempwk%f(4) * slterm - model%tempwk%f(2)*model%temper%bheatflx(ew,ns) + model%tempwk%f(3) * &
-                     model%tempwk%dupc(model%general%upn) * &
-                     thck(ew,ns) * model%tempwk%dissip(model%general%upn,ew,ns)
+             bmlt(ew,ns) = 0.0d0
+             newmlt = model%tempwk%f(4) * slterm - model%tempwk%f(2)*model%temper%bheatflx(ew,ns) + model%tempwk%f(3) * &
+                  model%tempwk%dupc(model%general%upn) * &
+                  thck(ew,ns) * model%tempwk%dissip(model%general%upn,ew,ns)
 
-                up = model%general%upn - 1
+             up = model%general%upn - 1
 
-                do while (abs(temp(up,ew,ns)-pmptemp(up)) .lt. 0.001 .and. up .ge. 3)
-                   bmlt(ew,ns) = bmlt(ew,ns) + newmlt
-                   newmlt = model%tempwk%f(3) * model%tempwk%dupc(up) * thck(ew,ns) * model%tempwk%dissip(up,ew,ns)
-                   up = up - 1
-                end do
+             do while (abs(temp(up,ew,ns)-pmptemp(up)) .lt. 0.001 .and. up .ge. 3)
+                bmlt(ew,ns) = bmlt(ew,ns) + newmlt
+                newmlt = model%tempwk%f(3) * model%tempwk%dupc(up) * thck(ew,ns) * model%tempwk%dissip(up,ew,ns)
+                up = up - 1
+             end do
 
-                up = up + 1
+             up = up + 1
 
-                if (up == model%general%upn) then
-                   bmlt(ew,ns) = newmlt - &
-                        model%tempwk%f(1) * ( (temp(up-2,ew,ns) - pmptemp(up-2)) * model%tempwk%dupa(up) &
-                        + (temp(up-1,ew,ns) - pmptemp(up-1)) * model%tempwk%dupb(up) ) / thck(ew,ns) 
-                else
-                   bmlt(ew,ns) = bmlt(ew,ns) + max(0.0d0, newmlt - &
-                        model%tempwk%f(1) * ( (temp(up-2,ew,ns) - pmptemp(up-2)) * model%tempwk%dupa(up) &
-                        + (temp(up-1,ew,ns) - pmptemp(up-1)) * model%tempwk%dupb(up) ) / thck(ew,ns)) 
-                end if
-
+             if (up == model%general%upn) then
+                bmlt(ew,ns) = newmlt - &
+                     model%tempwk%f(1) * ( (temp(up-2,ew,ns) - pmptemp(up-2)) * model%tempwk%dupa(up) &
+                     + (temp(up-1,ew,ns) - pmptemp(up-1)) * model%tempwk%dupb(up) ) / thck(ew,ns) 
              else
-
-                bmlt(ew,ns) = 0.0d0
-
+                bmlt(ew,ns) = bmlt(ew,ns) + max(0.0d0, newmlt - &
+                     model%tempwk%f(1) * ( (temp(up-2,ew,ns) - pmptemp(up-2)) * model%tempwk%dupa(up) &
+                     + (temp(up-1,ew,ns) - pmptemp(up-1)) * model%tempwk%dupb(up) ) / thck(ew,ns)) 
              end if
 
           else
@@ -925,7 +921,12 @@ contains
              bmlt(ew,ns) = 0.0d0
 
           end if
-       end do
+
+       else
+
+          bmlt(ew,ns) = 0.0d0
+
+       end if
     end do
     !$OMP END DO
     !$OMP END PARALLEL
