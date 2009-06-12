@@ -44,6 +44,8 @@
 #include "config.inc"
 #endif
 
+#include "glimmer_linearise_loop.inc"
+
 module glide_velo
 
   !*FD Contains routines which handle various aspects of velocity in the model,
@@ -154,9 +156,7 @@ contains
     !$OMP  PRIVATE(nsew,ns,ew,up,hrzflwa,intflwa) &
     !$OMP  SHARED(nsn,ewn,upn,stagthck,flwa,velowk)
     !$OMP DO SCHEDULE(STATIC)
-    do nsew=0,(nsn-1)*(ewn-1)-1
-       ns = 1+nsew/(ewn-1)
-       ew = 1+mod(nsew,ewn-1)
+    LINEARISE_NSEW_LOOP(nsew,ns,1,nsn-1,ew,1,ewn-1)
        if (stagthck(ew,ns) /= 0.0d0) then
           
           hrzflwa = hsum4(flwa(:,ew:ew+1,ns:ns+1))  
@@ -241,9 +241,7 @@ contains
     !$OMP  PRIVATE(nsew,ns,ew,up,hrzflwa,factor,const) &
     !$OMP  SHARED(nsn,ewn,upn,stagthck,vflx,uflx,diffu,dusrfdns,vbas,dusrfdew,ubas,uvel,vvel,flwa,velowk)
     !$OMP DO SCHEDULE(STATIC)
-    do nsew=0,nsn*ewn-1
-       ns = 1+nsew/ewn
-       ew = 1+mod(nsew,ewn)
+    LINEARISE_NSEW_LOOP(nsew,ns,1,nsn,ew,1,ewn)
        if (stagthck(ew,ns) /= 0.0d0) then
 
           vflx(ew,ns) = diffu(ew,ns) * dusrfdns(ew,ns) + vbas(ew,ns) * stagthck(ew,ns)
@@ -428,9 +426,7 @@ contains
        !$OMP  PRIVATE(nsew,ns,ew,up,hrzflwa,const) &
        !$OMP  SHARED(nsn,ewn,upn,stagthck,uvel,vvel,flwa,dusrfdew,dusrfdns,velowk,diffu,ubas,vbas,uflx,vflx)
        !$OMP DO SCHEDULE(STATIC)
-       do nsew=0,nsn*ewn-1
-          ns = 1+nsew/ewn
-          ew = 1+mod(nsew,ewn)
+       LINEARISE_NSEW_LOOP(nsew,ns,1,nsn,ew,1,ewn)
 
           if (stagthck(ew,ns) /= 0.0d0) then
 
@@ -491,9 +487,7 @@ contains
        !$OMP  PRIVATE(nsew,ns,ew,up,hrzflwa,intflwa) &
        !$OMP  SHARED(nsn,ewn,upn,stagthck,velowk,flwa)
        !$OMP DO SCHEDULE(STATIC)
-       do nsew=0,nsn*ewn-1
-          ns = 1+nsew/ewn
-          ew = 1+mod(nsew,ewn)
+       LINEARISE_NSEW_LOOP(nsew,ns,1,nsn,ew,1,ewn)
           if (stagthck(ew,ns) /= 0.0d0) then
 
              hrzflwa = hsum4(flwa(:,ew:ew+1,ns:ns+1))  
@@ -528,9 +522,7 @@ contains
        !$OMP  PRIVATE(nsew,ns,ew,up,hrzflwa,const) &
        !$OMP  SHARED(nsn,ewn,upn,stagthck,velowk,flwa,uflx,vflx,diffu,dusrfdns,dusrfdew,ubas,vbas,uvel,vvel)
        !$OMP DO SCHEDULE(STATIC)
-       do nsew=0,nsn*ewn-1
-          ns = 1+nsew/ewn
-          ew = 1+mod(nsew,ewn)
+       LINEARISE_NSEW_LOOP(nsew,ns,1,nsn,ew,1,ewn)
           if (stagthck(ew,ns) /= 0.0d0) then
 
              vflx(ew,ns) = diffu(ew,ns) * dusrfdns(ew,ns) + vbas(ew,ns) * stagthck(ew,ns)
@@ -624,9 +616,7 @@ contains
     !$OMP  PRIVATE(nsew,ns,ew) &
     !$OMP  SHARED(nsn,ewn,thck,thklim,wgrd,geomderv,sigma,uvel,vvel)
     !$OMP DO SCHEDULE(STATIC)
-    do nsew=0,(nsn-2)*(ewn-2)-1
-       ns = 2+nsew/(ewn-2)
-       ew = 2+mod(nsew,ewn-2)
+    LINEARISE_NSEW_LOOP(nsew,ns,2,nsn-1,ew,2,ewn-1)
        if (thck(ew,ns) > thklim) then
           wgrd(:,ew,ns) = geomderv%dusrfdtm(ew,ns) - sigma * geomderv%dthckdtm(ew,ns) + & 
                (hsum4(uvel(:,ew-1:ew,ns-1:ns)) * &
@@ -718,9 +708,7 @@ contains
     !$OMP  PRIVATE(nsew,ns,ew,cons,suvel,svvel,up) &
     !$OMP  SHARED(nsn,ewn,upn,thck,numerics,uvel,vvel,wvel,wgrd,bmlt,velowk,dew16,dns16,geomderv)
     !$OMP DO SCHEDULE(STATIC)
-    do nsew=0,(nsn-1)*(ewn-1)-1
-       ns = 2+nsew/(ewn-1)
-       ew = 2+mod(nsew,ewn-1)
+    LINEARISE_NSEW_LOOP(nsew,ns,2,nsn,ew,2,ewn)
        if (thck(ew,ns) > numerics%thklim) then
 
           ! Set the bottom boundary condition ------------------------------------------
@@ -838,9 +826,7 @@ contains
        !$OMP  PRIVATE(nsew,ns,ew,tempcor) &
        !$OMP  SHARED(nsn,ewn,thck,numerics,temp,flwa,velowk,fiddle)
        !$OMP DO SCHEDULE(STATIC)
-       do nsew=0,nsn*ewn-1
-          ns = 1+nsew/ewn
-          ew = 1+mod(nsew,ewn)
+       LINEARISE_NSEW_LOOP(nsew,ns,1,nsn,ew,1,ewn)
 
           if (thck(ew,ns) > numerics%thklim) then
 
@@ -869,9 +855,7 @@ contains
        !$OMP  PRIVATE(nsew,ns,ew) &
        !$OMP  SHARED(nsn,ewn,thck,numerics,tempcor,flwa,velowk,fiddle)
        !$OMP DO SCHEDULE(STATIC)
-       do nsew=0,nsn*ewn-1
-          ns = 1+nsew/ewn
-          ew = 1+mod(nsew,ewn)
+       LINEARISE_NSEW_LOOP(nsew,ns,1,nsn,ew,1,ewn)
           if (thck(ew,ns) > numerics%thklim) then
 
              ! Calculate Glenn's A with a fixed temperature.
@@ -943,9 +927,7 @@ contains
     !$OMP  PRIVATE(nsew,ns,ew,wchk,tempcoef) &
     !$OMP  SHARED(nsn,ewn,thck,numerics,wvel,geomderv,acab,uvel,vvel)
     !$OMP DO SCHEDULE(STATIC)
-    do nsew=0,(nsn-2)*(ewn-2)-1
-       ns = 2+nsew/(ewn-2)
-       ew = 2+mod(nsew,ewn-2)
+    LINEARISE_NSEW_LOOP(nsew,ns,2,nsn-1,ew,2,ewn-1)
        if (thck(ew,ns) > numerics%thklim .and. wvel(1,ew,ns).ne.0) then
           
           wchk = geomderv%dusrfdtm(ew,ns) &

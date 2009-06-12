@@ -1,4 +1,11 @@
 2009-06-12 Magnus Hagdorn
+ * src/fortran/Makefile.am: add new file
+ * src/fortran/glide_temp.F90: use macro to setup linearised loop
+ * src/fortran/glide_velo.F90: ditto
+ * src/fortran/glimmer_linearise_loop.inc: new include file defining
+   linearised loop macro
+
+2009-06-12 Magnus Hagdorn
  * src/fortran/glide_temp.F90: replace nested parallel loops witha linearised
    loop
  * src/fortran/glide_velo.F90: ditto

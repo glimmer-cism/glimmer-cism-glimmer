@@ -50,7 +50,8 @@ libglide_a_SOURCES = glide.F90 glide_setup.F90 glide_types.F90 glide_temp.F90 \
                      isostasy.F90 isostasy_el.F90 isostasy_setup.F90 \
                      isostasy_types.F90 glide_lithot.F90 glide_lithot3d.F90 \
                      glide_lithot1d.F90 glide_profile.F90 glide_diagnostics.F90 \
-                     glissade.F90 glissade_remap.F90 glissade_constants.F90
+                     glissade.F90 glissade_remap.F90 glissade_constants.F90 \
+                     glimmer_linearise_loop.inc
 libglint_a_SOURCES = glint_climate.F90 glint_initialise.F90 glint_io.F90 \
                      glint_timestep.F90 glint_type.F90 glint_main.F90 \
                      glint_interp.F90 glint_global_grid.F90 \

@@ -44,6 +44,8 @@
 #include "config.inc"
 #endif
 
+#include "glimmer_linearise_loop.inc"
+
 ! some macros used to disable parts of the temperature equation
 ! vertical diffusion
 #ifdef NO_VERTICAL_DIFFUSION
@@ -348,9 +350,7 @@ contains
        !$OMP  PRIVATE(nsew,ns,ew) &
        !$OMP  SHARED(model)
        !$OMP DO SCHEDULE(STATIC)
-       do nsew=0,(model%general%nsn-2)*(model%general%ewn-2)-1
-          ns=2+nsew/(model%general%ewn-2)
-          ew=2+mod(nsew,model%general%ewn-2)
+       LINEARISE_NSEW_LOOP(nsew,ns,2,model%general%nsn-1,ew,2,model%general%ewn-1)
           model%tempwk%hadv_u(:,ew,ns) = model%tempwk%advconst(1) * hsum4(model%velocity%uvel(:,ew-1:ew,ns-1:ns))
           model%tempwk%hadv_v(:,ew,ns) = model%tempwk%advconst(2) * hsum4(model%velocity%vvel(:,ew-1:ew,ns-1:ns))
        end do
@@ -369,9 +369,7 @@ contains
        !$OMP  SHARED(model) &
        !$OMP  REDUCTION(max:tempresid)
        !$OMP DO SCHEDULE(STATIC)
-       do nsew=0,(model%general%nsn-2)*(model%general%ewn-2)-1
-          ns=2+nsew/(model%general%ewn-2)
-          ew=2+mod(nsew,model%general%ewn-2)
+       LINEARISE_NSEW_LOOP(nsew,ns,2,model%general%nsn-1,ew,2,model%general%ewn-1)
           if(model%geometry%thck(ew,ns)>model%numerics%thklim) then
 
              weff = model%velocity%wvel(:,ew,ns) - model%velocity%wgrd(:,ew,ns)
@@ -423,9 +421,7 @@ contains
           !$OMP  SHARED(model) &
           !$OMP  REDUCTION(max:tempresid)
           !$OMP DO SCHEDULE(STATIC)
-          do nsew=0,(model%general%nsn-2)*(model%general%ewn-2)-1
-             ns=2+nsew/(model%general%ewn-2)
-             ew=2+mod(nsew,model%general%ewn-2)
+          LINEARISE_NSEW_LOOP(nsew,ns,2,model%general%nsn-1,ew,2,model%general%ewn-1)
              if(model%geometry%thck(ew,ns)>model%numerics%thklim) then
 
                 weff = model%velocity%wvel(:,ew,ns) - model%velocity%wgrd(:,ew,ns)
@@ -462,7 +458,7 @@ contains
              endif
           end do
           !$OMP END DO
-          !$OMP END PARALLEL          
+          !$OMP END PARALLEL
 
           iter = iter + 1
        end do
@@ -830,9 +826,7 @@ contains
     !$OMP  PRIVATE(nsew,ns,ew,c2) &
     !$OMP  SHARED(model,thck,stagthck,dusrfdew,dusrfdns,flwa)
     !$OMP DO SCHEDULE(STATIC)
-    do nsew=0,(model%general%nsn-2)*(model%general%ewn-2)-1
-       ns=2+nsew/(model%general%ewn-2)
-       ew=2+mod(nsew,model%general%ewn-2)
+    LINEARISE_NSEW_LOOP(nsew,ns,2,model%general%nsn-1,ew,2,model%general%ewn-1)
        if (thck(ew,ns) > model%numerics%thklim) then
 
           c2 = (0.25*sum(stagthck(ew-1:ew,ns-1:ns)) * sqrt((0.25*sum(dusrfdew(ew-1:ew,ns-1:ns)))**2 &
@@ -873,9 +867,7 @@ contains
     !$OMP  PRIVATE(nsew,ns,ew, pmptemp,slterm,nsp,ewp,newmlt,up) &
     !$OMP  SHARED(model,thck,floater,temp,stagthck,dusrfdew,ubas,dusrfdns,vbas,bmlt)
     !$OMP DO SCHEDULE(STATIC)
-    do nsew=0,(model%general%nsn-2)*(model%general%ewn-2)-1
-       ns=2+nsew/(model%general%ewn-2)
-       ew=2+mod(nsew,model%general%ewn-2)
+    LINEARISE_NSEW_LOOP(nsew,ns,2,model%general%nsn-1,ew,2,model%general%ewn-1)
        if (thck(ew,ns) > model%numerics%thklim .and. .not. floater(ew,ns)) then
 
           call calcpmpt(pmptemp,thck(ew,ns),model%numerics%sigma)
