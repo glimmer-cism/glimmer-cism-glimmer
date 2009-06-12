@@ -52,7 +52,7 @@ module glide_thck
   use glide_velo_higher
   use glimmer_sparse
   use glimmer_sparse_type
-  use glide_grids, only: stagvarb
+  use glide_grids
 
   !DEBUG ONLY, these should be deleted eventually
   use glide_stop
