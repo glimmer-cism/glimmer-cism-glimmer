@@ -44,6 +44,20 @@ def plotAggregatedFlowlines(axis, meanFlowline, stdevFlowline, dataMember, color
     #Plot the polygon as the same color but at only 1/4 opacity
     axis.fill(polyX, polyY, facecolor=color,edgecolor=color,alpha=.25, label=labelPrefix + " Std. Dev.")
 
+def maxObservedError(meanFlowline, stdevFlowline, myFlowline):
+    means = meanFlowline.getDependantVariable(0)
+    stdevs = stdevFlowline.getDependantVariable(0)
+    computed = myFlowline.getDependantVariable(0)
+    currentMax = -float("inf")
+    matchingStdevError = None
+    for mean, stdev, val in zip(means, stdevs, computed):
+        err = (val-mean)/mean
+        if err > currentMax:
+            currentMax = err
+            matchingStdevError = stdev/mean
+    return currentMax, matchingStdevError
+            
+
 #Returns a tuple with two tuples suitable for creating a legend.  The first tuple contains
 #the lines and patches, the second contains the names
 def createPlot(experiment, domainSizeKm, fig, subplotNum, notFullStokesModelType):
@@ -54,6 +68,7 @@ def createPlot(experiment, domainSizeKm, fig, subplotNum, notFullStokesModelType
     glimFlowline = intercomparison.grabFlowline(glimFileName)
 
     axis.plot(glimFlowline.getPointLocations(), glimFlowline.getDependantVariable(0), color=(0,0,0))
+
 
     for isFullStokes in [True, False]:
         if isFullStokes:
@@ -75,6 +90,10 @@ def createPlot(experiment, domainSizeKm, fig, subplotNum, notFullStokesModelType
         #Compute the mean and standard deviations of the experiments
         mean, stdev = intercomparison.aggregateExperimentFlowlines(flowlines, glimFlowline.getPointLocations())
         
+        if not isFullStokes:
+            myErr,oneStdev = maxObservedError(mean, stdev, glimFlowline)
+            print '\t'.join([str(domainSizeKm) + " km", str(myErr), str(oneStdev)])
+
         #Plot the mean and std. dev.
         if isFullStokes:
             plotAggregatedFlowlines(axis, mean, stdev, 0, (1,0,0), "Full Stokes")
