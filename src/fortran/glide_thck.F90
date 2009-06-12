@@ -281,7 +281,6 @@ contains
     
        end if
 
-
           first_p = .false.
 #ifdef USE_UNSTABLE_MANIFOLD
           linearize_start = 1
@@ -577,7 +576,7 @@ contains
                model%geomderv%stagthck,&
                model%general%ewn, &
                model%general%nsn, &
-               1, &
+               STAGGER_CHOICE_ALBNEW, &
                model%geometry%usrf, &
                model%numerics%thklim)
       

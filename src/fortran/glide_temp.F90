@@ -1200,7 +1200,7 @@ contains
   
     case(FLWA_CONST_EISMINT_ROSS)
 
-      flwa = 5.70391437e-18 / (vis0*scyr)
+      flwa = 4.6e-18 / (vis0*scyr)
 
     end select
 

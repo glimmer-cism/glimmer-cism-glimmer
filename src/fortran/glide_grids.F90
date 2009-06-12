@@ -10,6 +10,7 @@ module glide_grids
     integer, parameter :: STAGGER_CHOICE_STD = 0      !Simple linear interpolation onto staggered grid
     integer, parameter :: STAGGER_CHOICE_ALBNEW = 1   !Use the ALBnew mass conservation fix
     integer, parameter :: STAGGER_CHOICE_HARMONIC = 2 !Use the harmonic mean to bias points on shelf edges
+    integer, parameter :: STAGGER_IGNORE_ZEROS = 3
 
 contains
   subroutine stagvarb(ipvr,opvr,ewn,nsn,choice_arg,usrf,thklim)
@@ -28,8 +29,9 @@ contains
     real(dp), intent(in), dimension(:,:), optional :: usrf
     real(dp), optional :: thklim
     
-    integer :: ewn,nsn,ew,ns
-    integer :: choice 
+    integer :: ewn,nsn,ew,ns,n
+    integer :: choice
+    real(dp) :: tot
 
     if (present(choice_arg)) then
         choice = choice_arg !If a choice was specified, use it
@@ -116,7 +118,33 @@ contains
             end do
         end do
 
+    !Apply the standard staggering algorithm, but do not include points with
+    !zero thickness in the average
+    else if (choice == STAGGER_IGNORE_ZEROS) then
+        do ns = 1, nsn-1
+            do ew = 1, ewn-1
+                n = 0
+                tot = 0
 
+                if (abs(ipvr(ew,ns)) > 1e-10) then
+                    tot = tot + ipvr(ew,ns)
+                    n   = n   + 1
+                end if
+                if (abs(ipvr(ew+1,ns)) > 1e-10) then
+                    tot = tot + ipvr(ew+1,ns)
+                    n   = n   + 1
+                end if
+                if (abs(ipvr(ew,ns+1)) > 1e-10) then
+                    tot = tot + ipvr(ew,ns+1)
+                    n   = n   + 1
+                end if
+                if (abs(ipvr(ew+1,ns+1)) > 1e-10) then
+                    tot = tot + ipvr(ew+1,ns+1)
+                    n   = n   + 1
+                end if
+                opvr(ew,ns) = tot/n
+            end do
+        end do
 
     else !Use standard staggering
         opvr(1:ewn-1,1:nsn-1) = (ipvr(2:ewn,1:nsn-1) + ipvr(1:ewn-1,2:nsn) + &

@@ -554,7 +554,7 @@ contains
             call cpu_time(iter_start_time)
             
             lacc=lacc+1
-            
+           
             !Every 10 iterations, we relax the error requirement somewhat (1/2
             !an order of magnitude) under the assumption that we won't converge 
             !given the current error tolerance.
@@ -1904,9 +1904,6 @@ contains
         !taken place on the boundary.  Since the thickness is, on average, halved, we double
         !the source term
         !(technique from Stephen Price)
-        if (staggered) then
-            source_term = source_term * 2
-        end if
 
     end function
 

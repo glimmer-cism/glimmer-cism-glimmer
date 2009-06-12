@@ -295,8 +295,8 @@ contains
                     point_mask_t,totpts, geometry_mask_t, kinematic_bc_u_t, kinematic_bc_v_t, marine_bc_normal_t)
        
         !Final computation of stress field for output
-        call stressf(mu_t, uvel_t, vvel_t, flwa_t, stagthck_t, ax, ay, dew, dns, sigma, & 
-                     tau_xz_t, tau_yz_t, tau_xx_t, tau_yy_t, tau_xy_t, flwn, zip, options%periodic_ew, options%periodic_ns) 
+        !call stressf(mu_t, uvel_t, vvel_t, flwa_t, stagthck_t, ax, ay, dew, dns, sigma, & 
+        !             tau_xz_t, tau_yz_t, tau_xx_t, tau_yy_t, tau_xy_t, flwn, zip, options%periodic_ew, options%periodic_ns) 
     
         !Transpose from the ice3d coordinate system (y,x,z) to the glimmer
         !coordinate system (z,x,y).  We need to do this for all the 3D outputs
