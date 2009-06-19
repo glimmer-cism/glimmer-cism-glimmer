@@ -312,6 +312,8 @@ module glide_types
     !*FD \item[2] mean value
     !*FD \begin{description}
 
+!end whlmod
+
     integer :: which_ho_sparse = 0
     !*FD Flag that indicates method for solving the sparse linear system
     !*FD that arises from the higher-order solver
@@ -320,6 +322,13 @@ module glide_types
     !*FD \item[1] GMRES, Incomplete LU Preconditioner
     !*FD \item[2] Unsymmetric multifrontal direct solver
     !*FD \end{description}
+
+    integer :: which_ho_sparse_fallback = -1
+    !*FD Flag that indicates a sparse matrix solver that the higher-order 
+    !*FD computation should fall back on if the primary choice fails.
+    !*FD By default, this is set to -1 which indicates no fallback.
+    !*FD Optimally, this should be set to a direct solver (such as UMFPACK)
+    !*FD that can be used if the iterative solver fails.
 
     integer :: which_ho_source = 0
     !*FD Flag that indicates how to compute the source term of an ice shelf
@@ -331,7 +340,6 @@ module glide_types
     logical :: ho_include_thinice = .true.
     !*FD Whether or not to include thin ice in the higher order computation
 
-!end whlmod
 
     logical :: periodic_ew = .false.
     !*FD \begin{description}

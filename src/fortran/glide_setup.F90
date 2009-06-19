@@ -435,6 +435,7 @@ contains
     call GetValue(section, 'which_ho_efvs',      model%options%which_ho_efvs)
     call GetValue(section, 'which_ho_resid',     model%options%which_ho_resid)
     call GetValue(section, 'which_ho_sparse',    model%options%which_ho_sparse)
+    call GetValue(section, 'which_ho_sparse_fallback', model%options%which_ho_sparse_fallback)
   end subroutine handle_ho_options
 
   subroutine print_options(model)

@@ -229,7 +229,7 @@ contains
         endif
     end subroutine sparse_interpret_error
 
-    subroutine sparse_easy_solve(matrix, rhs, answer, err, iter, calling_file, calling_line)
+    subroutine sparse_easy_solve(matrix, rhs, answer, err, iter, method_arg, calling_file, calling_line)
         !This subroutine wraps the basic (though probably the most inefficient)
         !workflow to solve a sparse matrix using the sparse matrix solver
         !framework.  It handles errors gracefully, and reports back the
@@ -245,16 +245,25 @@ contains
         
         real(dp), intent(out) :: err
         integer, intent(out) :: iter
+        
+        integer, optional, intent(in) :: method_arg
 
-        character(100), optional :: calling_file
+        character(*), optional :: calling_file
         integer, optional :: calling_line
 
         type(sparse_solver_options) :: opt
         type(sparse_solver_workspace) :: wk
 
         integer :: ierr
+        integer :: method
 
-        call sparse_solver_default_options(SPARSE_SOLVER_BICG, opt)
+        if (present(method_arg)) then
+            method = method_arg
+        else
+            method = SPARSE_SOLVER_BICG
+        endif
+
+        call sparse_solver_default_options(method, opt)
         call sparse_allocate_workspace(matrix, opt, wk)
         call sparse_solver_preprocess(matrix, opt, wk)
 

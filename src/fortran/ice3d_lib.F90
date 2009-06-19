@@ -616,10 +616,10 @@ contains
             iter=sparuv(mu,dzdx,dzdy,ax,ay,bx,by,cxy,h,&
                 uvel,vvel,dudx,dudy,dudz,dvdx,dvdy,dvdz,&
                 ustar,vstar,tau,dhbdx,dhbdy,ijktot,MAXY,&
-                MAXX,NZETA,TOLER, options%which_ho_source, delta_x, delta_y, zeta, point_mask, &
+                MAXX,NZETA,TOLER, options, delta_x, delta_y, zeta, point_mask, &
                 geometry_mask,matrix, matrix_workspace, matrix_options, &
                 kinematic_bc_u, kinematic_bc_v, &
-                marine_bc_normal,direction_x,direction_y, STAGGERED, options%ho_include_thinice)
+                marine_bc_normal,direction_x,direction_y, STAGGERED)
 
 #ifdef OUTPUT_SPARSE_MATRIX
            close(ITER_UNIT)
@@ -917,9 +917,9 @@ contains
 
     function sparuv(mu,dzdx,dzdy,ax,ay,bx,by,cxy,h,uvel,vvel,dudx,dudy,dudz,dvdx,dvdy,dvdz,&
                     ustar,vstar,beta,dhbdx,dhbdy,&
-                    IJKTOT,MAXY,MAXX,NZETA,TOLER,WHICH_SOURCE,GRIDX,GRIDY,zeta, point_mask, geometry_mask,&
+                    IJKTOT,MAXY,MAXX,NZETA,TOLER,options,GRIDX,GRIDY,zeta, point_mask, geometry_mask,&
                     matrix, matrix_workspace, matrix_options, kinematic_bc_u, kinematic_bc_v,latbc_normal, &
-                    direction_x, direction_y, STAGGERED, INCLUDE_THIN)
+                    direction_x, direction_y, STAGGERED)
         INTEGER IJKTOT,MAXY,MAXX,NZETA
         real(dp), dimension(:,:,:), intent(in) :: mu
         real(dp), dimension(:,:), intent(in) :: dzdx
@@ -956,10 +956,8 @@ contains
         type(sparse_solver_workspace), intent(inout) :: matrix_workspace
         type(sparse_solver_options), intent(inout) :: matrix_options
 
-        
+        type(glide_options), intent(in) :: options
         logical, intent(in)::STAGGERED
-        integer, intent(in)::WHICH_SOURCE
-        logical, intent(in)::INCLUDE_THIN
         real(dp) :: rhs
         
         INTEGER i,j,k,m,sparuv,iter, ierr
@@ -1014,7 +1012,7 @@ contains
                             stencil_center_idx = csp_masked(I_J_K,i,j,k,point_mask,NZETA) 
                             if (.not. GLIDE_HAS_ICE( geometry_mask(i,j) ) .or. &
                                       GLIDE_IS_THIN( geometry_mask(i,j) ) &
-                                         .and. .not. INCLUDE_THIN) then
+                                         .and. .not. options%ho_include_thinice) then
                                 !No ice - "pass through"
                                 coef(I_J_K)=1.
                                 !Normally, we use uvel(i,j,k) as our initial guess.
@@ -1046,7 +1044,7 @@ contains
                                      h, gridx, gridy, zeta, uvel, vvel, dudx, dudy, dudx, dvdx, dvdy, dvdz, &
                                      dhbdx, dhbdy, beta, geometry_mask, &
                                      latbc_normal, maxx, maxy, Nzeta, coef, rhs, direction_x, direction_y, STAGGERED, &
-                                     WHICH_SOURCE)
+                                     options%which_ho_source)
                             endif
                             d(stencil_center_idx)=rhs
                             !Preliminary benchmarks indicate the we actually reach
@@ -1103,8 +1101,20 @@ contains
             call sparse_solver_preprocess(matrix, matrix_options, matrix_workspace)        
             ierr = sparse_solve(matrix, d, x, matrix_options, matrix_workspace,  err, iter, verbose=sparverbose)
             sparuv = sparuv + iter
-        
-            call handle_sparse_error(matrix, matrix_options, ierr, __FILE__, __LINE__)      
+       
+            if (ierr /= 0) then
+                !The sparse solve failed.  If a fallback was specified, use it
+                if (options%which_ho_sparse_fallback >= 0 .and. &
+                write(*,*) options%which_ho_sparse_fallback
+                (*,*) options%which_ho_sparse_fallback
+                    options%which_ho_sparse_fallback /= options%which_ho_sparse) then
+                    write(*,*)"Sparse solve failed, falling back on alternate method"
+                    call sparse_easy_solve(matrix, d, x, err, iter, options%which_ho_sparse_fallback, &
+                                           __FILE__, __LINE__)
+                else
+                    call handle_sparse_error(matrix, matrix_options, ierr, __FILE__, __LINE__)      
+                end if
+            end if
             call sparse_solver_postprocess(matrix, matrix_options, matrix_workspace)
 #ifdef VERY_VERBOSE
             write(*,*)"End Matrix Solve"
@@ -1899,11 +1909,6 @@ contains
             end if
 #endif
         end if  
-
-        !If we are running on a staggered grid, then we need to correct for the averaging that has
-        !taken place on the boundary.  Since the thickness is, on average, halved, we double
-        !the source term
-        !(technique from Stephen Price)
 
     end function
 
