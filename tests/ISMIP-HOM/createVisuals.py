@@ -11,10 +11,9 @@ import matplotlib.patches
 import matplotlib.figure
 import matplotlib.font_manager
 import numpy
-from getopt import gnu_getopt
+from optparse import OptionParser
 
 import intercomparison
-
 
 def plotAggregatedFlowlines(axis, meanFlowline, stdevFlowline, dataMember, color, labelPrefix):
     xs = meanFlowline.getPointLocations()
@@ -60,15 +59,15 @@ def maxObservedError(meanFlowline, stdevFlowline, myFlowline):
 
 #Returns a tuple with two tuples suitable for creating a legend.  The first tuple contains
 #the lines and patches, the second contains the names
-def createPlot(experiment, domainSizeKm, fig, subplotNum, notFullStokesModelType):
+def createPlot(experiment, domainSizeKm, prefix, fig, subplotNum, notFullStokesModelType):
+    domainSizeKm=int(domainSizeKm)
     axis = fig.add_subplot(2,3,subplotNum)
     axis.set_title(str(domainSizeKm) + " km", size="medium")
     #Read the data that came from the Glimmer run
-    glimFileName = glimPrefix + experiment + "%03d"%domainSizeKm + ".txt"
+    glimFileName = prefix + experiment + "%03d"%domainSizeKm + ".txt"
     glimFlowline = intercomparison.grabFlowline(glimFileName)
 
     axis.plot(glimFlowline.getPointLocations(), glimFlowline.getDependantVariable(0), color=(0,0,0))
-
 
     for isFullStokes in [True, False]:
         if isFullStokes:
@@ -108,37 +107,28 @@ def createPlot(experiment, domainSizeKm, fig, subplotNum, notFullStokesModelType
         
 
 if __name__ == "__main__":
-    optlist, args = gnu_getopt(sys.argv[1:], 
-                               intercomparison.ExperimentOptionsShort, 
-                               intercomparison.ExperimentOptionsLong + ["lmla", "prefix=", "subtitle="])
-    optdict = dict(optlist)
-   
-    experiments, domainSizes = intercomparison.getExperimentsToRun(optlist)
+    parser=OptionParser()
+    intercomparison.standardOptions(parser)
+    parser.add_option("-t", "--subtitle", dest="subtitle", help="subtitle to place on the created graph")
+    parser.add_option("", "--lmla", dest="lmla", action="store_true", help="use only lmla models rather than all partial stokes models")
+    options, args = parser.parse_args()
+    #If the user didn't specify a list of experiments or domain sizes, run the whole suite
+    if not options.experiments:
+        options.experiments = ["a","b","c","d"]
+    if not options.sizes:
+        options.sizes = ["5", "10", "20", "40", "80", "160"]
 
-    #Convert domain sizes from meters to km
-    domainSizes = [d/1000 for d in domainSizes]
-
-    if "--lmla" in optdict:
+    if options.lmla:
         notFullStokesModelType = "lmla"
     else:
         notFullStokesModelType = "partial-stokes"
 
-    if "--prefix" in optdict:
-        glimPrefix = optdict["--prefix"]
-    else:
-        glimPrefix = "glm1"
-
-    if "--subtitle" in optdict:
-        subtitle = optdict["--subtitle"]
-    else:
-        subtitle = None
-
-    for experiment in experiments:
+    for experiment in options.experiments:
         print "ISMIP-HOM",experiment.upper()
 
         fig = pyplot.figure(subplotpars=matplotlib.figure.SubplotParams(top=.85,bottom=.15))
-        for i, domainSize in enumerate(domainSizes):
-            createPlot(experiment, domainSize, fig, i+1, notFullStokesModelType)
+        for i, domainSize in enumerate(options.sizes):
+            createPlot(experiment, domainSize, options.prefix, fig, i+1, notFullStokesModelType)
 
         #Create the legend!  This is overly complicated because I want the legend to be
         #in multiple columns at the bottom of the visual, and that's impossible with my
@@ -162,14 +152,14 @@ if __name__ == "__main__":
 
         #Add an overall title to the figure
         fig.text(.5, .92, "ISMIP-HOM Experiment " + experiment.upper(), horizontalalignment='center', size='large')
-        if subtitle:
-            fig.text(.5, .89, subtitle, horizontalalignment='center', size='small')
+        if options.subtitle:
+            fig.text(.5, .89, options.subtitle, horizontalalignment='center', size='small')
         
         #Add one axis label per side (the labels are the same because of the small multiple format,
         #so we only want to repeat them once in the whole figure!)
         fig.text(.5, .1, "Normalized X coordinate", horizontalalignment='center',size='small')
         fig.text(.06, .5, "Ice Speed (m/a)", rotation="vertical", verticalalignment='center') 
         #Save the figure
-        filename = "ISMIP-HOM-" + experiment.upper() + "-" + glimPrefix + ".png" 
+        filename = "ISMIP-HOM-" + experiment.upper() + "-" + options.prefix + ".png" 
         pyplot.savefig(filename)
 

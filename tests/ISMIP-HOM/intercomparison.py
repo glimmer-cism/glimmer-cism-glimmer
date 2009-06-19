@@ -256,41 +256,19 @@ def grabFlowline(filename):
         return plan.extractFlowline(.25)
 
 #STANDARD OPTION PARSING
+def standardOptions(parser):
+    parser.add_option("-e", "--exp", dest="experiments", action="callback", type="string", callback=listAppendCallback, help="Which ISMIP-HOM experiments to run")
+    parser.add_option("-s", "--size", dest="sizes", action="callback", type="string", callback=listAppendCallback, help="Which domain sizes to run")
+    parser.add_option("-p", "--prefix", dest="prefix", default="glm1", help="Prefix to use when writing intercomparison data files")
 
-#Lists of options to use with getopt.  Append these to whatever other options you want
-#or use them straight out.
-ExperimentOptionsShort = "abcd"
-ExperimentOptionsLong  = ["5km","10km","20km","40km","80km","160km"]
 
-#Parses a list of arguments extracted by getopt.  The user may specify specific experiments and/or domain
-#sizes to run on the command line.  For example, -ab --5km --10km runs only experiments a and b for 5km and
-#10km domains.  If nothing is specified for one of the lists, everything is run.  For example, -ac runs
-#experiments a and c for all domain sizes, and --40km runs all experiments for a 40 km domain.
-#Returns an (experimentList, domainSizes) tuple
-def getExperimentsToRun(optlist):
-    domainSizesDict = {"5km":5000, "10km":10000, "20km":20000, "40km":40000, "80km":80000, "160km":160000}
-    experimentList = ['a','b','c','d']
-    
-    experimentDefaults = True
-    experiments = []
-    domainSizeDefaults = True
-    domainSizes = []
-
-    for option, arg in optlist:
-        option = option.replace("-","")
-        if option in experimentList:
-            experimentDefaults = False
-            experiments.append(option)
-        elif option in domainSizesDict:
-            domainSizeDefaults = False
-            domainSizes.append(domainSizesDict[option])
-
-    if experimentDefaults:
-        experiments = experimentList
-    if domainSizeDefaults:
-        domainSizes = sorted(domainSizesDict.values())
-    
-    return experiments, domainSizes
+#OptParser callback that splits a comma-separated list.
+def listAppendCallback(option, str_opt, value, parser):
+    l = getattr(parser.values, option.dest)
+    if not l:
+        l = []
+    l += value.split(",")
+    setattr(parser.values, option.dest, l)
 
 
 

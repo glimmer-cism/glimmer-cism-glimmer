@@ -24,7 +24,7 @@ def runExperiment(gridSizeArg="40", vertGridArg="40", vertGridSpacing="even", di
     args.append("--prefix="+prefix)
     args.append("--diagnostic-type="+diagnosticScheme)
 
-    verifyCommand = sys.executable + " verify.py -abc " + " ".join(args) + " >>refinement-log.txt"
+    verifyCommand = sys.executable + " verify.py --exp=a,c " + " ".join(args) + " >>refinement-log.txt"
 
     caption = gridSizeArg + "x" + gridSizeArg + "x" + vertGridArg + ", " + vertGridSpacing + " spacing, " + strDiagnostic
 
@@ -38,8 +38,8 @@ def runExperiment(gridSizeArg="40", vertGridArg="40", vertGridSpacing="even", di
 	
 
 def fullCombinatorics():
-    for gridSizeArg in ["20","40","80"]:
-        for vertGridArg in ["20","40","80"]:
+    for gridSizeArg in ["20","40","60","80"]:
+        for vertGridArg in ["20","40",,"60","80"]:
             for vertGridSpacing in ["glimmer","pattyn","even"]:
                 for diagnosticScheme in ["1","2"]:
                     runExperiment(gridSizeArg, vertGridArg, vertGridSpacing, diagnosticScheme)
@@ -49,15 +49,13 @@ def isolatedVariables():
     runExperiment()
     #Try varying horizontal grid spacing
     runExperiment(gridSizeArg=20)
+    runExperiment(gridSizeArg=60)
     runExperiment(gridSizeArg=80)
 
     #Try varying vertical grid spacing
     runExperiment(vertGridArg=20)
+    runExperiment(vertGridARg=60)
     runExperiment(vertGridArg=80)
-
-    #Try varying both
-    runExperiment(gridSizeArg=20, vertGridArg=20)
-    runExperiment(gridSizeArg=80, vertGridArg=80)
 
     #Try different grid spacings
     runExperiment(vertGridSpacing = "pattyn")
