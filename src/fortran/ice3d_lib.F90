@@ -1105,8 +1105,6 @@ contains
             if (ierr /= 0) then
                 !The sparse solve failed.  If a fallback was specified, use it
                 if (options%which_ho_sparse_fallback >= 0 .and. &
-                write(*,*) options%which_ho_sparse_fallback
-                (*,*) options%which_ho_sparse_fallback
                     options%which_ho_sparse_fallback /= options%which_ho_sparse) then
                     write(*,*)"Sparse solve failed, falling back on alternate method"
                     call sparse_easy_solve(matrix, d, x, err, iter, options%which_ho_sparse_fallback, &
