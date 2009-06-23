@@ -100,6 +100,30 @@ contains
         end do
     end subroutine
 
+    function picard_iterate(vec_new, vec_old, vec_size, toler, tot_out)
+        logical :: picard_iterate
+
+        real(dp), dimension(:), intent(in) :: vec_new
+        real(dp), dimension(:), intent(inout) :: vec_old
+        integer :: vec_size
+        real(dp) :: toler
+        real(dp), optional, intent(out) :: tot_out
+
+        real(dp) :: err, norm1, norm2
+
+        norm1 = sqrt(sum(vec_new**2))
+        norm2 = sqrt(sum((vec_new-vec_old)**2))
+
+        err = norm2/(norm1 + 1d-10)
+        picard_iterate = err >= toler
+
+        vec_old = vec_new
+
+        if (present(tot_out)) then
+            tot_out = err
+        end if
+    end function picard_iterate
+
     function unstable_manifold_correction(vec_new, vec_old, vec_correction, &
                                           vec_size, toler, tot_out, theta_out)
         logical :: unstable_manifold_correction

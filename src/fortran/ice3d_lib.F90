@@ -30,6 +30,8 @@
 
 !#define VERY_VERBOSE
 
+#define NOSHELF
+
 module ice3d_lib
     use glimmer_global
     use glimmer_physcon, only: pi, grav, rhoi, rhoo, scyr
@@ -43,7 +45,7 @@ module ice3d_lib
     implicit none
     real(dp) :: small, zip, toler_adjust_factor
     PARAMETER(SMALL=1.D-10,ZIP=1.D-30)
-    PARAMETER(toler_adjust_factor=1.1)
+    PARAMETER(toler_adjust_factor=1.0)
 
     real(dp) :: plastic_bed_regularization = 1e-2
 
@@ -461,6 +463,10 @@ contains
         !For timing the algorithm
         real(dp) :: solve_start_time, solve_end_time, iter_start_time, iter_end_time
 
+        real(dp) :: this_delta, last_delta
+        this_delta=0
+        last_delta=0
+
         call cpu_time(solve_start_time)
 
         allocate(pointtype(size(mu, 1), size(mu, 2)))
@@ -514,6 +520,7 @@ contains
         call write_xls("dhbdy.txt",dhbdy)
         call write_xls("latbc.txt",marine_bc_normal)
         call write_xls_int("geometry_mask.txt",geometry_mask)
+        call write_xls_int("point_mask.txt",point_mask)
         call write_xls_3d("kinematic_bc_u.txt",kinematic_bc_u)
         call write_xls_3d("kinematic_bc_v.txt",kinematic_bc_v)
         call write_xls("marine_bc_norms.txt",marine_bc_normal)
@@ -622,7 +629,7 @@ contains
                 marine_bc_normal,direction_x,direction_y, STAGGERED)
 
 #ifdef OUTPUT_SPARSE_MATRIX
-           close(ITER_UNIT)
+            close(ITER_UNIT)
 #endif
 
             !Apply periodic boundary conditions to the computed velocity
@@ -637,15 +644,17 @@ contains
             !Apply unstable manifold correction.  This function returns
             !true if we need to keep iterating, false if we reached convergence
             cont = umc_correct_vels(ustar, uvel, &
-                                                vstar, vvel, correction_vec, &
-                                                maxy, maxx, nzeta, error, &
-                                                tot, teta)    
+                                        vstar, vvel, correction_vec, &
+                                        maxy, maxx, nzeta, error, &
+                                        tot, teta)    
             call cpu_time(iter_end_time)
+            this_delta = maxval(sqrt(ustar**2 + vstar**2))
 #if DEBUG 
             write(*,*) l, iter, tot, teta, &
-                       max( maxval(abs(ustar)), maxval(abs(vstar)) ),&
+                       this_delta, this_delta-last_delta,&
                        iter_end_time - iter_start_time
 #endif
+            last_delta = this_delta
             !Check whether we have reached convergance
             if (.not. cont) exit nonlinear_iteration
      end do nonlinear_iteration
@@ -732,10 +741,13 @@ contains
         call linearize_3d(vec_old, linearize_idx, u_old)
         call linearize_3d(vec_old, linearize_idx, v_old)
 
-
+#if 1
         umc_correct_vels = unstable_manifold_correction(vec_new, &
                 vec_old, vec_correction, maxy*maxx*nzeta*2, toler, tot_out, theta_out)
-
+#else
+        umc_correct_vels = picard_iterate(vec_new, vec_old, maxy*maxx*nzeta*2, toler, tot_out)
+        theta_out = 0
+#endif
         linearize_idx = 1
         call delinearize_3d(vec_old, linearize_idx, u_old)
         call delinearize_3d(vec_old, linearize_idx, v_old)
@@ -1439,14 +1451,16 @@ contains
         else
             write(*,*)"FATAL ERROR: sparse_setup called with invalid component"
         end if
-        
+#ifndef NOSHELF        
         if (GLIDE_IS_CALVING(geometry_mask(i,j)) .and. &
             WHICH_SOURCE /= HO_SOURCE_DISABLED) then !Marine margin dynamic (Neumann) boundary condition
             call sparse_marine_margin(component,i,j,k,h,latbc_normal, vel_perp, mu, dx, dy, ax, ay, dz,coef, rhs, &
                                       dudx_field,dudy_field,dudz_field,dvdx_field,dvdy_field,dvdz_field,&
                                       direction_x, direction_y, geometry_mask, STAGGERED, WHICH_SOURCE)
             point_type = "lateral"
-        else if (k.eq.1) then !Upper boundary condition (stress-free surface)
+        else  &
+#endif
+        if (k.eq.1) then !Upper boundary condition (stress-free surface)
             point_type = "surface"
             !Finite difference coefficients for an irregular Z grid, downwinded
             dz_down1=(2.*dz(k)-dz(k+1)-dz(k+2))/(dz(k+1)-dz(k))/(dz(k+2)-dz(k))

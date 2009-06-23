@@ -41,7 +41,8 @@
     use glissade_constants
     use glide_deriv
     use glide_grids, only: stagvarb
-
+    use glide_thck
+    use glide_velo_higher
     implicit none
     private
 
@@ -170,7 +171,8 @@
     nsn = model%general%nsn
     upn = model%general%upn
     nlyr = upn - 1
-    dsigma(:) = model%velowk%dups(:)
+    write(*,*) "DSIGMA", model%velowk%dups
+    dsigma(:) = model%velowk%dups(2:)
  
     worku(:,:) = c0
     workv(:,:) = c0
@@ -197,34 +199,41 @@
        !           of gravitational driving stress.  
        !lipscomb - Not sure why the flag is not simply set to
        !           model%glide_options%which_slip
+      call geometry_derivs(model)
+      model%velocity%uvel = model%velocity_hom%uvel
+      model%velocity%vvel = model%velocity_hom%vvel
+          
+      if (model%options%which_ho_diagnostic  /= 0) then
+          !Compute higher-order velocities according to Pattyn model
+          call geometry_derivs_unstag(model)
+          call run_ho_diagnostic(model)
+          !Place the higher-order velocities in the shallow ice fields
+          !to make them accessible to the inc. remapping.
+          model%velocity%uvel = model%velocity_hom%uvel
+          model%velocity%vvel = model%velocity_hom%vvel
+      else
+          call slipvelo(model,                        &
+                   0,                            &
+                   model%velocity%btrc,          &
+                   model%velocity%ubas,          &
+                   model%velocity%vbas)
  
-       call slipvelo(model,                        &
-                     0,                            &
-                     model%velocity%btrc,          &
-                     model%velocity%ubas,          &
-                     model%velocity%vbas)
- 
-    !------------------------------------------------------------------
-    ! Calculate horizontal velocity field
-    !------------------------------------------------------------------
- 
-       !lipscomb - With flag = 0, this subroutine computes uvel and vvel,
-       !           following Payne and Dongelmans eq. 8.  
- 
-       call zerovelo (model%velowk,             &
-                      model%numerics%sigma,     &
-                      0,                        &  ! Payne & Dongelmans
-                      model%geomderv%stagthck,  &
-                      model%geomderv%dusrfdew,  &
-                      model%geomderv%dusrfdns,  &
-                      model%temper%flwa,        &
-                      model%velocity%ubas,      &
-                      model%velocity%vbas,      &
-                      model%velocity%uvel,      &  ! uvel, vvel are needed
-                      model%velocity%vvel,      &
-                      model%velocity%uflx,      &  ! uflx, vflx are not needed
-                      model%velocity%vflx,      &  ! 
-                      model%velocity%diffu)        ! diffu not needed
+
+          call zerovelo (model%velowk,             &
+                         model%numerics%sigma,     &
+                         0,                        &
+                         model%geomderv%stagthck,  &
+                         model%geomderv%dusrfdew,  &
+                         model%geomderv%dusrfdns,  &
+                         model%temper%flwa,        &
+                         model%velocity%ubas,      &
+                         model%velocity%vbas,      &
+                         model%velocity%uvel,      &
+                         model%velocity%vvel,      &
+                         model%velocity%uflx,      & ! uflx, vflx, and diffu
+                         model%velocity%vflx,      & ! not needed for remapping
+                         model%velocity%diffu)  
+       endif
  
        if (predict_correct) then
  
@@ -274,45 +283,32 @@
           workh(:,:) = p5 * (model%geometry%thck(:,:) + workh(:,:))
  
           ! Correct H and grad(S) at grid cell corners
- 
-          call stagvarb(workh,                         &
-                        model%geomderv%stagthck,       &
-                        ewn,                           &
-                        nsn                            ) 
- 
-          !call geomders(model%numerics,                &
-          !              model%geometry%usrf,           &
-          !              model%geomderv%stagthck,       & 
-          !              model%geomderv%dusrfdew,       &
-          !              model%geomderv%dusrfdns)
+          call geometry_derivs(model)
           
-          call df_field_2d_staggered(model%geometry%usrf, &
-                                     model%numerics%dew, model%numerics%dns, &
-                                     model%geomderv%dusrfdew, &
-                                     model%geomderv%dusrfdns, &
-                                     .false.,.false.)
-          where (model%geomderv%stagthck == 0)
-              model%geomderv%dusrfdew = 0
-              model%geomderv%dusrfdns = 0
-          endwhere
-
-
           ! Correct the velocities
- 
-          call zerovelo (model%velowk,             &
-                         model%numerics%sigma,     &
-                         0,                        &
-                         model%geomderv%stagthck,  &
-                         model%geomderv%dusrfdew,  &
-                         model%geomderv%dusrfdns,  &
-                         model%temper%flwa,        &
-                         model%velocity%ubas,      &
-                         model%velocity%vbas,      &
-                         model%velocity%uvel,      &
-                         model%velocity%vvel,      &
-                         model%velocity%uflx,      & ! uflx, vflx, and diffu
-                         model%velocity%vflx,      & ! not needed for remapping
-                         model%velocity%diffu)        
+          if (model%options%which_ho_diagnostic  /= 0) then
+              call geometry_derivs_unstag(model)
+              call run_ho_diagnostic(model)
+              !Place the higher-order velocities in the shallow ice fields
+              !to make them accessible to the inc. remapping.
+              model%velocity%uvel = model%velocity_hom%uvel
+              model%velocity%vvel = model%velocity_hom%vvel
+          else
+             call zerovelo (model%velowk,             &
+                            model%numerics%sigma,     &
+                            0,                        &
+                            model%geomderv%stagthck,  &
+                            model%geomderv%dusrfdew,  &
+                            model%geomderv%dusrfdns,  &
+                            model%temper%flwa,        &
+                            model%velocity%ubas,      &
+                            model%velocity%vbas,      &
+                            model%velocity%uvel,      &
+                            model%velocity%vvel,      &
+                            model%velocity%uflx,      & ! uflx, vflx, and diffu
+                            model%velocity%vflx,      & ! not needed for remapping
+                            model%velocity%diffu)  
+         endif
  
        endif   ! predict_correct
  
