@@ -425,6 +425,7 @@ contains
     !verification
     real(8) ::  t, r, z, x, y                       !in variables
     real(8) ::  H, TT, U, w, Sig, M, Sigc        !out variables
+    real(8) :: H_0
     integer center
     center = (model%general%ewn - 1)*.5
     !point by point call to the function 
@@ -434,20 +435,35 @@ contains
           y = (ns - center)*model%numerics%dns
           r = sqrt(x**2 + y**2)
           z = model%geometry%thck(ew,ns)
+          !the function only returns values within the radius
           if(r>0.0 .and. r<L) then
               if (which_test .eq. 0.0) then
                   call testF(r,z,H,TT,U,w,Sig,M,Sigc)
-              else
+              else if (which_test .eq. 1.0) then
                   call testG(time,r,z,H,TT,U,w,Sig,M,Sigc)
+              else if (which_test .eq. 2.0) then
+                  !H_0 = H0
+                  H_0 = model%geometry%thck(center,center)
+                  !TT = 0.0
+                  TT = model%temper%bheatflx(ew,ns)
+                  call model_exact(time,r,z,model%geometry%thck(ew,ns),H_0,TT,U,w,Sig,M,Sigc)
               end if
               if (which_call .eq. 0.0) then
-                  model%temper%bheatflx(ew,ns) = -Sigc*SperA*1.0e3  !m/a
+                  model%temper%bheatflx(ew,ns) = -Sigc*SperA*1.0e3 ! (10^(-3) deg K/a)
               else
                   model%climate%acab(ew,ns) = M*SperA  !m/a
               end if
           else
               model%temper%bheatflx(ew,ns) = 0.0
-              model%climate%acab(ew,ns) = -1.0
+              if(r .eq. 0.0) then
+                  !no acab for the center
+                  !model%climate%acab(ew,ns) = 0.0
+                  !set it back to H0
+                  model%climate%acab(ew,ns) = H0 - model%geometry%thck(center,center)
+              else
+                  !outside the glacier we need ablation or the glacier will expand forever.
+                  model%climate%acab(ew,ns) = -1.0
+              end if
           end if
        end do
     end do
