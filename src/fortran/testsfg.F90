@@ -180,5 +180,105 @@ contains
       ! p_4=x^4-4*x^3+12*x^2-24*x+24, using Horner's
       p4 = 24 + x*(-24 + x*(12 + x*(-4 + x)))
    end function p4
+   
+   subroutine model_exact(t,r,z,Hh,H0,TT,U,w,Sig,M,Sigc)
+      real(kind), intent(in) :: t, r, z, Hh, H0 
+      real(kind), intent(inout) :: TT
+      real(kind), intent(out) :: U, w, Sig, M, Sigc
 
+      real(kind), parameter :: pi = 3.14159265358979
+      real(kind), parameter :: Kcond=k/(rho*cpheat)  ! constant in temp eqn
+
+      ! declare all temporary quantities real(kind); computed in blocks below
+      real(kind) pow, Hconst, s, lamhat, f, goft, Ts, nusqrt, nu
+      real(kind) lamhatr, fr, Hr, mu, I3, surfArr, Uconst, omega
+      real(kind) Sigmu, lamhatrr, frr, Hrr, Tsr, nur, mur, phi, gamma, I4
+      real(kind) I4H, divQ, Ht, nut, dTt, Tr, Tz, Tzz
+      real Cp, H
+
+      if (r<=0 .or. r>=L) then
+         print *,'code and derivation assume 0<r<L'
+         stop
+      end if
+      H = Hh
+      !Don't need the perturbation 
+      Cp = 0.0
+      ! compute H from analytical steady state Hs (Test D) plus perturbation
+      pow = n/(2*n+2)
+      Hconst = H0/((1-1/n)**pow)
+      s = r/L
+      lamhat = (1+1/n)*s - (1/n) + (1-s)**(1+1/n) - s**(1+1/n);
+      if (r>0.3*L .and. r<0.9*L) then
+         f = ( cos(pi*(r-0.6*L)/(0.6*L)) )**2
+      else
+         f = 0.0
+      end if
+      goft = Cp*sin(2.0*pi*t/Tp)
+      !H = Hconst*(lamhat)**pow + goft*f
+      if (H .gt. Hconst*(lamhat)**pow + goft*f) then
+          H = Hconst*(lamhat)**pow + goft*f
+      end if
+      ! compute TT = temperature
+      Ts = Tmin+ST*r
+      nusqrt = sqrt( 1 + (4.0*H*Ggeo)/(k*Ts) )
+      nu = ( k*Ts/(2.0*Ggeo) )*( 1 + nusqrt )
+      if(TT .eq. 0.0) then
+          TT = Ts * (nu+H) / (nu+z)
+      end if
+
+      ! compute surface slope and horizontal velocity
+      lamhatr = ((1+1/n)/L)*( 1 - (1-s)**(1/n) - s**(1/n) )
+      if (r>0.3*L .and. r<0.9*L) then
+         fr = -(pi/(0.6*L)) * sin(2.0*pi*(r-0.6*L)/(0.6*L))
+      else
+         fr = 0.0
+      end if
+      Hr = Hconst * pow * lamhat**(pow-1) * lamhatr + goft*fr   ! chain rule
+      if (Hr>0) then
+         print *,'code and derivation assume H_r negative for all 0<r<L'
+         stop
+      end if
+      mu = Q/(Rgas*Ts*(nu+H))
+      I3 = p3(mu*H) * exp(mu*H) - p3(mu*(H-z)) * exp(mu*(H-z))
+      surfArr = exp(-Q/(Rgas*Ts))
+      Uconst = 2.0 * (rho*g)**n * A
+      omega = Uconst * (-Hr)**n * surfArr * mu**(-n-1)
+      U = omega * I3
+
+      ! compute strain heating
+      Sigmu = -(Q*(nu+z)) / (Rgas*Ts*(nu+H))
+      Sig = (Uconst*g/cpheat) * exp(Sigmu) * ( abs(Hr)*(H-z) )**(n+1)
+
+      ! compute vertical velocity
+      lamhatrr = ((1+1/n) / (n*L*L)) * ( (1-s)**((1/n)-1) - s**((1/n)-1) )
+      if (r>0.3*L .and. r<0.9*L) then
+         frr = -(2.0*pi*pi/(0.36*L*L)) * cos(2.0*pi*(r-0.6*L)/(0.6*L))
+      else
+         frr = 0.0
+      end if
+      Hrr = Hconst*pow*(pow-1)*(lamhat)**(pow-2) * lamhatr**2  + &
+         Hconst*pow*(lamhat)**(pow-1)*lamhatrr + goft*frr
+      Tsr = ST
+      nur = (k*Tsr/(2.0*Ggeo)) * (1 + nusqrt) + &
+          (1/Ts) * (Hr*Ts-H*Tsr) / nusqrt
+      mur = (-Q/(Rgas*Ts*Ts*(nu+H)**2)) * (Tsr*(nu+H)+Ts*(nur+Hr))
+      phi = 1/r + n*Hrr/Hr + Q*Tsr/(Rgas*Ts*Ts) - (n+1)*mur/mu   ! division by r
+      gamma = mu**n * exp(mu*H) * (mur*H+mu*Hr) * H**n
+      I4 = p4(mu*H) * exp(mu*H) - p4(mu*(H-z)) * exp(mu*(H-z))
+      w = omega * ((mur/mu - phi)*I4/mu + (phi*(H-z)+Hr)*I3 - gamma*z)
+
+      ! compute compensatory accumulation M
+      I4H = p4(mu*H) * exp(mu*H) - 24
+      divQ = - omega * (mur/mu - phi) * I4H / mu + omega * gamma * H
+      Ht = (Cp*2.0*pi/Tp) * cos(2.0*pi*t/Tp) * f
+      M = Ht + divQ
+
+      ! compute compensatory heating
+      nut = Ht/nusqrt
+      dTt = Ts * ((nut+Ht)*(nu+z)-(nu+H)*nut) * (nu+z)**(-2)
+      Tr = Tsr*(nu+H)/(nu+z) + Ts * ((nur+Hr)*(nu+z)-(nu+H)*nur) * (nu+z)**(-2)
+      Tz = -Ts * (nu+H) * (nu+z)**(-2)
+      Tzz = 2.0 * Ts * (nu+H) * (nu+z)**(-3)
+      Sigc = dTt + U*Tr + w*Tz - Kcond*Tzz - Sig
+   end subroutine model_exact
 end module testsFG
