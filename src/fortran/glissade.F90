@@ -171,8 +171,8 @@
     nsn = model%general%nsn
     upn = model%general%upn
     nlyr = upn - 1
-    write(*,*) "DSIGMA", model%velowk%dups
-    dsigma(:) = model%velowk%dups(2:)
+    !write(*,*) "DSIGMA", model%velowk%dups
+    dsigma(:) = model%velowk%dups(:size(model%velowk%dups)-1)
  
     worku(:,:) = c0
     workv(:,:) = c0
