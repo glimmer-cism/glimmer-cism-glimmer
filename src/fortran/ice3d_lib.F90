@@ -19,7 +19,7 @@
 !#define OUTPUT_SPARSE_MATRIX
 
 !Define to output a NetCDF file of the partial iterations
-#define OUTPUT_PARTIAL_ITERATIONS
+!#define OUTPUT_PARTIAL_ITERATIONS
 
 !If defined, a vertically averaged pressure will be used across the ice front.
 !Otherwise, a vertically explicit pressure will be used.
@@ -478,9 +478,6 @@ contains
         nzeta = size(mu,3)
         ijktot = active_points*nzeta
 
-        uvel = 0
-        vvel = 0
-
         maxiter=NUMBER_OF_ITERATIONS
         error=VEL2ERR
         m=1
@@ -491,7 +488,7 @@ contains
         !Set up sparse matrix options
         call sparse_solver_default_options(options%which_ho_sparse, matrix_options)
         matrix_options%base%tolerance=TOLER
-        matrix_options%base%maxiters  = 100000
+        matrix_options%base%maxiters  = 1000
         
         if (options%which_ho_efvs == 1) then
             write(*,*) "Using linear rheology"
@@ -503,7 +500,7 @@ contains
         call new_sparse_matrix(ijktot, ijktot*STENCIL_SIZE, matrix)
         call sparse_allocate_workspace(matrix, matrix_options, matrix_workspace, ijktot*STENCIL_SIZE)
 
-#if 1
+#if 0
         call write_xls_3d("arrh.txt",arrh)
         call write_xls("dzdx.txt",dzdx)
         call write_xls("dzdy.txt",dzdy)
@@ -862,8 +859,8 @@ contains
             direction_x = 0
             direction_y = 0
             call upwind_from_mask(geometry_mask, direction_y, direction_x)
-            call write_xls("direction_x.txt",direction_x)
-            call write_xls("direction_y.txt",direction_y)
+            !call write_xls("direction_x.txt",direction_x)
+            !call write_xls("direction_y.txt",direction_y)
             
             call df_field_3d(uvel_test, dy, dx, levels, dudy, dudx, dudz, direction_y, direction_x)
             call df_field_3d(vvel_test, dy, dx, levels, dvdy, dvdx, dvdz, direction_y, direction_x)
