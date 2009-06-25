@@ -142,7 +142,11 @@ contains
                     tot = tot + ipvr(ew+1,ns+1)
                     n   = n   + 1
                 end if
-                opvr(ew,ns) = tot/n
+                if (n > 0) then
+                    opvr(ew,ns) = tot/n
+                else
+                    opvr(ew,ns) = 0
+                end if
             end do
         end do
 
