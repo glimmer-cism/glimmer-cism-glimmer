@@ -59,10 +59,11 @@ def maxObservedError(meanFlowline, stdevFlowline, myFlowline):
         err = (val-mean)/mean
         if err > currentMax:
             currentMax = err
-            matchingStdevError = stdev/mean
+            matchingStdevError = (mean+stdev)/mean
             position = float(i)/float(len(means))
-        toterr += abs(err)
-        totstdev += stdev/mean
+        #Compute mean squared errors
+        toterr += abs(err)**2
+        totstdev += ((mean+stdev)/mean)**2
         n += 1
     return toterr/n, totstdev/n, position
             
