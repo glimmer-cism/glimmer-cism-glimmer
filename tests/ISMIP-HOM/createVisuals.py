@@ -49,12 +49,22 @@ def maxObservedError(meanFlowline, stdevFlowline, myFlowline):
     computed = myFlowline.getDependantVariable(0)
     currentMax = -float("inf")
     matchingStdevError = None
-    for mean, stdev, val in zip(means, stdevs, computed):
+    position = None
+    toterr = 0
+    totstdev = 0
+    n = 0
+    for i, (mean, stdev, val) in enumerate(zip(means, stdevs, computed)): #Ignore boundaries for now, periodic bcs can cause funkiness there
+        if i < 2 or i > len(means) - 2:
+            continue
         err = (val-mean)/mean
         if err > currentMax:
             currentMax = err
             matchingStdevError = stdev/mean
-    return currentMax, matchingStdevError
+            position = float(i)/float(len(means))
+        toterr += abs(err)
+        totstdev += stdev/mean
+        n += 1
+    return toterr/n, totstdev/n, position
             
 
 #Returns a tuple with two tuples suitable for creating a legend.  The first tuple contains
@@ -90,8 +100,8 @@ def createPlot(experiment, domainSizeKm, prefix, fig, subplotNum, notFullStokesM
         mean, stdev = intercomparison.aggregateExperimentFlowlines(flowlines, glimFlowline.getPointLocations())
         
         if not isFullStokes:
-            myErr,oneStdev = maxObservedError(mean, stdev, glimFlowline)
-            print '\t'.join([str(domainSizeKm) + " km", str(myErr), str(oneStdev)])
+            myErr,oneStdev,pos = maxObservedError(mean, stdev, glimFlowline)
+            print '\t'.join([str(domainSizeKm) + " km", str(myErr), str(oneStdev), str(pos)])
 
         #Plot the mean and std. dev.
         if isFullStokes:
