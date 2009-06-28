@@ -205,7 +205,7 @@ program glint_example
   time=climate%climate_tstep
 
   do
-     call example_climate(climate,precip,temp,real(time,rk))
+     call example_climate(climate,precip,temp,real(time,rk),'new')
      call glint(ice_sheet,time,temp,precip,orog, &
           orog_out=orog_out,   albedo=albedo,         output_flag=out, &
           ice_frac=ice_frac,   water_out=fw,          water_in=fw_in, &

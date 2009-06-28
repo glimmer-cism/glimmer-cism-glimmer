@@ -159,6 +159,8 @@ contains
     ! load sigma file
     call glide_load_sigma(model,dummyunit)
 
+    ! set uniform basal heat flux
+    model%temper%bheatflx = model%paramets%geot
     
     ! open all input files
     call openall_in(model)
@@ -177,8 +179,6 @@ contains
        call isos_relaxed(model)
     end select
 
-    ! set uniform basal heat flux
-    model%temper%bheatflx = model%paramets%geot
 
     ! open all output files
     call openall_out(model)

@@ -81,7 +81,7 @@ contains
 
     real(dp), parameter :: con = - rhoi / rhoo
     real(dp), parameter :: sigmaxx = 0.5 * rhoi * grav * (1.0 - rhoi / rhoo)
-    real(dp), parameter :: theta = 0.5
+    real(dp), parameter :: theta = 0.125
     real(dp), dimension(2,2) :: A
     
     real(sp), dimension(:,:), intent(inout) :: backstress
@@ -95,7 +95,7 @@ contains
     real(sp) :: sigmabout,sigmabin
     type(glide_grnd) :: ground        !*FD ground instance
     !---------------------------------------------------------------------
-
+   
 
     ablation_field=0.0
 
@@ -137,19 +137,41 @@ contains
         do ns = 2, size(backstress,2)-1
            do ew = 2, size(backstress,1)-1
                 if(.not. backstressmap(ew,ns)) then
-                   if (tempanmly > 0.0) then
+                   if (tempanmly > -1.0) then
                       backstress(ew,ns) = sigmabout
                    else
-                      !backstress(ew,ns) = 1-exp(tempanmly) 
-                      backstress(ew,ns) = sigmabout + (1-sigmabout)*abs(tempanmly/9.2)
+                      backstress(ew,ns) =sigmabout + (1-sigmabout)*log10(-tempanmly)
+                      !( 1-exp(tempanmly))
+                      !backstress(ew,ns) = sigmabout + (1-sigmabout)*abs(tempanmly/9.2)
+                   end if
+                else
+                   if (tempanmly > -1.0) then
+                      backstress(ew,ns) = sigmabin
+                   else
+                     !backstress = sigmabin + (1-sigmabin)*abs(tempanmly/9.2)
+                      backstress(ew,ns) =sigmabin + (1-sigmabin)*log10(-tempanmly)
+                      !( 1-exp(tempanmly))
                    end if
                 end if
            end do
         end do 
-        where (backstressmap) 
-          backstress = sigmabin + (1-sigmabin)*abs(tempanmly/9.2)
-        end where 
-           
+        
+        !do ns = 2, size(backstress,2)-1
+        !   do ew = 2, size(backstress,1)-1
+        !where (backstressmap) 
+        !    if (tempanmly > 0.0) then
+        !      backstress(ew,ns) = sigmabin
+        !    else
+            !backstress = sigmabin + (1-sigmabin)*abs(tempanmly/9.2)
+        !      backstress(ew,ns) =sigmabin + (1-sigmabin)*( 1-exp(tempanmly))
+        !    end if 
+        !   end do
+       ! end do
+        !end where 
+        
+        where(backstress > 1.0)
+          backstress = 1.0
+        end where
            
            do ns = 2,size(thck,2)-1
               do ew = 2,size(thck,1)-1

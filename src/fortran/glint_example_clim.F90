@@ -79,6 +79,7 @@ module glint_example_clim
      integer  :: hours_in_year=365*24
      real(rk) :: precip_scale=1.0 ! Factor to scale precip by
      logical  :: temp_in_kelvin=.true. ! Set if temperature field is in Kelvin
+     integer :: cur_tstep=1 !time step counter
   end type glex_climate
 
   interface read_ncdf
@@ -664,7 +665,7 @@ contains
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine example_climate(params,precip,temp,time)
+  subroutine example_climate(params,precip,temp,time,method)
 
     use glimmer_log
 
@@ -676,21 +677,30 @@ contains
     real(rk) :: tsp,tst
     real(rk) :: pos
     integer :: lower,upper
-
+    character(*),         intent(in)    :: method
     real(rk) :: fyear
-
-
-    ! Calculate fraction of year
-    fyear = real(mod(time,real(params%hours_in_year,rk)))/real(params%hours_in_year)
     
-    ! Do temperature interpolation
-    call bracket_point(fyear,params%st_time,lower,upper,pos)
-    temp=linear_interp(params%surftemp_clim(:,:,lower),params%surftemp_clim(:,:,upper),pos)
-
-    ! precip
-    call bracket_point(fyear,params%pr_time,lower,upper,pos)
-    precip=linear_interp(params%precip_clim(:,:,lower),params%precip_clim(:,:,upper),pos)
-
+    select case(method)
+    case default !use original method for calculating climate
+      ! Calculate fraction of year
+      fyear = real(mod(time,real(params%hours_in_year,rk)))/real(params%hours_in_year)
+    
+      ! Do temperature interpolation
+      call bracket_point(fyear,params%st_time,lower,upper,pos)
+      temp=linear_interp(params%surftemp_clim(:,:,lower),params%surftemp_clim(:,:,upper),pos)
+    
+      ! precip
+      call bracket_point(fyear,params%pr_time,lower,upper,pos)
+      precip=linear_interp(params%precip_clim(:,:,lower),params%precip_clim(:,:,upper),pos)
+    
+    case('new')
+      temp = params%surftemp_clim(:,:,params%cur_tstep)
+      precip = params%precip_clim(:,:,params%cur_tstep)
+      write(*,*), params%cur_tstep
+      params%cur_tstep = params%cur_tstep + 1
+  
+    end select
+  
   end subroutine example_climate
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

@@ -38,6 +38,7 @@
 #ifdef HAVE_CONFIG_H
 #include <config.inc>
 #endif
+
 !The mass balance model
 module spin_mb
    
@@ -182,7 +183,8 @@ contains
                             temp%arng, &
                             model%general%ewn, &
                             model%general%nsn, &
-                            mb%oisotope)
+                            mb%oisotope, &
+                            temp%temp_ele)
                             
                            
 
@@ -247,7 +249,7 @@ contains
   
   subroutine spin_massbalance(pdd_scheme, model_type, usrf, landsea,          &
                             tinvp, presartm, artm, prcp, presprcp, acab, ablt,&
-                            arng,ewn, nsn, oisotope)
+                            arng,ewn, nsn, oisotope, temp_ele)
 
     use glimmer_pdd
     type(glimmer_pdd_params)              :: pdd_scheme !pdd type, holds
@@ -269,6 +271,8 @@ contains
     real(dp), dimension(:,:),intent(inout)     :: usrf !ice elevation
     real                                  :: tzero = 273.16 !Kelvin 
     real, intent(in)                      :: oisotope !oxygen-isotope
+    real(sp), intent(in)                  :: temp_ele !correction in
+                                                      !temperature for elevation
     !real, intent(in) :: eus !eustatic sea level
     !real(dp), intent(in) :: topg !topgraphy field
     
@@ -300,7 +304,7 @@ contains
     
     !calculate the perturbed precipitation using a file containing
     !oxygen isotopes instead of temperatures
-      prcp = presprcp * exp(0.169*(oisotope + 34.83)) 
+      prcp = presprcp * exp(0.169*(oisotope + 34.83 - temp_ele/2.4)) 
     !end of Green model calculations
     end select     
        
@@ -312,7 +316,7 @@ contains
                           ablt, & 
                           acab, &
                           landsea) 
-    
+     
   end subroutine spin_massbalance
   
   

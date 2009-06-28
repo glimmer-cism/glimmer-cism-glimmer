@@ -91,7 +91,7 @@ contains
     type(spin_climate_type) :: climate  !*FD structure holding climate
     
     call write_log_div
-    call write_log('Ant Spin Model')
+    call write_log('Spin Model')
     call spin_mb_printconfig(climate%mb)
     call spin_temp_printconfig(climate%temp)
     call spin_slc_printconfig(climate%slc)
