@@ -677,7 +677,7 @@ contains
     real(rk) :: tsp,tst
     real(rk) :: pos
     integer :: lower,upper
-    character(*),         intent(in)    :: method
+    character(*), intent(in),optional    :: method
     real(rk) :: fyear
     
     select case(method)
