@@ -150,7 +150,7 @@ contains
 #ifdef VERY_VERBOSE
             write(*,*)"Running Pattyn unstaggered"
 #endif
-            call velo_hom_pattyn_nonstag(model%general%ewn, model%general%nsn, model%general%upn, &
+             call velo_hom_pattyn_nonstag(model%general%ewn, model%general%nsn, model%general%upn, &
                                          model%numerics%dew, model%numerics%dns, model%numerics%sigma, &
                                          model%geometry%thck, model%geometry%usrf, model%geometry%lsrf, &
                                          model%geomderv%dusrfdew_unstag, model%geomderv%dusrfdns_unstag, &

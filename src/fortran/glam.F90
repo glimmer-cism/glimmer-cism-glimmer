@@ -52,8 +52,12 @@ module glam
 
         ewn = model%general%ewn
         nsn = model%general%nsn
-
+        
+        !Set up - compute the new geometry derivatives for this time step
+        call geometry_derivs(model)
+        call geometry_derivs_unstag(model)  
         ! Compute the higher-order velocities using the method of Payne and Price
+
 
         !whl - to do - Make sure that the sigma field passed to glam is consistent with glam numerics.
         ! Note that the argument 'eta' was removed from the call, as it is not used. 
