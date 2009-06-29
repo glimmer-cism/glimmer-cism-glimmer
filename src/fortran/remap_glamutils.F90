@@ -148,14 +148,14 @@ module remap_glamutils
     dt_ir = dt * tim0
 
     where( thck > 0.0_dp )
-        mask_ir = 1.0_dp
+        mask_ir(:size(mask_ir,1)-1, :size(mask_ir,2)-1) = 1.0_dp
     end where
 
     end subroutine horizontal_remap_in
 
 !----------------------------------------------------------------------
 
-    subroutine horizontal_remap_out( thck_ir, thck, acab, dt )
+    subroutine horizontal_remap_out( thck_ir, mask_ir, thck, acab, dt )
 
     ! *sfp** take output from inc. remapping and put back in GLAM format
 
@@ -164,9 +164,20 @@ module remap_glamutils
     real (kind = dp), intent(in) :: dt
     real (kind = sp), intent(in), dimension(:,:) :: acab
     real (kind = dp), dimension(:,:,:), intent(in) :: thck_ir
+    real (kind = dp), dimension(:,:), intent(in) :: mask_ir
     real (kind = dp), dimension(:,:), intent(inout) :: thck
 
-    thck(:,:) = ( thck_ir(:,:,1) / thk0 + acab(:,:)*dt ) * mask_ir
+    integer :: ewn, nsn
+
+    ewn = size(thck, 1)
+    nsn = size(thck, 2)
+
+    write(*,*) shape(thck)
+    write(*,*) shape(thck_ir)
+    write(*,*) shape(acab)
+    write(*,*) shape(mask_ir)
+
+    thck(:ewn-1,:nsn-1) = ( thck_ir(:,:,1) / thk0 + acab(:ewn-1, :nsn-1)*dt ) * mask_ir(:ewn-1, :nsn-1)
 
     end subroutine horizontal_remap_out
 

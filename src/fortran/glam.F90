@@ -37,17 +37,6 @@ module glam
 
         type(glide_global_type), intent(inout) :: model
 
-        ! arrays passed in and out of remapping routine
-        real (kind = dp), allocatable, dimension(:,:,:) ::   &
-          thck_ir,            &
-          dew_ir,   dns_ir,   &
-          dewt_ir,  dnst_ir,  &
-          dewu_ir,  dnsu_ir,  &
-          hm_ir,    tarea_ir, &
-          ubar_ir,  vbar_ir
-
-        real (kind = dp), allocatable, dimension(:,:,:,:) :: trace_ir
-        real (kind = dp) :: dt_ir
         integer :: ewn, nsn
 
         integer ::         & 
@@ -108,7 +97,7 @@ module glam
 
         ! *sfp** put variables back into format to be used by glam
 
-         call horizontal_remap_out (thck_ir,            model%geometry%thck,    &
+         call horizontal_remap_out (thck_ir,            mask_ir, model%geometry%thck,    &
                                     model%climate%acab, model%numerics%dt )
 
 !       These to be moved elsewhere ... somewhere in "glide_stop.F90"?
