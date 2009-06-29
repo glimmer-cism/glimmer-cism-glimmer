@@ -86,10 +86,10 @@ contains
                                  model%paramets%slip_ratio, model%velocity_hom%beta)
         end if
 
-            
         if (model%options%which_ho_diagnostic == HO_DIAG_PATTYN_STAGGERED) then
+#ifdef VERY_VERBOSE
             write(*,*)"Running Pattyn staggered"
-         
+#endif
             !Compute the "point mask" (mask that assigns a unique value to each
             !grid point on which ice dynamics are enabled) for the
             !staggered grid.  
@@ -127,8 +127,16 @@ contains
                                  model%velocity_hom%uflx, model%velocity_hom%vflx, &
                                  model%velocity_hom%efvs, model%velocity_hom%tau, &
                                  model%velocity_hom%gdsx, model%velocity_hom%gdsy)
+
+            call hom_diffusion_pattyn(model%velocity_hom%uvel, model%velocity_hom%vvel, model%geomderv%stagthck, &
+                                      model%geomderv%dusrfdew, model%geomderv%dusrfdns, model%numerics%sigma, &
+                                      model%velocity_hom%diffu_x, model%velocity_hom%diffu_y, &
+                                      model%velocity_hom%uflx,    model%velocity_hom%vflx) 
+
         else if (model%options%which_ho_diagnostic == HO_DIAG_PATTYN_UNSTAGGERED) then
+#ifdef VERY_VERBOSE
             write(*,*)"Running Pattyn unstaggered"
+#endif
             call velo_hom_pattyn_nonstag(model%general%ewn, model%general%nsn, model%general%upn, &
                                          model%numerics%dew, model%numerics%dns, model%numerics%sigma, &
                                          model%geometry%thck, model%geometry%usrf, model%geometry%lsrf, &
@@ -145,7 +153,13 @@ contains
                                          model%geometry%marine_bc_normal, &
                                          model%velocity_hom%uvel, model%velocity_hom%vvel, &
                                          model%velocity_hom%is_velocity_valid)
-        end if
+
+            call hom_diffusion_pattyn(model%velocity_hom%uvel, model%velocity_hom%vvel, model%geomderv%stagthck, &
+                                      model%geomderv%dusrfdew, model%geomderv%dusrfdns, model%numerics%sigma, &
+                                      model%velocity_hom%diffu_x, model%velocity_hom%diffu_y, &
+                                      model%velocity_hom%uflx,    model%velocity_hom%vflx) 
+
+         end if
         !Compute the velocity norm - this is independant of the methods used to compute the u and v components so
         !we put it out here
         model%velocity_hom%velnorm = sqrt(model%velocity_hom%uvel**2 + model%velocity_hom%vvel**2)
@@ -311,9 +325,11 @@ contains
         call ice3dToGlim_3d(tau_xy_t, tau%xy, ewn-1, nsn-1, upn)
     end subroutine velo_hom_pattyn
 
-    subroutine hom_diffusion_pattyn(uvel_hom, vvel_hom, stagthck, dusrfdew, dusrfdns, sigma, diffu_x, diffu_y)
+    subroutine hom_diffusion_pattyn(uvel_hom, vvel_hom, stagthck, dusrfdew, dusrfdns, sigma, diffu_x, diffu_y, uflx, vflx)
         !*FD Estimate of higher-order diffusivity vector given Pattyn's approach
         !*FD Implements (54) in Pattyn 2003, including vertical integration
+        !*FD Also returns fluxes computed from the velocities, as these are part of the
+        !*FD HO diffusivity computation anyway
         real(dp), dimension(:,:,:), intent(in) :: uvel_hom
         real(dp), dimension(:,:,:), intent(in) :: vvel_hom
         real(dp), dimension(:,:),   intent(in) :: stagthck
@@ -322,7 +338,8 @@ contains
         real(dp), dimension(:),     intent(in) :: sigma
         real(dp), dimension(:,:),   intent(out):: diffu_x
         real(dp), dimension(:,:),   intent(out):: diffu_y
-
+        real(dp), dimension(:,:),   intent(out):: uflx
+        real(dp), dimension(:,:),   intent(out):: vflx
         !Local Variables
         real(dp), dimension(size(uvel_hom, 2), size(uvel_hom, 3)) :: u_int !*FD Vertically integrated u velocity
         real(dp), dimension(size(uvel_hom, 2), size(uvel_hom, 3)) :: v_int !*FD Vertically integrated v velocity
@@ -330,8 +347,11 @@ contains
         call vertint_output2d(uvel_hom, u_int, sigma)
         call vertint_output2d(vvel_hom, v_int, sigma)
 
-        diffu_x = u_int*stagthck*dusrfdew
-        diffu_y = u_int*stagthck*dusrfdns
+        uflx = u_int*stagthck
+        vflx = v_int*stagthck
+
+        diffu_x = uflx*dusrfdew
+        diffu_y = vflx*dusrfdns
 
     end subroutine hom_diffusion_pattyn
 

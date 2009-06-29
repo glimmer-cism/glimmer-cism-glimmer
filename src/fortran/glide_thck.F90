@@ -157,10 +157,6 @@ contains
        ! get new thicknesses
             call thck_evolve(model,model%velocity%diffu, model%velocity%diffu, .true.,model%geometry%thck,model%geometry%thck)
        else if (model%options%which_ho_prognostic == HO_PROG_PATTYN) then
-            call hom_diffusion_pattyn(model%velocity_hom%uvel, model%velocity_hom%vvel, model%geomderv%stagthck, &
-                                      model%geomderv%dusrfdew, model%geomderv%dusrfdns, model%numerics%sigma, &
-                                      model%velocity_hom%diffu_x, model%velocity_hom%diffu_y) 
-
             call thck_evolve(model,model%velocity_hom%diffu_x, model%velocity_hom%diffu_y, .true.,& 
                   model%geometry%thck, model%geometry%thck)
     
@@ -271,10 +267,6 @@ contains
             call thck_evolve(model,model%velocity%diffu, model%velocity%diffu, .true.,model%geometry%thck,model%geometry%thck)
        else if (model%options%which_ho_prognostic == HO_PROG_PATTYN) then
             
-
-            call hom_diffusion_pattyn(model%velocity_hom%uvel, model%velocity_hom%vvel, model%geomderv%stagthck, &
-                                      model%geomderv%dusrfdew, model%geomderv%dusrfdns, model%numerics%sigma, &
-                                      model%velocity_hom%diffu_x, model%velocity_hom%diffu_y) 
 
             call thck_evolve(model,model%velocity_hom%diffu_x, model%velocity_hom%diffu_y, .true.,& 
                   model%geometry%thck, model%geometry%thck)
