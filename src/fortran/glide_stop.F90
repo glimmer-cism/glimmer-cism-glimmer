@@ -138,6 +138,10 @@ contains
     call closeall_in(model)
     call closeall_out(model)
    
+    ! *tjb** added; finalization of LANL incremental remapping subroutine for thickness evolution
+    if (model%options%whichevol== EVOL_INC_REMAP_PP ) then
+        call horizontal_remap_final()
+    endif 
 
     call glide_deallocarr(model)
     call deregister_model(model)
