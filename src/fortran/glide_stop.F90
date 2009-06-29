@@ -47,7 +47,8 @@
 module glide_stop
   use glide_types
   use glimmer_log
-  
+  use remap_glamutils
+
   implicit none
   !*FD module containing finalisation of glide
   !*FD this subroutine had to be split out from glide.f90 to avoid
