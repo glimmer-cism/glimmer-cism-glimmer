@@ -14,9 +14,11 @@ module glam
     use glimmer_physcon, only :
     use glide_mask
 
-    use glam_strs2, only: glam_velo_fordsiapstr, umask
     use remap_advection
     use remap_glamutils
+
+    use glide_velo_higher
+    use glide_thck
 
     implicit none
     private
@@ -79,62 +81,43 @@ module glam
         ! usrf and thck derivs. rather than specified directly as in 'glam'. However, shouldn't they be
         ! e.g. 'dlsrfdew  = dusrfdew - dthckdew' rather than 'dlsrfdew = dthckdew - dusrfdew' ???   
 
-        call glam_velo_fordsiapstr( model%general%ewn,       model%general%nsn,                 &
-                                    model%general%upn,                                          &
-                                    model%numerics%dew,      model%numerics%dns,                &
-                                    model%numerics%sigma,    model%numerics%stagsigma,          &
-                                    model%geometry%thck,     model%geometry%usrf,               &
-                                    model%geometry%lsrf,     model%geometry%topg,               &
-                                    model%geomderv%dthckdew, model%geomderv%dthckdns,           &
-                                    model%geomderv%dusrfdew, model%geomderv%dusrfdns,           &
-                                    model%geomderv%dusrfdew-model%geomderv%dthckdew,            &
-                                    model%geomderv%dusrfdns-model%geomderv%dthckdns,            & 
-                                    model%geomderv%stagthck, model%temper%flwa*vis0/vis0_glam,  &
-                                    minTauf, umask,                                             &
-                                    model%options%which_ho_babc,                                &
-                                    model%options%which_ho_efvs,                                &
-                                    model%options%which_ho_resid,                               &
-                                    model%options%periodic_ew,                                  &
-                                    model%options%periodic_ns,                                  &
-                                    model%velocity_hom%beta,                                    & 
-                                    model%velocity_hom%uvel, model%velocity_hom%vvel,           &
-                                    model%velocity_hom%uflx, model%velocity_hom%vflx,           &
-                                    model%velocity_hom%efvs )
-                                    !model%velocity_hom%efvs,                                    & 
-                                    !model%velocity_hom%kinematic_bc_u,                          &
-                                    !model%velocity_hom%kinematic_bc_v )
+
+        ! *tjb** Moved the PP call to glide_velo_higher.  This needs to prompt some more rethinking
+        !        regarding what's "glide", what's "glam", and what's "glissade" so that we have
+        !        more logical separation between high-level modules
+        call run_ho_diagnostic(model)
 
         ! *sfp** put necessary variables in format for inc. remapping
 
-!         call horizontal_remap_in(model%numerics%dt,       model%geometry%thck(1:ewn-1,1:nsn-1),  &
-!                                  ntrace_ir,               nghost_ir,                             &
-!                                  model%numerics%dew,      model%numerics%dns,                    &
-!                                  model%velocity_hom%uflx, model%velocity_hom%vflx,               &
-!                                  model%geomderv%stagthck, thck_ir,                      &
-!                                  dew_ir,                  dns_ir,                       &
-!                                  dewt_ir,                 dnst_ir,                      &
-!                                  dewu_ir,                 dnsu_ir,                      &
-!                                  hm_ir,                   tarea_ir,                     &
-!                                  ubar_ir,                 vbar_ir,                      &
-!                                  trace_ir,                dt_ir )
+        call horizontal_remap_in(model%numerics%dt,       model%geometry%thck(1:ewn-1,1:nsn-1),  &
+                                  ntrace_ir,               nghost_ir,                             &
+                                  model%numerics%dew,      model%numerics%dns,                    &
+                                  model%velocity_hom%uflx, model%velocity_hom%vflx,               &
+                                  model%geomderv%stagthck, thck_ir,                      &
+                                  dew_ir,                  dns_ir,                       &
+                                  dewt_ir,                 dnst_ir,                      &
+                                  dewu_ir,                 dnsu_ir,                      &
+                                  hm_ir,                   tarea_ir,                     &
+                                  ubar_ir,                 vbar_ir,                      &
+                                  trace_ir,                dt_ir )
 
         ! *sfp** call remapping code
 
-!         call horizontal_remap  ( dt_ir,                                  & 
-!                                  ewn-1,               nsn-1,             &
-!                                  ntrace_ir,           nghost_ir,         &
-!                                  ubar_ir,             vbar_ir,           &
-!                                  thck_ir,             trace_ir,          &
-!                                  dew_ir,              dns_ir,            &
-!                                  dewt_ir,             dnst_ir,           &
-!                                  dewu_ir,             dnsu_ir,           &
-!                                  hm_ir,               tarea_ir )
+         call horizontal_remap  ( dt_ir,                                  & 
+                                  ewn-1,               nsn-1,             &
+                                  ntrace_ir,           nghost_ir,         &
+                                  ubar_ir,             vbar_ir,           &
+                                  thck_ir,             trace_ir,          &
+                                  dew_ir,              dns_ir,            &
+                                  dewt_ir,             dnst_ir,           &
+                                  dewu_ir,             dnsu_ir,           &
+                                  hm_ir,               tarea_ir )
 
 
         ! *sfp** put variables back into format to be used by glam
 
-!         call horizontal_remap_out (thck_ir,            model%geometry%thck,    &
-!                                    model%climate%acab, model%numerics%dt )
+         call horizontal_remap_out (thck_ir,            model%geometry%thck,    &
+                                    model%climate%acab, model%numerics%dt )
 
 !       These to be moved elsewhere ... somewhere in "glide_stop.F90"?
 !
