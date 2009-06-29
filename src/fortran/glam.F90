@@ -64,14 +64,6 @@ module glam
         ewn = model%general%ewn
         nsn = model%general%nsn
 
-        ! *sfp* calculate mask for staggered thickness grid, using CISM subroutines. This will eventually
-        ! take the place of the mask subroutines that are internal to 'glam_strs2'
-        call glide_set_mask(model%numerics, model%geomderv%stagthck, model%geomderv%stagtopg, &
-                             model%general%ewn, model%general%nsn, model%climate%eus, &
-                             umask ) 
-
-
-
         ! Compute the higher-order velocities using the method of Payne and Price
 
         !whl - to do - Make sure that the sigma field passed to glam is consistent with glam numerics.
