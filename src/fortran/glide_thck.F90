@@ -60,7 +60,7 @@ module glide_thck
   use glide_io
   private
   public :: init_thck, thck_nonlin_evolve, thck_lin_evolve, timeders, &
-            stagleapthck, fix_mass_conservation, geometry_derivs, &
+            stagleapthck, geometry_derivs, &
             geometry_derivs_unstag 
 
 #ifdef DEBUG_PICARD
@@ -516,39 +516,7 @@ contains
   end subroutine thck_evolve
 
 
-!---------------------------------------------------------------------------------
 
-  subroutine fix_mass_conservation(thck, stagthck)
-    !*FD Fixes a problem where the thickness staggering introduces
-    !*FD non-conservation of mass around areas of zero mass.
-    !*FD The problem and its solution are discussed in the Glimmer
-    !*FD mailing list archive:
-    !*FD http://forge.nesc.ac.uk/pipermail/glimmer-discuss/2007-October/000280.html
-    !*FD (Message from Anne Le Brocq, October 22, 2007)
-    use glimmer_paramets, only: thk0
-    real(dp), dimension(:,:) ::thck, stagthck
-    integer :: ewn, nsn
-      
-    ewn = size(thck,1)
-    nsn = size(thck,2)
-
-
-    where (thck(1:ewn-1,1:nsn-1)*thk0 < 100)
-        stagthck = 0
-    endwhere
-
-    where (thck(1:ewn-1, 2:nsn)*thk0 < 100)
-        stagthck = 0
-    endwhere
-
-    where (thck(2:ewn, 1:nsn-1)*thk0 < 100)
-        stagthck = 0
-    endwhere
-
-    where (thck(2:ewn, 2:nsn)*thk0 < 100)
-        stagthck = 0
-    endwhere
-  end subroutine
 
 !---------------------------------------------------------------
 
