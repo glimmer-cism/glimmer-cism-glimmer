@@ -5,6 +5,7 @@
 #endif
 
 module glide_grids
+    use glimmer_global, only : dp
     implicit none
 
     integer, parameter :: STAGGER_CHOICE_STD = 0      !Simple linear interpolation onto staggered grid
@@ -14,8 +15,6 @@ module glide_grids
 
 contains
   subroutine stagvarb(ipvr,opvr,ewn,nsn,choice_arg,usrf,thklim)
-
-    use glimmer_global, only : dp ! ewn, nsn
     use glimmer_paramets, only: thk0
     implicit none 
 
@@ -156,4 +155,53 @@ contains
     end if
   end subroutine stagvarb
 
+  subroutine stagvarb_3d(ipvr, opvr, ewn, nsn, upn)
+    real(dp), intent(in), dimension(:,:,:) :: ipvr
+    real(dp), intent(out), dimension(:,:,:) :: opvr
+    integer, intent(in) :: ewn, nsn, upn
+    integer :: k
+
+    do k = 1, upn
+        call stagvarb(ipvr(k,:,:), opvr(k,:,:), ewn, nsn)
+    end do
+  end subroutine stagvarb_3d
+
+    subroutine periodic_boundaries(m, apply_to_x, apply_to_y)
+        !*FD Applies periodic boundary conditions to a 2D array
+        real(dp), dimension(:,:), intent(inout) :: m
+        integer :: maxx, maxy
+        logical :: apply_to_x, apply_to_y
+        maxx = size(m, 1)
+        maxy = size(m, 2)
+       
+        if(apply_to_y) then
+            m(:,maxy) = m(:,2)
+            m(:,1) = m(:,maxy-1)
+        end if
+
+        if(apply_to_x) then
+            m(maxx,:) = m(2,:)
+            m(1,:) = m(maxx-1,:)
+        end if
+    end subroutine periodic_boundaries
+    
+    subroutine periodic_boundaries_3d(m, apply_to_x, apply_to_y)
+        !*FD Applies periodic boundary conditions to a 2D array
+        real(dp), dimension(:,:,:), intent(inout) :: m
+        integer :: maxx, maxy
+        logical :: apply_to_x, apply_to_y
+        maxx = size(m, 2)
+        maxy = size(m, 3)
+       
+        if(apply_to_y) then
+            m(:,:,maxy) = m(:,:,2)
+            m(:,:,1) = m(:,:,maxy-1)
+        end if
+
+        if(apply_to_x) then
+            m(:,maxx,:) = m(:,2,:)
+            m(:,1,:) = m(:,maxx-1,:)
+        end if
+    end subroutine periodic_boundaries_3d
+ 
 end module glide_grids

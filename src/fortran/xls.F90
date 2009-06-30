@@ -8,8 +8,8 @@ contains
         integer :: i , j
         open(11, file=fname)
 
-        do i = 1, size(data, 1)
-            write(11, *)(data(i,j),j=1,size(data,2))
+        do i = 1, size(data, 2)
+            write(11, *)(data(j,i),j=1,size(data,1))
         end do
 
         close(11)
@@ -22,8 +22,8 @@ contains
         integer :: i , j
         open(11, file=fname)
 
-        do i = 1, size(data, 1)
-            write(11, *)(data(i,j),j=1,size(data,2))
+        do i = 1, size(data, 2)
+            write(11, *)(data(j,i),j=1,size(data,1))
         end do
 
         close(11)
@@ -37,9 +37,9 @@ contains
         double precision data(:,:,:)
         integer :: i , j, k
         open(11, file=fname)
-        do k = 1, size(data, 3)
-            do i = 1, size(data, 1)
-                write(11, *)(data(i,j,k),j=1,size(data,2))
+        do k = 1, size(data, 1)
+            do i = 1, size(data, 3)
+                write(11, *)(data(k,j,i),j=1,size(data,2))
             end do
         end do
         close(11)

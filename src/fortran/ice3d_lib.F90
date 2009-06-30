@@ -30,13 +30,14 @@
 
 !#define VERY_VERBOSE
 
-#define NOSHELF
+!#define NOSHELF
 
 module ice3d_lib
     use glimmer_global
     use glimmer_physcon, only: pi, grav, rhoi, rhoo, scyr
     use glide_deriv
     use glide_types
+    use glide_grids
     use glimmer_sparse_type
     use glimmer_sparse
     use glimmer_log
@@ -173,8 +174,9 @@ contains
         call write_xls("d2hdx2.txt",d2hdx2)
         call write_xls("d2hdy2.txt",d2hdy2)
 #endif
-        MAXY = size(h, 1)
-        MAXX = size(h, 2)
+
+        MAXY = size(h, 2)
+        MAXX = size(h, 1)
         NZETA = size(zeta, 1)
 
         !Get a field of 2nd derivatives of the surface onto a staggered
@@ -187,34 +189,34 @@ contains
         !and vice versa.  This is because it is operating in
         !transposed coordinates instead of native Fortran
         !coordinates.
-        do i = 1, MAXY
-            do j = 1, MAXX
-                if ( (i > 1) .and. (i < MAXY) .and. (j > 1) .and. (j < MAXX)&
+        do i = 1, MAXX
+            do j = 1, MAXY
+                if ( (i > 1) .and. (i < MAXX) .and. (j > 1) .and. (j < MAXY)&
                      .and. (h(i,j) > 0.)) then
                     do k = 1, NZETA
-                        ax(i,j,k) = (dzdx(i, j) - zeta(k) * dhdx(i, j)) / h(i, j)
-                        ay(i,j,k) = (dzdy(i, j) - zeta(k) * dhdy(i, j)) / h(i, j)
+                        ax(k,i,j) = (dzdx(i, j) - zeta(k) * dhdx(i, j)) / h(i, j)
+                        ay(k,i,j) = (dzdy(i, j) - zeta(k) * dhdy(i, j)) / h(i, j)
               
-                        bx(i,j,k) = ( d2zdx2(i, j) - &
+                        bx(k,i,j) = ( d2zdx2(i, j) - &
                                       zeta(k) * d2hdx2(i, j) - & 
-                                      2. * ax(i, j, k) * dhdx(i, j) ) / h(i,j)
+                                      2. * ax(k,i,j) * dhdx(i, j) ) / h(i,j)
                          
-                        by(i,j,k) = ( d2zdy2(i, j) - &
+                        by(k,i,j) = ( d2zdy2(i, j) - &
                                       zeta(k) * d2hdy2(i, j) - & 
-                                      2. * ay(i, j, k) * dhdy(i, j) ) / h(i,j)
+                                      2. * ay(k,i,j) * dhdy(i, j) ) / h(i,j)
                          
-                        cxy(i,j,k) = ( dfdy_2d(dzdy, i, j, dx) - & 
-                                      zeta(k) * dfdy_2d(dhdy, i, j, dx) - &
-                                      ax(i, j, k)*dhdy(i, j) - &
-                                      ay(i, j, k)*dhdx(i, j) ) / h(i,j)
+                        cxy(k,i,j) = ( dfdx_2d(dzdy, i, j, dx) - & 
+                                      zeta(k) * dfdx_2d(dhdy, i, j, dx) - &
+                                      ax(k,i,j)*dhdy(i, j) - &
+                                      ay(k,i,j)*dhdx(i, j) ) / h(i,j)
                 
                     end do
                 else
-                    ax(i,j,:)=0.
-                    ay(i,j,:)=0.
-                    bx(i,j,:)=0.
-                    by(i,j,:)=0.
-                    cxy(i,j,:)=0.
+                    ax(:,i,j)=0.
+                    ay(:,i,j)=0.
+                    bx(:,i,j)=0.
+                    by(:,i,j)=0.
+                    cxy(:,i,j)=0.
                 endif
             end do
         end do
@@ -233,23 +235,23 @@ contains
 !------------------------------------------------------
 !
       SUBROUTINE veloc1(dzdx,dzdy,h,arrh,zeta,uvel,vvel,u,v,&
-        MAXY,MAXX,NZETA,FLOWN,PERIODIC_X,PERIODIC_Y)
+        MAXX,MAXY,NZETA,FLOWN,PERIODIC_X,PERIODIC_Y)
 !
         INTEGER MAXX,MAXY,NZETA
-        real(dp) :: dzdx(MAXY,MAXX)
-        real(dp) :: dzdy(MAXY,MAXX),h(MAXY,MAXX),zeta(NZETA)
-        real(dp) :: arrh(MAXY,MAXX,NZETA),uvel(MAXY,MAXX,NZETA)
-        real(dp) :: vvel(MAXY,MAXX,NZETA),u(MAXY,MAXX)
-        real(dp) :: v(MAXY,MAXX),FLOWN
+        real(dp) :: dzdx(:,:)
+        real(dp) :: dzdy(:,:),h(:,:),zeta(:)
+        real(dp) :: arrh(:,:,:),uvel(:,:,:)
+        real(dp) :: vvel(:,:,:),u(:,:)
+        real(dp) :: v(:,:),FLOWN
         logical :: PERIODIC_X, PERIODIC_Y
 !
       INTEGER i,j,k
       real(dp) :: diff1(NZETA),d,grad,z,diffus,us,vs
 !
       diff1 = 0
-     
-      do 10 i=2,MAXY-1
-        do 20 j=2,MAXX-1
+      
+      do 10 i=2,MAXX-1
+        do 20 j=2,MAXY-1
           grad=(dzdx(i,j)**2)+(dzdy(i,j)**2)
           us=0.
           vs=0.
@@ -257,7 +259,7 @@ contains
           !Accumulated vertical integration using trapezoid rule??
           do 30 k=(NZETA-1),1,-1
             z = (0.5*(zeta(k+1)+zeta(k)))**FLOWN
-            diff1(k)=d*grad*h(i,j)*(arrh(i,j,k+1)+arrh(i,j,k))*z*&
+            diff1(k)=d*grad*h(i,j)*(arrh(k,i,j+1)+arrh(k,i,j))*z*&
               (zeta(k)-zeta(k+1))+diff1(k+1)
    30     CONTINUE
           diffus=0.
@@ -269,8 +271,8 @@ contains
    40     CONTINUE
           !Estimation of velocity from SIA diffusivity
           do 50 k=1,NZETA
-            uvel(i,j,k)=diff1(k)*dzdx(i,j)+us
-            vvel(i,j,k)=diff1(k)*dzdy(i,j)+vs
+            uvel(k,i,j)=diff1(k)*dzdx(i,j)+us
+            vvel(k,i,j)=diff1(k)*dzdy(i,j)+vs
    50     CONTINUE
         !Estimation of vertical average velocity from vertical average diff.
         u(i,j)=diffus*dzdx(i,j)
@@ -278,108 +280,8 @@ contains
    20   CONTINUE
    10 CONTINUE
 
-      !Periodic boundary conditions
-      if (PERIODIC_X) then
-        do 100 i=1,MAXY
-          u(i,MAXX)=u(i,2)
-          u(i,1)=u(i,MAXX-1)
-          v(i,MAXX)=v(i,2)
-          v(i,1)=v(i,MAXX-1)
-          do 110 k=1,NZETA
-            uvel(i,MAXX,k)=uvel(i,2,k)
-            uvel(i,1,k)=uvel(i,MAXX-1,k)
-            vvel(i,MAXX,k)=vvel(i,2,k)
-            vvel(i,1,k)=vvel(i,MAXX-1,k)
-  110     CONTINUE
-  100   CONTINUE
-      end if
-      if (PERIODIC_Y) then
-        do 120 j=1,MAXX
-          u(MAXY,j)=u(2,j)
-          u(1,j)=u(MAXY-1,j)
-          v(MAXY,j)=v(2,j)
-          v(1,j)=v(MAXY-1,j)
-          do 130 k=1,NZETA
-            uvel(MAXY,j,k)=uvel(2,j,k)
-            uvel(1,j,k)=uvel(MAXY-1,j,k)
-            vvel(MAXY,j,k)=vvel(2,j,k)
-            vvel(1,j,k)=vvel(MAXY-1,j,k)
-  130     CONTINUE
-  120   CONTINUE
-      endif
-      return
-      END subroutine
+    END subroutine
      !
-
-    subroutine periodic_boundaries(m, apply_to_x, apply_to_y)
-        real(dp), dimension(:,:), intent(inout) :: m
-        integer :: maxx, maxy
-        logical :: apply_to_x, apply_to_y
-        maxx = size(m, 2)
-        maxy = size(m, 1)
-
-        if(apply_to_x) then
-            m(:,maxx) = m(:,2)
-            m(:,1) = m(:,maxx-1)
-        end if
-
-        if(apply_to_y) then
-            m(maxy,:) = m(2,:)
-            m(1,:) = m(maxy-1,:)
-        end if
-    end subroutine periodic_boundaries
-    
-    subroutine periodic_boundaries_stag(m, apply_to_x, apply_to_y)
-        real(dp), dimension(:,:), intent(inout) :: m
-        integer :: maxx, maxy
-        logical, intent(in) :: apply_to_x, apply_to_y
-
-        maxx = size(m, 2)
-        maxy = size(m, 1)
-        
-        !UNCOMMENT for "standard" periodic boundary conditions (this might
-        !(not be right)
-    
-        !See the discussion of periodic boundary conditions on a staggered
-        !grid at the top of this code file
-        !Note that we aren't using the last row and column of the staggered grid
-        !right now!!!
-        if(apply_to_x) then
-            m(:,maxx) = m(:,2)
-            m(:,1) = m(:,maxx-1)
-        end if
-
-        if(apply_to_y) then
-            m(maxy,:) = m(2,:)
-            m(1,:) = m(maxy-1,:)
-        end if
-
-    end subroutine periodic_boundaries_stag
-    
-    subroutine periodic_boundaries_3d(m, apply_to_x, apply_to_y)
-        real(dp), dimension(:,:,:) :: m
-        integer :: maxx, maxy, maxz , k
-        logical, intent(in) :: apply_to_x, apply_to_y
-                
-        maxx = size(m,2)
-        maxy = size(m,1)
-        maxz = size(m,3)
-                
-    
-        do k = 1, maxz
-            call periodic_boundaries(m(:,:,k),apply_to_x, apply_to_y)
-        end do    
-    end subroutine periodic_boundaries_3d
-    
-    subroutine periodic_boundaries_3d_stag(m,apply_to_x,apply_to_y)
-        real(dp), dimension(:,:,:) :: m
-        integer :: k
-        logical, intent(in) :: apply_to_x, apply_to_y
-    
-        do k=1, size(m, 3)
-            call periodic_boundaries_stag(m(:,:,k),apply_to_x, apply_to_y)
-        end do
-    end subroutine periodic_boundaries_3d_stag
 !
 !------------------------------------------------------
 !   Velocity estimation according to higher order model
@@ -445,11 +347,11 @@ contains
         !vvel, comparitively, hold the velocity estimates for the *last*
         !iteration.
         real(dp), dimension(size(mu,1),size(mu,2),size(mu,3)) :: ustar, vstar
-        real(dp), dimension(size(mu,1),size(mu,2)) :: tau !Basal traction, to be computed from the provided beta parameter
+        real(dp), dimension(size(mu,2),size(mu,3)) :: tau !Basal traction, to be computed from the provided beta parameter
        
         real(dp), dimension(size(mu,1),size(mu,2),size(mu,3)) :: dudx, dudy, dudz
         real(dp), dimension(size(mu,1),size(mu,2),size(mu,3)) :: dvdx, dvdy, dvdz
-        real(dp), dimension(size(mu,1),size(mu,2)) :: direction_x, direction_y
+        real(dp), dimension(size(mu,2),size(mu,3)) :: direction_x, direction_y
 
         logical :: cont
 
@@ -469,13 +371,13 @@ contains
 
         call cpu_time(solve_start_time)
 
-        allocate(pointtype(size(mu, 1), size(mu, 2)))
+        allocate(pointtype(size(mu, 2), size(mu, 3)))
 
         !Get the sizes from the mu field.  Calling code must make sure that
         !these all agree.
-        maxy = size(mu,1)
         maxx = size(mu,2)
-        nzeta = size(mu,3)
+        maxy = size(mu,3)
+        nzeta = size(mu,1)
         ijktot = active_points*nzeta
 
         maxiter=NUMBER_OF_ITERATIONS
@@ -532,23 +434,9 @@ contains
         vstar=vvel
 
         !Deal with periodic boundary conditions
-        call periodic_boundaries_3d_stag(uvel,options%periodic_ew,options%periodic_ns)
-        call periodic_boundaries_3d_stag(vvel,options%periodic_ew,options%periodic_ns)
+        call periodic_boundaries_3d(uvel,options%periodic_ew,options%periodic_ns)
+        call periodic_boundaries_3d(vvel,options%periodic_ew,options%periodic_ns)
         !Compute basal traction
-
-        !Force a radially symmetric initial guess
-        !call fill_radial_symmetry(uvel, 1000.0_dp, 1)
-        !call fill_radial_symmetry(vvel, 1000.0_dp, 2)
-        
-        call comp_type(kinematic_bc_u(:,:,1), geometry_mask, point_mask, "comp_type_before.txt")
-        !call mask_out_edges(geometry_mask, point_mask, kinematic_bc_u, kinematic_bc_v)
-        !do k=1,nzeta
-        !    where (h > 0 .and. point_mask == 0)
-        !        kinematic_bc_u(:,:,k) = 0
-        !        kinematic_bc_v(:,:,k) = 0
-        !    endwhere
-        !end do
-        call comp_type(kinematic_bc_u(:,:,1), geometry_mask, point_mask, "comp_type_after.txt")
 
 #ifdef OUTPUT_PARTIAL_ITERATIONS        
         ncid_debug = begin_iteration_debug(maxx, maxy, nzeta)
@@ -578,7 +466,7 @@ contains
             if (options%which_ho_bstress == HO_BSTRESS_LINEAR) then
                 tau = beta
             else
-                call plastic_bed(tau, beta, uvel(:,:,nzeta), vvel(:,:,nzeta))
+                call plastic_bed(tau, beta, uvel(nzeta,:,:), vvel(nzeta,:,:))
             end if
 
             !Compute velocity derivatives
@@ -607,7 +495,8 @@ contains
 
             call write_xls_3d("mu.txt",mu)
             !Apply periodic boundary conditions to the viscosity
-            call periodic_boundaries_3d_stag(mu,options%periodic_ew,options%periodic_ns)
+            call periodic_boundaries_3d(mu,options%periodic_ew,options%periodic_ns)
+
             !call write_xls_3d("mu.txt",mu)
             
             !Sparse matrix routine for determining velocities.  The new
@@ -629,14 +518,15 @@ contains
             close(ITER_UNIT)
 #endif
 
-            !Apply periodic boundary conditions to the computed velocity
-            call periodic_boundaries_3d_stag(ustar,options%periodic_ew,options%periodic_ns)
-            call periodic_boundaries_3d_stag(vstar,options%periodic_ew,options%periodic_ns)
-
 #ifdef OUTPUT_PARTIAL_ITERATIONS
             call iteration_debug_step(ncid_debug, l, mu, ustar, vstar, geometry_mask)
             call iterdebug_vel_derivs(ncid_debug, l, dudx, dudy, dvdx, dvdy)
 #endif
+
+
+            !Apply periodic boundary conditions to the computed velocity
+            call periodic_boundaries_3d(ustar,options%periodic_ew,options%periodic_ns)
+            call periodic_boundaries_3d(vstar,options%periodic_ew,options%periodic_ns)
 
             !Apply unstable manifold correction.  This function returns
             !true if we need to keep iterating, false if we reached convergence
@@ -644,6 +534,7 @@ contains
                                         vstar, vvel, correction_vec, &
                                         maxy, maxx, nzeta, error, &
                                         tot, teta)    
+
             call cpu_time(iter_end_time)
             this_delta = maxval(sqrt(ustar**2 + vstar**2))
 #if DEBUG 
@@ -711,7 +602,7 @@ contains
 ! !INTERFACE:
     function umc_correct_vels(u_new, u_old, &
                                           v_new, v_old, vec_correction, &
-                                          maxy, maxx, nzeta, toler, &
+                                          maxx, maxy, nzeta, toler, &
                                           tot_out, theta_out)
         ! !RETURN VALUE:
         logical :: umc_correct_vels !whether another iteration step is needed
@@ -795,8 +686,8 @@ contains
         maxy = size(ubas,1)
         maxx = size(ubas,2)
         !TODO: Vectorize
-        do i = 1,maxy
-            do j = 1,maxx
+        do i = 1,maxx
+            do j = 1,maxy
                 tau(i,j) = tau0(i,j) / (sqrt(ubas(i,j)**2 + vbas(i,j)**2 + plastic_bed_regularization ** 2))
             end do
         end do
@@ -853,17 +744,17 @@ contains
         !TODO: Implement option for upstream differencing
         if (UPSTREAM) then
             !Upstream the number 
-            call df_field_3d(uvel, dy, dx, levels, dudy, dudx, dudz, dzdy, dzdx)
-            call df_field_3d(vvel, dy, dx, levels, dvdy, dvdx, dvdz, dzdy, dzdx)
+            call df_field_3d(uvel, dx, dy, levels, dudx, dudy, dudz, dzdy, dzdx)
+            call df_field_3d(vvel, dx, dy, levels, dvdx, dvdy, dvdz, dzdy, dzdx)
         else
             direction_x = 0
             direction_y = 0
-            call upwind_from_mask(geometry_mask, direction_y, direction_x)
+            call upwind_from_mask(geometry_mask, direction_x, direction_y)
             !call write_xls("direction_x.txt",direction_x)
             !call write_xls("direction_y.txt",direction_y)
             
-            call df_field_3d(uvel_test, dy, dx, levels, dudy, dudx, dudz, direction_y, direction_x)
-            call df_field_3d(vvel_test, dy, dx, levels, dvdy, dvdx, dvdz, direction_y, direction_x)
+            call df_field_3d(uvel_test, dx, dy, levels, dudx, dudy, dudz, direction_x, direction_y)
+            call df_field_3d(vvel_test, dx, dy, levels, dvdx, dvdy, dvdz, direction_x, direction_y)
          end if
 
     end subroutine
@@ -891,33 +782,33 @@ contains
         real(dp) :: macht
         real(dp) :: exx,eyy,exy,exz,eyz,eeff
 !
-        MAXY = size(mu, 1)
+        MAXY = size(mu, 3)
         MAXX = size(mu, 2)
-        NZETA = size(mu, 3)
+        NZETA = size(mu, 1)
 
         macht=(1.-FLOWN)/(2.*FLOWN)
      
         !Compute mu term from the acceleration fields
-        do i=1,MAXY
-            do j=1,MAXX
+        do i=1,MAXX
+            do j=1,MAXY
                 do k=1,NZETA
           
                     if (h(i,j) > 0.) then
-                        exx=dudx(i,j,k)+ax(i,j,k)*dudz(i,j,k)
-                        eyy=dvdy(i,j,k)+ay(i,j,k)*dvdz(i,j,k)
-                        exy=0.5*((dudy(i,j,k)+ay(i,j,k)*dudz(i,j,k))+(dvdx(i,j,k)+ax(i,j,k)*dvdz(i,j,k)))
-                        exz=-0.5*dudz(i,j,k)/h(i,j)
-                        eyz=-0.5*dvdz(i,j,k)/h(i,j)
+                        exx=dudx(k,i,j)+ax(k,i,j)*dudz(k,i,j)
+                        eyy=dvdy(k,i,j)+ay(k,i,j)*dvdz(k,i,j)
+                        exy=0.5*((dudy(k,i,j)+ay(k,i,j)*dudz(k,i,j))+(dvdx(k,i,j)+ax(k,i,j)*dvdz(k,i,j)))
+                        exz=-0.5*dudz(k,i,j)/h(i,j)
+                        eyz=-0.5*dvdz(k,i,j)/h(i,j)
                     else
-                        exx=dudx(i,j,k)
-                        eyy=dvdy(i,j,k)
-                        exy=0.5*(dudy(i,j,k)+dvdx(i,j,k))
+                        exx=dudx(k,i,j)
+                        eyy=dvdy(k,i,j)
+                        exy=0.5*(dudy(k,i,j)+dvdx(k,i,j))
                         exz=0.
                         eyz=0.
                     endif
             
                     eeff=(exx*exx)+(eyy*eyy)+(exx*eyy)+(exy*exy)+(exz*exz)+(eyz*eyz)
-                    mu(i,j,k)=0.5 * (arrh(i,j,k)**(-1./FLOWN)) * ((eeff+ZIP)**macht)
+                    mu(k,i,j)=0.5 * (arrh(k,i,j)**(-1./FLOWN)) * ((eeff+ZIP)**macht)
                 end do
             end do
         end do
@@ -985,7 +876,7 @@ contains
 !-------  velocity u
 !
 #ifdef OUTPUT_SPARSE_MATRIX
-        write(ITER_UNIT,*) " Component Y X Z h mu point_type ", &
+        write(ITER_UNIT,*) " Component Y X Z h mu mask point_type ", &
                    "im1jm1 im1km1 im1 im1kp1 im1jp1 jm1km1 jm1 jm1kp1 ", &
                    "km2 km1 center kp1 kp2 jp1km1 jp1 jp1kp1 ", &
                    "ip1jm1 ip1km1 ip1 ip1kp1 ip1jp1 im2 ip2 jm2 jp2 stencil_total rhs "
@@ -1013,8 +904,8 @@ contains
 #ifdef VERY_VERBOSE
             write(*,*)"Begin Matrix Assembly"
 #endif
-            do i=1,MAXY
-                do j=1,MAXX
+            do i=1,MAXX
+                do j=1,MAXY
                     if (point_mask(i,j) /= 0) then
                         do k=1,NZETA
                             coef = 0
@@ -1027,17 +918,17 @@ contains
                                 !Normally, we use uvel(i,j,k) as our initial guess.
                                 !However, in this case, we know the velocity
                                 !should be 0, so we'll replace our uvel with that
-                                velpara(i,j,k) = 0
+                                velpara(k,i,j) = 0
                                 rhs = 0
                                 pointtype(i,j) = 1
-                            else if (.not. IS_NAN(kinematic_bc_para(i,j,k))) then
+                            else if (.not. IS_NAN(kinematic_bc_para(k,i,j))) then
                                 !If a kinematic boundary condition was specified
                                 !for this location, hold the location at the
                                 !specified value.
                                 coef(I_J_K)=1.
-                                rhs = kinematic_bc_para(i,j,k)
+                                rhs = kinematic_bc_para(k,i,j)
                                 pointtype(i,j) = 2
-                            else if ((i.eq.1).or.(i.eq.MAXY).or.(j.eq.1).or.(j.eq.MAXX)) then
+                            else if ((i.eq.1).or.(i.eq.MAXX).or.(j.eq.1).or.(j.eq.MAXY)) then
 
                                 !Boundary condition at the edges of the domain.
                                 !If we don't have a kinematic boundary already
@@ -1045,7 +936,7 @@ contains
                                 !guess.  If a kinematic b.c. is specified, we
                                 !handle it in sparse_setup rather than here.
                                 coef(I_J_K)=1.
-                                rhs=velpara(i,j,k)
+                                rhs=velpara(k,i,j)
                                 pointtype(i,j) = 3
                             else
                                 pointtype(i,j) = 4
@@ -1073,14 +964,19 @@ contains
 
                             do m=1,STENCIL_SIZE
                                 if (abs(coef(m)) > SMALL) then
-                                    si = stencil_i(m,i)
-                                    sj = stencil_j(m,j)
-                                    sk = stencil_k(m,k)
+                                    !Because of the transposition of Pattyn's original code compared to
+                                    !Glimmer/CISM, we need to interpret indices slightly differently:
+                                    !i = y index (would normally be z index)
+                                    !k = z index (would normally be y index)
+                                    !j = x as usual
+                                    si = stencil_y(m,j)
+                                    sj = stencil_x(m,i)
+                                    sk = stencil_z(m,k)
 
                                     if (si > 0 .and. si <= maxy .and. &
                                         sj > 0 .and. sj <= maxx .and. &
                                         sk > 0 .and. sk <= nzeta) then
-                                            if (point_mask(si,sj) == 0) then
+                                            if (point_mask(sj,si) == 0) then
                                                 write(*,*) "ERROR: point is off mask."
                                                 write(*,*) "component:",componentstr
                                                 write(*,*) "location:",i,j,k
@@ -1127,14 +1023,14 @@ contains
             write(*,*)"End Matrix Solve"
 #endif
             !Delinearize the solution
-            do i=1,MAXY
-                do j=1,MAXX
+            do i=1,MAXX
+                do j=1,MAXY
                     do k=1,NZETA
                         if (point_mask(i,j) /= 0) then
                             !write(*,*)csp_masked(11,i,j,k,point_mask,nzeta)
-                            velpara_star(i,j,k)=x(csp_masked(11,i,j,k,point_mask,nzeta))
+                            velpara_star(k,i,j)=x(csp_masked(11,i,j,k,point_mask,nzeta))
                         else
-                            velpara_star(i,j,k)=0
+                            velpara_star(k,i,j)=0
                         end if
                     end do
                 end do
@@ -1173,72 +1069,76 @@ contains
 !
       !Given a point and a stencil location,
       !the following three functions return the equivalent location
-      function stencil_i(pos, i)
+      
+      !NOTE: When referring to stencils, i refers to the y coordinate
+      function stencil_y(pos, i)
         integer, intent(in) :: pos, i
-        integer :: stencil_i
+        integer :: stencil_y
         if (pos <= 5) then
-            stencil_i = i - 1
+            stencil_y = i - 1
         else if (pos <= 16 .or. pos == 24 .or. pos == 25) then
-            stencil_i = i
+            stencil_y = i
         else if (pos == 22) then
-            stencil_i = i - 2
+            stencil_y = i - 2
         else if (pos == 23) then
-            stencil_i = i + 2
+            stencil_y = i + 2
         else
-            stencil_i = i + 1
+            stencil_y = i + 1
         end if
       end function
 
-      function stencil_j(pos, j)
+      !NOTE: When referring to stencils, j refers to the x coordinate
+      function stencil_x(pos, j)
         integer, intent(in) :: pos, j
-        integer :: stencil_j
+        integer :: stencil_x
         select case(pos)
             case(1, 6, 7, 8, 17)
-                stencil_j = j - 1
+                stencil_x = j - 1
             case(5, 14, 15, 16, 21)
-                stencil_j = j + 1
+                stencil_x = j + 1
             case(24)
-                stencil_j = j - 2
+                stencil_x = j - 2
             case(25)
-                stencil_j = j + 2
+                stencil_x = j + 2
             case default
-                stencil_j = j
+                stencil_x = j
         end select
       end function
 
-      function stencil_k(pos, k)
+      function stencil_z(pos, k)
         integer, intent(in) :: pos, k
-        integer :: stencil_k
+        integer :: stencil_z
         select case(pos)
             case(2, 6, 10, 14, 18)
-                stencil_k = k - 1
+                stencil_z = k - 1
             case(4, 8, 12, 16, 20)
-                stencil_k = k + 1
+                stencil_z = k + 1
             case(9)
-                stencil_k = k - 2
+                stencil_z = k - 2
             case(13)
-                stencil_k = k + 2
+                stencil_z = k + 2
             case default
-                stencil_k = k
+                stencil_z = k
         end select
       end function
  !
       function csp_masked(pos, i, j, k, point_mask, nzeta)
          integer, intent(in) :: pos
-         integer, intent(in) :: i !Y coordinate
-         integer, intent(in) :: j !X coordinate
+         integer, intent(in) :: i !X coordinate
+         integer, intent(in) :: j !Y coordinate
          integer, intent(in) :: k !Z coordinate
          integer, dimension(:,:), intent(in) :: point_mask
          integer, intent(in) :: nzeta
 
          integer :: csp_masked
-
-         csp_masked = (point_mask(stencil_i(pos,i), stencil_j(pos,j)) - 1) * nzeta &
-                      + stencil_k(pos, k)
+         !TODO: Should i and j be transposed here?
+         csp_masked = (point_mask(stencil_x(pos,i), stencil_y(pos,j)) - 1) * nzeta &
+                      + stencil_z(pos, k)
       end function
 
       !Returns the coordinate without performing stencil lookups (this assumes
       !those have already been done)
+      !NOTE: si should refer to the y coordinate, and sj should refer to the x coordinate!!
       function csp_stenciled(si, sj, sk, point_mask, nzeta)
             integer, intent(in) :: si, sj, sk
             integer, dimension(:,:), intent(in) :: point_mask
@@ -1246,7 +1146,7 @@ contains
 
             integer :: csp_stenciled
 
-            csp_stenciled = (point_mask(si, sj) - 1)*nzeta + sk
+            csp_stenciled = (point_mask(sj, si) - 1)*nzeta + sk
       end function
 
 !
@@ -1465,12 +1365,12 @@ contains
             dz_down3=(dz(k)-dz(k+1))/(dz(k+2)-dz(k+1))/(dz(k+2)-dz(k))
  
             dpara_dpara = 4*dz_dpara(i,j)
-            dpara_dz = 4*a_para(i,j,k)*dz_dpara(i,j) + a_perp(i,j,k)*dz_dperp(i,j) + 1./h(i,j)
+            dpara_dz = 4*a_para(k,i,j)*dz_dpara(i,j) + a_perp(k,i,j)*dz_dperp(i,j) + 1./h(i,j)
             dpara_dperp = dz_dperp(i,j)
 
             dperp_dpara = dz_dperp(i,j)
             dperp_dperp = 2*dz_dpara(i,j)
-            dperp_dz = 2.*a_perp(i,j,k)*dz_dpara(i,j)+a_para(i,j,k)*dz_dperp(i,j)
+            dperp_dz = 2.*a_perp(k,i,j)*dz_dpara(i,j)+a_para(k,i,j)*dz_dperp(i,j)
 
             coef(IM1_J_K) = -.5*dpara_dy/dy
             coef(I_JM1_K) = -.5*dpara_dx/dx
@@ -1480,8 +1380,8 @@ contains
             coef(I_JP1_K) = dpara_dx*.5/dx
             coef(IP1_J_K) = dpara_dy*.5/dy
             !Note the transposition below (dfdx => dfdy, vice versa)
-            rhs = -dperp_dx * dfdy_3d(vel_perp,i,j,k,dx) &
-                -  dperp_dy * dfdx_3d(vel_perp,i,j,k,dy) &
+            rhs = -dperp_dx * dfdx_3d(vel_perp,i,j,k,dx) &
+                -  dperp_dy * dfdy_3d(vel_perp,i,j,k,dy) &
                 -  dperp_dz * dfdz_3d_downwind_irregular(vel_perp,i,j,k,dz)
                 
             !"Blend" with lateral boundary condition if we are on the
@@ -1506,24 +1406,24 @@ contains
             else !Compute sliding 
                 point_type = "base-stress-free"
                 dpara_dpara = 4.*dhb_dpara(i,j)
-                dpara_dz = 4.*a_para(i,j,k)*dhb_dpara(i,j) + a_perp(i,j,k)*dhb_dperp(i,j) + 1./h(i,j)
+                dpara_dz = 4.*a_para(k,i,j)*dhb_dpara(i,j) + a_perp(k,i,j)*dhb_dperp(i,j) + 1./h(i,j)
                 dpara_dperp = dhb_dperp(i,j)
 
                 dperp_dpara = dhb_dperp(i,j)
                 dperp_dperp = 2.*dhb_dpara(i,j)
-                dperp_dz = 2.*a_perp(i,j,k)*dhb_dpara(i,j) + a_para(i,j,k)*dhb_dperp(i,j)
+                dperp_dz = 2.*a_perp(k,i,j)*dhb_dpara(i,j) + a_para(k,i,j)*dhb_dperp(i,j)
 
                 !If we have a non-zero friction, then we need to scale the
                 !strain rates by the viscosity.  If there is no friction, then
                 !we have a stress-free base and these coefficients disappear.
                 if (beta(i,j) >= SMALL) then
                    point_type = "base-beta-squared"
-                   dpara_dpara = dpara_dpara*mu(i,j,k)
-                   dpara_dperp = dpara_dperp*mu(i,j,k)
-                   dpara_dz = dpara_dz*mu(i,j,k)
-                   dperp_dpara = dperp_dpara*mu(i,j,k)
-                   dperp_dperp = dperp_dperp*mu(i,j,k)
-                   dperp_dz = dperp_dz*mu(i,j,k)
+                   dpara_dpara = dpara_dpara*mu(k,i,j)
+                   dpara_dperp = dpara_dperp*mu(k,i,j)
+                   dpara_dz = dpara_dz*mu(k,i,j)
+                   dperp_dpara = dperp_dpara*mu(k,i,j)
+                   dperp_dperp = dperp_dperp*mu(k,i,j)
+                   dperp_dz = dperp_dz*mu(k,i,j)
                 end if
 
                 coef(IM1_J_K) = -.5*dpara_dy/dy
@@ -1534,8 +1434,8 @@ contains
                 coef(I_JP1_K) = .5*dpara_dx/dx
                 coef(IP1_J_K) = .5*dpara_dy/dy
                 !Transposition of derivatives below
-                rhs = -dperp_dx * dfdy_3d(vel_perp, i, j, k, dx) &
-                    -  dperp_dy * dfdx_3d(vel_perp, i, j, k, dy) &
+                rhs = -dperp_dx * dfdx_3d(vel_perp, i, j, k, dx) &
+                    -  dperp_dy * dfdy_3d(vel_perp, i, j, k, dy) &
                     -  dperp_dz * dfdz_3d_upwind_irregular(vel_perp, i, j, k, dz)
 
                 !Adjust center of stencil for the basal friction parameter (this
@@ -1564,30 +1464,30 @@ contains
             dz_sec3 = 2./(dz(k+1)-dz(k))/(dz(k+1)-dz(k-1))
 
             !Derivative transposition below
-            dmudx=dfdy_3d(mu,i,j,k,dx)
-            dmudy=dfdx_3d(mu,i,j,k,dy)
+            dmudx=dfdx_3d(mu,i,j,k,dx)
+            dmudy=dfdy_3d(mu,i,j,k,dy)
             dmudz=dfdz_3d_irregular(mu,i,j,k,dz)
-            dmudx2=dmudx+ax(i,j,k)*dmudz
-            dmudy2=dmudy+ay(i,j,k)*dmudz
+            dmudx2=dmudx+ax(k,i,j)*dmudz
+            dmudy2=dmudy+ay(k,i,j)*dmudz
 
             dpara_dpara = 4.*dmu_dpara2
-            dpara_dz = 4.*a_para(i,j,k)*dmu_dpara2 + 4.*b_para(i,j,k)*mu(i,j,k) &
-                     +    a_perp(i,j,k)*dmu_dperp2 +    b_perp(i,j,k)*mu(i,j,k) &
+            dpara_dz = 4.*a_para(k,i,j)*dmu_dpara2 + 4.*b_para(k,i,j)*mu(k,i,j) &
+                     +    a_perp(k,i,j)*dmu_dperp2 +    b_perp(k,i,j)*mu(k,i,j) &
                      +    dmudz/(h(i,j)*h(i,j))
-            dpara_dpara2 = 4.*mu(i,j,k)
-            dpara_dz2 = mu(i,j,k)*(4.*a_para(i,j,k)**2 + a_perp(i,j,k)**2 + 1/h(i,j)**2)
-            dpara_dparaz = 8.*a_para(i,j,k)*mu(i,j,k)
+            dpara_dpara2 = 4.*mu(k,i,j)
+            dpara_dz2 = mu(k,i,j)*(4.*a_para(k,i,j)**2 + a_perp(k,i,j)**2 + 1/h(i,j)**2)
+            dpara_dparaz = 8.*a_para(k,i,j)*mu(k,i,j)
             dpara_dperp=dmu_dperp2
-            dpara_dperp2=mu(i,j,k)
-            dpara_dperpz=2.*mu(i,j,k)*a_perp(i,j,k)
+            dpara_dperp2=mu(k,i,j)
+            dpara_dperpz=2.*mu(k,i,j)*a_perp(k,i,j)
 
             dperp_dpara = dmu_dperp2
             dperp_dperp = 2 * dmu_dpara2
-            dperp_dz  = 2 * a_perp(i,j,k) * dmu_dpara2  + a_para(i,j,k) * dmu_dperp2 + 3 * mu(i,j,k) * cxy(i,j,k) 
-            dperp_dxy = 3 * mu(i,j,k)
-            dperp_dxz = 3 * mu(i,j,k) * ay(i,j,k)
-            dperp_dyz = 3 * mu(i,j,k) * ax(i,j,k)
-            dperp_dz2 = 3 * mu(i,j,k) * ax(i,j,k)*ay(i,j,k)
+            dperp_dz  = 2 * a_perp(k,i,j) * dmu_dpara2  + a_para(k,i,j) * dmu_dperp2 + 3 * mu(k,i,j) * cxy(k,i,j) 
+            dperp_dxy = 3 * mu(k,i,j)
+            dperp_dxz = 3 * mu(k,i,j) * ay(k,i,j)
+            dperp_dyz = 3 * mu(k,i,j) * ax(k,i,j)
+            dperp_dz2 = 3 * mu(k,i,j) * ax(k,i,j)*ay(k,i,j)
 
             coef(IM1_J_KM1)  = dpara_dyz*dz_cen1*(-.5/dy)
             coef(IM1_J_K)  = (dpara_dyz*dz_cen2 + dpara_dy)*(-.5/dy) + dpara_dy2/(dy**2)
@@ -1611,20 +1511,20 @@ contains
           
             !Transposition of derivatives below
             rhs =RHOI * GRAV * dz_dpara(i,j) &
-                - dperp_dx  * dfdy_3d(vel_perp,i,j,k,dx)&
-                - dperp_dy  * dfdx_3d(vel_perp,i,j,k,dy)&
+                - dperp_dx  * dfdx_3d(vel_perp,i,j,k,dx)&
+                - dperp_dy  * dfdy_3d(vel_perp,i,j,k,dy)&
                 - dperp_dz  * dfdz_3d_irregular(vel_perp,i,j,k,dz)&
                 - dperp_dxy * d2fdxy_3d(vel_perp,i,j,k,dx,dy)&
-                - dperp_dxz * d2fdyz_3d(vel_perp,i,j,k,dx,dz)&
-                - dperp_dyz * d2fdxz_3d(vel_perp,i,j,k,dy,dz)&
+                - dperp_dxz * d2fdxz_3d(vel_perp,i,j,k,dx,dz)&
+                - dperp_dyz * d2fdyz_3d(vel_perp,i,j,k,dy,dz)&
                 - dperp_dz2 * d2fdz2_3d_irregular(vel_perp,i,j,k,dz)
         
             point_type = "interior"
         end if
 
 #ifdef OUTPUT_SPARSE_MATRIX
-        write(ITER_UNIT,*)component,i,j,k,h(i,j),mu(i,j,k), &
-                  point_type, coef,sum(coef),rhs
+        write(ITER_UNIT,*)component,i,j,k,h(i,j),mu(k,i,j), &
+                  geometry_mask(i,j), point_type, coef,sum(coef),rhs
 #endif
 
     end subroutine sparse_setup
@@ -1727,7 +1627,7 @@ contains
         !Divide the source term by viscosity, less error-prone to do it here
         !rather than multiply everything else by it (though it may give
         !iterative solvers more fits maybe?)
-        source = source_term(i, j, k, H, zeta, WHICH_SOURCE, STAGGERED)/mu(i,j,k)
+        source = source_term(i, j, k, H, zeta, WHICH_SOURCE, STAGGERED)/mu(k,i,j)
 
         !Determine whether to use upwinded or downwinded derivatives for the
         !horizontal directions.
@@ -1751,9 +1651,9 @@ contains
             para_coeff => dx_coeff
             perp_coeff => dy_coeff
         
-            dperp_dx = dvdx(i,j,k)
-            dperp_dy = dvdy(i,j,k)
-            dperp_dz = dvdz(i,j,k)
+            dperp_dx = dvdx(k,i,j)
+            dperp_dy = dvdy(k,i,j)
+            dperp_dz = dvdz(k,i,j)
         else if (component=="v") then
             n_para => n_y
             n_perp => n_x
@@ -1767,9 +1667,9 @@ contains
             para_coeff => dy_coeff
             perp_coeff => dx_coeff
 
-            dperp_dx = dudx(i,j,k)
-            dperp_dy = dudy(i,j,k)
-            dperp_dz = dudz(i,j,k)
+            dperp_dx = dudx(k,i,j)
+            dperp_dy = dudy(k,i,j)
+            dperp_dz = dudz(k,i,j)
         end if
 
         if (direction_y(i,j) > 0) then
@@ -1787,12 +1687,14 @@ contains
         para_coeff = 4*n_para
         perp_coeff =   n_perp
         
-        dz_coeff   =   (4*a_para(i,j,k)*n_para + a_perp(i,j,k)*n_perp)
+        dz_coeff   =   (4*a_para(k,i,j)*n_para + a_perp(k,i,j)*n_perp)
 
         rhs = source/ntot * n_para &
                 - 2*n_para*dperp_dperp & 
                 -   n_perp*dperp_dpara &
-                -   (2*a_para(i,j,k)*n_perp + a_perp(i,j,k)*n_para)*dperp_dz
+                -   (2*a_para(k,i,j)*n_perp + a_perp(k,i,j)*n_para)*dperp_dz
+
+
 
         !Enter the z component into the finite difference scheme.
         !If we are on the top of bottom of the ice shelf, we will need
@@ -1831,6 +1733,7 @@ contains
         !Apply finite difference approximations of the x and y derivatives.  The
         !coefficients have already been computed above, so we just need to make
         !sure to use the correct difference form (upwind or downwind, etc.)
+
         if (downwind_y) then
             coef(IP2_J_K) = coef(IP2_J_K) - 0.5 * dy_coeff/dy
             coef(IP1_J_K) = coef(IP1_J_K) + 2.0 * dy_coeff/dy
@@ -1959,17 +1862,17 @@ contains
       
       macht=(1.-FLOWN)/(2.*FLOWN)
       
-      MAXY = size(uvel, 1)
+      MAXY = size(uvel, 3)
       MAXX = size(uvel, 2)
       NZETA = size(dz)
       
             !Allocate temporary derivative data
-      allocate(dudx(MAXX, MAXY, NZETA))
-      allocate(dudy(MAXX, MAXY, NZETA))
-      allocate(dudz(MAXX, MAXY, NZETA))
-      allocate(dvdx(MAXX, MAXY, NZETA))
-      allocate(dvdy(MAXX, MAXY, NZETA))
-      allocate(dvdz(MAXX, MAXY, NZETA))
+      allocate(dudx(NZETA, MAXX, MAXY))
+      allocate(dudy(NZETA, MAXX, MAXY))
+      allocate(dudz(NZETA, MAXX, MAXY))
+      allocate(dvdx(NZETA, MAXX, MAXY))
+      allocate(dvdy(NZETA, MAXX, MAXY))
+      allocate(dvdz(NZETA, MAXX, MAXY))
       
       
       !TODO: Figure out what the UPSTREAM flag does!!
@@ -1979,31 +1882,31 @@ contains
       call df_field_3d(uvel, dx, dy, dz, dudy, dudx, dudz)
       call df_field_3d(vvel, dx, dy, dz, dvdy, dvdx, dvdz)
       !TODO: Can we somehow avoid the code duplication with muterm?
-      do  i=1,MAXY
-        do  j=1,MAXX
+      do  i=1,MAXX
+        do  j=1,MAXY
           do  k=1,NZETA
             if (h(i,j).gt.0.) then
-              exx=dudx(j,i,k)+ax(i,j,k)*dudz(j,i,k)
-              eyy=dvdy(j,i,k)+ay(i,j,k)*dvdz(j,i,k)
-              exy=0.5*((dudy(j,i,k)+ay(i,j,k)*dudz(j,i,k))+(dvdx(j,i,k)+ax(i,j,k)*dvdz(j,i,k)))
-              exz=-0.5*dudz(j,i,k)/h(i,j)
-              eyz=-0.5*dvdz(j,i,k)/h(i,j)
+              exx=dudx(k,i,j)+ax(k,i,j)*dudz(k,i,j)
+              eyy=dvdy(k,i,j)+ay(k,i,j)*dvdz(k,i,j)
+              exy=0.5*((dudy(k,i,j)+ay(k,i,j)*dudz(k,i,j))+(dvdx(k,i,j)+ax(k,i,j)*dvdz(k,i,j)))
+              exz=-0.5*dudz(k,i,j)/h(i,j)
+              eyz=-0.5*dvdz(k,i,j)/h(i,j)
             else
-              exx=dudx(j,i,k)
-              eyy=dvdy(j,i,k)
-              exy=0.5*(dudy(j,i,k)+dvdx(j,i,k))
+              exx=dudx(k,i,j)
+              eyy=dvdy(k,i,j)
+              exy=0.5*(dudy(k,i,j)+dvdx(k,i,j))
               exz=0.
               eyz=0.
             endif
             eeff=(exx*exx)+(eyy*eyy)+(exx*eyy)+(exy*exy)+(exz*exz)+&
               (eyz*eyz)
             if (eeff < ZIP) eeff=ZIP
-            mu(i,j,k)=0.5*(arrh(i,j,k)**(-1./FLOWN))*(eeff**macht)
-            txz(i,j,k)=2.0*mu(i,j,k)*exz
-            tyz(i,j,k)=2.0*mu(i,j,k)*eyz
-            txx(i,j,k)=2.0*mu(i,j,k)*exx
-            tyy(i,j,k)=2.0*mu(i,j,k)*eyy
-            txy(i,j,k)=2.0*mu(i,j,k)*exy
+            mu(k,i,j)=0.5*(arrh(k,i,j)**(-1./FLOWN))*(eeff**macht)
+            txz(k,i,j)=2.0*mu(k,i,j)*exz
+            tyz(k,i,j)=2.0*mu(k,i,j)*eyz
+            txx(k,i,j)=2.0*mu(k,i,j)*exx
+            tyy(k,i,j)=2.0*mu(k,i,j)*eyy
+            txy(k,i,j)=2.0*mu(k,i,j)*exy
         end do
       end do
     end do
@@ -2011,11 +1914,11 @@ contains
 
       !Adjust boundaries if using periodic boundary conditions.
       !REFACTORED CODE BELOW
-      call periodic_boundaries_3d_stag(txz,PERIODIC_X,PERIODIC_Y)
-      call periodic_boundaries_3d_stag(txy,PERIODIC_X,PERIODIC_Y)
-      call periodic_boundaries_3d_stag(txx,PERIODIC_X,PERIODIC_Y)
-      call periodic_boundaries_3d_stag(tyy,PERIODIC_X,PERIODIC_Y)
-      call periodic_boundaries_3d_stag(txy,PERIODIC_X,PERIODIC_Y)
+      call periodic_boundaries_3d(txz,PERIODIC_X,PERIODIC_Y)
+      call periodic_boundaries_3d(txy,PERIODIC_X,PERIODIC_Y)
+      call periodic_boundaries_3d(txx,PERIODIC_X,PERIODIC_Y)
+      call periodic_boundaries_3d(tyy,PERIODIC_X,PERIODIC_Y)
+      call periodic_boundaries_3d(txy,PERIODIC_X,PERIODIC_Y)
       
             !Free temporary derivative data
       deallocate(dudx)
@@ -2027,94 +1930,7 @@ contains
       
       return
       END subroutine
-      
-    function staggered_point_2d(f, i, j)
-        real(dp), dimension(:,:), intent(in) :: f
-        integer, intent(in) :: i, j
-        real(dp) :: staggered_point_2d
-        
-        staggered_point_2d = (f(i, j) + f(i, j+1) + f(i+1, j) + f(i+1, j+1))/4
-        
-    end function staggered_point_2d
-    
-    function staggered_point_3d(f,i,j,k)
-        real(dp), dimension(:,:,:), intent(in) :: f
-        integer, intent(in) :: i, j, k
-        real(dp) :: staggered_point_3d
-        
-        staggered_point_3d = ( f(i, j, k) + f(i, j+1, k) + f(i+1, j, k) + f(i+1, j+1, k) )/4
-    
-    !*FD Moves a field to a staggered grid version of that field
-    !*FD This is done simply by averaging each point
-    !*FD f_stag must have 1 fewer element in each dimension
-    end function staggered_point_3d
-    
-    subroutine staggered_field_2d(f, f_stag)
-        !See the note on staggered grids and periodic boundary conditions at the top
-        !of this code file.
-        !We will assume that f is the same size as f_stag.  If periodic boundary
-        !conditions are not used, then the last row and column of f_stag will be
-        !set to zero.  Otherwise, the staggered grid values will be set for them
-        !such that the last row and column represents the staggered values
-        !that occur between periodic repetitions of the nonstaggered grid.
-        real(dp), dimension(:,:), intent(in)  :: f
-        real(dp), dimension(:,:), intent(out) :: f_stag
-        integer :: nx, ny, i, j
-        
-        nx = size(f, 1)
-        ny = size(f, 2)
-        
-        !f_stag = (f(1:nx-1, 1:ny-1) + f(2:nx, 1:ny-1) + f(1:nx-1, 2:ny) + f(2:nx, 2:ny))/4
-        do i = 1,nx-1
-            do j = 1,ny-1
-                f_stag(i,j) = staggered_point_2d(f, i, j)
-            end do
-        end do
-        
-!       if (periodic_x) then
-!               do j = 1, ny-1
-!                       f_stag(nx, j) = (f(nx, j) + f(nx, j+1) + f(1, j) +f(1,j+1))/4
-!               end do
-!       else
-!               !DANGER: Did I transpose X and Y?
-!               f_stag(nx,:) = 0
-!       end if
-!       
-!       if (periodic_y) then
-!               do i = 1, nx-1
-!                       f_stag(i, ny) = (f(i, ny) + f(i+1, ny) + f(i, 1) + f(i+1, 1))/4
-!               end do
-!       else
-!               f_stag(:, ny) = 0
-!       end if
-!       
-!       !Do the corner only if both periodic boundaries are used
-!       if (periodic_x .and. periodic_y) then
-!               f_stag(nx, ny) = (f(nx, ny) + f(1, ny) + f(nx, 1) + f(1,1))/4
-!       else
-!               f_stag(nx, ny) = 0
-!       end if
-!       
-        
-    end subroutine staggered_field_2d
-    
-    !*FD Moves a field to a staggered grid version of that field
-    !*FD This is done simply by averaging each point
-    !*FD f_stag must have 1 fewer element in the x and y dimensions, and the same
-    !*FD number of elements in the z dimension
-    subroutine staggered_field_3d(f, f_stag)
-    
-        real(dp), dimension(:,:,:), intent(in)  :: f
-        real(dp), dimension(:,:,:), intent(out) :: f_stag
-        integer :: nz, k
 
-        nz = size(f, 3)
-    
-        do k = 1, nz
-            call staggered_field_2d(f(:,:,k), f_stag(:,:,k))
-        end do
-    end subroutine staggered_field_3d
-    
     !*FD Copies a staggered grid onto a nonstaggered grid.  This verion
     !*FD assumes periodic boundary conditions.
     subroutine unstagger_field_2d(f_stag, f, periodic_x, periodic_y)
@@ -2279,42 +2095,42 @@ subroutine iteration_debug_step(ncid, iter, mu, uvel, vvel, geometry_mask)
     integer :: i,j,k, start(4), count(4)
     
     nx = size(mu, 2)
-    ny = size(mu, 1)
-    nz = size(mu, 3)
+    ny = size(mu, 3)
+    nz = size(mu, 1)
 
     count = (/1,1,1,1/)
-    do i = 1,ny
-        do j = 1,nx
+    do i = 1,nx
+        do j = 1,ny
             do k = 1,nz
-                start=(/j,i,k,iter+1/)
+                start=(/i,j,k,iter+1/)
        err = nf90_inq_varid(ncid, "mu", varid)
        call nc_errorhandle(__FILE__, __LINE__, err)
        
-       err = nf90_put_var(ncid, varid, mu(i,j,k), start)
+       err = nf90_put_var(ncid, varid, mu(k,i,j), start)
        call nc_errorhandle(__FILE__, __LINE__, err)
        
        err = nf90_inq_varid(ncid, "uvel", varid)
        call nc_errorhandle(__FILE__, __LINE__, err) 
        
-       err = nf90_put_var(ncid, varid, uvel(i,j,k), start)
+       err = nf90_put_var(ncid, varid, uvel(k,i,j), start)
        
        err = nf90_inq_varid(ncid, "vvel", varid)
        call nc_errorhandle(__FILE__, __LINE__, err)
        
-       err = nf90_put_var(ncid, varid, vvel(i,j,k), start)
+       err = nf90_put_var(ncid, varid, vvel(k,i,j), start)
        call nc_errorhandle(__FILE__, __LINE__, err)
  
        err = nf90_inq_varid(ncid, "velnorm", varid)
        call nc_errorhandle(__FILE__, __LINE__, err)
        
-       err = nf90_put_var(ncid, varid, sqrt(uvel(i,j,k)**2 + vvel(i,j,k)**2), start)
+       err = nf90_put_var(ncid, varid, sqrt(uvel(k,i,j)**2 + vvel(k,i,j)**2), start)
        call nc_errorhandle(__FILE__, __LINE__, err)
 
  
        err = nf90_inq_varid(ncid, "mask", varid)
        call nc_errorhandle(__FILE__, __LINE__, err)
        
-       err = nf90_put_var(ncid, varid, geometry_mask(i,j), (/j,i,iter+1/))
+       err = nf90_put_var(ncid, varid, geometry_mask(i,j), (/i,j,iter+1/))
        call nc_errorhandle(__FILE__, __LINE__, err)
             end do
         end do
@@ -2341,36 +2157,36 @@ subroutine iterdebug_vel_derivs(ncid, iter, dudx, dudy, dvdx, dvdy)
     integer :: i,j,k, start(4), count(4)
     
     nx = size(dudx, 2)
-    ny = size(dudx, 1)
-    nz = size(dudx, 3)
+    ny = size(dudx, 3)
+    nz = size(dudx, 1)
 
     count = (/1,1,1,1/)
-    do i = 1,ny
-        do j = 1,nx
+    do i = 1,nx
+        do j = 1,ny
             do k = 1,nz
-                start=(/j,i,k,iter+1/)
+                start=(/i,j,k,iter+1/)
                 err = nf90_inq_varid(ncid, "dudx", varid)
                 call nc_errorhandle(__FILE__, __LINE__, err)
        
-                err = nf90_put_var(ncid, varid, dudx(i,j,k), start)
+                err = nf90_put_var(ncid, varid, dudx(k,i,j), start)
                 call nc_errorhandle(__FILE__, __LINE__, err)
 
                 err = nf90_inq_varid(ncid, "dudy", varid)
                 call nc_errorhandle(__FILE__, __LINE__, err)
        
-                err = nf90_put_var(ncid, varid, dudy(i,j,k), start)
+                err = nf90_put_var(ncid, varid, dudy(k,i,j), start)
                 call nc_errorhandle(__FILE__, __LINE__, err)
        
                 err = nf90_inq_varid(ncid, "dvdx", varid)
                 call nc_errorhandle(__FILE__, __LINE__, err)
        
-                err = nf90_put_var(ncid, varid, dvdx(i,j,k), start)
+                err = nf90_put_var(ncid, varid, dvdx(k,i,j), start)
                 call nc_errorhandle(__FILE__, __LINE__, err)
        
                 err = nf90_inq_varid(ncid, "dvdy", varid)
                 call nc_errorhandle(__FILE__, __LINE__, err)
        
-                err = nf90_put_var(ncid, varid, dvdy(i,j,k), start)
+                err = nf90_put_var(ncid, varid, dvdy(k,i,j), start)
                 call nc_errorhandle(__FILE__, __LINE__, err)
        
  

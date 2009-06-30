@@ -22,6 +22,7 @@ module glide_velo_higher
     use glide_vertint
     use glide_grids, only: stagvarb
     use glide_mask
+    use glide_grids
     implicit none
     
     !TODO: Parameterize the following globals
@@ -241,7 +242,7 @@ contains
         integer, dimension(:,:), intent(in) :: geometry_mask
         real(dp), dimension(:,:,:), intent(in) :: flwa !*FD Glen's A (rate factor) - Used for thermomechanical coupling
         real(dp), dimension(:,:), intent(in)   :: btrc !*FD Basal Traction, either betasquared or tau0
-        real(dp), dimension(:,:,:), intent(in)   :: kinematic_bc_u, kinematic_bc_v
+        real(dp), dimension(:,:,:), intent(inout)   :: kinematic_bc_u, kinematic_bc_v
         real(dp), dimension(:,:), intent(in)   :: marine_bc_normal
         real(dp), intent(in) :: flwn !*FD Exponent in Glenn power law
         type(glide_options), intent(in) :: options
@@ -257,87 +258,40 @@ contains
 
         !Second derivative of surface
                 !Arrays for rescaled coordinate parameters
-        real(dp), dimension(nsn-1, ewn-1, upn) :: ax, ay, bx, by, cxy
+        real(dp), dimension(upn, ewn-1, ewn-1) :: ax, ay, bx, by, cxy
         
-        real(dp), dimension(nsn-1, ewn-1, upn) :: kinematic_bc_u_t, kinematic_bc_v_t
+        real(dp), dimension(ewn, nsn)::u,v
 
-        real(dp), dimension(nsn, ewn)::u,v
+        real(dp), dimension(ewn-1, nsn-1) :: direction_x, direction_y
+        real(dp), dimension(upn, ewn-1, nsn-1) :: flwa_stag
 
-        !Arrays to hold transposed data
-        real(dp), dimension(nsn-1, ewn-1) :: dlsrfdew_t, dlsrfdns_t, dusrfdew_t, & 
-        dusrfdns_t, dthckdew_t, dthckdns_t, btrc_t, staglsrf_t, stagusrf_t, stagthck_t, &
-        d2zdx2_t, d2zdy2_t, d2hdx2_t, d2hdy2_t
-       
-        real(dp), dimension(nsn, ewn, upn) :: flwa_t
-        real(dp), dimension(nsn-1, ewn-1, upn) :: uvel_t, vvel_t, mu_t, flwa_t_stag, &
-                                                  tau_xz_t, tau_yz_t, tau_xx_t, tau_yy_t, tau_xy_t
-
-        integer,  dimension(nsn-1, ewn-1) :: point_mask_t
-        integer,  dimension(nsn-1, ewn-1) :: geometry_mask_t
-        real(dp), dimension(nsn-1, ewn-1) :: marine_bc_normal_t       
-        real(dp), dimension(nsn-1, ewn-1) :: direction_x, direction_y
-        
         direction_x = 0
         direction_y = 0
 
-        !Move everything into transposed coordinates
-        !This means that we need to transpose every data field with x and y that
-        !we have thus far.
-        !It also means that we need to swap x and y derivatives
-        stagthck_t = transpose(thck)
-        staglsrf_t = transpose(lsrf)
-        stagusrf_t = transpose(usrf)
-        btrc_t = transpose(btrc)
 
-        !TODO: Recompute these derivatives?
-        dthckdew_t = transpose(dthckdew)
-        dthckdns_t = transpose(dthckdns)
-        dlsrfdew_t = transpose(dlsrfdew)
-        dlsrfdns_t = transpose(dlsrfdns)
-        dusrfdew_t = transpose(dusrfdew)
-        dusrfdns_t = transpose(dusrfdns)
-
-        d2zdx2_t = transpose(d2zdx2)
-        d2zdy2_t = transpose(d2zdy2)
-        d2hdx2_t = transpose(d2hdx2)
-        d2hdy2_t = transpose(d2hdy2)
-
-        point_mask_t = transpose(point_mask)
-        geometry_mask_t = transpose(geometry_mask)
-        marine_bc_normal_t = transpose(marine_bc_normal)
-
-        call glimToIce3d_3d(uvel,uvel_t,ewn-1,nsn-1,upn)
-        call glimToIce3d_3d(vvel,vvel_t,ewn-1,nsn-1,upn)
-
-        call glimToIce3d_3d(kinematic_bc_u, kinematic_bc_u_t, ewn-1, nsn-1, upn)
-        call glimToIce3d_3d(kinematic_bc_v, kinematic_bc_v_t, ewn-1, nsn-1, upn)
-
-        !The flow law field needs to be transposed AND staggered, which is a lot
-        !of fun!!!
-        call glimToIce3d_3d(flwa,flwa_t,ewn,nsn,upn)
-        call staggered_field_3d(flwa_t, flwa_t_stag)
+        call stagvarb_3d(flwa, flwa_stag, ewn, nsn, upn)
 
         !Compute a new geometry mask based on staggered geometry
        
         !Compute rescaled coordinate parameters (needed because Pattyn uses an
         !irregular Z grid and scales so that 0 is the surface, 1 is the bed)
-        call init_rescaled_coordinates(dthckdew_t,dlsrfdew_t,dthckdns_t,dlsrfdns_t,stagusrf_t,stagthck_t,staglsrf_t,&
-                                               dusrfdew_t,dusrfdns_t,d2zdx2_t,d2zdy2_t,d2hdx2_t,d2hdy2_t,&
+        call init_rescaled_coordinates(dthckdew,dlsrfdew,dthckdns,dlsrfdns,usrf,thck,lsrf,&
+                                               dusrfdew,dusrfdns,d2zdx2,d2zdy2,d2hdx2,d2hdy2,&
                                                sigma,ax,ay,bx,by,cxy,dew,dns,direction_x,direction_y)
         !"Spin up" estimate with Pattyn's SIA model runs if we don't already
         !have a good initial guess
         if (.not. valid_initial_guess) then
-            call veloc1(dusrfdew_t, dusrfdns_t, stagthck_t, flwa_t_stag, sigma, uvel_t, vvel_t, u, v, nsn-1, ewn-1, upn, &
+            call veloc1(dusrfdew, dusrfdns, thck, flwa_stag, sigma, uvel, vvel, u, v, ewn-1, nsn-1, upn, &
                         FLWN, options%periodic_ew, options%periodic_ns)
             !If we are performing the plastic bed iteration, the SIA is not
             !enough and we need to spin up a better estimate by shoehorning the
             !tau0 values into a linear bed estimate
             if (options%which_ho_bstress == HO_BSTRESS_PLASTIC) then
-                call veloc2(mu_t, uvel_t, vvel_t, flwa_t_stag, dusrfdew_t, dusrfdns_t, stagthck_t, ax, ay, &
-                        sigma, bx, by, cxy, btrc_t/100, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, &
-                        TOLER, options, .true., dew, dns,point_mask_t, &
-                        totpts,geometry_mask_t, &
-                        kinematic_bc_u_t, kinematic_bc_v_t, marine_bc_normal_t)
+                call veloc2(efvs, uvel, vvel, flwa_stag, dusrfdew, dusrfdns, thck, ax, ay, &
+                        sigma, bx, by, cxy, btrc/100, dlsrfdew, dlsrfdns, FLWN, ZIP, VEL2ERR, &
+                        TOLER, options, .true., dew, dns,point_mask, &
+                        totpts,geometry_mask, &
+                        kinematic_bc_u, kinematic_bc_v, marine_bc_normal)
             end if
         end if
 
@@ -347,26 +301,15 @@ contains
         !Because of the transposition, ewn=maxy and nsn=maxx.  However, veloc2
         !passes maxy in *first*, so these really get passed in the same order
         !that they normally would.
-        call veloc2(mu_t, uvel_t, vvel_t, flwa_t, dusrfdew_t, dusrfdns_t, stagthck_t, ax, ay, &
-                    sigma, bx, by, cxy, btrc_t, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, &
+        call veloc2(efvs, uvel, vvel, flwa_stag, dusrfdew, dusrfdns, thck, ax, ay, &
+                    sigma, bx, by, cxy, btrc, dlsrfdew, dlsrfdns, FLWN, ZIP, VEL2ERR, &
                     TOLER, options, .true., dew, dns, &
-                    point_mask_t,totpts, geometry_mask_t, kinematic_bc_u_t, kinematic_bc_v_t, marine_bc_normal_t)
+                    point_mask,totpts, geometry_mask, kinematic_bc_u, kinematic_bc_v, marine_bc_normal)
        
         !Final computation of stress field for output
         !call stressf(mu_t, uvel_t, vvel_t, flwa_t, stagthck_t, ax, ay, dew, dns, sigma, & 
         !             tau_xz_t, tau_yz_t, tau_xx_t, tau_yy_t, tau_xy_t, flwn, zip, options%periodic_ew, options%periodic_ns) 
     
-        !Transpose from the ice3d coordinate system (y,x,z) to the glimmer
-        !coordinate system (z,x,y).  We need to do this for all the 3D outputs
-        !that Glimmer expects
-        call ice3dToGlim_3d(uvel_t, uvel, ewn-1, nsn-1, upn)
-        call ice3dToGlim_3d(vvel_t, vvel, ewn-1, nsn-1, upn)
-        call ice3dToGlim_3d(mu_t, efvs, ewn-1, nsn-1, upn)
-        call ice3dToGlim_3d(tau_xz_t, tau%xz, ewn-1, nsn-1, upn)
-        call ice3dToGlim_3d(tau_yz_t, tau%yz, ewn-1, nsn-1, upn)
-        call ice3dToGlim_3d(tau_xx_t, tau%xx, ewn-1, nsn-1, upn)
-        call ice3dToGlim_3d(tau_yy_t, tau%yy, ewn-1, nsn-1, upn)
-        call ice3dToGlim_3d(tau_xy_t, tau%xy, ewn-1, nsn-1, upn)
     end subroutine velo_hom_pattyn
 
     subroutine hom_diffusion_pattyn(uvel_hom, vvel_hom, stagthck, dusrfdew, dusrfdns, sigma, diffu_x, diffu_y, uflx, vflx)
@@ -440,34 +383,20 @@ contains
         logical, intent(in) :: valid_initial_guess !*Whether or not the given uvel or vvel are appropriate initial guesses.  If not we'll have to roll our own.
         
         !Arrays for rescaled coordinate parameters
-        real(dp), dimension(nsn, ewn, upn) :: ax, ay, bx, by, cxy
+        real(dp), dimension(upn, ewn, nsn) :: ax, ay, bx, by, cxy
         
-        real(dp), dimension(nsn, ewn)::u,v
+        real(dp), dimension(ewn, nsn)::u,v
 
         !whether to upwind or downwind derivatives.
         real(dp), dimension(ewn, nsn) :: direction_x, direction_y
         
-        !Arrays to hold transposed data
-        real(dp), dimension(nsn, ewn) :: dlsrfdew_t, dlsrfdns_t, dusrfdew_t, & 
-        dusrfdns_t, dthckdew_t, dthckdns_t, btrc_t_unstag,&
-        d2zdx2_t, d2zdy2_t, d2hdx2_t, d2hdy2_t,usrf_t, lsrf_t, thck_t
-
-        real(dp), dimension(nsn-1, ewn-1) :: btrc_t 
-        real(dp), dimension(nsn, ewn, upn) :: flwa_t
-        real(dp), dimension(nsn-1, ewn-1, upn) :: uvel_t, vvel_t
-        real(dp), dimension(nsn, ewn, upn) :: mu_t
-        real(dp), dimension(nsn, ewn, upn) :: uvel_t_unstag, vvel_t_unstag
-        integer, dimension(nsn, ewn) :: point_mask_t
-        integer, dimension(nsn, ewn) :: geometry_mask_t
-
-        real(dp), dimension(nsn-1, ewn-1, upn) :: kinematic_bc_u_t
-        real(dp), dimension(nsn-1, ewn-1, upn) :: kinematic_bc_v_t
-
-        real(dp), dimension(nsn, ewn, upn) :: kinematic_bc_u_t_unstag
-        real(dp), dimension(nsn, ewn, upn) :: kinematic_bc_v_t_unstag
-
-        real(dp), dimension(nsn,ewn) :: marine_bc_normal_t
-
+        !Arrays to hold unstaggered data
+        real(dp), dimension(ewn,nsn) :: btrc_unstag
+        
+        real(dp), dimension(upn, ewn, nsn) :: kinematic_bc_u_unstag, kinematic_bc_v_unstag
+        
+        real(dp), dimension(upn, ewn, nsn) :: efvs, uvel_unstag, vvel_unstag
+        
         integer :: i,j 
 
         !Determine whether to upwind or downwind derivatives at points on the
@@ -479,46 +408,14 @@ contains
         direction_x = 0
         call upwind_from_mask(geometry_mask, direction_y, direction_x)
 
-        !Move everything into transposed coordinates
-        !This means that we need to transpose every data field with x and y that
-        !we have thus far.
-        !It also means that we need to swap x and y derivatives
-        thck_t = transpose(thck)
-        lsrf_t = transpose(lsrf)
-        usrf_t = transpose(usrf)
-        btrc_t = transpose(btrc)
-        
-        dthckdew_t = transpose(dthckdew)
-        dthckdns_t = transpose(dthckdns)
-        dlsrfdew_t = transpose(dlsrfdew)
-        dlsrfdns_t = transpose(dlsrfdns)
-        dusrfdew_t = transpose(dusrfdew)
-        dusrfdns_t = transpose(dusrfdns)
-
-        d2zdx2_t = transpose(d2zdx2)
-        d2zdy2_t = transpose(d2zdy2)
-        d2hdx2_t = transpose(d2hdx2)
-        d2hdy2_t = transpose(d2hdy2)
-
-        point_mask_t = transpose(point_mask)
-        geometry_mask_t = transpose(geometry_mask)
-
-        marine_bc_normal_t = transpose(marine_bc_normal)
+        call unstagger_field_3d(uvel, uvel_unstag, options%periodic_ew, options%periodic_ns)
+        call unstagger_field_3d(vvel, vvel_unstag, options%periodic_ew, options%periodic_ns)
        
-        call glimToIce3d_3d(uvel,uvel_t,ewn-1,nsn-1,upn)
-        call glimToIce3d_3d(vvel,vvel_t,ewn-1,nsn-1,upn)
-        
-        call glimToIce3d_3d(kinematic_bc_u,kinematic_bc_u_t,ewn-1,nsn-1,upn)
-        call glimToIce3d_3d(kinematic_bc_v,kinematic_bc_v_t,ewn-1,nsn-1,upn)
+        call unstagger_field_3d(kinematic_bc_u,kinematic_bc_u_unstag, options%periodic_ew, options%periodic_ns)
+        call unstagger_field_3d(kinematic_bc_v,kinematic_bc_v_unstag, options%periodic_ew, options%periodic_ns)
 
-        call glimToIce3d_3d(flwa,flwa_t,ewn,nsn,upn)
-      
-        call unstagger_field_3d(vvel_t, uvel_t_unstag, options%periodic_ew, options%periodic_ns)
-        call unstagger_field_3d(vvel_t, uvel_t_unstag, options%periodic_ew, options%periodic_ns)
-       
-        call unstagger_field_3d(kinematic_bc_u_t,kinematic_bc_u_t_unstag, options%periodic_ew, options%periodic_ns)
-        call unstagger_field_3d(kinematic_bc_v_t,kinematic_bc_v_t_unstag, options%periodic_ew, options%periodic_ns)
-        
+        call unstagger_field_2d(btrc, btrc_unstag, options%periodic_ew, options%periodic_ns)
+ 
         !In unstaggering the boundary condition fields, we need to remove points
         !that aren't on the boundary
         !do i = 1,nsn
@@ -532,27 +429,25 @@ contains
         !    end do
         !end do
 
-        call unstagger_field_2d(btrc_t, btrc_t_unstag, options%periodic_ew, options%periodic_ns)
-
         !Compute rescaled coordinate parameters (needed because Pattyn uses an
         !irregular Z grid and scales so that 0 is the surface, 1 is the bed)
-        call init_rescaled_coordinates(dthckdew_t,dlsrfdew_t,dthckdns_t,dlsrfdns_t,usrf_t,thck_t,lsrf_t,&
-                                               dusrfdew_t,dusrfdns_t,d2zdx2_t,d2zdy2_t,d2hdx2_t,d2hdy2_t,&
+        call init_rescaled_coordinates(dthckdew,dlsrfdew,dthckdns,dlsrfdns,usrf,thck,lsrf,&
+                                               dusrfdew,dusrfdns,d2zdx2,d2zdy2,d2hdx2,d2hdy2,&
                                                sigma,ax,ay,bx,by,cxy,dew,dns,direction_x,direction_y)
        
         !"Spin up" estimate with Pattyn's SIA model runs if we don't already
         !have a good initial guess
         if (.not. valid_initial_guess) then
-            call veloc1(dusrfdew_t, dusrfdns_t, thck_t, flwa_t, sigma, uvel_t_unstag, vvel_t_unstag, u, v, nsn, ewn, upn, &
+            call veloc1(dusrfdew, dusrfdns, thck, flwa, sigma, uvel_unstag, vvel_unstag, u, v, ewn, nsn, upn, &
                         FLWN, options%periodic_ew, options%periodic_ns)
             !If we are performing the plastic bed iteration, the SIA is not
             !enough and we need to spin up a better estimate by shoehorning the
             !tau0 values into a linear bed estimate
             if (options%which_ho_bstress == HO_BSTRESS_PLASTIC) then
-                call veloc2(mu_t, uvel_t, vvel_t, flwa_t, dusrfdew_t, dusrfdns_t, thck_t, ax, ay, &
-                        sigma, bx, by, cxy, btrc_t_unstag, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, &
-                        TOLER, options, .false., dew, dns,point_mask_t,totpts,geometry_mask_t,&
-                        kinematic_bc_u_t_unstag, kinematic_bc_v_t_unstag, marine_bc_normal_t)
+                call veloc2(efvs, uvel, vvel, flwa, dusrfdew, dusrfdns, thck, ax, ay, &
+                        sigma, bx, by, cxy, btrc_unstag, dlsrfdew, dlsrfdns, FLWN, ZIP, VEL2ERR, &
+                        TOLER, options, .false., dew, dns,point_mask,totpts,geometry_mask,&
+                        kinematic_bc_u_unstag, kinematic_bc_v_unstag, marine_bc_normal)
             end if
         end if
         
@@ -562,63 +457,20 @@ contains
         !Because of the transposition, ewn=maxy and nsn=maxx.  However, veloc2
         !passes maxy in *first*, so these really get passed in the same order
         !that they normally would.
-        call veloc2(mu_t, uvel_t_unstag, vvel_t_unstag, flwa_t, dusrfdew_t, dusrfdns_t, thck_t, ax, ay, &
-                    sigma, bx, by, cxy, btrc_t_unstag, dlsrfdew_t, dlsrfdns_t, FLWN, ZIP, VEL2ERR, &
+        call veloc2(efvs, uvel_unstag, vvel_unstag, flwa, dusrfdew, dusrfdns, thck, ax, ay, &
+                    sigma, bx, by, cxy, btrc_unstag, dlsrfdew, dlsrfdns, FLWN, ZIP, VEL2ERR, &
                     TOLER, options, .false., dew, dns, &
-                    point_mask_t,totpts,geometry_mask_t,kinematic_bc_u_t_unstag, kinematic_bc_v_t_unstag, marine_bc_normal_t)
-        
-        
+                    point_mask,totpts,geometry_mask,kinematic_bc_u_unstag, kinematic_bc_v_unstag, marine_bc_normal)
 
         !Final computation of stress field for output
         !call stressf(mu_t, uvel_t, vvel_t, flwa_t, stagthck_t, ax, ay, dew, dns, sigma, & 
         !             tau_xz_t, tau_yz_t, tau_xx_t, tau_yy_t, tau_xy_t, flwn, zip, periodic_ew, periodic_ns) 
         
         
-        call staggered_field_3d(uvel_t_unstag, uvel_t)
-        call staggered_field_3d(vvel_t_unstag, vvel_t)
+        call stagvarb_3d(uvel_unstag, uvel,ewn,nsn,upn)
+        call stagvarb_3d(vvel_unstag, vvel,ewn,nsn,upn)
         
-        !Transpose from the ice3d coordinate system (y,x,z) to the glimmer
-        !coordinate system (z,x,y).  We need to do this for all the 3D outputs
-        !that Glimmer expects
-        call ice3dToGlim_3d(uvel_t, uvel, ewn-1, nsn-1, upn)
-        call ice3dToGlim_3d(vvel_t, vvel, ewn-1, nsn-1, upn)
-        !call ice3dToGlim_3d(mu_t, efvs, ewn-1, nsn-1, upn)
-        
-        !call ice3dToGlim_3d(tau_xz_t, tau%xz, ewn-1, nsn-1, upn)
-        !call ice3dToGlim_3d(tau_yz_t, tau%yz, ewn-1, nsn-1, upn)
-        !call ice3dToGlim_3d(tau_xx_t, tau%xx, ewn-1, nsn-1, upn)
-        !call ice3dToGlim_3d(tau_yy_t, tau%yy, ewn-1, nsn-1, upn)
-        !call ice3dToGlim_3d(tau_xy_t, tau%xy, ewn-1, nsn-1, upn)
     end subroutine velo_hom_pattyn_nonstag
 
-
-    !Transposes from Glimmer 3D fields, stored (z,x,y), to Ice3D fields, stored
-    !(y,x,z)
-    subroutine glimToIce3d_3d(field, dest, nx, ny, nz)
-        real(dp), dimension(:, :, :) :: field
-        real(dp), dimension(:, :, :) :: dest
-        integer :: nx, ny, nz, i, j, k
- 
-        do i=1,nx
-            do j=1,ny
-                do k=1,nz
-                    dest(j,i,k) = field(k,i,j)
-                end do
-            end do
-        end do
-    end subroutine glimToIce3d_3d
-
-    subroutine ice3dToGlim_3d(field, dest, nx, ny, nz)
-        real(dp), dimension(:, :, :) :: field
-        real(dp), dimension(:, :, :) :: dest
-        integer :: nx, ny, nz, i, j, k
-        do i=1,nx
-            do j=1,ny
-                do k=1,nz
-                    dest(k,i,j) = field(j,i,k)
-                end do
-            end do
-        end do
-    end subroutine ice3dToGlim_3d
 
 end module glide_velo_higher

@@ -243,7 +243,7 @@ contains
         integer, intent(in) :: i,j,k
         real(dp), intent(in) :: delta
         real(dp) :: dfdx_3d
-        dfdx_3d = (-.5/delta)*f(i-1, j, k)  + (.5/delta)*f(i+1, j, k)
+        dfdx_3d = (-.5/delta)*f(k, i-1, j)  + (.5/delta)*f(k, i+1, j)
     end function dfdx_3d
 
     !*FD Computes derivative with respect to y at a given point
@@ -253,7 +253,7 @@ contains
         integer, intent(in) :: i,j,k
         real(dp), intent(in) :: delta
         real(dp) :: dfdy_3d
-        dfdy_3d = (-.5/delta)*f(i, j-1, k) + (.5/delta)*f(i, j+1, k)
+        dfdy_3d = (-.5/delta)*f(k, i, j-1) + (.5/delta)*f(k, i, j+1)
     end function dfdy_3d
     
 
@@ -268,9 +268,9 @@ contains
         real(dp), dimension(:), intent(in) :: dz
         real(dp) :: dfdz_3d_irregular
 
-        dfdz_3d_irregular = f(i,j,k - 1)*(dz(k) - dz(k+1))/((dz(k) - dz(k-1))*(dz(k+1)-dz(k-1))) + &
-                            f(i,j,k)*(dz(k+1)-2*dz(k)+dz(k-1))/((dz(k)-dz(k-1))*(dz(k+1)-dz(k))) + &
-                            f(i,j,k+1)*(dz(k)-dz(k-1))/((dz(k+1)-dz(k))*(dz(K+1)-dz(k-1)))
+        dfdz_3d_irregular = f(k-1,i,j)*(dz(k) - dz(k+1))/((dz(k) - dz(k-1))*(dz(k+1)-dz(k-1))) + &
+                            f(k,  i,j)*(dz(k+1)-2*dz(k)+dz(k-1))/((dz(k)-dz(k-1))*(dz(k+1)-dz(k))) + &
+                            f(k+1,i,j)*(dz(k)-dz(k-1))/((dz(k+1)-dz(k))*(dz(K+1)-dz(k-1)))
     end function
     
     !*FD Computes derivative with respect to z at a given point using an upwinding
@@ -286,9 +286,9 @@ contains
         zkMinusZkm2 = deltas(k) - deltas(k-2)
         zkm1MinusZkm2 = deltas(k-1) - deltas(k-2)
         
-        dfdz_3d_upwind_irregular = f(i, j, k-2) * zkMinusZkm1 / (zkm1MinusZkm2 * zkMinusZkm2) - &
-                                   f(i, j, k-1) * zkMinusZkm2 / (zkMinusZkm1 * zkm1MinusZkm2) + &
-                                   f(i, j, k) * (2*deltas(k) - deltas(k-1) - deltas(k-2)) / (zkMinusZkm1 * zkMinusZkm2)
+        dfdz_3d_upwind_irregular = f(k-2, i, j) * zkMinusZkm1 / (zkm1MinusZkm2 * zkMinusZkm2) - &
+                                   f(k-1, i, j) * zkMinusZkm2 / (zkMinusZkm1 * zkm1MinusZkm2) + &
+                                   f(k,   i, j) * (2*deltas(k) - deltas(k-1) - deltas(k-2)) / (zkMinusZkm1 * zkMinusZkm2)
     end function
     
         !*FD Computes derivative with respect to z at a given point using a downwinding
@@ -304,9 +304,9 @@ contains
         zkp2MinusZk = deltas(k+2) - deltas(k)
         zkp2MinusZkp1 = deltas(k+2) - deltas(k+1)
         
-        dfdz_3d_downwind_irregular =f(i, j, k) * (-zkp1MinusZk - zkp2MinusZk)/(zkp1MinusZk * zkp2MinusZk) + &
-                                    f(i, j, k + 1) * zkp2MinusZk / (zkp2MinusZkp1 * zkp1MinusZk) - &
-                                    f(i, j, k + 2) * zkp1MinusZk / (zkp2MinusZkp1 * zkp2MinusZk)
+        dfdz_3d_downwind_irregular =f(k,   i, j) * (-zkp1MinusZk - zkp2MinusZk)/(zkp1MinusZk * zkp2MinusZk) + &
+                                    f(k+1, i, j) * zkp2MinusZk / (zkp2MinusZkp1 * zkp1MinusZk) - &
+                                    f(k+2, i, j) * zkp1MinusZk / (zkp2MinusZkp1 * zkp2MinusZk)
     end function
     
     !*FD Computes derivative with respect to x at the equivalent
@@ -317,7 +317,7 @@ contains
         integer, intent(in) :: i,j,k
         real(dp), intent(in) :: delta
         real(dp) :: dfdx_3d_stag
-        dfdx_3d_stag = (f(i+1, j, k) + f(i+1, j+1, k) - f(i, j, k) - f(i, j+1, k))/(2*delta) 
+        dfdx_3d_stag = (f(k, i+1, j) + f(k, i+1, j+1) - f(k, i, j) - f(k, i, j+1))/(2*delta) 
     end function dfdx_3d_stag
 
     !*FD Computes derivative with respect to y at the equivalent
@@ -328,7 +328,7 @@ contains
         integer, intent(in) :: i,j,k
         real(dp), intent(in) :: delta
         real(dp) :: dfdy_3d_stag
-        dfdy_3d_stag = (f(i, j+1, k) + f(i+1, j+1, k) - f(i,j, k) - f(i+1, j, k))/(2*delta)
+        dfdy_3d_stag = (f(k, i, j+1) + f(k, i+1, j+1) - f(k, i, j) - f(k, i+1, j))/(2*delta)
     end function dfdy_3d_stag
 
     !*FD Computes derivative with respect to x at the given point
@@ -339,7 +339,7 @@ contains
         integer, intent(in) :: i,j,k
         real(dp), intent(in) :: delta
         real(dp) :: dfdx_3d_upwind
-        dfdx_3d_upwind = (.5 * f(i-2, j, k) - 2 * f(i-1, j, k) + 1.5 * f(i, j, k))/delta
+        dfdx_3d_upwind = (.5 * f(k, i-2, j) - 2 * f(k, i-1, j) + 1.5 * f(k, i, j))/delta
     end function dfdx_3d_upwind
 
     !*FD Computes derivative with respect to y at the given point
@@ -350,7 +350,7 @@ contains
         integer, intent(in) :: i,j,k
         real(dp), intent(in) :: delta
         real(dp) :: dfdy_3d_upwind
-        dfdy_3d_upwind = (.5 * f(i, j-2, k) - 2 * f(i, j-1, k) + 1.5 * f(i, j, k))/delta
+        dfdy_3d_upwind = (.5 * f(k, i, j-2) - 2 * f(k, i, j-1) + 1.5 * f(k, i, j))/delta
     end function dfdy_3d_upwind
 
     !*FD Computes derivative with respect to x at the given point
@@ -361,7 +361,7 @@ contains
         integer, intent(in) :: i,j, k
         real(dp), intent(in) :: delta
         real(dp) :: dfdx_3d_downwind
-        dfdx_3d_downwind = (-1.5 * f(i, j, k) + 2 * f(i+1, j, k) - .5 * f(i+2, j, k))/delta
+        dfdx_3d_downwind = (-1.5 * f(k, i, j) + 2 * f(k, i+1, j) - .5 * f(k, i+2, j))/delta
     end function dfdx_3d_downwind 
 
     !*FD Computes derivative with respect to y at the given point
@@ -372,7 +372,7 @@ contains
         integer, intent(in) :: i,j,k
         real(dp), intent(in) :: delta
         real(dp) :: dfdy_3d_downwind
-        dfdy_3d_downwind = (-1.5 * f(i, j, k) + 2 * f(i, j+1, k) - .5 * f(i, j+2, k))/delta
+        dfdy_3d_downwind = (-1.5 * f(k, i, j) + 2 * f(k, i, j+1) - .5 * f(k, i, j+2))/delta
     end function dfdy_3d_downwind
     
     !*FD Computes derivative fields of the given function.
@@ -398,9 +398,9 @@ contains
         logical :: upwind
 
         !Get the size of the field we're working with
-        nx = size(f, 1)
-        ny = size(f, 2)
-        nz = size(f, 3)
+        nx = size(f, 2)
+        ny = size(f, 3)
+        nz = size(f, 1)
         
         upwind = present(direction_x) .and. present(direction_y)
 
@@ -429,29 +429,29 @@ contains
                                 !we need to use an upwinding or downwinding differentiation
                                 !scheme.
                                 if (x == 1 .or. grad_x > 0) then
-                                        out_dfdx(x, y, z) = dfdx_3d_downwind(f, x, y, z, deltax)
+                                        out_dfdx(z, x, y) = dfdx_3d_downwind(f, x, y, z, deltax)
                                         !out_dfdx(x, y, z) = (f(x+1,y,z) - f(x,y,z))/deltax
                                 else if (x == nx .or. grad_x < 0) then
-                                        out_dfdx(x, y, z) = dfdx_3d_upwind(f, x, y, z, deltax)
+                                        out_dfdx(z, x, y) = dfdx_3d_upwind(f, x, y, z, deltax)
                                         !out_dfdx(x, y, z) = (f(x,y,z) - f(x-1,y,z))/deltax
                                 else
-                                        out_dfdx(x, y, z) = dfdx_3d(f, x, y, z, deltax)
+                                        out_dfdx(z, x, y) = dfdx_3d(f, x, y, z, deltax)
                                 end if
                                 if (y == 1 .or. grad_y > 0) then
-                                        out_dfdy(x, y, z) = dfdy_3d_downwind(f, x, y, z, deltay)
+                                        out_dfdy(z, x, y) = dfdy_3d_downwind(f, x, y, z, deltay)
                                         !out_dfdy(x, y, z) = (f(x,y+1,z) - f(x,y,z))/deltay
                                 else if (y == ny .or. grad_y < 0) then
-                                        out_dfdy(x, y, z) = dfdy_3d_upwind(f, x, y, z, deltay)
+                                        out_dfdy(z, x, y) = dfdy_3d_upwind(f, x, y, z, deltay)
                                         !out_dfdy(x, y, z) = (f(x,y,z) - f(x,y-1,z))/deltay
                                 else
-                                        out_dfdy(x, y, z) = dfdy_3d(f, x, y, z, deltay)
+                                        out_dfdy(z, x, y) = dfdy_3d(f, x, y, z, deltay)
                                 end if
                                 if (z == 1) then
-                                        out_dfdz(x, y, z) = dfdz_3d_downwind_irregular(f, x, y, z, deltaz)
+                                        out_dfdz(z, x, y) = dfdz_3d_downwind_irregular(f, x, y, z, deltaz)
                                 else if (z == nz) then
-                                        out_dfdz(x, y, z) = dfdz_3d_upwind_irregular(f, x, y, z, deltaz)
+                                        out_dfdz(z, x, y) = dfdz_3d_upwind_irregular(f, x, y, z, deltaz)
                                 else
-                                        out_dfdz(x, y, z) = dfdz_3d_irregular(f, x, y, z, deltaz)
+                                        out_dfdz(z, x, y) = dfdz_3d_irregular(f, x, y, z, deltaz)
                                 end if
                         end do
                 end do  
@@ -954,7 +954,7 @@ contains
         real(dp), intent(in) :: delta_x, delta_y
         real(dp) :: d2fdxy_3d
         
-        d2fdxy_3d = (f(i-1, j-1, k) - f(i-1, j+1, k) - f(i+1, j-1, k) + f(i+1, j+1, k))/(4*delta_x*delta_y) 
+        d2fdxy_3d = (f(k, i-1, j-1) - f(k, i-1, j+1) - f(k, i+1, j-1) + f(k, i+1, j+1))/(4*delta_x*delta_y) 
     end function d2fdxy_3d
     
     function d2fdxz_3d(f, i, j, k, delta_x, dz)
@@ -966,9 +966,9 @@ contains
         real(dp) :: d2fdxz_3d
         
         d2fdxz_3d = (.5/delta_x) * ( &
-          (f(i+1, j, k-1) - f(i-1, j, k-1)) * (dz(k) - dz(k+1)) / ( (dz(k) - dz(k-1)) * (dz(k+1) - dz(k-1)) ) + &
-          (f(i+1, j, k) - f(i-1, j, k)) * (dz(k+1) + dz(k-1) - 2*dz(k)) / ( (dz(k) - dz(k-1)) * (dz(k+1) - dz(k)) ) + &
-          (f(i+1, j, k+1) - f(i-1, j, k+1)) * (dz(k) - dz(k-1)) / ( (dz(k+1) - dz(k)) * (dz(k+1) - dz(k-1)) ) )
+          (f(k-1, i+1, j) - f(k-1, i-1, j)) * (dz(k) - dz(k+1)) / ( (dz(k) - dz(k-1)) * (dz(k+1) - dz(k-1)) ) + &
+          (f(k,   i+1, j) - f(k,   i-1, j)) * (dz(k+1) + dz(k-1) - 2*dz(k)) / ( (dz(k) - dz(k-1)) * (dz(k+1) - dz(k)) ) + &
+          (f(k+1, i+1, j) - f(k+1, i-1, j)) * (dz(k) - dz(k-1)) / ( (dz(k+1) - dz(k)) * (dz(k+1) - dz(k-1)) ) )
         end function d2fdxz_3d
         
         function d2fdyz_3d(f, i, j, k, delta_x, dz)
@@ -980,9 +980,9 @@ contains
         real(dp) :: d2fdyz_3d
         
         d2fdyz_3d = (.5/delta_x) * ( &
-          (f(i, j+1, k-1) - f(i, j-1, k-1)) * (dz(k) - dz(k+1)) / ( (dz(k) - dz(k-1)) * (dz(k+1) - dz(k-1)) ) + &
-          (f(i, j+1, k) - f(i, j-1, k)) * (dz(k+1) + dz(k-1) - 2*dz(k)) / ( (dz(k) - dz(k-1)) * (dz(k+1) - dz(k)) ) + &
-          (f(i, j+1, k+1) - f(i, j-1, k+1)) * (dz(k) - dz(k-1)) / ( (dz(k+1) - dz(k)) * (dz(k+1) - dz(k-1)) ) )
+          (f(k-1, i, j+1) - f(k-1, i, j-1)) * (dz(k) - dz(k+1)) / ( (dz(k) - dz(k-1)) * (dz(k+1) - dz(k-1)) ) + &
+          (f(k,   i, j+1) - f(k,   i, j-1)) * (dz(k+1) + dz(k-1) - 2*dz(k)) / ( (dz(k) - dz(k-1)) * (dz(k+1) - dz(k)) ) + &
+          (f(k+1, i, j+1) - f(k+1, i, j-1)) * (dz(k) - dz(k-1)) / ( (dz(k+1) - dz(k)) * (dz(k+1) - dz(k-1)) ) )
         end function d2fdyz_3d
         
     !*FD Computes derivative with respect to z at a given point
@@ -1002,9 +1002,9 @@ contains
         zkp1MinusZk = -1 * zkMinusZkp1
         
         
-        d2fdz2_3d_irregular = 2 * f(i, j, k - 1) / (zkMinusZkm1 * zkp1MinusZkm1) - &
-                                          2 * f(i, j, k) / (zkp1MinusZk * zkMinusZkm1) + &
-                                          2 * f(i, j, k + 1) / (zkp1Minuszk * zkp1MinusZkm1)    
+        d2fdz2_3d_irregular = 2 * f(k-1, i, j) / (zkMinusZkm1 * zkp1MinusZkm1) - &
+                              2 * f(k,   i, j) / (zkp1MinusZk * zkMinusZkm1) + &
+                              2 * f(k+1, i, j) / (zkp1Minuszk * zkp1MinusZkm1)    
     end function
 
 end module glide_deriv
