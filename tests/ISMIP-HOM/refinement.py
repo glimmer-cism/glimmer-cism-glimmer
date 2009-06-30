@@ -24,7 +24,7 @@ def runExperiment(gridSizeArg="40", vertGridArg="40", vertGridSpacing="even", di
     args.append("--prefix="+prefix)
     args.append("--diagnostic-type="+diagnosticScheme)
 
-    verifyCommand = sys.executable + " verify.py --exp=a,c " + " ".join(args) + " >>refinement-log.txt"
+    verifyCommand = sys.executable + " verify.py --exp=a " + " ".join(args) + " >>refinement-log.txt"
 
     caption = gridSizeArg + "x" + gridSizeArg + "x" + vertGridArg + ", " + vertGridSpacing + " spacing, " + strDiagnostic
 
@@ -39,7 +39,7 @@ def runExperiment(gridSizeArg="40", vertGridArg="40", vertGridSpacing="even", di
 
 def fullCombinatorics():
     for gridSizeArg in ["20","40","60","80"]:
-        for vertGridArg in ["20","40",,"60","80"]:
+        for vertGridArg in ["20","40","60","80"]:
             for vertGridSpacing in ["glimmer","pattyn","even"]:
                 for diagnosticScheme in ["1","2"]:
                     runExperiment(gridSizeArg, vertGridArg, vertGridSpacing, diagnosticScheme)
