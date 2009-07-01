@@ -166,42 +166,68 @@ contains
     end do
   end subroutine stagvarb_3d
 
-    subroutine periodic_boundaries(m, apply_to_x, apply_to_y)
+    subroutine periodic_boundaries(m, apply_to_x, apply_to_y, nlayers_arg)
         !*FD Applies periodic boundary conditions to a 2D array
         real(dp), dimension(:,:), intent(inout) :: m
         integer :: maxx, maxy
         logical :: apply_to_x, apply_to_y
+        integer, optional :: nlayers_arg
+
+        integer :: nlayers 
+        integer :: layer
+
+        if (present(nlayers_arg)) then
+            nlayers = nlayers_arg
+        else
+            nlayers = 1
+        end if
+
         maxx = size(m, 1)
         maxy = size(m, 2)
        
-        if(apply_to_y) then
-            m(:,maxy) = m(:,2)
-            m(:,1) = m(:,maxy-1)
-        end if
+        do layer = 1, nlayers
+            if(apply_to_y) then
+                m(:, maxy-layer+1) = m(:, layer+1)
+                m(:, layer)        = m(:, maxy-layer)
+            end if
 
-        if(apply_to_x) then
-            m(maxx,:) = m(2,:)
-            m(1,:) = m(maxx-1,:)
-        end if
+            if(apply_to_x) then
+                m(maxx-layer+1, :) = m(layer+1, :)
+                m(layer, :)        = m(maxx-layer, :)
+            end if
+        end do
     end subroutine periodic_boundaries
     
-    subroutine periodic_boundaries_3d(m, apply_to_x, apply_to_y)
-        !*FD Applies periodic boundary conditions to a 2D array
+    subroutine periodic_boundaries_3d(m, apply_to_x, apply_to_y, nlayers_arg)
+        !*FD Applies periodic boundary conditions to a 3D array
         real(dp), dimension(:,:,:), intent(inout) :: m
         integer :: maxx, maxy
         logical :: apply_to_x, apply_to_y
-        maxx = size(m, 2)
-        maxy = size(m, 3)
-       
-        if(apply_to_y) then
-            m(:,:,maxy) = m(:,:,2)
-            m(:,:,1) = m(:,:,maxy-1)
+        integer, optional :: nlayers_arg
+
+        integer :: nlayers 
+        integer :: layer
+
+        if (present(nlayers_arg)) then
+            nlayers = nlayers_arg
+        else
+            nlayers = 1
         end if
 
-        if(apply_to_x) then
-            m(:,maxx,:) = m(:,2,:)
-            m(:,1,:) = m(:,maxx-1,:)
-        end if
+        maxx = size(m, 1)
+        maxy = size(m, 2)
+       
+        do layer = 1, nlayers
+            if(apply_to_y) then
+                m(:, :, maxy-layer+1) = m(:, :, layer+1)
+                m(:, :, layer)        = m(:, :, maxy-layer)
+            end if
+
+            if(apply_to_x) then
+                m(:, maxx-layer+1, :) = m(:, layer+1, :)
+                m(:, layer, :)        = m(:, maxx-layer, :)
+            end if
+        end do
     end subroutine periodic_boundaries_3d
  
 end module glide_grids
