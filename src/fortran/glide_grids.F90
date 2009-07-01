@@ -214,8 +214,8 @@ contains
             nlayers = 1
         end if
 
-        maxx = size(m, 1)
-        maxy = size(m, 2)
+        maxx = size(m, 2)
+        maxy = size(m, 3)
        
         do layer = 1, nlayers
             if(apply_to_y) then
