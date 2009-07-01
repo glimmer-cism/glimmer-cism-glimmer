@@ -389,24 +389,24 @@ contains
     end if
 
     ! x0
-    status = nf90_inq_dimid(NCI%id,'x0',dimid)
-    call nc_errorhandle(__FILE__,__LINE__,status)
-    status = nf90_inquire_dimension(NCI%id,dimid,len=dimsize)
-    call nc_errorhandle(__FILE__,__LINE__,status)
-    if (dimsize.ne.model%general%ewn-1) then
-       write(message,*) 'Dimension x0 of file ',trim(process_path(NCI%filename)),' does not match with config dimension: ', &
-            dimsize, model%general%ewn-1
-       call write_log(message,type=GM_FATAL)
-    end if
-    status = nf90_inq_varid(NCI%id,'x0',varid)
-    call nc_errorhandle(__FILE__,__LINE__,status)
-    status = nf90_get_var(NCI%id,varid,delta)
-    call nc_errorhandle(__FILE__,__LINE__,status)
-    if (abs(delta(2)-delta(1) - model%numerics%dew*len0).gt.small) then
-       write(message,*) 'deltax0 of file '//trim(process_path(NCI%filename))//' does not match with config deltax: ', &
-            delta(2)-delta(1),model%numerics%dew*len0
-       call write_log(message,type=GM_FATAL)
-    end if
+    !status = nf90_inq_dimid(NCI%id,'x0',dimid)
+    !call nc_errorhandle(__FILE__,__LINE__,status)
+    !status = nf90_inquire_dimension(NCI%id,dimid,len=dimsize)
+    !call nc_errorhandle(__FILE__,__LINE__,status)
+    !if (dimsize.ne.model%general%ewn-1) then
+    !   write(message,*) 'Dimension x0 of file ',trim(process_path(NCI%filename)),' does not match with config dimension: ', &
+    !        dimsize, model%general%ewn-1
+    !   call write_log(message,type=GM_FATAL)
+    !end if
+    !status = nf90_inq_varid(NCI%id,'x0',varid)
+    !call nc_errorhandle(__FILE__,__LINE__,status)
+    !status = nf90_get_var(NCI%id,varid,delta)
+    !call nc_errorhandle(__FILE__,__LINE__,status)
+    !if (abs(delta(2)-delta(1) - model%numerics%dew*len0).gt.small) then
+    !   write(message,*) 'deltax0 of file '//trim(process_path(NCI%filename))//' does not match with config deltax: ', &
+    !        delta(2)-delta(1),model%numerics%dew*len0
+    !   call write_log(message,type=GM_FATAL)
+    !end if
 
     ! y1
     status = nf90_inq_dimid(NCI%id,'y1',dimid)
@@ -429,24 +429,24 @@ contains
     end if
     
     ! y0
-    status = nf90_inq_dimid(NCI%id,'y0',dimid)
-    call nc_errorhandle(__FILE__,__LINE__,status)
-    status = nf90_inquire_dimension(NCI%id,dimid,len=dimsize)
-    call nc_errorhandle(__FILE__,__LINE__,status)
-    if (dimsize.ne.model%general%nsn-1) then
-       write(message,*) 'Dimension y0 of file '//trim(process_path(NCI%filename))//' does not match with config dimension: ',&
-            dimsize, model%general%nsn-1
-       call write_log(message,type=GM_FATAL)
-    end if
-    status = nf90_inq_varid(NCI%id,'y0',varid)
-    call nc_errorhandle(__FILE__,__LINE__,status)
-    status = nf90_get_var(NCI%id,varid,delta)
-    call nc_errorhandle(__FILE__,__LINE__,status)
-    if (abs(delta(2)-delta(1) - model%numerics%dns*len0).gt.small) then
-       write(message,*) 'deltay0 of file '//trim(process_path(NCI%filename))//' does not match with config deltay: ',&
-            delta(2)-delta(1),model%numerics%dns*len0
-       call write_log(message,type=GM_FATAL)
-    end if
+    !status = nf90_inq_dimid(NCI%id,'y0',dimid)
+    !call nc_errorhandle(__FILE__,__LINE__,status)
+    !status = nf90_inquire_dimension(NCI%id,dimid,len=dimsize)
+    !call nc_errorhandle(__FILE__,__LINE__,status)
+    !if (dimsize.ne.model%general%nsn-1) then
+    !   write(message,*) 'Dimension y0 of file '//trim(process_path(NCI%filename))//' does not match with config dimension: ',&
+    !        dimsize, model%general%nsn-1
+    !   call write_log(message,type=GM_FATAL)
+    !end if
+    !status = nf90_inq_varid(NCI%id,'y0',varid)
+    !call nc_errorhandle(__FILE__,__LINE__,status)
+    !status = nf90_get_var(NCI%id,varid,delta)
+    !call nc_errorhandle(__FILE__,__LINE__,status)
+    !if (abs(delta(2)-delta(1) - model%numerics%dns*len0).gt.small) then
+    !   write(message,*) 'deltay0 of file '//trim(process_path(NCI%filename))//' does not match with config deltay: ',&
+    !        delta(2)-delta(1),model%numerics%dns*len0
+    !   call write_log(message,type=GM_FATAL)
+    !end if
   
   ! Check that the number of vertical layers is the same, though it's asking for trouble
   ! to check whether the spacing is the same (don't want to put that burden on setup,
