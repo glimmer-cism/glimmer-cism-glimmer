@@ -19,7 +19,7 @@
 !#define OUTPUT_SPARSE_MATRIX
 
 !Define to output a NetCDF file of the partial iterations
-!#define OUTPUT_PARTIAL_ITERATIONS
+#define OUTPUT_PARTIAL_ITERATIONS
 
 !If defined, a vertically averaged pressure will be used across the ice front.
 !Otherwise, a vertically explicit pressure will be used.
@@ -391,19 +391,24 @@ contains
         call sparse_solver_default_options(options%which_ho_sparse, matrix_options)
         matrix_options%base%tolerance=TOLER
         matrix_options%base%maxiters  = 1000
-        
+
+#ifdef VERY_VERBOSE
         if (options%which_ho_efvs == 1) then
             write(*,*) "Using linear rheology"
         else
             write(*,*) "Using full stress calculation"
         end if
+#endif
 
         !Create the sparse matrix
         call new_sparse_matrix(ijktot, ijktot*STENCIL_SIZE, matrix)
         call sparse_allocate_workspace(matrix, matrix_options, matrix_workspace, ijktot*STENCIL_SIZE)
 
-#if 0
+        write(*,*)"arrh", minval(arrh), maxval(arrh)
+        call write_xls("h.txt",h)
         call write_xls_3d("arrh.txt",arrh)
+
+#if 0
         call write_xls("dzdx.txt",dzdx)
         call write_xls("dzdy.txt",dzdy)
         call write_xls_3d("ax.txt",ax)
@@ -411,7 +416,6 @@ contains
         call write_xls_3d("bx.txt",bx)
         call write_xls_3d("by.txt",by)
         call write_xls_3d("cxy.txt",cxy)
-        call write_xls("h.txt",h)
         call write_xls_3d("uvel_sia.txt",uvel)
         call write_xls_3d("vvel_sia.txt",vvel)
         call write_xls("beta.txt",beta)
@@ -546,6 +550,10 @@ contains
             !Check whether we have reached convergance
             if (.not. cont) exit nonlinear_iteration
      end do nonlinear_iteration
+
+     if ( l >= maxiter) then
+        call write_log("Maximum iterations exceeded in Pattyn velocity solve", GM_FATAL)
+     end if
 
 #ifdef OUTPUT_PARTIAL_ITERATIONS
       call end_debug_iteration(ncid_debug)
@@ -2103,6 +2111,7 @@ subroutine iteration_debug_step(ncid, iter, mu, uvel, vvel, geometry_mask)
         do j = 1,ny
             do k = 1,nz
                 start=(/i,j,k,iter+1/)
+#if 0
        err = nf90_inq_varid(ncid, "mu", varid)
        call nc_errorhandle(__FILE__, __LINE__, err)
        
@@ -2119,28 +2128,31 @@ subroutine iteration_debug_step(ncid, iter, mu, uvel, vvel, geometry_mask)
        
        err = nf90_put_var(ncid, varid, vvel(k,i,j), start)
        call nc_errorhandle(__FILE__, __LINE__, err)
- 
+#endif
        err = nf90_inq_varid(ncid, "velnorm", varid)
        call nc_errorhandle(__FILE__, __LINE__, err)
        
        err = nf90_put_var(ncid, varid, sqrt(uvel(k,i,j)**2 + vvel(k,i,j)**2), start)
        call nc_errorhandle(__FILE__, __LINE__, err)
 
- 
+#if 0 
        err = nf90_inq_varid(ncid, "mask", varid)
        call nc_errorhandle(__FILE__, __LINE__, err)
        
        err = nf90_put_var(ncid, varid, geometry_mask(i,j), (/i,j,iter+1/))
        call nc_errorhandle(__FILE__, __LINE__, err)
-            end do
+#endif
+        end do
         end do
     end do
    
     !Close and open the dataset so that changes get written to it
-    call end_debug_iteration(ncid)
+    if (mod(iter+1, 10) == 0) then
+        call end_debug_iteration(ncid)
 
-    err = nf90_open("iterdebug.nc", ior(NF90_WRITE,NF90_SHARE), ncid)
-    call nc_errorhandle(__FILE__, __LINE__, err)
+        err = nf90_open("iterdebug.nc", ior(NF90_WRITE,NF90_SHARE), ncid)
+        call nc_errorhandle(__FILE__, __LINE__, err)
+    end if
 
 end subroutine
 
@@ -2159,7 +2171,7 @@ subroutine iterdebug_vel_derivs(ncid, iter, dudx, dudy, dvdx, dvdy)
     nx = size(dudx, 2)
     ny = size(dudx, 3)
     nz = size(dudx, 1)
-
+#if 0
     count = (/1,1,1,1/)
     do i = 1,nx
         do j = 1,ny
@@ -2193,7 +2205,7 @@ subroutine iterdebug_vel_derivs(ncid, iter, dudx, dudy, dvdx, dvdy)
             end do
         end do
     end do
-    
+#endif
 
 
 end subroutine
