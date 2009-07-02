@@ -84,7 +84,8 @@ module glam
                                   dewu_ir,                 dnsu_ir,                      &
                                   hm_ir,                   tarea_ir,                     &
                                   ubar_ir,                 vbar_ir,                      &
-                                  trace_ir,                dt_ir )
+                                  trace_ir,                dt_ir,                         &
+                                  model%options%periodic_ew,             model%options%periodic_ns)
 
         ! *sfp** call remapping code
 
@@ -96,13 +97,14 @@ module glam
                                   dew_ir,              dns_ir,            &
                                   dewt_ir,             dnst_ir,           &
                                   dewu_ir,             dnsu_ir,           &
-                                  hm_ir,               tarea_ir )
+                                  hm_ir,               tarea_ir)
 
 
         ! *sfp** put variables back into format to be used by glam
 
          call horizontal_remap_out (thck_ir,            mask_ir, model%geometry%thck,    &
-                                    model%climate%acab, model%numerics%dt )
+                                    model%climate%acab, model%numerics%dt, &
+                                    model%options%periodic_ew, model%options%periodic_ns)
 
 !       These to be moved elsewhere ... somewhere in "glide_stop.F90"?
 !
