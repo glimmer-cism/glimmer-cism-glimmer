@@ -761,8 +761,9 @@ module glide_types
     real(dp),dimension(:,:),  pointer :: smth     => null()
     real(dp),dimension(:,:,:),pointer :: hadv_u   => null()
     real(dp),dimension(:,:,:),pointer :: hadv_v   => null()
-    real(dp),dimension(4)             :: cons     = 0.0
-    real(dp),dimension(4)             :: f        = 0.0
+    !*sfp* added space to the next 2 (cons, f) for use w/ HO and SSA dissip. calc. 
+    real(dp),dimension(5)             :: cons     = 0.0
+    real(dp),dimension(5)             :: f        = 0.0     
     real(dp),dimension(8)             :: c        = 0.0
     real(dp),dimension(2)             :: slide_f
     real(dp) :: noflow      = -1

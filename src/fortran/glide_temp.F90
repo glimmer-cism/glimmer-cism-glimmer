@@ -1,9 +1,9 @@
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! +                                                           +
-! +  glimmer_temp.f90 - part of the GLIMMER ice model         + 
+! +  glimmer_temp.f90 - part of the GLIMMER ice model         +
 ! +                                                           +
-! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-! 
+! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
+!
 ! Copyright (C) 2004 GLIMMER contributors - see COPYRIGHT file 
 ! for list of contributors.
 !
@@ -85,7 +85,7 @@ contains
   subroutine init_temp(model)
     !*FD initialise temperature module
     use glimmer_physcon, only : rhoi, shci, coni, scyr, grav, gn, lhci, rhow
-    use glimmer_paramets, only : tim0, thk0, acc0, len0, vis0, vel0
+    use glimmer_paramets, only : tim0, thk0, acc0, len0, vis0, vel0, tau0_glam
     use glimmer_global, only : dp 
     use glimmer_log
     implicit none
@@ -143,7 +143,9 @@ contains
     model%tempwk%cons = (/ 2.0d0 * tim0 * model%numerics%dttem * coni / (2.0d0 * rhoi * shci * thk0**2), &
          model%numerics%dttem / 2.0d0, &
          VERT_DIFF*2.0d0 * tim0 * model%numerics%dttem / (thk0 * rhoi * shci), &
-         VERT_ADV*tim0 * acc0 * model%numerics%dttem / coni /)
+         VERT_ADV*tim0 * acc0 * model%numerics%dttem / coni, &
+         ( tau0_glam * vel0 / len0 ) / ( rhoi * shci ) * ( model%numerics%dttem * tim0 ) /)  
+         !*sfp* added last term to vector above for use in HO & SSA dissip. cacl
 
     model%tempwk%c1 = STRAIN_HEAT *(model%numerics%sigma * rhoi * grav * thk0**2 / len0)**p1 * &
          2.0d0 * vis0 * model%numerics%dttem * tim0 / (16.0d0 * rhoi * shci)
@@ -166,7 +168,9 @@ contains
     model%tempwk%f = (/ tim0 * coni / (thk0**2 * lhci * rhoi), &
          tim0 / (thk0 * lhci * rhoi), &
          tim0 * thk0 * rhoi * shci /  (thk0 * tim0 * model%numerics%dttem * lhci * rhoi), &
-         tim0 * thk0**2 * vel0 * grav * rhoi / (4.0d0 * thk0 * len0 * rhoi * lhci) /)
+         tim0 * thk0**2 * vel0 * grav * rhoi / (4.0d0 * thk0 * len0 * rhoi * lhci), &
+         tim0 * vel0 * tau0_glam / (4.0d0 * thk0 * rhoi * lhci) /)      
+         !*sfp* added the last term in the vect above for HO and SSA dissip. calc. 
 
     ! setting up some factors for sliding contrib to basal heat flux
     model%tempwk%slide_f = (/ VERT_DIFF * grav * thk0 * model%numerics%dttem/ shci, & ! vert diffusion
@@ -792,15 +796,25 @@ contains
     real(dp), dimension(:,:,:), intent(in) :: flwa
 
     integer, parameter :: p1 = gn + 1  
-    integer :: ew,ns
+    integer :: ew, ns
+!    integer :: iew, ins    !*sfp* for HO and SSA dissip. calc.
 
-    real(dp) :: c2
+    real(dp) :: c2 
+
+    !*sfp* The next 2 declarations needed for HO and SSA dissip. calc. ... only needed 
+    ! for internal work, so not clear if it is necessary to declare/allocate them elsewhere 
+!    real(dp) :: c4                         
+!    real (kind = dp), dimension(upn) :: c5     
+
+!    select case( whichdisp ) 
+
+!    case(0)
+    !*sfp* 0-order SIA case only 
 
     ! two methods of doing this. 
     ! 1. find dissipation at u-pts and then average
     ! 2. find dissipation at H-pts by averaging quantities from u-pts
     ! 2. works best for eismint divide (symmetry) but 1 likely to be better for full expts
-
 
     model%tempwk%dissip = 0.0d0
     
@@ -818,6 +832,67 @@ contains
           end if
        end do
     end do
+
+!   case(1)
+    !*sfp* 1st-order, depth-integrated  SIA case only (SSA model) 
+    ! NOTE: this needs tau and efvs (3d arrays), which are the eff. stress and the eff. visc. calculated
+    ! from and/or consistent with the HO model. For simplicity, tau can be calculated from: tau = 2*efvs*eps_eff,
+    ! where eps_eff is the eff. strain rate. Further, eps_eff can be calculated from the efvs according to a 
+    ! re-arrangement of: efvs = 1/2 * ( 1 / A(T) )^(1/n) * eps_eff^((1-n)/n), in which case only the efvs and rate
+    ! factor arrays need to be passed in for this calculation.
+!    model%tempwk%dissip = 0.0d0
+!    do ns = 2, model%general%nsn-1
+!       do ew = 2, model%general%ewn-1
+!          if (thck(ew,ns) > model%numerics%thklim) then
+!            c5 = 0.0d0
+!            do ins = ns-1,ns; do iew = ew-1,ew
+!                if ( sum( efvs(:,iew,ins) ) .ne. 0.0d0) then
+!                ! (1) use space in c5 vector to store dissip terms that actually apply at midpoints of vert coord vector 
+!                ! (i.e. on staggered vertical grid) ...
+!                    c5(2:model%general%upn) = c5(2:model%general%upn) + tau(:,iew,ins)**2 / efvs(:,iew,ins)
+!                ! (2) average these to points that correspond to vert grid spaces up(2:upn-1) ...  
+!                    c5(2:model%general%upn-1) = ( c5(3:model%general%upn) + c5(2:model%general%upn-1) ) / 2.0d0
+!
+!                !! (3) extrapolate values at up=1 and up=upn by assuming linear gradient and const grid spacing
+!                !    c5(1) = c5(2) + ( c5(2) - c5(3) )   
+!                !    c5(upn) = c5(upn-1) + ( c5(upn-1) - c5(upn-2) )
+!
+!                ! (3) extrapolate values at up=1 and up=upn by using second-order, one-sided diffs. to approx. gradient
+!                    c5(1) = c5(2) - ( -3.0d0*c5(2) + 4.0d0*c5(3) - c5(4) ) / 2.0d0
+!                    c5(model%general%upn) = c5(model%general%upn-1) + ( 3.0d0*c5(model%general%upn-1) - &
+!                                            4.0d0*c5(model%general%upn-2) + c5(model%general%upn-3) ) / 2.0d0
+!
+!                    if ( c5(1) .lt. 0.0d0 ) then; c5(1) = 0.0d0; end if      ! gaurd against extrapolated dissip. term < 0 
+!
+!                end if
+!            end do; end do
+!            model%tempwk%dissip(:,ew,ns) = c5 * model%tempwk%cons(5)
+!          end if
+!       end do
+!    end do
+
+!   case(2)
+    !*sfp* 1st-order, NON-depth integrated SIA case only (Pattyn, Payne-Price models) 
+    ! NOTE: this needs taus and efvss (2d arrays), which are depth-integrated and averaged 
+    ! effective stress and effective viscosity fields calculated from and/or consistent
+    ! with the SSA model.
+!
+!    model%tempwk%dissip = 0.0d0
+!    do ns = 2, model%general%nsn-1
+!       do ew = 2, model%general%ewn-1
+!          if (thck(ew,ns) > model%numerics%thklim) then
+!            c4 = 0.0d0
+!            do ins = ns-1,ns; do iew = ew-1,ew; 
+!                if (efvss(iew,ins) .ne. 0.0d0) then                     
+!                    c4 = c4 + taus(iew,ins)**2 / efvss(iew,ins)
+!                end if; 
+!            end do; end do
+!            model%tempwk%dissip(:,ew,ns) = c4 * model%tempwk%cons(5)
+!          end if
+!       end do
+!    end do
+
+!    end select
 
   end subroutine finddisp
 
@@ -838,8 +913,8 @@ contains
     real(dp), dimension(size(model%numerics%sigma)) :: pmptemp
     real(dp) :: slterm, newmlt
 
+ 
     integer :: ewp, nsp,up,ew,ns
-
 
     do ns = 2, model%general%nsn-1
        do ew = 2, model%general%ewn-1
@@ -851,6 +926,10 @@ contains
 
                 slterm = 0.0d0
 
+!                case select( whichstrs )    !*sfp* added for calculating differently based on model physics
+
+!                case( 0 )                   ! 0-order SIA approx. --> Tau_d = Tau_b                                     
+
                 do nsp = ns-1,ns
                    do ewp = ew-1,ew
                       slterm = slterm - stagthck(ewp,nsp) * &
@@ -858,8 +937,47 @@ contains
                    end do
                 end do
 
+                !*sfp* NOTE that multiplication by this term has been moved up from below
+                slterm = model%tempwk%f(4) * slterm 
+
+
+!                case( 1 )                   ! 1st-order SIA approx. (HO model)
+!                                            ! NOTE: need to pass 2d basal shear stress arrays from HO model 
+!                do nsp = ns-1,ns 
+!                    do ewp = ew-1,ew
+!                        slterm = slterm - &
+!                            ( tauxz(upn,ewp,nsp) * ubas(ewp,nsp) + tauyz(upn,ewp,nsp) * vbas(ewp,nsp))
+!                    end do
+!                end do
+!
+!                slterm = model%tempwk%f(5) * slterm
+
+!                case( 2 )                   ! 1st-order, depth-integrated approx. (SSA) 
+!                                            ! NOTE: need to pass 2d basal shear stress arrays from SSA model
+!                do nsp = ns-1,ns 
+!                    do ewp = ew-1,ew
+!                        slterm = slterm - &
+!                            ( taubxs(upn,ewp,nsp) * ubas(ewp,nsp) + taubys(upn,ewp,nsp) * vbas(ewp,nsp))
+!                    end do
+!                end do
+!
+!                slterm = model%tempwk%f(5) * slterm
+!
+!                end select
+
+
                 bmlt(ew,ns) = 0.0d0
-                newmlt = model%tempwk%f(4) * slterm - model%tempwk%f(2)*model%temper%bheatflx(ew,ns) + model%tempwk%f(3) * &
+
+                !*sfp* changed this so that 'slterm' is multiplied by f(4) const. above ONLY for the 0-order SIA case,
+                ! since for the HO and SSA cases a diff. const. needs to be used
+
+                ! OLD version
+!                newmlt = model%tempwk%f(4) * slterm - model%tempwk%f(2)*model%temper%bheatflx(ew,ns) + model%tempwk%f(3) * &
+!                     model%tempwk%dupc(model%general%upn) * &
+!                     thck(ew,ns) * model%tempwk%dissip(model%general%upn,ew,ns)
+
+                ! NEW version
+                newmlt = slterm - model%tempwk%f(2)*model%temper%bheatflx(ew,ns) + model%tempwk%f(3) * &
                      model%tempwk%dupc(model%general%upn) * &
                      thck(ew,ns) * model%tempwk%dissip(model%general%upn,ew,ns)
 
