@@ -195,7 +195,17 @@ contains
                 m(maxx-layer+1, :) = m(layer+1, :)
                 m(layer, :)        = m(maxx-layer, :)
             end if
+        
         end do
+        
+        !If both directions are periodic, treat the corners specially.
+        if(apply_to_x .and. apply_to_y) then
+            m(1:nlayers, 1:nlayers) = m(maxx-nlayers*2:maxx-nlayers-1, maxy-nlayers*2:maxy-nlayers-1)
+            m(nlayers+1:2*nlayers, nlayers+1:2*nlayers) = m(maxx-nlayers+1:maxx, maxy-nlayers+1:maxy)
+            
+            m(1:nlayers, maxy-nlayers+1:maxy) = m(maxx-nlayers*2:maxx-nlayers-1, nlayers+1:2*nlayers)
+            m(nlayers+1:2*nlayers, maxy-nlayers*2:maxy-nlayers-1) = m(maxx-nlayers+1:maxx, 1:nlayers)
+        end if
     end subroutine periodic_boundaries
     
     subroutine periodic_boundaries_3d(m, apply_to_x, apply_to_y, nlayers_arg)
@@ -228,6 +238,15 @@ contains
                 m(:, layer, :)        = m(:, maxx-layer, :)
             end if
         end do
+        
+        !If both directions are periodic, treat the corners specially.
+        if(apply_to_x .and. apply_to_y) then
+            m(:, 1:nlayers, 1:nlayers)  = m(:, maxx-nlayers*2:maxx-nlayers-1, maxy-nlayers*2:maxy-nlayers-1)
+            m(:, nlayers+1:2*nlayers, nlayers+1:2*nlayers) = m(:, maxx-nlayers+1:maxx, maxy-nlayers+1:maxy)
+            
+            m(:, 1:nlayers, maxy-nlayers+1:maxy) = m(:, maxx-nlayers*2:maxx-nlayers-1, nlayers+1:2*nlayers)
+            m(:, nlayers+1:2*nlayers, maxy-nlayers*2:maxy-nlayers-1) = m(:, maxx-nlayers+1:maxx, 1:nlayers)
+        end if
     end subroutine periodic_boundaries_3d
  
 end module glide_grids
