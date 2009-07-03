@@ -696,7 +696,7 @@ contains
     case('new')
       temp = params%surftemp_clim(:,:,params%cur_tstep)
       precip = params%precip_clim(:,:,params%cur_tstep)
-      write(*,*), params%cur_tstep
+      write(*,*) params%cur_tstep
       params%cur_tstep = params%cur_tstep + 1
   
     end select
