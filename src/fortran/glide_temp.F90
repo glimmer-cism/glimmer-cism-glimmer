@@ -107,7 +107,8 @@ contains
 
     allocate(model%tempwk%inittemp(model%general%upn,model%general%ewn,model%general%nsn))
     allocate(model%tempwk%dissip(model%general%upn,model%general%ewn,model%general%nsn))
-
+    allocate(model%tempwk%compheat(model%general%upn,model%general%ewn,model%general%nsn))
+    model%tempwk%compheat = 0.0d0
     allocate(model%tempwk%dups(model%general%upn,3))
 
     allocate(model%tempwk%c1(model%general%upn))
@@ -832,7 +833,9 @@ contains
           end if
        end do
     end do
-
+    !the compensatory heating(compheat) is initialized to zero and allows
+    !for modifying the calculated dissip.  This is needed for exact verification tests,
+    model%tempwk%dissip = model%tempwk%dissip + model%tempwk%compheat 
 !   case(1)
     !*sfp* 1st-order, depth-integrated  SIA case only (SSA model) 
     ! NOTE: this needs tau and efvs (3d arrays), which are the eff. stress and the eff. visc. calculated

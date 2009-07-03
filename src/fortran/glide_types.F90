@@ -746,6 +746,7 @@ module glide_types
   type glide_tempwk
     real(dp),dimension(:,:,:),pointer :: inittemp => null()
     real(dp),dimension(:,:,:),pointer :: dissip   => null()
+    real(dp),dimension(:,:,:),pointer :: compheat => null()
     real(dp),dimension(:,:,:),pointer :: initadvt => null()
     real(dp),dimension(:),    pointer :: dupa     => null()
     real(dp),dimension(:),    pointer :: dupb     => null()
