@@ -49,7 +49,7 @@ module remap_glamutils
 
       if (periodic_ew) then
         ewn_ir = ewn + 2
-      else
+     else
         ewn_ir = ewn + 4
       end if
 
@@ -60,18 +60,18 @@ module remap_glamutils
       end if
 
       ! allocate arrays/vars 
-      allocate( thck_ir(1:ewn_ir-1,1:nsn_ir-1,1) ); thck_ir = 0.0_dp
-      allocate( dew_ir(1:ewn_ir-1,1:nsn_ir-1,1) ); dew_ir = 0.0_dp
-      allocate( dns_ir(1:ewn_ir-1,1:nsn_ir-1,1) ); dns_ir = 0.0_dp
-      allocate( dewt_ir(1:ewn_ir-1,1:nsn_ir-1,1) ); dewt_ir = 0.0_dp
-      allocate( dnst_ir(1:ewn_ir-1,1:nsn_ir-1,1) ); dnst_ir = 0.0_dp
-      allocate( dewu_ir(1:ewn_ir-1,1:nsn_ir-1,1) ); dewu_ir = 0.0_dp
-      allocate( dnsu_ir(1:ewn_ir-1,1:nsn_ir-1,1) ); dnsu_ir = 0.0_dp
-      allocate( hm_ir(1:ewn_ir-1,1:nsn_ir-1,1) ); hm_ir = 0.0_dp
-      allocate( tarea_ir(1:ewn_ir-1,1:nsn_ir-1,1) ); tarea_ir = 0.0_dp
-      allocate( ubar_ir(1:ewn_ir-1,1:nsn_ir-1,1) ); ubar_ir = 0.0_dp
-      allocate( vbar_ir(1:ewn_ir-1,1:nsn_ir-1,1) ); vbar_ir = 0.0_dp
-      allocate( trace_ir(1:ewn_ir-1,1:nsn_ir-1,ntrace,1) ); trace_ir = 0.0_dp
+      allocate( thck_ir(1:ewn_ir,1:nsn_ir,1) ); thck_ir = 0.0_dp
+      allocate( dew_ir(1:ewn_ir,1:nsn_ir,1) ); dew_ir = 0.0_dp
+      allocate( dns_ir(1:ewn_ir,1:nsn_ir,1) ); dns_ir = 0.0_dp
+      allocate( dewt_ir(1:ewn_ir,1:nsn_ir,1) ); dewt_ir = 0.0_dp
+      allocate( dnst_ir(1:ewn_ir,1:nsn_ir,1) ); dnst_ir = 0.0_dp
+      allocate( dewu_ir(1:ewn_ir,1:nsn_ir,1) ); dewu_ir = 0.0_dp
+      allocate( dnsu_ir(1:ewn_ir,1:nsn_ir,1) ); dnsu_ir = 0.0_dp
+      allocate( hm_ir(1:ewn_ir,1:nsn_ir,1) ); hm_ir = 0.0_dp
+      allocate( tarea_ir(1:ewn_ir,1:nsn_ir,1) ); tarea_ir = 0.0_dp
+      allocate( ubar_ir(1:ewn_ir,1:nsn_ir,1) ); ubar_ir = 0.0_dp
+      allocate( vbar_ir(1:ewn_ir,1:nsn_ir,1) ); vbar_ir = 0.0_dp
+      allocate( trace_ir(1:ewn_ir,1:nsn_ir,ntrace,1) ); trace_ir = 0.0_dp
       allocate( mask_ir(1:ewn_ir,1:nsn_ir) ); mask_ir = 0.0_dp
 
     end subroutine horizontal_remap_init
@@ -80,7 +80,7 @@ module remap_glamutils
 
     subroutine horizontal_remap_final( )
 
-    ! *sfp** deallocate variables for use in inc. remapping code   
+      ! *sfp** deallocate variables for use in inc. remapping code   
 
       implicit none
 
@@ -157,7 +157,7 @@ module remap_glamutils
 
     ngew = (ewn_ir - ewn)/2
     ngns = (nsn_ir - nsn)/2
-
+    
     thck_ir(1+ngew:ngew+ewn,1+ngns:ngns+nsn,1) = thck(:,:)*thk0
     dew_ir(:,:,1)  = dew*len0; dns_ir(:,:,1) = dns*len0
     dewt_ir(:,:,1) = dew*len0; dnst_ir(:,:,1) = dns*len0
@@ -168,20 +168,40 @@ module remap_glamutils
     call write_xls("uflx.txt", uflx)
     call write_xls("vflx.txt", vflx)
 
+    !Copy fluxes over
+    !*tjb** - Some rejiggering is needed here, because, while IR and Glide both place
+    !velocities on a B-grid, the IR B-grid is the same size as the A-grid
+    !(that is, there is an extra row of cells on the extreme right and bottom
+    !of the domain).
+    !If periodic BCs are used, then the fluxes already have a row of ghost cells
+    !on the left and right.  This means that, like thickness, a second row
+    !is needed on the left.  However, unlike thickness, *two* extra rows are needed
+    !on the right, to account for the extra B-grid row.  Same goes for top and bottom.
     where( stagthck > 0.0_dp )
-        ubar_ir(1+ngew:ngew+ewn,1+ngns:ngns+nsn,1) = uflx/stagthck*vel0;
-        vbar_ir(1+ngew:ngew+ewn,1+ngns:ngns+nsn,1) = vflx/stagthck*vel0;
+        ubar_ir(1+ngew:ngew+ewn-1,1+ngns:ngns+nsn-1,1) = uflx/stagthck*vel0;
+        vbar_ir(1+ngew:ngew+ewn-1,1+ngns:ngns+nsn-1,1) = vflx/stagthck*vel0;
     elsewhere
-        ubar_ir(1+ngew:ngew+ewn,1+ngns:ngns+nsn,1) = 0.0_dp
-        vbar_ir(1+ngew:ngew+ewn,1+ngns:ngns+nsn,1) = 0.0_dp
+        ubar_ir(1+ngew:ngew+ewn-1,1+ngns:ngns+nsn-1,1) = 0.0_dp
+        vbar_ir(1+ngew:ngew+ewn-1,1+ngns:ngns+nsn-1,1) = 0.0_dp
     endwhere
 
     call write_xls("ubar_ir.txt", ubar_ir(:,:,1))
     call write_xls("vbar_ir.txt", vbar_ir(:,:,1))
 
     call periodic_boundaries(thck_ir(:,:,1), periodic_ew, periodic_ns, 2)
-    call periodic_boundaries(ubar_ir(:,:,1), periodic_ew, periodic_ns, 2)
-    call periodic_boundaries(vbar_ir(:,:,1), periodic_ew, periodic_ns, 2)
+    call periodic_boundaries(ubar_ir(:ewn_ir-1,:nsn_ir-1,1), periodic_ew, periodic_ns, 2)
+    call periodic_boundaries(vbar_ir(:ewn_ir-1,:nsn_ir-1,1), periodic_ew, periodic_ns, 2)
+
+    !Copy the extra set of ghost cells over
+    !Hard coded 5 as the source for these ghost cells,
+    !because we go in two rows for the low-end ghost cells,
+    !then go in two more for the source of the first two
+    !high-end ghost cells.
+    ubar_ir(ewn_ir,:,:) = ubar_ir(5,:,:)
+    ubar_ir(:,nsn_ir,:) = ubar_ir(:,5,:)
+    vbar_ir(ewn_ir,:,:) = ubar_ir(5,:,:)
+    vbar_ir(:,nsn_ir,:) = ubar_ir(:,5,:)
+     
 
     call write_xls("ubar_ir_pbc.txt", ubar_ir(:,:,1))
     call write_xls("vbar_ir_pbc.txt", vbar_ir(:,:,1))    
@@ -219,12 +239,21 @@ module remap_glamutils
     ngew = (ewn_ir - ewn)/2
     ngns = (nsn_ir - nsn)/2
 
-    write(*,*)"HELLO" 
-    thck(:ewn-1,:nsn-1) = ( thck_ir(1+ngew:ngew+ewn-1,1+ngns:ngns+nsn-1,1) / thk0 + acab(:ewn-1, :nsn-1)*dt ) &
-          * mask_ir(1+ngew:ngew+ewn-1,1+ngns:ngns+nsn-1)
+    write(*,*)"HELLO", ngew, ngns
+
+    !Map from IR thickness field back to Glide thickness field
+    thck = thck_ir(1+ngew:ngew+ewn, 1+ngns:ngns+nsn,1) / thk0
+    
+    !Apply accumulation
+    thck = thck + acab
+    
+    !Remove thickness from previously masked out locations
+    thck = thck * mask_ir(1+ngew:ngew+ewn, 1+ngns:ngns+nsn)
+    
+
     call write_xls("thck_ir.txt", thck_ir(:,:,1))
     call write_xls("thck.txt", thck)
-    call periodic_boundaries(thck, periodic_ew, periodic_ns, 1)
+    !call periodic_boundaries(thck, periodic_ew, periodic_ns, 1)
     call write_xls("thck_pbc.txt", thck)
     end subroutine horizontal_remap_out
 
