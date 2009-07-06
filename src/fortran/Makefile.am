@@ -109,7 +109,8 @@ test_lithot_LDADD = libclimate.a libglide.a libglimmer.a SLAP_library/libslap.a
 test_integrate_SOURCES = test_integrate.F90 glimmer_global.F90 \
                          glimmer_physcon.F90 glimmer_integrate.F90
 
-glimmer_unittest_SOURCES = unittest.F90 unittest_glide_deriv.F90 unittest_ice3d_lib.F90
+glimmer_unittest_SOURCES = unittest_framework.F90 unittest.F90 unittest_glide_deriv.F90 \
+                           unittest_ice3d_lib.F90 unittest_pbc.F90
 glimmer_unittest_LDADD = libglide.a libglimmer.a SLAP_library/libslap.a
 
 glide_thermal_equib_SOURCES = thermal_equib.F90

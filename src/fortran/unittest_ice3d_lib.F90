@@ -6,7 +6,7 @@ contains
         integer :: i
 
         do i=1,25
-            write(*,*) i, stencil_i(i,0), stencil_j(i,0),stencil_k(i,0)
+            write(*,*) i, stencil_y(i,0), stencil_x(i,0),stencil_z(i,0)
         end do
     end subroutine
 end module unittest_ice3d_lib
