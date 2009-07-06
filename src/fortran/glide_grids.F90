@@ -197,10 +197,10 @@ contains
         
         !If both directions are periodic, treat the corners specially.
         if(apply_to_x .and. apply_to_y) then
-            m(1:nlayers, 1:nlayers) = m(maxx-nlayers*2+1:maxx-nlayers-1, maxy-nlayers*2+1:maxy-nlayers)
+            m(1:nlayers, 1:nlayers) = m(maxx-nlayers*2+1:maxx-nlayers, maxy-nlayers*2+1:maxy-nlayers)
             m(nlayers+1:2*nlayers, nlayers+1:2*nlayers) = m(maxx-nlayers+1:maxx, maxy-nlayers+1:maxy)
             
-            m(1:nlayers, maxy-nlayers+1:maxy) = m(maxx-nlayers*2+1:maxx-nlayers-1, nlayers+1:2*nlayers)
+            m(1:nlayers, maxy-nlayers+1:maxy) = m(maxx-nlayers*2+1:maxx-nlayers, nlayers+1:2*nlayers)
             m(nlayers+1:2*nlayers, maxy-nlayers*2+1:maxy-nlayers) = m(maxx-nlayers+1:maxx, 1:nlayers)
         end if
     end subroutine periodic_boundaries
@@ -213,7 +213,7 @@ contains
         integer, optional :: nlayers_arg
     
         integer :: i
-
+        
         do i = 1, size(m,1)
             call periodic_boundaries(m(i,:,:), apply_to_x, apply_to_y, nlayers_arg)
         end do
