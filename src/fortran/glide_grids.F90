@@ -214,7 +214,7 @@ contains
     
         integer :: i
 
-        do i = 1, size(m,1):
+        do i = 1, size(m,1)
             call periodic_boundaries(m(i,:,:), apply_to_x, apply_to_y, nlayers_arg)
         end do
     end subroutine periodic_boundaries_3d
