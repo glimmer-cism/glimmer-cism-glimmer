@@ -6,6 +6,7 @@ module remap_glamutils
 
     use glimmer_paramets, only: sp, dp, len0, thk0, tim0, vel0
     use glide_grids,      only: periodic_boundaries, periodic_boundaries_3d
+    use xls
 
     ! *sfp** arrays needed to pass GLAM variables to/from inc. remapping solver
     real (kind = dp), allocatable, dimension(:,:,:) ::   &
@@ -164,6 +165,9 @@ module remap_glamutils
     hm_ir(:,:,1) = 1.0_dp
     tarea_ir = 1.0_dp / ( dew_ir * dns_ir )
 
+    call write_xls("uflx.txt", uflx)
+    call write_xls("vflx.txt", vflx)
+
     where( stagthck > 0.0_dp )
         ubar_ir(1+ngew:ngew+ewn,1+ngns:ngns+nsn,1) = uflx/stagthck*vel0;
         vbar_ir(1+ngew:ngew+ewn,1+ngns:ngns+nsn,1) = vflx/stagthck*vel0;
@@ -172,10 +176,15 @@ module remap_glamutils
         vbar_ir(1+ngew:ngew+ewn,1+ngns:ngns+nsn,1) = 0.0_dp
     endwhere
 
+    call write_xls("ubar_ir.txt", ubar_ir(:,:,1))
+    call write_xls("vbar_ir.txt", vbar_ir(:,:,1))
+
     call periodic_boundaries(thck_ir(:,:,1), periodic_ew, periodic_ns, 2)
     call periodic_boundaries(ubar_ir(:,:,1), periodic_ew, periodic_ns, 2)
     call periodic_boundaries(vbar_ir(:,:,1), periodic_ew, periodic_ns, 2)
-    
+
+    call write_xls("ubar_ir_pbc.txt", ubar_ir(:,:,1))
+    call write_xls("vbar_ir_pbc.txt", vbar_ir(:,:,1))    
 
 !whl - to do - Fill the tracer array with ice temperature and other tracers
     trace_ir(:,:,:,1) = 1.0_dp;
@@ -190,7 +199,7 @@ module remap_glamutils
 !----------------------------------------------------------------------
 
     subroutine horizontal_remap_out( thck_ir, mask_ir, thck, acab, dt, periodic_ew, periodic_ns )
-
+    use xls
     ! *sfp** take output from inc. remapping and put back in GLAM format
 
     implicit none
@@ -210,12 +219,13 @@ module remap_glamutils
     ngew = (ewn_ir - ewn)/2
     ngns = (nsn_ir - nsn)/2
 
+    write(*,*)"HELLO" 
     thck(:ewn-1,:nsn-1) = ( thck_ir(1+ngew:ngew+ewn-1,1+ngns:ngns+nsn-1,1) / thk0 + acab(:ewn-1, :nsn-1)*dt ) &
           * mask_ir(1+ngew:ngew+ewn-1,1+ngns:ngns+nsn-1)
-
+    call write_xls("thck_ir.txt", thck_ir(:,:,1))
+    call write_xls("thck.txt", thck)
     call periodic_boundaries(thck, periodic_ew, periodic_ns, 1)
-    call periodic_boundaries(thck, periodic_ew, periodic_ns, 1)
-
+    call write_xls("thck_pbc.txt", thck)
     end subroutine horizontal_remap_out
 
 !----------------------------------------------------------------------

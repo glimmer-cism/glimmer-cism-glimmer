@@ -174,7 +174,6 @@ contains
         integer, optional :: nlayers_arg
 
         integer :: nlayers 
-        integer :: layer
 
         if (present(nlayers_arg)) then
             nlayers = nlayers_arg
@@ -185,26 +184,24 @@ contains
         maxx = size(m, 1)
         maxy = size(m, 2)
        
-        do layer = 1, nlayers
-            if(apply_to_y) then
-                m(:, maxy-layer+1) = m(:, layer+1)
-                m(:, layer)        = m(:, maxy-layer)
-            end if
+        if (apply_to_x) then
+            m( 1 : nlayers, : ) = m( maxx-nlayers*2 + 1 : maxx - nlayers, :)
+            m( maxx-nlayers+1 : maxx, : ) = m(nlayers + 1 : nlayers*2, : )
+        end if
 
-            if(apply_to_x) then
-                m(maxx-layer+1, :) = m(layer+1, :)
-                m(layer, :)        = m(maxx-layer, :)
-            end if
-        
-        end do
+        if (apply_to_y) then
+            m( :, 1 : nlayers ) = m( :, maxy-nlayers*2 + 1 : maxy - nlayers )
+            m( :, maxy-nlayers+1 : maxy ) = m( :, nlayers + 1 : nlayers*2 )
+        end if
+
         
         !If both directions are periodic, treat the corners specially.
         if(apply_to_x .and. apply_to_y) then
-            m(1:nlayers, 1:nlayers) = m(maxx-nlayers*2:maxx-nlayers-1, maxy-nlayers*2:maxy-nlayers-1)
+            m(1:nlayers, 1:nlayers) = m(maxx-nlayers*2+1:maxx-nlayers-1, maxy-nlayers*2+1:maxy-nlayers)
             m(nlayers+1:2*nlayers, nlayers+1:2*nlayers) = m(maxx-nlayers+1:maxx, maxy-nlayers+1:maxy)
             
-            m(1:nlayers, maxy-nlayers+1:maxy) = m(maxx-nlayers*2:maxx-nlayers-1, nlayers+1:2*nlayers)
-            m(nlayers+1:2*nlayers, maxy-nlayers*2:maxy-nlayers-1) = m(maxx-nlayers+1:maxx, 1:nlayers)
+            m(1:nlayers, maxy-nlayers+1:maxy) = m(maxx-nlayers*2+1:maxx-nlayers-1, nlayers+1:2*nlayers)
+            m(nlayers+1:2*nlayers, maxy-nlayers*2+1:maxy-nlayers) = m(maxx-nlayers+1:maxx, 1:nlayers)
         end if
     end subroutine periodic_boundaries
     
@@ -214,39 +211,12 @@ contains
         integer :: maxx, maxy
         logical :: apply_to_x, apply_to_y
         integer, optional :: nlayers_arg
+    
+        integer :: i
 
-        integer :: nlayers 
-        integer :: layer
-
-        if (present(nlayers_arg)) then
-            nlayers = nlayers_arg
-        else
-            nlayers = 1
-        end if
-
-        maxx = size(m, 2)
-        maxy = size(m, 3)
-       
-        do layer = 1, nlayers
-            if(apply_to_y) then
-                m(:, :, maxy-layer+1) = m(:, :, layer+1)
-                m(:, :, layer)        = m(:, :, maxy-layer)
-            end if
-
-            if(apply_to_x) then
-                m(:, maxx-layer+1, :) = m(:, layer+1, :)
-                m(:, layer, :)        = m(:, maxx-layer, :)
-            end if
+        do i = 1, size(m,1):
+            call periodic_boundaries(m(i,:,:), apply_to_x, apply_to_y, nlayers_arg)
         end do
-        
-        !If both directions are periodic, treat the corners specially.
-        if(apply_to_x .and. apply_to_y) then
-            m(:, 1:nlayers, 1:nlayers)  = m(:, maxx-nlayers*2:maxx-nlayers-1, maxy-nlayers*2:maxy-nlayers-1)
-            m(:, nlayers+1:2*nlayers, nlayers+1:2*nlayers) = m(:, maxx-nlayers+1:maxx, maxy-nlayers+1:maxy)
-            
-            m(:, 1:nlayers, maxy-nlayers+1:maxy) = m(:, maxx-nlayers*2:maxx-nlayers-1, nlayers+1:2*nlayers)
-            m(:, nlayers+1:2*nlayers, maxy-nlayers*2:maxy-nlayers-1) = m(:, maxx-nlayers+1:maxx, 1:nlayers)
-        end if
     end subroutine periodic_boundaries_3d
  
 end module glide_grids
