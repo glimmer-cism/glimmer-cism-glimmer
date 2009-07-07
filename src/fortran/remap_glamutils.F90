@@ -226,7 +226,7 @@ module remap_glamutils
 
     real (kind = dp), intent(in) :: dt
     real (kind = sp), intent(in), dimension(:,:) :: acab
-    real (kind = dp), dimension(:,:,:), intent(in) :: thck_ir
+    real (kind = dp), dimension(:,:,:), intent(inout) :: thck_ir
     real (kind = dp), dimension(:,:), intent(in) :: mask_ir
     real (kind = dp), dimension(:,:), intent(inout) :: thck
     logical, intent(in) :: periodic_ew, periodic_ns
@@ -239,7 +239,10 @@ module remap_glamutils
     ngew = (ewn_ir - ewn)/2
     ngns = (nsn_ir - nsn)/2
 
-    write(*,*)"HELLO", ngew, ngns
+    call write_xls("thck_ir.txt", thck_ir(:,:,1))
+    call periodic_boundaries(thck_ir(:,:,1), periodic_ew, periodic_ns, 2)
+    call write_xls("thck_ir_pbc.txt", thck_ir(:,:,1))
+
 
     !Map from IR thickness field back to Glide thickness field
     thck = thck_ir(1+ngew:ngew+ewn, 1+ngns:ngns+nsn,1) / thk0
@@ -251,10 +254,7 @@ module remap_glamutils
     thck = thck * mask_ir(1+ngew:ngew+ewn, 1+ngns:ngns+nsn)
     
 
-    call write_xls("thck_ir.txt", thck_ir(:,:,1))
     call write_xls("thck.txt", thck)
-    !call periodic_boundaries(thck, periodic_ew, periodic_ns, 1)
-    call write_xls("thck_pbc.txt", thck)
     end subroutine horizontal_remap_out
 
 !----------------------------------------------------------------------
