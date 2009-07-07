@@ -178,11 +178,11 @@ module remap_glamutils
     !is needed on the left.  However, unlike thickness, *two* extra rows are needed
     !on the right, to account for the extra B-grid row.  Same goes for top and bottom.
     where( stagthck > 0.0_dp )
-        ubar_ir(1+ngew:ngew+ewn-1,1+ngns:ngns+nsn-1,1) = uflx/stagthck*vel0;
-        vbar_ir(1+ngew:ngew+ewn-1,1+ngns:ngns+nsn-1,1) = vflx/stagthck*vel0;
+        ubar_ir(1+ngew:ngew+ewn,1+ngns:ngns+nsn,1) = uflx/stagthck*vel0;
+        vbar_ir(1+ngew:ngew+ewn,1+ngns:ngns+nsn,1) = vflx/stagthck*vel0;
     elsewhere
-        ubar_ir(1+ngew:ngew+ewn-1,1+ngns:ngns+nsn-1,1) = 0.0_dp
-        vbar_ir(1+ngew:ngew+ewn-1,1+ngns:ngns+nsn-1,1) = 0.0_dp
+        ubar_ir(1+ngew:ngew+ewn,1+ngns:ngns+nsn,1) = 0.0_dp
+        vbar_ir(1+ngew:ngew+ewn,1+ngns:ngns+nsn,1) = 0.0_dp
     endwhere
 
     call write_xls("ubar_ir.txt", ubar_ir(:,:,1))
@@ -211,7 +211,7 @@ module remap_glamutils
     dt_ir = dt * tim0
 
     where( thck_ir(:,:,1) > 0.0_dp )
-        mask_ir(:size(mask_ir,1)-1, :size(mask_ir,2)-1) = 1.0_dp
+        mask_ir  = 1.0_dp
     end where
 
     end subroutine horizontal_remap_in
