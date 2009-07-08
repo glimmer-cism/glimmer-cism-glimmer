@@ -408,7 +408,7 @@ contains
         call write_xls("h.txt",h)
         call write_xls_3d("arrh.txt",arrh)
 
-#if 0
+#if 1
         call write_xls("dzdx.txt",dzdx)
         call write_xls("dzdy.txt",dzdy)
         call write_xls_3d("ax.txt",ax)
@@ -522,15 +522,18 @@ contains
             close(ITER_UNIT)
 #endif
 
+            !Apply periodic boundary conditions to the computed velocity
+            call write_xls("ustar_beforebc.txt", ustar(1,:,:))
+            
+            call periodic_boundaries_3d(ustar,options%periodic_ew,options%periodic_ns)
+            call periodic_boundaries_3d(vstar,options%periodic_ew,options%periodic_ns)
+
+            call write_xls("ustar_afterbc.txt", ustar(1,:,:))
+
 #ifdef OUTPUT_PARTIAL_ITERATIONS
             call iteration_debug_step(ncid_debug, l, mu, ustar, vstar, geometry_mask)
             call iterdebug_vel_derivs(ncid_debug, l, dudx, dudy, dvdx, dvdy)
 #endif
-
-
-            !Apply periodic boundary conditions to the computed velocity
-            call periodic_boundaries_3d(ustar,options%periodic_ew,options%periodic_ns)
-            call periodic_boundaries_3d(vstar,options%periodic_ew,options%periodic_ns)
 
             !Apply unstable manifold correction.  This function returns
             !true if we need to keep iterating, false if we reached convergence
@@ -1938,97 +1941,6 @@ contains
       
       return
       END subroutine
-
-    !*FD Copies a staggered grid onto a nonstaggered grid.  This verion
-    !*FD assumes periodic boundary conditions.
-    subroutine unstagger_field_2d(f_stag, f, periodic_x, periodic_y)
-        real(dp), dimension(:,:), intent(in) :: f_stag
-        real(dp), dimension(:,:), intent(out) :: f
-        logical, intent(in) :: periodic_x, periodic_y
-
-        real(dp), dimension(4) :: pts
-
-        real(dp) :: s,n
-
-        integer :: i,j, k,i1, i2, j1, j2, ni, nj
-        
-        ni = size(f, 1)
-        nj = size(f, 2)
-
-        do i = 1, size(f, 1)
-            do j = 1, size(f, 2)
-                s = 0
-                n = 0
-                
-                i1 = i-1
-                i2 = i
-
-                if (i1 == 0) then
-                    if (periodic_y) then
-                        i1 = ni - 1
-                    else
-                        i1 = 1
-                    end if
-                end if
-    
-                if (i2 == ni) then
-                    if (periodic_y) then
-                        i2 = 1
-                    else
-                        i2 = ni - 1
-                    end if
-                end if
-    
-                j1 = j-1
-                j2 = j
-    
-                if (j1 == 0) then
-                    if (periodic_x) then
-                        j1 = nj - 1
-                    else
-                        j1 = 1
-                    end if
-                end if
-    
-                if (j2 == nj) then
-                    if (periodic_x) then
-                        j2 = 1
-                    else
-                        j2 = nj - 1
-                    end if
-                end if
-                
-                !Place the points into an array, loop over them, and average
-                !all the points that AREN'T NaN.
-                pts = (/f_stag(i1, j1), f_stag(i2, j1), f_stag(i1, j2), f_stag(i2, j2)/)
-            
-                do k=1,4
-                    if (.not. (IS_NAN(pts(k)))) then
-                        s = s + pts(k)
-                        n = n + 1
-                    end if
-                end do
-                if (n /= 0) then
-                    f(i,j) = s/n
-                else
-                    f(i,j) = NaN
-                end if
-            end do
-        end do
-    
-    end subroutine unstagger_field_2d
-
-    subroutine unstagger_field_3d(f, f_stag, periodic_x, periodic_y)
-        real(dp), dimension(:,:,:) :: f, f_stag
-        logical, intent(in) :: periodic_x, periodic_y
-
-        integer :: i
-
-        do i = 1,size(f,3)
-            call unstagger_field_2d(f(:,:,i), f_stag(:,:,i), periodic_x, periodic_y)
-        end do
-        
-    end subroutine unstagger_field_3d
 
 #ifdef OUTPUT_PARTIAL_ITERATIONS
 !------------------------------------------------------------------------------

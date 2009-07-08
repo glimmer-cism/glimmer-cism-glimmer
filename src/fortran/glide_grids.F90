@@ -4,8 +4,10 @@
 #include <config.inc>
 #endif
 
+#include <glide_nan.inc>
+
 module glide_grids
-    use glimmer_global, only : dp
+    use glimmer_global, only : dp, NaN
     implicit none
 
     integer, parameter :: STAGGER_CHOICE_STD = 0      !Simple linear interpolation onto staggered grid
@@ -165,6 +167,102 @@ contains
         call stagvarb(ipvr(k,:,:), opvr(k,:,:), ewn, nsn)
     end do
   end subroutine stagvarb_3d
+
+
+    !*FD Copies a staggered grid onto a nonstaggered grid.  This verion
+    !*FD assumes periodic boundary conditions.
+    subroutine unstagger_field_2d(f_stag, f, periodic_x, periodic_y)
+        real(dp), dimension(:,:), intent(in) :: f_stag
+        real(dp), dimension(:,:), intent(out) :: f
+        logical, intent(in) :: periodic_x, periodic_y
+
+        real(dp), dimension(4) :: pts
+
+        real(dp) :: s,n
+
+        integer :: i,j, k,i1, i2, j1, j2, ni, nj
+        
+        ni = size(f, 1)
+        nj = size(f, 2)
+
+        do i = 1, size(f, 1)
+            do j = 1, size(f, 2)
+                s = 0
+                n = 0
+                
+                i1 = i-1
+                i2 = i
+                
+                !If we're unstaggering with periodic boundaries, we cross over to the
+                !other side of the domain when we "de-average".  Otherwise, we just ignore
+                !the point that's off the domain.
+                if (i1 == 0) then
+                    if (periodic_y) then
+                        i1 = ni - 1
+                    else
+                        i1 = 1
+                    end if
+                end if
+    
+                if (i2 == ni) then
+                    if (periodic_y) then
+                        i2 = 1
+                    else
+                        i2 = ni - 1
+                    end if
+                end if
+    
+                j1 = j-1
+                j2 = j
+    
+                if (j1 == 0) then
+                    if (periodic_y) then
+                        j1 = nj - 1
+                    else
+                        j1 = 1
+                    end if
+                end if
+    
+                if (j2 == nj) then
+                    if (periodic_x) then
+                        j2 = 1
+                    else
+                        j2 = nj - 1
+                    end if
+                end if
+                
+                !Place the points into an array, loop over them, and average
+                !all the points that AREN'T NaN.
+                pts = (/f_stag(i1, j1), f_stag(i2, j1), f_stag(i1, j2), f_stag(i2, j2)/)
+            
+                do k=1,4
+                    if (.not. (IS_NAN(pts(k)))) then
+                        s = s + pts(k)
+                        n = n + 1
+                    end if
+                end do
+                if (n /= 0) then
+                    f(i,j) = s/n
+                else
+                    f(i,j) = NaN
+                end if
+            end do
+        end do
+    
+    end subroutine unstagger_field_2d
+
+    subroutine unstagger_field_3d(f, f_stag, periodic_x, periodic_y)
+        real(dp), dimension(:,:,:) :: f, f_stag
+        logical, intent(in) :: periodic_x, periodic_y
+
+        integer :: i
+
+        do i = 1,size(f,1)
+            call unstagger_field_2d(f(i,:,:), f_stag(i,:,:), periodic_x, periodic_y)
+        end do
+        
+    end subroutine unstagger_field_3d
+
 
     subroutine periodic_boundaries(m, apply_to_x, apply_to_y, nlayers_arg)
         !*FD Applies periodic boundary conditions to a 2D array
