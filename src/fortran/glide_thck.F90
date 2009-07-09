@@ -115,7 +115,7 @@ contains
     ! subroutine arguments
     type(glide_global_type) :: model
     logical, intent(in) :: newtemps                     !*FD true when we should recalculate Glen's A
-    
+
     if (model%geometry%empty) then
 
        model%geometry%thck = dmax1(0.0d0,model%geometry%thck + model%climate%acab * model%pcgdwk%fc2(2))
@@ -153,6 +153,11 @@ contains
             call run_ho_diagnostic(model)                          
        end if
 
+       if (model%options%diagnostic_run == 1) then
+          call glide_finalise_all(.true.)
+          stop
+       end if
+
        if (model%options%which_ho_prognostic == HO_PROG_SIAONLY) then
        ! get new thicknesses
             call thck_evolve(model,model%velocity%diffu, model%velocity%diffu, .true.,model%geometry%thck,model%geometry%thck)
@@ -174,11 +179,6 @@ contains
             model%geomderv%dusrfdns,model%temper%flwa,model%velocity%diffu,model%velocity%ubas, &
             model%velocity%vbas,model%velocity%uvel,model%velocity%vvel,model%velocity%uflx,model%velocity%vflx,&
             model%velocity%surfvel)
-       if (model%options%diagnostic_run == 1) then
-       call write_xls_3d("tau_xz.txt", model%velocity_hom%tau%xz)
-          call glide_finalise_all(.true.)
-          stop
-       end if
     end if
   end subroutine thck_lin_evolve
 
