@@ -258,7 +258,7 @@ contains
 
         !Second derivative of surface
                 !Arrays for rescaled coordinate parameters
-        real(dp), dimension(upn, ewn-1, ewn-1) :: ax, ay, bx, by, cxy
+        real(dp), dimension(upn, ewn-1, nsn-1) :: ax, ay, bx, by, cxy
         
         real(dp), dimension(ewn, nsn)::u,v
 
