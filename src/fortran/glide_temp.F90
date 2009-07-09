@@ -534,6 +534,7 @@ contains
                   model%temper%temp,     &
                   model%geometry%thck,   &
                   model%paramets%flow_factor, &
+                  model%paramets%default_flwa, &
                   model%options%whichflwa) 
 
     ! Output some information ----------------------------------------------------
@@ -1221,7 +1222,7 @@ contains
 
 !------------------------------------------------------------------------------------------
 
-  subroutine calcflwa(numerics,flwa,temp,thck,flow_factor,flag)
+  subroutine calcflwa(numerics,flwa,temp,thck,flow_factor,default_flwa_arg,flag)
 
     !*FD Calculates Glenn's $A$ over the three-dimensional domain,
     !*FD using one of three possible methods.
@@ -1241,6 +1242,7 @@ contains
     real(dp),dimension(:,0:,0:),intent(in)    :: temp      !*FD The 3D temperature field
     real(dp),dimension(:,:),    intent(in)    :: thck      !*FD The ice thickness
     real(dp)                                  :: flow_factor !*FD Fudge factor in arrhenius relationship
+    real(dp),                   intent(in)    :: default_flwa_arg !*FD Glen's A to use in isothermal case 
     integer,                    intent(in)    :: flag      !*FD Flag to select the method
                                                            !*FD of calculation:
     !*FD \begin{description}
@@ -1263,7 +1265,7 @@ contains
 
     !------------------------------------------------------------------------------------
     
-    default_flwa = flow_factor * 1.0d-16 / (vis0*scyr) 
+    default_flwa = flow_factor * default_flwa_arg / (vis0*scyr) 
 
     upn=size(flwa,1) ; ewn=size(flwa,2) ; nsn=size(flwa,3)
 
@@ -1319,10 +1321,6 @@ contains
 
       flwa = default_flwa
   
-    case(FLWA_CONST_EISMINT_ROSS)
-
-      flwa = 4.6e-18 / (vis0*scyr)
-
     end select
 
   end subroutine calcflwa 
