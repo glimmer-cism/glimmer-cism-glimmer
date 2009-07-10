@@ -62,8 +62,8 @@ module ice3d_lib
     !the beta^2 computation to "quiet down" before attempting another
     !viscosity iteration.  Set to a very high number to turn this feature off
     !entirely
-    real(dp) :: recompute_mu_toler = 1e10
-    real(dp) :: recompute_mu_adjust = 1
+    real(dp) :: recompute_efvs_toler = 1e10
+    real(dp) :: recompute_efvs_adjust = 1
 
     integer, parameter :: ITER_UNIT = 42
 !------------------------------------------------------
@@ -234,13 +234,13 @@ contains
 !   Velocity estimation according to 0th order model (SIA)
 !------------------------------------------------------
 !
-      SUBROUTINE veloc1(dzdx,dzdy,h,arrh,zeta,uvel,vvel,u,v,&
+      SUBROUTINE veloc1(dzdx,dzdy,h,flwa,zeta,uvel,vvel,u,v,&
         MAXX,MAXY,NZETA,FLOWN,PERIODIC_X,PERIODIC_Y)
 !
         INTEGER MAXX,MAXY,NZETA
         real(dp) :: dzdx(:,:)
         real(dp) :: dzdy(:,:),h(:,:),zeta(:)
-        real(dp) :: arrh(:,:,:),uvel(:,:,:)
+        real(dp) :: flwa(:,:,:),uvel(:,:,:)
         real(dp) :: vvel(:,:,:),u(:,:)
         real(dp) :: v(:,:),FLOWN
         logical :: PERIODIC_X, PERIODIC_Y
@@ -259,7 +259,7 @@ contains
           !Accumulated vertical integration using trapezoid rule??
           do 30 k=(NZETA-1),1,-1
             z = (0.5*(zeta(k+1)+zeta(k)))**FLOWN
-            diff1(k)=d*grad*h(i,j)*(arrh(k,i,j+1)+arrh(k,i,j))*z*&
+            diff1(k)=d*grad*h(i,j)*(flwa(k,i,j+1)+flwa(k,i,j))*z*&
               (zeta(k)-zeta(k+1))+diff1(k+1)
    30     CONTINUE
           diffus=0.
@@ -287,7 +287,7 @@ contains
 !   Velocity estimation according to higher order model
 !------------------------------------------------------
 !
-    SUBROUTINE veloc2(mu,uvel,vvel,arrh,dzdx,dzdy,h,ax,ay,&
+    SUBROUTINE veloc2(efvs,uvel,vvel,flwa,dzdx,dzdy,h,ax,ay,&
                 zeta,bx,by,cxy,beta,&
                 dhbdx,dhbdy,FLOWN,ZIP,VEL2ERR,&
                 TOLER, options, STAGGERED, delta_x, delta_y, &
@@ -297,10 +297,10 @@ contains
 
         INTEGER MAXY,MAXX,NZETA,MANIFOLD
 
-        real(dp), dimension(:,:,:), intent(inout) :: mu
+        real(dp), dimension(:,:,:), intent(inout) :: efvs
         real(dp), dimension(:,:,:), intent(inout) :: uvel
         real(dp), dimension(:,:,:), intent(inout) :: vvel
-        real(dp), dimension(:,:,:), intent(in) :: arrh
+        real(dp), dimension(:,:,:), intent(in) :: flwa
         real(dp), dimension(:,:), intent(in) :: dzdx
         real(dp), dimension(:,:), intent(in) :: dzdy
         real(dp), dimension(:,:), intent(in) :: h
@@ -340,18 +340,18 @@ contains
 
         PARAMETER (DU1=1,DU2=2,DV1=3,DV2=4)
 
-        real(dp), dimension(4,size(mu,1)*size(mu,2)*size(mu,3)) :: em
+        real(dp), dimension(4,size(efvs,1)*size(efvs,2)*size(efvs,3)) :: em
 
-        real(dp), dimension(2*size(mu,1)*size(mu,2)*size(mu,3)) :: correction_vec
+        real(dp), dimension(2*size(efvs,1)*size(efvs,2)*size(efvs,3)) :: correction_vec
         !Velocity estimates computed for the *current* iteration.  uvel and
         !vvel, comparitively, hold the velocity estimates for the *last*
         !iteration.
-        real(dp), dimension(size(mu,1),size(mu,2),size(mu,3)) :: ustar, vstar
-        real(dp), dimension(size(mu,2),size(mu,3)) :: tau !Basal traction, to be computed from the provided beta parameter
+        real(dp), dimension(size(efvs,1),size(efvs,2),size(efvs,3)) :: ustar, vstar
+        real(dp), dimension(size(efvs,2),size(efvs,3)) :: tau !Basal traction, to be computed from the provided beta parameter
        
-        real(dp), dimension(size(mu,1),size(mu,2),size(mu,3)) :: dudx, dudy, dudz
-        real(dp), dimension(size(mu,1),size(mu,2),size(mu,3)) :: dvdx, dvdy, dvdz
-        real(dp), dimension(size(mu,2),size(mu,3)) :: direction_x, direction_y
+        real(dp), dimension(size(efvs,1),size(efvs,2),size(efvs,3)) :: dudx, dudy, dudz
+        real(dp), dimension(size(efvs,1),size(efvs,2),size(efvs,3)) :: dvdx, dvdy, dvdz
+        real(dp), dimension(size(efvs,2),size(efvs,3)) :: direction_x, direction_y
 
         logical :: cont
 
@@ -371,13 +371,13 @@ contains
 
         call cpu_time(solve_start_time)
 
-        allocate(pointtype(size(mu, 2), size(mu, 3)))
+        allocate(pointtype(size(efvs, 2), size(efvs, 3)))
 
-        !Get the sizes from the mu field.  Calling code must make sure that
+        !Get the sizes from the efvs field.  Calling code must make sure that
         !these all agree.
-        maxx = size(mu,2)
-        maxy = size(mu,3)
-        nzeta = size(mu,1)
+        maxx = size(efvs,2)
+        maxy = size(efvs,3)
+        nzeta = size(efvs,1)
         ijktot = active_points*nzeta
 
         maxiter=NUMBER_OF_ITERATIONS
@@ -404,9 +404,9 @@ contains
         call new_sparse_matrix(ijktot, ijktot*STENCIL_SIZE, matrix)
         call sparse_allocate_workspace(matrix, matrix_options, matrix_workspace, ijktot*STENCIL_SIZE)
 
-        write(*,*)"arrh", minval(arrh), maxval(arrh)
+        write(*,*)"flwa", minval(flwa), maxval(flwa)
         call write_xls("h.txt",h)
-        call write_xls_3d("arrh.txt",arrh)
+        call write_xls_3d("flwa.txt",flwa)
 
 #if 1
         call write_xls("dzdx.txt",dzdx)
@@ -444,7 +444,7 @@ contains
 
 #ifdef OUTPUT_PARTIAL_ITERATIONS        
         ncid_debug = begin_iteration_debug(maxx, maxy, nzeta)
-        call iteration_debug_step(ncid_debug, 0, mu, uvel, vvel, geometry_mask)
+        call iteration_debug_step(ncid_debug, 0, efvs, uvel, vvel, geometry_mask)
 #endif
         nonlinear_iteration: do l=1,maxiter !Loop until we have reached the number of iterations allowed
             call cpu_time(iter_start_time)
@@ -488,20 +488,20 @@ contains
 #endif
             !Compute viscosity
             if (options%which_ho_efvs == HO_EFVS_FULL) then
-                if (tot < recompute_mu_toler) then
-                    call muterm(mu,arrh,h,ax,ay,FLOWN,ZIP,dudx, dudy, dudz, dvdx, dvdy, dvdz)
-                    recompute_mu_toler = recompute_mu_toler / recompute_mu_adjust
-                    recompute_mu_toler = max(recompute_mu_toler, error*2)
+                if (tot < recompute_efvs_toler) then
+                    call calcefvs(efvs,flwa,h,ax,ay,FLOWN,ZIP,dudx, dudy, dudz, dvdx, dvdy, dvdz)
+                    recompute_efvs_toler = recompute_efvs_toler / recompute_efvs_adjust
+                    recompute_efvs_toler = max(recompute_efvs_toler, error*2)
                 end if
             else if (options%which_ho_efvs == HO_EFVS_CONSTANT) then
-                mu = 1d6
+                efvs = 1d6
             end if
 
-            call write_xls_3d("mu.txt",mu)
+            call write_xls_3d("efvs.txt",efvs)
             !Apply periodic boundary conditions to the viscosity
-            call periodic_boundaries_3d(mu,options%periodic_ew,options%periodic_ns)
+            call periodic_boundaries_3d(efvs,options%periodic_ew,options%periodic_ns)
 
-            !call write_xls_3d("mu.txt",mu)
+            !call write_xls_3d("efvs.txt",efvs)
             
             !Sparse matrix routine for determining velocities.  The new
             !velocities will get spit into ustar and vstar, while uvel and vvel
@@ -510,7 +510,7 @@ contains
 #ifdef OUTPUT_SPARSE_MATRIX
             call open_sparse_output(l, ITER_UNIT)
 #endif
-            iter=sparuv(mu,dzdx,dzdy,ax,ay,bx,by,cxy,h,&
+            iter=sparuv(efvs,dzdx,dzdy,ax,ay,bx,by,cxy,h,&
                 uvel,vvel,dudx,dudy,dudz,dvdx,dvdy,dvdz,&
                 ustar,vstar,tau,dhbdx,dhbdy,ijktot,MAXY,&
                 MAXX,NZETA,TOLER, options, delta_x, delta_y, zeta, point_mask, &
@@ -531,7 +531,7 @@ contains
             call write_xls("ustar_afterbc.txt", ustar(1,:,:))
 
 #ifdef OUTPUT_PARTIAL_ITERATIONS
-            call iteration_debug_step(ncid_debug, l, mu, ustar, vstar, geometry_mask)
+            call iteration_debug_step(ncid_debug, l, efvs, ustar, vstar, geometry_mask)
             call iterdebug_vel_derivs(ncid_debug, l, dudx, dudy, dvdx, dvdy)
 #endif
 
@@ -776,12 +776,12 @@ contains
 !   nonlinear viscosity term
 !------------------------------------------------------
 !
-      subroutine muterm(mu, arrh, h, ax, ay, FLOWN, ZIP, &
+      subroutine calcefvs(efvs, flwa, h, ax, ay, FLOWN, ZIP, &
                         dudx, dudy, dudz, dvdx, dvdy, dvdz)
 !
         real(dp),                   intent(in)  :: FLOWN,ZIP
-        real(dp), dimension(:,:,:), intent(out) :: mu
-        real(dp), dimension(:,:,:), intent(in)  :: arrh
+        real(dp), dimension(:,:,:), intent(out) :: efvs
+        real(dp), dimension(:,:,:), intent(in)  :: flwa
         real(dp), dimension(:,:),   intent(in)  :: h
         real(dp), dimension(:,:,:), intent(in)  :: ax
         real(dp), dimension(:,:,:), intent(in)  :: ay
@@ -793,13 +793,13 @@ contains
         real(dp) :: macht
         real(dp) :: exx,eyy,exy,exz,eyz,eeff
 !
-        MAXY = size(mu, 3)
-        MAXX = size(mu, 2)
-        NZETA = size(mu, 1)
+        MAXY = size(efvs, 3)
+        MAXX = size(efvs, 2)
+        NZETA = size(efvs, 1)
 
         macht=(1.-FLOWN)/(2.*FLOWN)
      
-        !Compute mu term from the acceleration fields
+        !Compute efvs term from the acceleration fields
         do i=1,MAXX
             do j=1,MAXY
                 do k=1,NZETA
@@ -819,20 +819,20 @@ contains
                     endif
             
                     eeff=(exx*exx)+(eyy*eyy)+(exx*eyy)+(exy*exy)+(exz*exz)+(eyz*eyz)
-                    mu(k,i,j)=0.5 * (arrh(k,i,j)**(-1./FLOWN)) * ((eeff+ZIP)**macht)
+                    efvs(k,i,j)=0.5 * (flwa(k,i,j)**(-1./FLOWN)) * ((eeff+ZIP)**macht)
                 end do
             end do
         end do
         return
     end subroutine
 
-    function sparuv(mu,dzdx,dzdy,ax,ay,bx,by,cxy,h,uvel,vvel,dudx,dudy,dudz,dvdx,dvdy,dvdz,&
+    function sparuv(efvs,dzdx,dzdy,ax,ay,bx,by,cxy,h,uvel,vvel,dudx,dudy,dudz,dvdx,dvdy,dvdz,&
                     ustar,vstar,beta,dhbdx,dhbdy,&
                     IJKTOT,MAXY,MAXX,NZETA,TOLER,options,GRIDX,GRIDY,zeta, point_mask, geometry_mask,&
                     matrix, matrix_workspace, matrix_options, kinematic_bc_u, kinematic_bc_v,latbc_normal, &
                     direction_x, direction_y, STAGGERED)
         INTEGER IJKTOT,MAXY,MAXX,NZETA
-        real(dp), dimension(:,:,:), intent(in) :: mu
+        real(dp), dimension(:,:,:), intent(in) :: efvs
         real(dp), dimension(:,:), intent(in) :: dzdx
         real(dp), dimension(:,:), intent(in) :: dzdy
         real(dp), dimension(:,:,:), intent(in) :: ax
@@ -887,7 +887,7 @@ contains
 !-------  velocity u
 !
 #ifdef OUTPUT_SPARSE_MATRIX
-        write(ITER_UNIT,*) " Component Y X Z h mu mask point_type ", &
+        write(ITER_UNIT,*) " Component Y X Z h efvs mask point_type ", &
                    "im1jm1 im1km1 im1 im1kp1 im1jp1 jm1km1 jm1 jm1kp1 ", &
                    "km2 km1 center kp1 kp2 jp1km1 jp1 jp1kp1 ", &
                    "ip1jm1 ip1km1 ip1 ip1kp1 ip1jp1 im2 ip2 jm2 jp2 stencil_total rhs "
@@ -951,7 +951,7 @@ contains
                                 pointtype(i,j) = 3
                             else
                                 pointtype(i,j) = 4
-                                call sparse_setup(componentstr, i, j, k, mu, dzdx, dzdy, ax, ay, bx, by, cxy, &
+                                call sparse_setup(componentstr, i, j, k, efvs, dzdx, dzdy, ax, ay, bx, by, cxy, &
                                      h, gridx, gridy, zeta, uvel, vvel, dudx, dudy, dudx, dvdx, dvdy, dvdz, &
                                      dhbdx, dhbdy, beta, geometry_mask, &
                                      latbc_normal, maxx, maxy, Nzeta, coef, rhs, direction_x, direction_y, STAGGERED, &
@@ -1183,7 +1183,7 @@ contains
     !whether the "u" or "v" component is being requested.
     !DON'T PANIC, this works!  It's been tested!  Really!  The bug is somewhere
     !else!
-    subroutine sparse_setup(component, i,j,k,mu,dzdx,dzdy,ax,ay,bx,by,cxy,&
+    subroutine sparse_setup(component, i,j,k,efvs,dzdx,dzdy,ax,ay,bx,by,cxy,&
         h, dx, dy, dz, uvel, vvel, dudx_field, dudy_field, dudz_field, &
         dvdx_field, dvdy_field, dvdz_field, &
         dhbdx,dhbdy,beta,geometry_mask,latbc_normal,MAXX,MAXY,Ndz,&
@@ -1198,7 +1198,7 @@ contains
         real(dp), intent(out) :: rhs
 
         !Viscosity
-        real(dp), dimension(:,:,:), intent(in) :: mu
+        real(dp), dimension(:,:,:), intent(in) :: efvs
 
         real(dp), dimension(:,:,:), intent(in) :: dudx_field, dudy_field, dudz_field 
         real(dp), dimension(:,:,:), intent(in) :: dvdx_field, dvdy_field, dvdz_field
@@ -1241,7 +1241,7 @@ contains
 !
         !Temporary calculations done in the ABSOLUTE (using u/x, v/y) coordinate
         !system
-        real(dp), target :: dmudx, dmudy, dmudz, dmudx2, dmudy2
+        real(dp), target :: defvsdx, defvsdy, defvsdz, defvsdx2, defvsdy2
         real(dp), target :: dudx, dudy, dudz, dudx2, dudy2, dudz2, dudxz, dudyz, dudxy
         real(dp), target :: dvdx, dvdy, dvdz, dvdx2, dvdy2, dvdz2, dvdxz, dvdyz, dvdxy
 
@@ -1252,7 +1252,7 @@ contains
         real(dp), pointer :: dpara_dyz, dpara_dxz, dpara_dx2, dpara_dy2
         real(dp), pointer :: dperp_dpara, dperp_dperp, dperp_dx, dperp_dy, dperp_dz
         real(dp), pointer :: dperp_dxy, dperp_dxz, dperp_dyz, dperp_dz2
-        real(dp), pointer :: dmu_dpara2, dmu_dperp2
+        real(dp), pointer :: defvs_dpara2, defvs_dperp2
 
         !Fields done in the RELATIVE coordinate system
         real(dp), dimension(:,:,:), pointer :: a_para, a_perp, b_para, b_perp
@@ -1298,8 +1298,8 @@ contains
             dperp_dyz => dvdyz
             dperp_dz2 => dvdz2
 
-            dmu_dpara2 => dmudx2
-            dmu_dperp2 => dmudy2
+            defvs_dpara2 => defvsdx2
+            defvs_dperp2 => defvsdy2
 
             a_para => ax
             a_perp => ay
@@ -1341,8 +1341,8 @@ contains
             dperp_dyz => dudyz
             dperp_dz2 => dudz2
 
-            dmu_dpara2 => dmudy2
-            dmu_dperp2 => dmudx2
+            defvs_dpara2 => defvsdy2
+            defvs_dperp2 => defvsdx2
 
             a_para => ay
             a_perp => ax
@@ -1362,7 +1362,7 @@ contains
 #ifndef NOSHELF        
         if (GLIDE_IS_CALVING(geometry_mask(i,j)) .and. &
             WHICH_SOURCE /= HO_SOURCE_DISABLED) then !Marine margin dynamic (Neumann) boundary condition
-            call sparse_marine_margin(component,i,j,k,h,latbc_normal, vel_perp, mu, dx, dy, ax, ay, dz,coef, rhs, &
+            call sparse_marine_margin(component,i,j,k,h,latbc_normal, vel_perp, efvs, dx, dy, ax, ay, dz,coef, rhs, &
                                       dudx_field,dudy_field,dudz_field,dvdx_field,dvdy_field,dvdz_field,&
                                       direction_x, direction_y, geometry_mask, STAGGERED, WHICH_SOURCE)
             point_type = "lateral"
@@ -1401,7 +1401,7 @@ contains
             !to always add to coef, not overwrite it.
             !if (.not. IS_NAN(latbc_normal(i,j))) then !Marine margin dynamic (Neumann) boundary condition
             !    rhs2 = 0
-            !    call sparse_marine_margin(component,i,j,k,h,latbc_normal, vel_perp, mu, dx, dy, ax, ay, dz,coef, rhs2)
+            !    call sparse_marine_margin(component,i,j,k,h,latbc_normal, vel_perp, efvs, dx, dy, ax, ay, dz,coef, rhs2)
             !    rhs = rhs + rhs2
             !end if
         else if (k.eq.Ndz) then !Lower boundary condition (Basal sliding)
@@ -1429,12 +1429,12 @@ contains
                 !we have a stress-free base and these coefficients disappear.
                 if (beta(i,j) >= SMALL) then
                    point_type = "base-beta-squared"
-                   dpara_dpara = dpara_dpara*mu(k,i,j)
-                   dpara_dperp = dpara_dperp*mu(k,i,j)
-                   dpara_dz = dpara_dz*mu(k,i,j)
-                   dperp_dpara = dperp_dpara*mu(k,i,j)
-                   dperp_dperp = dperp_dperp*mu(k,i,j)
-                   dperp_dz = dperp_dz*mu(k,i,j)
+                   dpara_dpara = dpara_dpara*efvs(k,i,j)
+                   dpara_dperp = dpara_dperp*efvs(k,i,j)
+                   dpara_dz = dpara_dz*efvs(k,i,j)
+                   dperp_dpara = dperp_dpara*efvs(k,i,j)
+                   dperp_dperp = dperp_dperp*efvs(k,i,j)
+                   dperp_dz = dperp_dz*efvs(k,i,j)
                 end if
 
                 coef(IM1_J_K) = -.5*dpara_dy/dy
@@ -1461,7 +1461,7 @@ contains
                 !to always add to coef, not overwrite it.
                 !if (.not. IS_NAN(latbc_normal(i,j))) then !Marine margin dynamic (Neumann) boundary condition
                 !    rhs2 = 0
-                !    call sparse_marine_margin(component,i,j,k,h,latbc_normal, vel_perp, mu, dx, dy, ax, ay, dz,coef, rhs2)
+                !    call sparse_marine_margin(component,i,j,k,h,latbc_normal, vel_perp, efvs, dx, dy, ax, ay, dz,coef, rhs2)
                 !    rhs = rhs + rhs2
                 !end if
             endif
@@ -1475,30 +1475,30 @@ contains
             dz_sec3 = 2./(dz(k+1)-dz(k))/(dz(k+1)-dz(k-1))
 
             !Derivative transposition below
-            dmudx=dfdx_3d(mu,i,j,k,dx)
-            dmudy=dfdy_3d(mu,i,j,k,dy)
-            dmudz=dfdz_3d_irregular(mu,i,j,k,dz)
-            dmudx2=dmudx+ax(k,i,j)*dmudz
-            dmudy2=dmudy+ay(k,i,j)*dmudz
+            defvsdx=dfdx_3d(efvs,i,j,k,dx)
+            defvsdy=dfdy_3d(efvs,i,j,k,dy)
+            defvsdz=dfdz_3d_irregular(efvs,i,j,k,dz)
+            defvsdx2=defvsdx+ax(k,i,j)*defvsdz
+            defvsdy2=defvsdy+ay(k,i,j)*defvsdz
 
-            dpara_dpara = 4.*dmu_dpara2
-            dpara_dz = 4.*a_para(k,i,j)*dmu_dpara2 + 4.*b_para(k,i,j)*mu(k,i,j) &
-                     +    a_perp(k,i,j)*dmu_dperp2 +    b_perp(k,i,j)*mu(k,i,j) &
-                     +    dmudz/(h(i,j)*h(i,j))
-            dpara_dpara2 = 4.*mu(k,i,j)
-            dpara_dz2 = mu(k,i,j)*(4.*a_para(k,i,j)**2 + a_perp(k,i,j)**2 + 1/h(i,j)**2)
-            dpara_dparaz = 8.*a_para(k,i,j)*mu(k,i,j)
-            dpara_dperp=dmu_dperp2
-            dpara_dperp2=mu(k,i,j)
-            dpara_dperpz=2.*mu(k,i,j)*a_perp(k,i,j)
+            dpara_dpara = 4.*defvs_dpara2
+            dpara_dz = 4.*a_para(k,i,j)*defvs_dpara2 + 4.*b_para(k,i,j)*efvs(k,i,j) &
+                     +    a_perp(k,i,j)*defvs_dperp2 +    b_perp(k,i,j)*efvs(k,i,j) &
+                     +    defvsdz/(h(i,j)*h(i,j))
+            dpara_dpara2 = 4.*efvs(k,i,j)
+            dpara_dz2 = efvs(k,i,j)*(4.*a_para(k,i,j)**2 + a_perp(k,i,j)**2 + 1/h(i,j)**2)
+            dpara_dparaz = 8.*a_para(k,i,j)*efvs(k,i,j)
+            dpara_dperp=defvs_dperp2
+            dpara_dperp2=efvs(k,i,j)
+            dpara_dperpz=2.*efvs(k,i,j)*a_perp(k,i,j)
 
-            dperp_dpara = dmu_dperp2
-            dperp_dperp = 2 * dmu_dpara2
-            dperp_dz  = 2 * a_perp(k,i,j) * dmu_dpara2  + a_para(k,i,j) * dmu_dperp2 + 3 * mu(k,i,j) * cxy(k,i,j) 
-            dperp_dxy = 3 * mu(k,i,j)
-            dperp_dxz = 3 * mu(k,i,j) * ay(k,i,j)
-            dperp_dyz = 3 * mu(k,i,j) * ax(k,i,j)
-            dperp_dz2 = 3 * mu(k,i,j) * ax(k,i,j)*ay(k,i,j)
+            dperp_dpara = defvs_dperp2
+            dperp_dperp = 2 * defvs_dpara2
+            dperp_dz  = 2 * a_perp(k,i,j) * defvs_dpara2  + a_para(k,i,j) * defvs_dperp2 + 3 * efvs(k,i,j) * cxy(k,i,j) 
+            dperp_dxy = 3 * efvs(k,i,j)
+            dperp_dxz = 3 * efvs(k,i,j) * ay(k,i,j)
+            dperp_dyz = 3 * efvs(k,i,j) * ax(k,i,j)
+            dperp_dz2 = 3 * efvs(k,i,j) * ax(k,i,j)*ay(k,i,j)
 
             coef(IM1_J_KM1)  = dpara_dyz*dz_cen1*(-.5/dy)
             coef(IM1_J_K)  = (dpara_dyz*dz_cen2 + dpara_dy)*(-.5/dy) + dpara_dy2/(dy**2)
@@ -1534,14 +1534,14 @@ contains
         end if
 
 #ifdef OUTPUT_SPARSE_MATRIX
-        write(ITER_UNIT,*)component,i,j,k,h(i,j),mu(k,i,j), &
+        write(ITER_UNIT,*)component,i,j,k,h(i,j),efvs(k,i,j), &
                   geometry_mask(i,j), point_type, coef,sum(coef),rhs
 #endif
 
     end subroutine sparse_setup
 
     !Computes finite differences for the marine margin
-    subroutine sparse_marine_margin(component,i,j,k,h,normals, vel_perp, mu, dx, dy, ax, ay, zeta,coef, rhs, &
+    subroutine sparse_marine_margin(component,i,j,k,h,normals, vel_perp, efvs, dx, dy, ax, ay, zeta,coef, rhs, &
                                     dudx,dudy,dudz,dvdx,dvdy,dvdz,direction_x,direction_y, geometry_mask, STAGGERED, &
                                     WHICH_SOURCE)
         character(*), intent(in) :: component !*FD Either "u" or "v"
@@ -1549,7 +1549,7 @@ contains
         real(dp), dimension(:,:), intent(in) :: h !*FD Ice thickness field
         real(dp), dimension(:,:), intent(in) :: normals !*FD Pre-computed angles that are normal to the marine margin
         real(dp), dimension(:,:,:), intent(in) :: vel_perp !*FD Velocity component that is perpendicular to the one being computed
-        real(dp), dimension(:,:,:), intent(in) :: mu !*FD effective viscosity
+        real(dp), dimension(:,:,:), intent(in) :: efvs !*FD effective viscosity
 
         real(dp), intent(in) :: dx, dy !*FD grid spacing in x and y directions
         
@@ -1638,7 +1638,7 @@ contains
         !Divide the source term by viscosity, less error-prone to do it here
         !rather than multiply everything else by it (though it may give
         !iterative solvers more fits maybe?)
-        source = source_term(i, j, k, H, zeta, WHICH_SOURCE, STAGGERED)/mu(k,i,j)
+        source = source_term(i, j, k, H, zeta, WHICH_SOURCE, STAGGERED)/efvs(k,i,j)
 
         !Determine whether to use upwinded or downwinded derivatives for the
         !horizontal directions.
@@ -1841,15 +1841,15 @@ contains
 !   Calculation of stress field based on velocities
 !------------------------------------------------------
 !
-      SUBROUTINE stressf(mu,uvel,vvel,arrh,h,ax,ay,dx,dy,&
+      SUBROUTINE stressf(efvs,uvel,vvel,flwa,h,ax,ay,dx,dy,&
         dz,txz,tyz,txx,tyy,txy,FLOWN,ZIP,PERIODIC_X, PERIODIC_Y)
 !
         INTEGER MAXY,MAXX,NZETA
         real(dp) :: FLOWN,ZIP
-        real(dp), dimension(:,:,:), intent(inout) :: mu
+        real(dp), dimension(:,:,:), intent(inout) :: efvs
         real(dp), dimension(:,:,:), intent(in) :: uvel
         real(dp), dimension(:,:,:), intent(in) :: vvel
-        real(dp), dimension(:,:,:), intent(in) :: arrh
+        real(dp), dimension(:,:,:), intent(in) :: flwa
         real(dp), dimension(:,:),   intent(in) :: h
         real(dp), dimension(:,:,:), intent(in) :: ax
         real(dp), dimension(:,:,:), intent(in) :: ay
@@ -1892,7 +1892,7 @@ contains
       !of the field derivative function
       call df_field_3d(uvel, dx, dy, dz, dudy, dudx, dudz)
       call df_field_3d(vvel, dx, dy, dz, dvdy, dvdx, dvdz)
-      !TODO: Can we somehow avoid the code duplication with muterm?
+      !TODO: Can we somehow avoid the code duplication with calcefvs?
       do  i=1,MAXX
         do  j=1,MAXY
           do  k=1,NZETA
@@ -1912,12 +1912,12 @@ contains
             eeff=(exx*exx)+(eyy*eyy)+(exx*eyy)+(exy*exy)+(exz*exz)+&
               (eyz*eyz)
             if (eeff < ZIP) eeff=ZIP
-            mu(k,i,j)=0.5*(arrh(k,i,j)**(-1./FLOWN))*(eeff**macht)
-            txz(k,i,j)=2.0*mu(k,i,j)*exz
-            tyz(k,i,j)=2.0*mu(k,i,j)*eyz
-            txx(k,i,j)=2.0*mu(k,i,j)*exx
-            tyy(k,i,j)=2.0*mu(k,i,j)*eyy
-            txy(k,i,j)=2.0*mu(k,i,j)*exy
+            efvs(k,i,j)=0.5*(flwa(k,i,j)**(-1./FLOWN))*(eeff**macht)
+            txz(k,i,j)=2.0*efvs(k,i,j)*exz
+            tyz(k,i,j)=2.0*efvs(k,i,j)*eyz
+            txx(k,i,j)=2.0*efvs(k,i,j)*exx
+            tyy(k,i,j)=2.0*efvs(k,i,j)*eyy
+            txy(k,i,j)=2.0*efvs(k,i,j)*exy
         end do
       end do
     end do
@@ -1973,7 +1973,7 @@ function begin_iteration_debug(nx, ny, nz)
     dims = (/xdim, ydim, zdim, iterdim/)
     dims2d = (/xdim, ydim, iterdim/)
 
-    err = nf90_def_var(ncid, "mu", NF90_DOUBLE, dims, varid)
+    err = nf90_def_var(ncid, "efvs", NF90_DOUBLE, dims, varid)
     call nc_errorhandle(__FILE__, __LINE__, err)
     err = nf90_def_var(ncid, "uvel", NF90_DOUBLE, dims, varid)
     call nc_errorhandle(__FILE__, __LINE__, err)
@@ -2001,12 +2001,12 @@ function begin_iteration_debug(nx, ny, nz)
 
 end function
 
-subroutine iteration_debug_step(ncid, iter, mu, uvel, vvel, geometry_mask)
+subroutine iteration_debug_step(ncid, iter, efvs, uvel, vvel, geometry_mask)
     use netcdf
     use glimmer_ncdf, only: nc_errorhandle
 
     integer :: ncid, iter
-    real(dp), dimension(:,:,:) :: mu, uvel, vvel
+    real(dp), dimension(:,:,:) :: efvs, uvel, vvel
     integer, dimension(:,:) :: geometry_mask
 
     integer :: varid, err
@@ -2014,9 +2014,9 @@ subroutine iteration_debug_step(ncid, iter, mu, uvel, vvel, geometry_mask)
     integer :: nx, ny, nz
     integer :: i,j,k, start(4), count(4)
     
-    nx = size(mu, 2)
-    ny = size(mu, 3)
-    nz = size(mu, 1)
+    nx = size(efvs, 2)
+    ny = size(efvs, 3)
+    nz = size(efvs, 1)
 
     count = (/1,1,1,1/)
     do i = 1,nx
@@ -2024,10 +2024,10 @@ subroutine iteration_debug_step(ncid, iter, mu, uvel, vvel, geometry_mask)
             do k = 1,nz
                 start=(/i,j,k,iter+1/)
 #if 0
-       err = nf90_inq_varid(ncid, "mu", varid)
+       err = nf90_inq_varid(ncid, "efvs", varid)
        call nc_errorhandle(__FILE__, __LINE__, err)
        
-       err = nf90_put_var(ncid, varid, mu(k,i,j), start)
+       err = nf90_put_var(ncid, varid, efvs(k,i,j), start)
        call nc_errorhandle(__FILE__, __LINE__, err)
        
        err = nf90_inq_varid(ncid, "uvel", varid)
