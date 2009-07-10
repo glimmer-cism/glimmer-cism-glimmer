@@ -26,11 +26,14 @@
 !#define AVERAGED_PRESSURE
 
 !The maximum number of iterations to use in the unstable manifold loop
-#define NUMBER_OF_ITERATIONS 1000
+#define NUMBER_OF_ITERATIONS 4000
 
 !#define VERY_VERBOSE
 
 !#define NOSHELF
+
+
+!#define ENFORCE_PBC
 
 module ice3d_lib
     use glimmer_global
@@ -57,6 +60,7 @@ module ice3d_lib
 #else
     logical, parameter :: sparverbose = .false.
 #endif
+
     !Mu is recomputed only when the error tolerance reaches this level
     !This allows nonlinearities resulting from equation separation and 
     !the beta^2 computation to "quiet down" before attempting another
@@ -576,35 +580,6 @@ contains
       return
       END subroutine
 
-      subroutine comp_type(kinematic_bc, geometry_mask, point_mask, outfilename)
-            real(dp), dimension(:,:) :: kinematic_bc
-            integer,  dimension(:,:) :: geometry_mask, point_mask
-            character(*) outfilename
-
-            integer, dimension(size(kinematic_bc,1), size(kinematic_bc,2)) :: types
-
-            types = 1
-
-            where(.not. GLIDE_HAS_ICE(geometry_mask))
-                types = 0
-            endwhere
-
-            where(.not. IS_NAN(kinematic_bc))
-                types = 2
-            endwhere
-
-            where(GLIDE_IS_CALVING(geometry_mask))
-                types = 4
-            endwhere
-            
-            where(GLIDE_IS_CALVING(geometry_mask) &
-            .and. .not. IS_NAN(kinematic_bc))
-                types = 6
-            endwhere
-
-            call write_xls_int(outfilename, types)
-      end subroutine
-  
 !----------------------------------------------------------------------------------------
 ! BOP
 !
@@ -940,14 +915,42 @@ contains
                                 rhs = kinematic_bc_para(k,i,j)
                                 pointtype(i,j) = 2
                             else if ((i.eq.1).or.(i.eq.MAXX).or.(j.eq.1).or.(j.eq.MAXY)) then
-
                                 !Boundary condition at the edges of the domain.
                                 !If we don't have a kinematic boundary already
                                 !specified, we just "pass through" the initial
-                                !guess.  If a kinematic b.c. is specified, we
-                                !handle it in sparse_setup rather than here.
-                                coef(I_J_K)=1.
+                                !guess.  If this lies on a periodic boundary, 
+                                !enforce it in the sparse matrix (which means we need to do some
+                                !insertions ourselves...)
                                 rhs=velpara(k,i,j)
+ 
+#ifdef ENFORCE_PBC
+                                if (i .eq. 1 .and. options%periodic_ew) then
+                                    rhs = 0
+                                    call sparse_insert_val(matrix, &
+                                               stencil_center_idx, &
+                                               csp_stenciled(j, MAXX - 1, k,point_mask,NZETA), &
+                                               -1d0)
+                                else if (i .eq. MAXX .and. options%periodic_ew) then
+                                    rhs = 0
+                                    call sparse_insert_val(matrix, &
+                                               stencil_center_idx, &
+                                               csp_stenciled(j, 2, k,point_mask,NZETA), &
+                                               -1d0)                                
+                                else if (j .eq. 1 .and. options%periodic_ns) then
+                                    rhs = 0
+                                    call sparse_insert_val(matrix, &
+                                               stencil_center_idx, &
+                                               csp_stenciled(MAXY - 1, i, k,point_mask,NZETA), &
+                                               -1d0) 
+                                else if (j .eq. MAXY .and. options%periodic_ns) then
+                                    rhs = 0
+                                    call sparse_insert_val(matrix, &
+                                               stencil_center_idx, &
+                                               csp_stenciled(2, i, k,point_mask,NZETA), &
+                                               -1d0)                                                            
+                                end if
+#endif
+                                coef(I_J_K)=1.
                                 pointtype(i,j) = 3
                             else
                                 pointtype(i,j) = 4
