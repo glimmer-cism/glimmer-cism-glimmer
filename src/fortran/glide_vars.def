@@ -489,3 +489,11 @@ units:         meter
 long_name:     grounding line movement in ns directions
 data:          data%ground%gl_ns
 coordinates:   lon lat
+
+[gline_flux]
+dimensions:   time, y1, x1
+units:        meter2/year
+long_name:    grounding line flux
+data:         data%ground%gline_flux
+coordinates:  lon lat
+

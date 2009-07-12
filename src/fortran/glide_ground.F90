@@ -83,7 +83,8 @@ contains
     real(dp), parameter :: sigmaxx = 0.5 * rhoi * grav * (1.0 - rhoi / rhoo)
     real(dp), parameter :: theta = 0.125
     real(dp), dimension(2,2) :: A
-    
+    real(sp) :: pi =  3.141592654 
+
     real(sp), dimension(:,:), intent(inout) :: backstress
     real(sp) :: tempanmly
     real(dp), intent(in) ::  dew,dns
@@ -137,20 +138,27 @@ contains
         do ns = 2, size(backstress,2)-1
            do ew = 2, size(backstress,1)-1
                 if(.not. backstressmap(ew,ns)) then
-                   if (tempanmly > -1.0) then
+                   !should be > -1.0 if using log10
+                   if (tempanmly > 0.0) then
                       backstress(ew,ns) = sigmabout
                    else
-                      backstress(ew,ns) =sigmabout + (1-sigmabout)*log10(-tempanmly)
+                      backstress(ew,ns) =sigmabout + (1-sigmabout)*log10(-tempanmly + 1.)
                       !( 1-exp(tempanmly))
                       !backstress(ew,ns) = sigmabout + (1-sigmabout)*abs(tempanmly/9.2)
+                      ! backstress(ew,ns) =sigmabout + (1-sigmabout)*atan(-tempanmly)/(pi/2)
+                     
                    end if
                 else
-                   if (tempanmly > -1.0) then
+                   !should be > -1.0 if using log10
+                   if (tempanmly > 0.0) then
                       backstress(ew,ns) = sigmabin
                    else
-                     !backstress = sigmabin + (1-sigmabin)*abs(tempanmly/9.2)
-                      backstress(ew,ns) =sigmabin + (1-sigmabin)*log10(-tempanmly)
-                      !( 1-exp(tempanmly))
+                     !backstress(ew,ns) = sigmabin + (1-sigmabin)*abs(tempanmly/9.2)
+                      backstress(ew,ns) =sigmabin + (1-sigmabin)*log10(-tempanmly + 1.0)
+
+                     
+                     !backstress(ew,ns) =sigmabin + (1-sigmabin)*atan(-tempanmly)/(pi/2)
+                     
                    end if
                 end if
            end do
@@ -182,16 +190,18 @@ contains
                     if ((thck(ew,ns) - ablation_field(ew,ns)) >= 0.0) then
                       thck(ew,ns) = thck(ew,ns) - ablation_field(ew,ns) 
                     else 
+                      ablation_field(ew,ns) = thck(ew,ns)
                       thck(ew,ns) = 0.0d0
+                      
                     end if
                 end if
               end do
            end do
           
-          where (GLIDE_IS_FLOAT(mask).and.relx<mlimit+eus)
-              ablation_field=thck
-              thck = 0.0d0
-           end where
+          !where (GLIDE_IS_FLOAT(mask).and.relx<mlimit+eus)
+          !    ablation_field=thck
+          !    thck = 0.0d0
+          ! end where
           do ns = 2,size(thck,2)-1
              do ew = 2,size(thck,1)-1
                if (GLIDE_IS_FLOAT(mask(ew,ns)) .and. .not. backstressmap(ew,ns))then 
@@ -200,8 +210,9 @@ contains
                   .and. (.not. GLIDE_IS_GROUNDING_LINE(mask(ew+1,ns))) .and. &
                   (.not. GLIDE_IS_GROUNDING_LINE(mask(ew,ns-1))) .and. &
                   (.not. GLIDE_IS_GROUNDING_LINE(mask(ew,ns+1)))) then
+                       ablation_field(ew,ns) = thck(ew,ns)
+                       
                        thck(ew,ns) = 0.0
-                       ablation_field = thck
                  end if
                end if
              end do
@@ -215,7 +226,22 @@ contains
       
     end select
   end subroutine glide_marinlim
-  
+
+  !simple subroutine to calculate the flux at the grounding line
+  subroutine calc_gline_flux(thk, surfvel, mask, gline_flux)
+    use glide_mask
+    implicit none
+    integer, dimension(:,:),pointer       :: mask    !*FD grid type mask
+    real(dp),dimension(:,:),intent(in) :: thk    !*FD Ice thickness (scaled)
+    real(dp),dimension(:,:,:), intent(in) :: surfvel !*FD Surface velocity
+    real(sp),dimension(:,:), intent(out) :: gline_flux !*FD Grounding Line flux
+    
+    gline_flux = 0.0
+    where (GLIDE_IS_GROUNDING_LINE(mask))
+        gline_flux = thk * surfvel(1,:,:)
+    end where
+  end subroutine calc_gline_flux
+
 !-------------------------------------------------------------------------
   !This function returns the correct grounding line using the data given 
   ! the mask reference point.  dir is specifying 'ew' or 'ns', but can be 

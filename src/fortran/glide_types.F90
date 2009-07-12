@@ -684,6 +684,8 @@ module glide_types
   type glide_grnd
     real(dp),dimension(:,:),pointer :: gl_ew => null()
     real(dp),dimension(:,:),pointer :: gl_ns => null()
+    real(sp),dimension(:,:),pointer :: gline_flux => null() !*FD flux at the
+                                                            !grounding line
   end type glide_grnd
   
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1081,7 +1083,7 @@ contains
     ! allocate memory for grounding line
     allocate (model%ground%gl_ew(ewn-1,nsn))
     allocate (model%ground%gl_ns(ewn,nsn-1))
-    
+    allocate (model%ground%gline_flux(ewn,nsn)) 
     ! allocate memory for sparse matrix
     allocate (model%pcgdwk%rhsd(ewn*nsn))
     allocate (model%pcgdwk%answ(ewn*nsn))
@@ -1129,7 +1131,8 @@ contains
     
     deallocate(model%ground%gl_ns)
     deallocate(model%ground%gl_ew)
-    
+    deallocate(model%ground%gline_flux)
+
     deallocate(model%lithot%temp)
     deallocate(model%lithot%mask)
 

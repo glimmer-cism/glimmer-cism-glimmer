@@ -460,7 +460,10 @@ contains
     call glide_set_mask(model%numerics, model%geometry%thck, model%geometry%topg, &
                         model%general%ewn, model%general%nsn, model%climate%eus, &
                         model%geometry%thkmask, model%geometry%iarea, model%geometry%ivol)
-
+    !calculate the grounding line flux after the mask is correct
+    call calc_gline_flux(model%geometry%thck,model%velocity%surfvel, &
+    model%geometry%thkmask,model%ground%gline_flux)
+    write(*,*) model%ground%gline_flux
     ! ------------------------------------------------------------------------
     ! update ice/water load if necessary
     ! ------------------------------------------------------------------------
