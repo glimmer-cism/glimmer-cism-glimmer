@@ -336,23 +336,35 @@ contains
         direction_y = 0
 
         !Detect locations of the marine margin
-        do i = 2, size(geometry_mask,1)-1
-            do j = 2, size(geometry_mask,2)-1
+        do i = 1, size(geometry_mask,1)
+            do j = 1, size(geometry_mask,2)
                 if (GLIDE_IS_CALVING(geometry_mask(i,j))) then
                     !Detect whether we need to upwind or downwind in the Y
                     !direction
-                    if (.not. GLIDE_HAS_ICE(geometry_mask(i-1,j))) then
-                        direction_x(i,j) = 1
-                    else if (.not. GLIDE_HAS_ICE(geometry_mask(i+1,j))) then
-                        direction_x(i,j) = -1
+                    if (i > 1) then
+                        if (.not. GLIDE_HAS_ICE(geometry_mask(i-1,j))) then
+                            direction_x(i,j) = 1
+                        end if
+                    end if
+
+                    if (i < size(geometry_mask, 1)) then
+                        if (.not. GLIDE_HAS_ICE(geometry_mask(i+1,j))) then
+                            direction_x(i,j) = -1
+                        end if
                     end if
 
                     !Detect whether we need to upwind or downwind in the X
                     !direction
-                    if (.not. GLIDE_HAS_ICE(geometry_mask(i,j-1))) then
-                        direction_y(i,j) = 1
-                    else if (.not. GLIDE_HAS_ICE(geometry_mask(i,j+1))) then
-                        direction_y(i,j) = -1
+                    if (j > 1) then
+                        if (.not. GLIDE_HAS_ICE(geometry_mask(i,j-1))) then
+                            direction_y(i,j) = 1
+                        end if
+                    end if
+                    
+                    if (j < size(geometry_mask, 2)) then
+                        if (.not. GLIDE_HAS_ICE(geometry_mask(i,j+1))) then
+                            direction_y(i,j) = -1
+                        end if
                     end if
 
                     !If we are at a point that is "interior" to two other boundary points, 
@@ -371,7 +383,8 @@ contains
                     !points that are floating, and that works, but this doesn't work for two reasons:
                     !1. Boundary points are also floating
                     !2. Could fail for a very thin ice shelf
-                    if (int(direction_x(i,j)) == 0 .and. int(direction_y(i,j)) == 0) then
+                    if (int(direction_x(i,j)) == 0 .and. int(direction_y(i,j)) == 0 .and. &
+                        i > 1 .and. j > 1 .and. i < size(geometry_mask, 1) .and. j < size(geometry_mask, 2)) then
                         if (.not. GLIDE_HAS_ICE(geometry_mask(i-1, j-1))) then
                             direction_x(i,j) = 1
                             direction_y(i,j) = 1
