@@ -473,13 +473,11 @@ contains
          '~basal water', &
          '~basal melt ', &
          'taub^3      ' /)
-    character(len=*), dimension(0:5), parameter :: evolution = (/ &
+    character(len=*), dimension(0:3), parameter :: evolution = (/ &
          'pseudo-diffusion                      ', &
          'ADI scheme                            ', &
          'iterated diffusion                    ', &
-         'remap thickness                       ', &
-         'remap thickness and temperature       ', &
-         'remap thickness (Payne-Price dynamics)' /)    !*sfp* added
+         'remap thickness                       '/)    !*sfp* added
     character(len=*), dimension(0:1), parameter :: vertical_integration = (/ &
          'standard     ', &
          'obey upper BC' /)

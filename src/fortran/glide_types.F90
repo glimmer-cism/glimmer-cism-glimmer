@@ -106,8 +106,6 @@ module glide_types
   integer, parameter :: EVOL_ADI = 1
   integer, parameter :: EVOL_DIFFUSION = 2
   integer, parameter :: EVOL_INC_REMAP = 3
-  integer, parameter :: EVOL_INC_REMAP_WITHTEMP = 4
-  integer, parameter :: EVOL_INC_REMAP_PP = 5 ! *sfp** added
 
   integer, parameter :: SIGMA_BUILTIN_DEFAULT = 0 !Use default Sigma coordinate spacing
   integer, parameter :: SIGMA_BUILTIN_EVEN = 1 !Use an evenly spaced Sigma coordinate
@@ -210,9 +208,6 @@ module glide_types
     !*FD \item[0] Pseudo-diffusion approach 
     !*FD \item[2] Diffusion approach (also calculates velocities)
     !*FD \item[3] Incremental remapping
-    !*FD \item[4] Incremental remapping
-    !*FD \item[5] Diffusion, as estimated from vertically-integrated higher-order velocities, used in pseudo-diffusion approach
-    !*FD \item[6] (5), but incorporating nonlinear iteration
     !*FD \end{description}
 
     integer :: whichwvel = 0

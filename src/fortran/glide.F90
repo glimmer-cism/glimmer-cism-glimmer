@@ -118,7 +118,6 @@ contains
     use isostasy
     use glimmer_map_init
     use glide_ground
-    use glissade, only: init_glissade
 
     ! *sfp** added
     use glam_strs2, only : glam_velo_fordsiapstr_init
@@ -214,15 +213,8 @@ contains
                                         model%numerics%sigma, model%numerics%stagsigma)
     end if
 
-    ! initialisations for remapping, ice age
-    ! This call may be removed later
-    ! initialise grid-related arrays for remap transport
-    if (model%options%whichevol==EVOL_INC_REMAP .or. model%options%whichevol==EVOL_INC_REMAP_WITHTEMP) then
-       call init_glissade(model)
-    endif 
-
     ! *sfp** added; initialization of LANL incremental remapping subroutine for thickness evolution
-    if (model%options%whichevol== EVOL_INC_REMAP_PP ) then
+    if (model%options%whichevol== EVOL_INC_REMAP ) then
 
         call horizontal_remap_init( model%general%ewn, model%general%nsn, model%options%periodic_ew, model%options%periodic_ns )
 
@@ -348,11 +340,10 @@ contains
     use glide_temp
     use glide_mask
     use isostasy
-    use glissade, only: thck_remap_evolve
 
     ! *sfp** driver module/subroutines for Payne/Price HO dynamics and LANL inc. remapping for dH/dt 
     ! Modeled after similar routines in "glide_thck"
-    use glam, only: glam_driver
+    use glam, only: inc_remap_driver
 
     implicit none
 
@@ -394,18 +385,8 @@ contains
     case(EVOL_INC_REMAP) ! Use incremental remapping scheme for advecting ice thickness ---
             ! (Temperature is advected by glide_temp)
 
-       call thck_remap_evolve(model, model%temper%newtemps, 6, .false.)
+       call inc_remap_driver( model )
  
-    case(EVOL_INC_REMAP_WITHTEMP) ! Use incremental remapping scheme for advecting thickness
-            ! and temperature, as well as tracers such as ice age. 
- 
-       call thck_remap_evolve(model, model%temper%newtemps, 6, .true.)
-
-    case(EVOL_INC_REMAP_PP) ! *sfp** added option for Payne/Price HO dynamics + LANL inc. remapping for dH/dt
-                            ! Note that we are bypassing "glide_thick" altogether here.
-
-       call glam_driver( model )  
-
     end select
 #ifdef PROFILING
     call glide_prof_stop(model,model%glide_prof%ice_evo)

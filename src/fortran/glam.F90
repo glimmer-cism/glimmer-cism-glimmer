@@ -23,7 +23,7 @@ module glam
     implicit none
     private
 
-    public :: glam_driver
+    public :: inc_remap_driver
 
     ! *sfp** note that initializtion routines for "glam_velo_fordsiapstr" and "remap_advection
     ! have been moved to initialization portion of "glide.F90"
@@ -33,7 +33,7 @@ module glam
 
     contains
 
-    subroutine glam_driver( model )
+    subroutine inc_remap_driver( model )
 
         type(glide_global_type), intent(inout) :: model
 
@@ -115,7 +115,7 @@ module glam
 !        call horizontal_remap_final( )
 
 
-    end subroutine glam_driver 
+    end subroutine inc_remap_driver 
 
 
 !***********************************************************************
