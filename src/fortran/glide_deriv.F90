@@ -45,7 +45,6 @@ contains
         if (jm1 == 0) jm1 = size(f, 2)-1
         
         dfdy_2d = (-.5/delta)*f(i, j-1) + (.5/delta)*f(i, j+1)
-        !write(*,*),j, jp1, jm1
     end function dfdy_2d
 
     !*FD Computes derivative with respect to x at the equivalent
@@ -653,28 +652,34 @@ contains
         end function d2fdy2_2d_stag_upwind
    
 
-    subroutine d2f_field(f, deltax, deltay, d2fdx2, d2fdy2, periodic_x, periodic_y)
+    subroutine d2f_field(f, deltax, deltay, d2fdx2, d2fdy2, direction_x, direction_y)
         implicit none 
 
         real(dp), intent(out), dimension(:,:) :: d2fdx2, d2fdy2
         real(dp), intent(in), dimension(:,:) :: f
         real(dp), intent(in) :: deltax, deltay
-        logical :: periodic_x, periodic_y
-
+        real(dp), intent(in), dimension(:,:), optional :: direction_x, direction_y
         integer :: i,j
 
         do i = 1,size(f,1)
             do j = 1,size(f,2)
-                !I'll use the staggered versions of upwinded derivatives for
-                !now... my experience is that a 2nd order derivative onto a
-                !staggered grid is the same as a 1st order derivative onto the
                 !non-staggered grid
                 if (i == 1) then
                     d2fdx2(i,j) = d2fdx2_2d_downwind(f,i,j,deltax)
                 else if (i == size(f,1)) then
                     d2fdx2(i,j) = d2fdx2_2d_upwind(f,i,j,deltax)
                 else
-                    d2fdx2(i,j) = d2fdx2_2d(f,i,j,deltax)
+                    if (present(direction_x)) then
+                        if (direction_x(i,j) > 0) then
+                            d2fdx2(i,j) = d2fdx2_2d_downwind(f,i,j,deltax)
+                        else if (direction_x(i,j) < 0) then
+                            d2fdx2(i,j) = d2fdx2_2d_upwind(f,i,j,deltax)
+                        else
+                            d2fdx2(i,j) = d2fdx2_2d(f,i,j,deltax)
+                        end if
+                    else
+                        d2fdx2(i,j) = d2fdx2_2d(f,i,j,deltax)
+                    end if
                 end if
                 
                 if (j == 1) then
@@ -682,7 +687,17 @@ contains
                 else if (j == size(f,2)) then
                     d2fdy2(i,j) = d2fdy2_2d_upwind(f,i,j,deltax)
                 else
-                    d2fdy2(i,j) = d2fdy2_2d(f,i,j,deltax)
+                    if (present(direction_y)) then
+                        if (direction_y(i,j) > 0) then
+                            d2fdy2(i,j) = d2fdy2_2d_downwind(f,i,j,deltax)
+                        else if (direction_y(i,j) < 0) then
+                            d2fdy2(i,j) = d2fdy2_2d_upwind(f,i,j,deltax)
+                        else
+                            d2fdy2(i,j) = d2fdy2_2d(f,i,j,deltax)
+                        end if
+                    else
+                        d2fdy2(i,j) = d2fdy2_2d(f,i,j,deltax)
+                    end if
                 end if
             end do
         end do

@@ -156,6 +156,8 @@ contains
         
         real(dp), dimension(:,:), intent(in) :: direction_x, direction_y
 
+        real(dp) :: d2z_dxy, d2h_dxy
+
         INTEGER :: i,j,k
 
 #ifndef NO_RESCALE
@@ -163,7 +165,7 @@ contains
         stop
 #endif
 
-#if 0
+#if 1
         call write_xls("h.txt",h)
         call write_xls("hb.txt",hb)
         call write_xls("surf.txt",surf)
@@ -208,12 +210,25 @@ contains
                         by(k,i,j) = ( d2zdy2(i, j) - &
                                       zeta(k) * d2hdy2(i, j) - & 
                                       2. * ay(k,i,j) * dhdy(i, j) ) / h(i,j)
-                         
-                        cxy(k,i,j) = ( dfdx_2d(dzdy, i, j, dx) - & 
-                                      zeta(k) * dfdx_2d(dhdy, i, j, dx) - &
+                        
+                        !cxy requires cross derivatives of z and h!
+                        !We compute these here by differentiating dzdy and dhdy w.r.t. x,
+                        !as this lets us take upwinding needs into account
+                        if (direction_x(i,j) > 0) then
+                            d2z_dxy = dfdx_2d_downwind(dzdy, i, j, dx)
+                            d2h_dxy = dfdx_2d_downwind(dhdy, i, j, dx)
+                        else if (direction_x(i,j) < 0) then
+                            d2z_dxy = dfdx_2d_upwind(dzdy, i, j, dx)
+                            d2h_dxy = dfdx_2d_upwind(dhdy, i, j, dx)
+                        else
+                            d2z_dxy = dfdx_2d(dzdy, i, j, dx)
+                            d2h_dxy = dfdx_2d(dhdy, i, j, dx)
+                        end if 
+                        cxy(k,i,j) = ( d2z_dxy - & 
+                                      zeta(k) * d2h_dxy - &
                                       ax(k,i,j)*dhdy(i, j) - &
                                       ay(k,i,j)*dhdx(i, j) ) / h(i,j)
-                
+                         
                     end do
                 else
                     ax(:,i,j)=0.
@@ -224,7 +239,7 @@ contains
                 endif
             end do
         end do
-#if 0
+#if 1
         call write_xls_3d("ax.txt",ax)
         call write_xls_3d("ay.txt",ay)
         call write_xls_3d("bx.txt",bx)
@@ -521,7 +536,6 @@ contains
                 geometry_mask,matrix, matrix_workspace, matrix_options, &
                 kinematic_bc_u, kinematic_bc_v, &
                 marine_bc_normal,direction_x,direction_y, STAGGERED)
-
 #ifdef OUTPUT_SPARSE_MATRIX
             close(ITER_UNIT)
 #endif

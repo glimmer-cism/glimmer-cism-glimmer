@@ -624,11 +624,11 @@ contains
 
      call d2f_field(model%geometry%usrf, model%numerics%dew, model%numerics%dns, &
                           model%geomderv%d2usrfdew2_unstag, model%geomderv%d2usrfdns2_unstag, &
-                          .false., .false.)
+                          direction_x, direction_y)
 
      call d2f_field(model%geometry%thck, model%numerics%dew, model%numerics%dns, &
                           model%geomderv%d2thckdew2_unstag, model%geomderv%d2thckdns2_unstag, &
-                          .false., .false.)
+                          direction_x, direction_y)
   
 
   end subroutine
