@@ -150,7 +150,7 @@ contains
 
     ! initialise bed softness to uniform parameter
     model%velocity%bed_softness = model%velowk%btrac_const
-   
+  
     !Initialize boundary condition fields to be NaN everywhere
     model%velocity_hom%kinematic_bc_u = NaN
     model%velocity_hom%kinematic_bc_v = NaN
@@ -463,7 +463,6 @@ contains
     !calculate the grounding line flux after the mask is correct
     call calc_gline_flux(model%geometry%thck,model%velocity%surfvel, &
     model%geometry%thkmask,model%ground%gline_flux)
-    write(*,*) model%ground%gline_flux
     ! ------------------------------------------------------------------------
     ! update ice/water load if necessary
     ! ------------------------------------------------------------------------
