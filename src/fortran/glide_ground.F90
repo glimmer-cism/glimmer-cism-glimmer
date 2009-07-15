@@ -40,7 +40,7 @@ contains
 !-------------------------------------------------------------------------
 
   subroutine glide_marinlim(which,thck,relx,topg,flwa,levels,mask,mlimit,calving_fraction,eus,ablation_field,backstress, & 
-                 tempanmly,dew,dns,backstressmap,sigmabout,sigmabin,ground,nsn,ewn,usrf)
+                 tempanmly,dew,dns,backstressmap,stressout,stressin,ground,nsn,ewn,usrf)
 
 
     !*FD Removes non-grounded ice, according to one of two altenative
@@ -93,7 +93,7 @@ contains
     logical, dimension(:,:), intent(in)   :: backstressmap !*FD map of the
                                                            !*FD backstresses for the initial map
     integer ew,ns
-    real(sp) :: sigmabout,sigmabin
+    real(sp) :: stressout,stressin
     type(glide_grnd) :: ground        !*FD ground instance
     !---------------------------------------------------------------------
    
@@ -140,9 +140,9 @@ contains
                 if(.not. backstressmap(ew,ns)) then
                    !should be > -1.0 if using log10
                    if (tempanmly > 0.0) then
-                      backstress(ew,ns) = sigmabout
+                      backstress(ew,ns) = stressout
                    else
-                      backstress(ew,ns) =sigmabout + (1-sigmabout)*log10(-tempanmly + 1.)
+                      backstress(ew,ns) = stressout + (1-stressout)*log10(-tempanmly + 1.)
                       !( 1-exp(tempanmly))
                       !backstress(ew,ns) = sigmabout + (1-sigmabout)*abs(tempanmly/9.2)
                       ! backstress(ew,ns) =sigmabout + (1-sigmabout)*atan(-tempanmly)/(pi/2)
@@ -151,10 +151,10 @@ contains
                 else
                    !should be > -1.0 if using log10
                    if (tempanmly > 0.0) then
-                      backstress(ew,ns) = sigmabin
+                      backstress(ew,ns) = stressin
                    else
                      !backstress(ew,ns) = sigmabin + (1-sigmabin)*abs(tempanmly/9.2)
-                      backstress(ew,ns) =sigmabin + (1-sigmabin)*log10(-tempanmly + 1.0)
+                      backstress(ew,ns) =stressin + (1-stressin)*log10(-tempanmly + 1.0)
 
                      
                      !backstress(ew,ns) =sigmabin + (1-sigmabin)*atan(-tempanmly)/(pi/2)
@@ -202,6 +202,9 @@ contains
           !    ablation_field=thck
           !    thck = 0.0d0
           ! end where
+          
+          !remove all ice that is outside of a single grid layer of floating ice
+          !adjacent to the grounding line
           do ns = 2,size(thck,2)-1
              do ew = 2,size(thck,1)-1
                if (GLIDE_IS_FLOAT(mask(ew,ns)) .and. .not. backstressmap(ew,ns))then 

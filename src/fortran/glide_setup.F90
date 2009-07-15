@@ -410,8 +410,8 @@ contains
     call GetValue(section,'periodic_ew',model%options%periodic_ew)
     call GetValue(section,'periodic_ns',model%options%periodic_ns)
     call GetValue(section,'diagnostic_run',model%options%diagnostic_run)
-    call GetValue(section,'sigmabin',model%climate%sigmabin)
-    call GetValue(section,'sigmabout',model%climate%sigmabout)
+    call GetValue(section,'stressin',model%climate%stressin)
+    call GetValue(section,'stressout',model%climate%stressout)
     call GetValue(section,'sliding_constant',model%climate%slidconst)
   end subroutine handle_options
   
