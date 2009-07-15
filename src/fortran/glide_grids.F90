@@ -241,9 +241,16 @@ contains
                         n = n + 1
                     end if
                 end do
+                
                 if (n /= 0) then
                     f(i,j) = s/n
                 else
+                    f(i,j) = NaN
+                end if
+
+                !If the upper left of this location is not a number, then the staggered point must be
+                !not a number.  This is to prevent dirichlet boundary conditions from being duplicated.
+                if (IS_NAN(f_stag(i2,j2))) then
                     f(i,j) = NaN
                 end if
             end do
