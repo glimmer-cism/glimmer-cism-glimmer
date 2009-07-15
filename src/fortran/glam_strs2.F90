@@ -282,10 +282,6 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
 
 
   !!!!!!!!! *sfp* start debugging !!!!!!!!!!!!!!!!!!!!!!!!
-!  umask(5:ewn-1,1) = 3; umask(5:ewn-1,nsn-1) = 3
-!  umask(1:4,1) = -2; umask(1:4,nsn-1) = -2
-!  umask(1:4,:) = 0
-!  umask(5,2:nsn-2) = 132;
 !  print *, 'mask = '
 !  print *, umask
 !  print *, ' '
@@ -1084,8 +1080,8 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
     loc(1) = loc_array(ew,ns)
 
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-!    if ( mask(ew,ns) == GLIDE_MASK_INTERIOR ) then      ! If at interior point (sheet or shelf)
-    if ( mask(ew,ns) == 2 .or. mask(ew,ns) == 18 .or. mask(ew,ns) == 4 ) then
+    if ( GLIDE_HAS_ICE(mask(ew,ns)) .and. .not. GLIDE_IS_CALVING(mask(ew,ns)) &
+            .and. ( mask(ew,ns) /= GLIDE_MASK_BOUNDARY ) ) then
 !    print *, 'In main body ...'
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -1179,8 +1175,8 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
         call valueset(0.0_dp)
         do up = 1,upn
            locplusup = loc(1) + up
-           call valueset( thisvel(up,ew,ns) )     ! *sfp** vel at margin set to specified value (default = 0) 
-!           call valueset( 0.0_dp )  
+!           call valueset( thisvel(up,ew,ns) )     ! *sfp** vel at margin set to specified value (default = 0) 
+           call valueset( 0.0_dp )  
         end do
 
     end if
@@ -2661,22 +2657,23 @@ subroutine maskvelostr( ewn, nsn, thck, stagthck, umask )
 
    do ns = 1,nsn-1; do ew = 1,ewn-1
 
+    ! *sfp** if at the domain edges, define as a generic boundary
     if (all(thck(ew:ew+1,ns:ns+1) > 0.0_dp )) then
 
-      ! *sfp** if at the domain edges, define as a boundary
-      if (ew == 1 .or. ew == ewn-1) then
+      !if (ew == 1 .or. ew == ewn-1) then
+      if (ew == 1 .or. ew == 2 .or. ew == ewn-1 .or. ewn == ewn-2 ) then
         umask(ew,ns) = GLIDE_MASK_BOUNDARY
-      else if (ns == 1 .or. ns == nsn-1) then
+      !else if (ns == 1 .or. ns == nsn-1) then
+      else if (ns == 1 .or. ns == 2 .or. ns == nsn-1 .or. ns == nsn-2 ) then
         umask(ew,ns) = GLIDE_MASK_BOUNDARY
       end if
 
-    else if ( any(thck(ew:ew+1,ns:ns+1) > 0.0_dp ) ) then
-
-     if ( .not. GLIDE_IS_CALVING(umask(ew,ns) ) ) then
-      umask(ew,ns) = GLIDE_MASK_BOUNDARY
-     end if
-
     end if
+
+!    ! *sfp** temp fix for Ross IS exp - specify velocities at g.l. 
+!    if ( GLIDE_IS_GROUNDING_LINE(umask(ew,ns)) ) then
+!      umask(ew,ns) = GLIDE_MASK_BOUNDARY
+!    end if
 
    end do; end do
 
@@ -2712,8 +2709,7 @@ end subroutine maskvelostr
 !
 !      ! *sfp** if at the domain edges, define as a boundary
 !      if (ew == 1 .or. ew == ewn-1) then
-!        maskvelostr(ew,ns) = boundarys 
-!      else if (ns == 1 .or. ns == nsn-1) then
+!        maskvelostr(ew,ns) = boundarys !      else if (ns == 1 .or. ns == nsn-1) then
 !        maskvelostr(ew,ns) = boundarys 
 !      else      ! *sfp** if not at domain edge, define as main body 
 !        maskvelostr(ew,ns) = mnbdy

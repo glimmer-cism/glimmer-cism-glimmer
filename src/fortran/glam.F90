@@ -5,9 +5,6 @@ module glam
 
 
     ! *sfp** 1st-order ice sheet dynamics from Payne/Price solver and dH/dt from LANL incremental remapping
-    ! ... analagous in form to "glissade" ?
-
-    ! *sfp** contains only stubs for now
 
     use glide_types
     use glimmer_paramets, only : vis0, vis0_glam 
@@ -56,8 +53,8 @@ module glam
         !Set up - compute the new geometry derivatives for this time step
         call geometry_derivs(model)
         call geometry_derivs_unstag(model)  
-        ! Compute the higher-order velocities using the method of Payne and Price
 
+        ! Compute the higher-order velocities using the method of Payne and Price
 
         !whl - to do - Make sure that the sigma field passed to glam is consistent with glam numerics.
         ! Note that the argument 'eta' was removed from the call, as it is not used. 
@@ -67,7 +64,7 @@ module glam
         ! e.g. 'dlsrfdew  = dusrfdew - dthckdew' rather than 'dlsrfdew = dthckdew - dusrfdew' ???   
 
 
-        ! *tjb** Moved the PP call to glide_velo_higher.  This needs to prompt some more rethinking
+        ! *tjb** Moved the PP dynamics call to glide_velo_higher.  This needs to prompt some more rethinking
         !        regarding what's "glide", what's "glam", and what's "glissade" so that we have
         !        more logical separation between high-level modules
         call run_ho_diagnostic(model)

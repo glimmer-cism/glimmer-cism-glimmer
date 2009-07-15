@@ -3,23 +3,21 @@
 #define GLIDE_MASK_OCEAN           -2
 #define GLIDE_MASK_LAND            -1
 
-! *sfp* Tim says this not used, so I'm redefining it below to mark a boundary for our case only
-!#define GLIDE_MASK_BOUNDARY        0
-
 !Set if ice is below the ice dynamics thickness limit
 #define GLIDE_MASK_THIN_ICE        1
 
 !Grounded Ice
 #define GLIDE_MASK_INTERIOR        2
 
-#define GLIDE_MASK_BOUNDARY        3
+!*sfp* true for lateral boundary of any kind
+#define GLIDE_MASK_BOUNDARY        4
 
-#define GLIDE_MASK_SHELF           4
-#define GLIDE_MASK_STREAM          8
-#define GLIDE_MASK_GROUNDING_LINE  16
-#define GLIDE_MASK_STREAM_MARGIN   32
-#define GLIDE_MASK_LAND_MARGIN     64
-#define GLIDE_MASK_MARINE_EDGE     128
+#define GLIDE_MASK_SHELF           8
+#define GLIDE_MASK_STREAM          16
+#define GLIDE_MASK_GROUNDING_LINE  32
+#define GLIDE_MASK_STREAM_MARGIN   64
+#define GLIDE_MASK_LAND_MARGIN     128  
+#define GLIDE_MASK_MARINE_EDGE     256
 
 !Derived mask values
 #define GLIDE_MASK_SHELF_FRONT ior(GLIDE_MASK_MARINE_EDGE, GLIDE_MASK_SHELF)
