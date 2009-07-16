@@ -239,7 +239,7 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
   real (kind = dp), parameter :: minres = 1.0d-5 
   real (kind = dp), save, dimension(2) :: resid  
 
-  integer, parameter :: cmax = 100 
+  integer, parameter :: cmax = 10  
    
   integer :: counter, linit 
 
@@ -282,13 +282,13 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
 
 
   !!!!!!!!! *sfp* start debugging !!!!!!!!!!!!!!!!!!!!!!!!
-!  print *, 'mask = '
-!  print *, umask
-!  print *, ' '
-!  pause
-!  print *, 'uindx = '
-!  print *, uindx
-!  pause
+  print *, 'mask = '
+  print *, umask
+  print *, ' '
+  pause
+  print *, 'uindx = '
+  print *, uindx
+  pause
   !!!!!!!!! stop debugging !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
@@ -743,8 +743,7 @@ function getlocationarray(ewn, nsn, upn,  &
 
     do ew=1,ewn-1
         do ns=1,nsn-1
-!        if ( mask(ew,ns) == GLIDE_MASK_INTERIOR .or. mask(ew,ns) == GLIDE_MASK_BOUNDARY ) then
-        if ( mask(ew,ns) == 2 .or. mask(ew,ns) == 18 .or. mask(ew,ns) == 4 .or. mask(ew,ns) == 3 .or. mask(ew,ns) == 132 ) then
+        if ( GLIDE_HAS_ICE( mask(ew,ns) ) ) then
             cumsum = cumsum + ( upn + 2 )
             getlocationarray(ew,ns) = cumsum
             temparray(ew,ns) = upn + 2
@@ -1071,7 +1070,7 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
            loc_array = getlocationarray(ewn, nsn, upn, mask )
     end if
 
-  !!!!!!!!! *sfp* start debugging !!!!!!!!!!!!!!!!!!!!!!!!
+  !!!!!!!!! *sfp* debugging !!!!!!!!!!!!!!!!!!!!!!!!
 !    print *, 'loc_array = '
 !    print *, loc_array
 !    pause
@@ -1082,7 +1081,7 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     if ( GLIDE_HAS_ICE(mask(ew,ns)) .and. .not. GLIDE_IS_CALVING(mask(ew,ns)) &
             .and. ( mask(ew,ns) /= GLIDE_MASK_BOUNDARY ) ) then
-!    print *, 'In main body ...'
+!    print *, 'In main body ... ew, ns = ', ew, ns
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
         call calccoeffs( upn,               sigma,              &
@@ -1127,7 +1126,7 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
 
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     elseif ( GLIDE_IS_CALVING( mask(ew,ns) ) ) then 
-!    print *, 'At a SHELF boundary ...'
+!    print *, 'At a SHELF boundary ... ew, ns = ', ew, ns
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
         call calccoeffs( upn,               sigma,              &
@@ -1164,7 +1163,7 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
 
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     elseif ( mask(ew,ns) == GLIDE_MASK_BOUNDARY ) then 
-!    print *, 'At a NON-SHELF boundary ...'
+!    print *, 'At a NON-SHELF boundary ... ew, ns =', ew, ns
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
         !*sfp** puts specified value for vel on rhs, coincident w/ location of the additional equation 
@@ -2660,20 +2659,26 @@ subroutine maskvelostr( ewn, nsn, thck, stagthck, umask )
     ! *sfp** if at the domain edges, define as a generic boundary
     if (all(thck(ew:ew+1,ns:ns+1) > 0.0_dp )) then
 
-      !if (ew == 1 .or. ew == ewn-1) then
-      if (ew == 1 .or. ew == 2 .or. ew == ewn-1 .or. ewn == ewn-2 ) then
+      if (ew == 1 .or. ew == ewn-1) then
         umask(ew,ns) = GLIDE_MASK_BOUNDARY
-      !else if (ns == 1 .or. ns == nsn-1) then
-      else if (ns == 1 .or. ns == 2 .or. ns == nsn-1 .or. ns == nsn-2 ) then
+      else if (ns == 1 .or. ns == nsn-1) then
         umask(ew,ns) = GLIDE_MASK_BOUNDARY
       end if
 
+
+    else if (any(thck(ew:ew+1,ns:ns+1) > 0.0_dp )) then
+
+     if ( .not. GLIDE_IS_CALVING(umask(ew,ns)) ) then
+      umask(ew,ns) = GLIDE_MASK_BOUNDARY
+     end if
+
     end if
 
-!    ! *sfp** temp fix for Ross IS exp - specify velocities at g.l. 
-!    if ( GLIDE_IS_GROUNDING_LINE(umask(ew,ns)) ) then
-!      umask(ew,ns) = GLIDE_MASK_BOUNDARY
-!    end if
+   !*sfp* for Ross IS exp only
+!    umask(:,nsn-1) = GLIDE_MASK_BOUNDARY 
+!    umask(:,1) = GLIDE_MASK_BOUNDARY 
+!    umask(1,:) = GLIDE_MASK_BOUNDARY 
+!    umask(ewn-1,:) = GLIDE_MASK_BOUNDARY 
 
    end do; end do
 
