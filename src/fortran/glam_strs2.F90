@@ -1079,9 +1079,15 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
     loc(1) = loc_array(ew,ns)
 
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+<<<<<<< HEAD:glimmer/src/fortran/glam_strs2.F90
     if ( GLIDE_HAS_ICE(mask(ew,ns)) .and. .not. GLIDE_IS_CALVING(mask(ew,ns)) &
             .and. ( mask(ew,ns) /= GLIDE_MASK_BOUNDARY ) ) then
 !    print *, 'In main body ... ew, ns = ', ew, ns
+=======
+    if ( GLIDE_HAS_ICE(mask(ew,ns)) .and. .not. &
+         GLIDE_IS_UPWINDED_BOUNDARY(mask(ew,ns))) then
+!    print *, 'In main body ...'
+>>>>>>> Brand new masking scheme.  I have re-defined the mask bitfield.  Code that relied on the macros *should not break*.  Code that relied on the #defines or God forbid the actual numbers deserves to break.  This means that extensive testing is needed!:glimmer/src/fortran/glam_strs2.F90
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
         call calccoeffs( upn,               sigma,              &
@@ -1162,8 +1168,14 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
         lateralboundry = .false.
 
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+<<<<<<< HEAD:glimmer/src/fortran/glam_strs2.F90
     elseif ( mask(ew,ns) == GLIDE_MASK_BOUNDARY ) then 
 !    print *, 'At a NON-SHELF boundary ... ew, ns =', ew, ns
+=======
+    elseif ( GLIDE_IS_UPWINDED_BOUNDARY(mask(ew,ns)) .and. .not. &
+             GLIDE_IS_CALVING(mask(ew,ns))) then 
+!    print *, 'At a NON-SHELF boundary ...'
+>>>>>>> Brand new masking scheme.  I have re-defined the mask bitfield.  Code that relied on the macros *should not break*.  Code that relied on the #defines or God forbid the actual numbers deserves to break.  This means that extensive testing is needed!:glimmer/src/fortran/glam_strs2.F90
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
         !*sfp** puts specified value for vel on rhs, coincident w/ location of the additional equation 
@@ -2659,10 +2671,12 @@ subroutine maskvelostr( ewn, nsn, thck, stagthck, umask )
     ! *sfp** if at the domain edges, define as a generic boundary
     if (all(thck(ew:ew+1,ns:ns+1) > 0.0_dp )) then
 
-      if (ew == 1 .or. ew == ewn-1) then
-        umask(ew,ns) = GLIDE_MASK_BOUNDARY
-      else if (ns == 1 .or. ns == nsn-1) then
-        umask(ew,ns) = GLIDE_MASK_BOUNDARY
+      !if (ew == 1 .or. ew == ewn-1) then
+      if (ew == 1 .or. ew == 2 .or. ew == ewn-1 .or. ewn == ewn-2 ) then
+        !umask(ew,ns) = GLIDE_MASK_BOUNDARY
+      !else if (ns == 1 .or. ns == nsn-1) then
+      else if (ns == 1 .or. ns == 2 .or. ns == nsn-1 .or. ns == nsn-2 ) then
+        !umask(ew,ns) = GLIDE_MASK_BOUNDARY
       end if
 
 

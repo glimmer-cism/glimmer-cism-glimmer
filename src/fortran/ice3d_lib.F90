@@ -1203,7 +1203,7 @@ contains
     subroutine sparse_setup(component, i,j,k,efvs,dzdx,dzdy,ax,ay,bx,by,cxy,&
         h, dx, dy, dz, uvel, vvel, dudx_field, dudy_field, dudz_field, &
         dvdx_field, dvdy_field, dvdz_field, &
-        dhbdx,dhbdy,beta,geometry_mask,latbc_normal,MAXX,MAXY,Ndz,&
+        dhbdx,dhbdy,beta,mask,latbc_normal,MAXX,MAXY,Ndz,&
         coef, rhs, direction_x, direction_y, STAGGERED, WHICH_SOURCE)
 !
         integer, intent(in) :: i,j,k, MAXY, MAXX, Ndz
@@ -1242,7 +1242,7 @@ contains
         !Basal Traction
         real(dp), dimension(:,:), intent(in) :: beta
 
-        integer, dimension(:,:), intent(in) :: geometry_mask
+        integer, dimension(:,:), intent(in) :: mask
 
         !Contains the angle of the normal to the marine margine, NaN
         !everywhere not on the margin
@@ -1377,11 +1377,11 @@ contains
             write(*,*)"FATAL ERROR: sparse_setup called with invalid component"
         end if
 #ifndef NOSHELF        
-        if (GLIDE_IS_CALVING(geometry_mask(i,j)) .and. &
+        if (GLIDE_IS_CALVING(mask(i,j)) .and. &
             WHICH_SOURCE /= HO_SOURCE_DISABLED) then !Marine margin dynamic (Neumann) boundary condition
             call sparse_marine_margin(component,i,j,k,h,latbc_normal, vel_perp, efvs, dx, dy, ax, ay, dz,coef, rhs, &
                                       dudx_field,dudy_field,dudz_field,dvdx_field,dvdy_field,dvdz_field,&
-                                      direction_x, direction_y, geometry_mask, STAGGERED, WHICH_SOURCE)
+                                      direction_x, direction_y, mask, STAGGERED, WHICH_SOURCE)
             point_type = "lateral"
         else  &
 #endif
@@ -1552,7 +1552,7 @@ contains
 
 #ifdef OUTPUT_SPARSE_MATRIX
         write(ITER_UNIT,*)component,i,j,k,h(i,j),efvs(k,i,j), &
-                  geometry_mask(i,j), point_type, coef,sum(coef),rhs
+                  mask(i,j), point_type, coef,sum(coef),rhs
 #endif
 
     end subroutine sparse_setup

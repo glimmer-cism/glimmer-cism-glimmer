@@ -71,7 +71,7 @@ contains
     !finding can work even on the boundaries of the real mask.
     integer, dimension(0:ewn+1,0:nsn+1) :: maskWithBounds;
 
-    MASK = 0
+    mask = 0
     if (present(iarea)) then
         iarea = 0.
     end if
@@ -80,42 +80,25 @@ contains
         ivol = 0.
     end if
 
-    do ns=1,nsn
-       do ew = 1,ewn
-          
-          if (thck(ew,ns) .eq. 0.) then       ! no ice
-             if (topg(ew,ns) .lt. eus) then   ! below SL
-                MASK(ew,ns) = GLIDE_MASK_OCEAN
-             else                             ! above SL
-                MASK(ew,ns) = GLIDE_MASK_LAND
-             end if
-          else
-             if (present(iarea)) then
-                iarea = iarea + 1.
-             end if
-             
-             if (present(ivol)) then
-                ivol = ivol + thck(ew,ns)
-             end if
+    !Identify points with any ice
+    where (thck > 0)
+        mask = ior(mask, GLIDE_MASK_HAS_ICE)
+    endwhere
 
-             if (topg(ew,ns) - eus < con * thck(ew,ns)) then ! floating ice
-                MASK(ew,ns) = GLIDE_MASK_SHELF
-             else                                            ! grounded ice
-                MASK(ew,ns) = GLIDE_MASK_INTERIOR
-             end if
-             if (thck(ew,ns) .le. numerics%thklim) then         ! ice below dynamic limit
-                MASK(ew,ns) = ior(MASK(ew,ns),GLIDE_MASK_THIN_ICE)
-             end if
-          end if
+    !Identify points where the ice is below the ice dynamics limit
+    where (thck > 0 .and. thck < numerics%thklim)
+        mask = ior(mask, GLIDE_MASK_THIN_ICE)
+    endwhere
 
-       end do
-    end do
-    if (present(iarea)) then
-        iarea = iarea * numerics%dew * numerics%dns
-    end if
+    !Identify points where the ice is floating or where there is open ocean
+    where (topg(ew, ns) - eus < con * thck)
+        mask = ior(mask, GLIDE_MASK_OCEAN)
+    elsewhere
+        mask = ior(mask, GLIDE_MASK_LAND)
+    endwhere
 
-    if (present(ivol)) then
-        ivol = ivol * numerics%dew * numerics%dns
+    if (present(iarea) .and. present(ivol)) then
+        call get_area_volume(thck, numerics%dew, numerics%dns, iarea, ivol)
     end if
 
     maskWithBounds = 0
@@ -124,13 +107,8 @@ contains
     ! finding boundaries
     do ns=1,nsn
        do ew = 1,ewn
+          !Find the grounding line
           if (GLIDE_IS_GROUND(MASK(ew,ns))) then
-             ! land margin
-             if (GLIDE_IS_LAND(maskWithBounds(ew-1,ns)) .or. GLIDE_IS_LAND(maskWithBounds(ew+1,ns)) .or. &
-                  GLIDE_IS_LAND(maskWithBounds(ew,ns-1)) .or. GLIDE_IS_LAND(maskWithBounds(ew,ns+1))) then
-                MASK(ew,ns) = ior(MASK(ew,ns),GLIDE_MASK_LAND_MARGIN)
-             end if
-             ! grounding line
              if (GLIDE_IS_FLOAT(maskWithBounds(ew-1,ns)) .or. &
                   GLIDE_IS_FLOAT(maskWithBounds(ew+1,ns)) .or. &
                   GLIDE_IS_FLOAT(maskWithBounds(ew,ns-1)) .or. & 
@@ -139,24 +117,44 @@ contains
              end if
           end if
 
-          ! Edge of marine ice, whether floating or not
+          ! Ice margin
           ! *tb* A point is now masked even if it touches the ocean on one corner.
-          if ((topg(ew,ns) .lt. eus .and. thck(ew,ns)>0.0).and. &
-               (GLIDE_IS_OCEAN(maskWithBounds(ew-1,ns))   .or. GLIDE_IS_OCEAN(maskWithBounds(ew+1,ns))   .or. &
-                GLIDE_IS_OCEAN(maskWithBounds(ew,ns-1))   .or. GLIDE_IS_OCEAN(maskWithBounds(ew,ns+1))   .or. &
-                GLIDE_IS_OCEAN(maskWithBounds(ew-1,ns-1)) .or. GLIDE_IS_OCEAN(maskWithBounds(ew-1,ns+1)) .or. &
-                GLIDE_IS_OCEAN(maskWithBounds(ew+1,ns-1)) .or. GLIDE_IS_OCEAN(maskWithBounds(ew+1,ns+1)))) then
-             MASK(ew,ns) = ior(MASK(ew,ns),GLIDE_MASK_MARINE_EDGE)
+          if ( GLIDE_HAS_ICE(mask(ew, ns)) .and. &
+              (GLIDE_NO_ICE(maskWithBounds(ew-1,ns))   .or. GLIDE_NO_ICE(maskWithBounds(ew+1,ns))   .or. &
+               GLIDE_NO_ICE(maskWithBounds(ew,ns-1))   .or. GLIDE_NO_ICE(maskWithBounds(ew,ns+1))   .or. &
+               GLIDE_NO_ICE(maskWithBounds(ew-1,ns-1)) .or. GLIDE_NO_ICE(maskWithBounds(ew-1,ns+1)) .or. &
+               GLIDE_NO_ICE(maskWithBounds(ew+1,ns-1)) .or. GLIDE_NO_ICE(maskWithBounds(ew+1,ns+1)))) then
+             MASK(ew,ns) = ior(MASK(ew,ns),GLIDE_MASK_MARGIN)
           end if
 
+         !Mark domain boundaries
+         if (ns == 1 .or. ns == nsn .or. ew == 1 .or. ew == ewn) then
+            mask(ew, ns) = ior(mask(ew, ns), GLIDE_MASK_DOMAIN_BOUNDARY)
+         end if
        end do
     end do
   end subroutine glide_set_mask
 
-    subroutine fix_kinematicbc(mask, kinematic_bc)
-        integer, dimension(:,:), intent(inout) :: mask
-        real(dp), dimension(:,:), intent(in) :: kinematic_bc
-    end subroutine
+  subroutine get_area_vol(thck, dew, dns, iarea, ivol)
+    real(dp), dimension(:,:) :: thck
+    real(dp) :: dew, dns
+    real(dp) :: iarea, ivol
+
+    integer :: i,j
+
+    do i = 1, size(thck,1)
+        do j = 2, size(thck,2)
+            if (thck(i,j) > 0) then
+                iarea = iarea + 1
+                ivol = ivol + thck(i,j)
+            end if
+        end do
+    end do
+
+    iarea = iarea  * dew * dns
+    ivol = ivol * dew * dns
+    
+  end subroutine get_area_vol
 
     subroutine glide_marine_margin_normal(thck, mask, marine_bc_normal)
         use glimmer_physcon, only:pi
@@ -326,8 +324,8 @@ contains
     !derivative routine.  Uses centered differencing everywhere except for the
     !marine ice margin, where upwinding and downwinding is used to avoid
     !differencing across the boundary.
-    subroutine upwind_from_mask(geometry_mask, direction_x, direction_y)
-        integer, dimension(:,:), intent(in) :: geometry_mask
+    subroutine upwind_from_mask(mask, direction_x, direction_y)
+        integer, dimension(:,:), intent(in) :: mask
         double precision, dimension(:,:), intent(out) :: direction_x, direction_y
 
         integer :: i,j
@@ -336,19 +334,19 @@ contains
         direction_y = 0
 
         !Detect locations of the marine margin
-        do i = 1, size(geometry_mask,1)
-            do j = 1, size(geometry_mask,2)
-                if (GLIDE_IS_CALVING(geometry_mask(i,j))) then
+        do i = 1, size(mask,1)
+            do j = 1, size(mask,2)
+                if (GLIDE_IS_CALVING(mask(i,j))) then
                     !Detect whether we need to upwind or downwind in the Y
                     !direction
                     if (i > 1) then
-                        if (.not. GLIDE_HAS_ICE(geometry_mask(i-1,j))) then
+                        if (.not. GLIDE_HAS_ICE(mask(i-1,j))) then
                             direction_x(i,j) = 1
                         end if
                     end if
 
-                    if (i < size(geometry_mask, 1)) then
-                        if (.not. GLIDE_HAS_ICE(geometry_mask(i+1,j))) then
+                    if (i < size(mask, 1)) then
+                        if (.not. GLIDE_HAS_ICE(mask(i+1,j))) then
                             direction_x(i,j) = -1
                         end if
                     end if
@@ -356,13 +354,13 @@ contains
                     !Detect whether we need to upwind or downwind in the X
                     !direction
                     if (j > 1) then
-                        if (.not. GLIDE_HAS_ICE(geometry_mask(i,j-1))) then
+                        if (.not. GLIDE_HAS_ICE(mask(i,j-1))) then
                             direction_y(i,j) = 1
                         end if
                     end if
                     
-                    if (j < size(geometry_mask, 2)) then
-                        if (.not. GLIDE_HAS_ICE(geometry_mask(i,j+1))) then
+                    if (j < size(mask, 2)) then
+                        if (.not. GLIDE_HAS_ICE(mask(i,j+1))) then
                             direction_y(i,j) = -1
                         end if
                     end if
@@ -384,17 +382,17 @@ contains
                     !1. Boundary points are also floating
                     !2. Could fail for a very thin ice shelf
                     if (int(direction_x(i,j)) == 0 .and. int(direction_y(i,j)) == 0 .and. &
-                        i > 1 .and. j > 1 .and. i < size(geometry_mask, 1) .and. j < size(geometry_mask, 2)) then
-                        if (.not. GLIDE_HAS_ICE(geometry_mask(i-1, j-1))) then
+                        i > 1 .and. j > 1 .and. i < size(mask, 1) .and. j < size(mask, 2)) then
+                        if (.not. GLIDE_HAS_ICE(mask(i-1, j-1))) then
                             direction_x(i,j) = 1
                             direction_y(i,j) = 1
-                        else if (.not. GLIDE_HAS_ICE(geometry_mask(i-1, j+1))) then
+                        else if (.not. GLIDE_HAS_ICE(mask(i-1, j+1))) then
                             direction_x(i,j) = 1
                             direction_y(i,j) = -1
-                        else if (.not. GLIDE_HAS_ICE(geometry_mask(i+1, j-1))) then
+                        else if (.not. GLIDE_HAS_ICE(mask(i+1, j-1))) then
                             direction_x(i,j) = -1
                             direction_y(i,j) = 1
-                        else if (.not. GLIDE_HAS_ICE(geometry_mask(i+1, j+1))) then
+                        else if (.not. GLIDE_HAS_ICE(mask(i+1, j+1))) then
                             direction_x(i,j) = -1
                             direction_y(i,j) = -1
                         end if
