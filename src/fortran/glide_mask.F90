@@ -91,19 +91,26 @@ contains
     endwhere
 
     !Identify points where the ice is floating or where there is open ocean
-    where (topg(ew, ns) - eus < con * thck)
+    where (topg - eus < con * thck)
         mask = ior(mask, GLIDE_MASK_OCEAN)
     elsewhere
         mask = ior(mask, GLIDE_MASK_LAND)
     endwhere
 
     if (present(iarea) .and. present(ivol)) then
-        call get_area_volume(thck, numerics%dew, numerics%dns, iarea, ivol)
+        call get_area_vol(thck, numerics%dew, numerics%dns, iarea, ivol)
     end if
 
     maskWithBounds = 0
     maskWithBounds(1:ewn, 1:nsn) = MASK
-
+    maskWithBounds(0,1:nsn) = mask(1,:)
+    maskWithBounds(1:ewn,0) = mask(:,1)
+    maskWithBounds(ewn+1,1:nsn) = mask(ewn,:)
+    maskWithBounds(1:ewn,nsn+1) = mask(:,nsn)
+    maskWithBounds(0,0) = mask(1,1)
+    maskWithBounds(ewn+1,nsn+1) = mask(ewn,nsn)
+    maskWithBounds(0,nsn+1) = mask(1,nsn)
+    maskWithBounds(ewn+1,0) = mask(ewn,1)
     ! finding boundaries
     do ns=1,nsn
        do ew = 1,ewn
