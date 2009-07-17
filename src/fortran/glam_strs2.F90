@@ -342,7 +342,7 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
   print *, 'iter #     uvel resid          vvel resid         target resid'
   print *, ' '
 
-  do while ( maxval(resid) > minres .and. counter < cmax)	
+  do while ( maxval(resid) > minres .and. counter < cmax)
 !  do while ( resid(1) > minres .and. counter < cmax)  ! *sfp** for 1d solutions (d*/dy=0) 
 
     ! *sfp** effective viscosity calculation, based on previous estimate for vel. field
@@ -487,7 +487,7 @@ end subroutine glam_velo_fordsiapstr
 !***********************************************************************
 
 function indxvelostr(ewn,  nsn,  upn,  &
-                     mask, pointno)	
+                     mask, pointno)
 
 ! *sfp** if a point from the 2d array 'mask' is associated with non-zero ice thickness, 
 !      either a boundary or interior point, give it a unique number. If not, give it a zero.
@@ -1079,15 +1079,9 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
     loc(1) = loc_array(ew,ns)
 
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-<<<<<<< HEAD:glimmer/src/fortran/glam_strs2.F90
-    if ( GLIDE_HAS_ICE(mask(ew,ns)) .and. .not. GLIDE_IS_CALVING(mask(ew,ns)) &
-            .and. ( mask(ew,ns) /= GLIDE_MASK_BOUNDARY ) ) then
-!    print *, 'In main body ... ew, ns = ', ew, ns
-=======
     if ( GLIDE_HAS_ICE(mask(ew,ns)) .and. .not. &
          GLIDE_IS_UPWINDED_BOUNDARY(mask(ew,ns))) then
 !    print *, 'In main body ...'
->>>>>>> Brand new masking scheme.  I have re-defined the mask bitfield.  Code that relied on the macros *should not break*.  Code that relied on the #defines or God forbid the actual numbers deserves to break.  This means that extensive testing is needed!:glimmer/src/fortran/glam_strs2.F90
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
         call calccoeffs( upn,               sigma,              &
@@ -1167,16 +1161,9 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
         end do
         lateralboundry = .false.
 
-! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-<<<<<<< HEAD:glimmer/src/fortran/glam_strs2.F90
-    elseif ( mask(ew,ns) == GLIDE_MASK_BOUNDARY ) then 
-!    print *, 'At a NON-SHELF boundary ... ew, ns =', ew, ns
-=======
     elseif ( GLIDE_IS_UPWINDED_BOUNDARY(mask(ew,ns)) .and. .not. &
              GLIDE_IS_CALVING(mask(ew,ns))) then 
 !    print *, 'At a NON-SHELF boundary ...'
->>>>>>> Brand new masking scheme.  I have re-defined the mask bitfield.  Code that relied on the macros *should not break*.  Code that relied on the #defines or God forbid the actual numbers deserves to break.  This means that extensive testing is needed!:glimmer/src/fortran/glam_strs2.F90
-! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
         !*sfp** puts specified value for vel on rhs, coincident w/ location of the additional equation 
         ! for the HO sfc and basal bcs (NOTE: this is NOT zero by default unless the initial guess is zero !!)
@@ -2000,7 +1987,7 @@ function normhorizmainbc_lat(dew,       dns,   &
 
     integer, intent(in) :: which, what
 
-    c = 0.0_dp;	g(:,:,:) = 0.0_dp; whichbc = (/ 0.0_dp, 1.0_dp /)
+    c = 0.0_dp; g(:,:,:) = 0.0_dp; whichbc = (/ 0.0_dp, 1.0_dp /)
 
     ! for higher-order FREE SURFACE B.C. for x ('which'=1) or y ('which'=2) direction ...
 
@@ -2682,9 +2669,9 @@ subroutine maskvelostr( ewn, nsn, thck, stagthck, umask )
 
     else if (any(thck(ew:ew+1,ns:ns+1) > 0.0_dp )) then
 
-     if ( .not. GLIDE_IS_CALVING(umask(ew,ns)) ) then
-      umask(ew,ns) = GLIDE_MASK_BOUNDARY
-     end if
+     !if ( .not. GLIDE_IS_CALVING(umask(ew,ns)) ) then
+     ! umask(ew,ns) = GLIDE_MASK_BOUNDARY
+     !end if
 
     end if
 
