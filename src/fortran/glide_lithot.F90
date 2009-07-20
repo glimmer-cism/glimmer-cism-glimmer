@@ -57,16 +57,18 @@ contains
     use glimmer_log
     use glide_lithot1d
     use glide_lithot3d
+    
     implicit none
     type(glide_global_type),intent(inout) :: model       !*FD model instance
 
     ! local variables
     integer k
-    real(kind=dp) :: factor
+    real(kind=dp),dimension(:,:), pointer :: factor
 
     ! allocate memory for common arrays
     allocate(model%lithot%deltaz(model%lithot%nlayer)); model%lithot%deltaz = 0.0
     allocate(model%lithot%zfactors(3,model%lithot%nlayer)); model%lithot%zfactors = 0.0    
+    call coordsystem_allocate(model%general%ice_grid, factor)
 
     ! set up vertical grid
     do k=1,model%lithot%nlayer
@@ -92,7 +94,13 @@ contains
 
     if (model%options%hotstart.ne.1) then
        ! set initial temp distribution to thermal gradient
-       factor = model%paramets%geot/model%lithot%con_r
+       
+       where (model%temper%bheatflx .ne. 0.)
+         factor = model%temper%bheatflx/model%lithot%con_r
+       elsewhere
+         factor = model%paramets%geot/model%lithot%con_r
+       end where
+       
        do k=1,model%lithot%nlayer
           model%lithot%temp(:,:,k) = model%lithot%surft+model%lithot%deltaz(k)*factor
        end do
