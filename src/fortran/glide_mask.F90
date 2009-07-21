@@ -154,8 +154,8 @@ contains
     !Because the kinematic boundary conditions are specified on the staggered grid,
     !there may be a size mismatch here depending on whether we are computing a mask
     !for the staggered grid.
-    if (size(mask, 1) == size(kinbcmask, 1) + 1) then
-        maskp => mask(1:size(mask,1) - 1, 1:size(mask,1) - 1)
+    if (size(mask, 1) /= size(kinbcmask, 1)) then
+        maskp => mask(1:size(mask,1) - 1, 1:size(mask,2) - 1)
     else
         maskp => mask
     end if

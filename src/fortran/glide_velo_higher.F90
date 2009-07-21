@@ -100,6 +100,19 @@ contains
                                  model%paramets%slip_ratio, model%velocity_hom%beta)
         end if
 
+        !Compute the "geometry mask" (type of square) for the staggered grid
+
+        call glide_set_mask(model%numerics, model%geomderv%stagthck, model%geomderv%stagtopg, &
+                                model%general%ewn-1, model%general%nsn-1, model%climate%eus, &
+                                geom_mask_stag) 
+
+        !Augment masks with kinematic boundary condition info
+        call augment_kinbc_mask(model%geometry%thkmask, model%velocity_hom%kinbcmask)
+        call augment_kinbc_mask(geom_mask_stag, model%velocity_hom%kinbcmask)
+
+        !Compute the normal vectors to the marine margin for the staggered grid
+        call glide_marine_margin_normal(model%geomderv%stagthck, geom_mask_stag, latbc_norms_stag)
+
         if (model%options%which_ho_diagnostic == HO_DIAG_PATTYN_STAGGERED) then
 #ifdef VERY_VERBOSE
             write(*,*)"Running Pattyn staggered"
@@ -113,20 +126,7 @@ contains
             call glide_maskthck(model%geomderv%stagthck, stagmassb, .true., model%numerics%thklim,&
                                 model%geometry%dom, model%velocity_hom%velmask, totpts, empty)
                  
-            !Compute the "geometry mask" (type of square) for the staggered grid
-
-            call glide_set_mask(model%numerics, model%geomderv%stagthck, model%geomderv%stagtopg, &
-                                model%general%ewn-1, model%general%nsn-1, model%climate%eus, &
-                                geom_mask_stag) 
-            
-
-            !Augment masks with kinematic boundary condition info
-            call augment_kinbc_mask(model%geometry%mask, model%velocity_hom%kinbcmask)
-            call augment_kinbc_mask(geom_mask_stag, model%velocity_hom%kinbcmask)
-
-            !Compute the normal vectors to the marine margin for the staggered grid
-            call glide_marine_margin_normal(model%geomderv%stagthck, geom_mask_stag, latbc_norms_stag)
-                
+               
             call velo_hom_pattyn(model%general%ewn, model%general%nsn, model%general%upn, &
                                  model%numerics%dew, model%numerics%dns, model%numerics%sigma, &
                                  model%geomderv%stagthck, model%geomderv%stagusrf, model%geomderv%staglsrf, &
