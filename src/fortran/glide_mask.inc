@@ -77,6 +77,5 @@
 #define GLIDE_IS_COMP_DOMAIN_BND(mask)    (iand(mask, 129) == 129)
 
 
-
 #endif
 
