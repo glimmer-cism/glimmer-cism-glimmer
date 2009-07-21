@@ -177,11 +177,6 @@ contains
                                       model%velocity_hom%uflx,    model%velocity_hom%vflx) 
             
         else if (model%options%which_ho_diagnostic == HO_DIAG_PP) then
-            call glide_set_mask(model%numerics, model%geomderv%stagthck, model%geomderv%stagtopg, &
-                                model%general%ewn, model%general%nsn, model%climate%eus, &
-                                geom_mask_stag) 
-
-
             call glam_velo_fordsiapstr( model%general%ewn,       model%general%nsn,                 &
                                         model%general%upn,                                          &
                                         model%numerics%dew,      model%numerics%dns,                &
