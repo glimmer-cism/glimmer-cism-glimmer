@@ -3095,7 +3095,7 @@
                tmin(i,j,nt) = min (phi_nw, phi_n,  phi_ne, phi_w,     &
                       trm(i,j,nt), phi_e,  phi_sw, phi_s,  phi_se)
 
-            enddo	   ! i
+            enddo          ! i
          enddo             ! j
       enddo                ! nt
  

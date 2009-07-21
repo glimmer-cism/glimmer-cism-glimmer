@@ -110,13 +110,13 @@ subroutine spin_temp_config(config,temp)
       write(message,*) 'model type: ', temp%model_type, ' Antarctica Model'
     else if (temp%model_type == 1) then
       write(message,*) 'model type: ', temp%model_type, ' Greenland Model &
-      --Huybrechts Temperature Equations'
+      &--Huybrechts Temperature Equations'
     else if (temp%model_type == 2) then
       write(message,*) 'model type: ', temp%model_type, ' Greenland Model & 
-      --Fausto Temperature Equations'
+      &--Fausto Temperature Equations'
     else
       write(message,*) 'Model type is default: ', temp%model_type, ' Antarctica &
-                       Model'
+                       &Model'
     end if
     call write_log(message)
     if(temp%use_simple == 0) then
