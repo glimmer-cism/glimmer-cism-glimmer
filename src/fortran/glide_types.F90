@@ -517,38 +517,30 @@ module glide_types
     !*FD order model.  At least some of these fields are stored on the
     !*FD displaced grid.
     
-    real(dp),dimension(:,:,:),pointer :: uvel  => null() !*FD 3D $x$-velocity.
-    real(dp),dimension(:,:,:),pointer :: vvel  => null() !*FD 3D $y$-velocity.
-    real(dp),dimension(:,:,:),pointer :: wvel  => null() !*FD 3D $z$-velocity.
-    real(dp),dimension(:,:,:),pointer :: velnorm => null()
+    real(dp),dimension(:,:,:),pointer   :: uvel  => null() !*FD 3D $x$-velocity.
+    real(dp),dimension(:,:,:),pointer   :: vvel  => null() !*FD 3D $y$-velocity.
+    real(dp),dimension(:,:,:),pointer   :: wvel  => null() !*FD 3D $z$-velocity.
+    real(dp),dimension(:,:,:),pointer   :: velnorm => null()
     
-    real(dp),dimension(:,:,:),pointer :: wgrd  => null() !*FD 3D grid vertical velocity.
+    real(dp),dimension(:,:,:),pointer   :: wgrd  => null() !*FD 3D grid vertical velocity.
     
-    real(dp),dimension(:,:),pointer :: uflx  => null() !*FD     ! *sfp** changed this from 3d to 2d array 
-    real(dp),dimension(:,:),pointer :: vflx  => null() !*FD     ! *sfp** changed this from 3d to 2d array 
-    real(dp),dimension(:,:)  ,pointer :: diffu_x => null() !*FD 
-    real(dp),dimension(:,:)  ,pointer :: diffu_y => null()
-    real(dp),dimension(:,:)  ,pointer :: total_diffu => null() !*FD total diffusivity
-    real(dp),dimension(:,:)  ,pointer :: beta  => null() !*FD basal shear coefficient
-    type(glide_tensor)                :: tau
+    real(dp),dimension(:,:)  ,pointer   :: uflx  => null() !*FD     ! *sfp** changed this from 3d to 2d array 
+    real(dp),dimension(:,:)  ,pointer   :: vflx  => null() !*FD     ! *sfp** changed this from 3d to 2d array 
+    real(dp),dimension(:,:)  ,pointer   :: diffu_x => null() !*FD 
+    real(dp),dimension(:,:)  ,pointer   :: diffu_y => null()
+    real(dp),dimension(:,:)  ,pointer   :: total_diffu => null() !*FD total diffusivity
+    real(dp),dimension(:,:)  ,pointer   :: beta  => null() !*FD basal shear coefficient
+    type(glide_tensor)                  :: tau
     real(dp),dimension(:,:,:)  ,pointer :: gdsx => null() !*FD basal shear stress, x-dir
     real(dp),dimension(:,:,:)  ,pointer :: gdsy => null() !*FD basal shear stress, y-dir
-    real(dp),dimension(:,:,:),pointer :: efvs => null()
-    integer, dimension(:,:)  ,pointer :: velmask => null()
+    real(dp),dimension(:,:,:),pointer   :: efvs => null()
+    integer, dimension(:,:)  ,pointer   :: velmask => null()
     !*FD A mask similar to glide_geometry%mask, but on the velocity grid instead of the
     !*FD ice grid.  This is to aid in converging higher-order velocities
     logical :: is_velocity_valid = .false. !*FD True if uvel, vvel contains a HOM-computed velocity (and thus is valid as initial guess)
     
-    real(dp),dimension(:,:,:), pointer :: kinematic_bc_u => null()
-    !*FD Field that specifies the locations and magnitudes of kinematic
-    !*FD (velocity specified) boundary conditions.  Contains NaN everywhere
-    !*FD except where such a boundary condition exists.  This field contains
-    !*FD the u component, other fields contain the v components.
-
-    real(dp),dimension(:,:,:), pointer :: kinematic_bc_v => null()
-    
-    !TODO: Should there be a w field for the sake of full-Stokes models?
-
+    !*FD A mask that specifies where the velocity being read in should be held constant as a dirichlet condition
+    integer, dimension(:,:), pointer    :: kinbcmask => null()
   end type glide_velocity_hom
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1001,9 +993,8 @@ contains
     call coordsystem_allocate(model%general%velo_grid, upn, model%velocity_hom%gdsy)
     call coordsystem_allocate(model%general%velo_grid, upn, model%velocity_hom%efvs)
     call coordsystem_allocate(model%general%velo_grid, model%velocity_hom%velmask)
-    call coordsystem_allocate(model%general%velo_grid, upn, model%velocity_hom%kinematic_bc_u)
-    call coordsystem_allocate(model%general%velo_grid, upn, model%velocity_hom%kinematic_bc_v)
     call coordsystem_allocate(model%general%velo_grid, upn, model%velocity_hom%velnorm)
+    call coordsystem_allocate(model%general%velo_grid, model%velocity_hom%kinbcmask)
 
     call coordsystem_allocate(model%general%ice_grid, model%climate%acab)
     call coordsystem_allocate(model%general%ice_grid, model%climate%acab_tavg)
@@ -1170,9 +1161,8 @@ contains
     deallocate(model%velocity_hom%gdsy)
     deallocate(model%velocity_hom%efvs)
     deallocate(model%velocity_hom%velmask)
-    deallocate(model%velocity_hom%kinematic_bc_u)
-    deallocate(model%velocity_hom%kinematic_bc_v)
     deallocate(model%velocity_hom%velnorm)
+    deallocate(model%velocity_hom%kinbcmask)
 
     deallocate(model%climate%acab)
     deallocate(model%climate%acab_tavg)

@@ -285,10 +285,10 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
   print *, 'mask = '
   print *, umask
   print *, ' '
-  pause
+  !pause
   print *, 'uindx = '
   print *, uindx
-  pause
+  !`pause
   !!!!!!!!! stop debugging !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
@@ -1080,7 +1080,8 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
 
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     if ( GLIDE_HAS_ICE(mask(ew,ns)) .and. .not. &
-         GLIDE_IS_UPWINDED_BOUNDARY(mask(ew,ns))) then
+         GLIDE_IS_COMP_DOMAIN_BND(mask(ew,ns)) .and. .not. &
+         GLIDE_IS_CALVING(mask(ew,ns))) then
 !    print *, 'In main body ...'
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -1161,8 +1162,7 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
         end do
         lateralboundry = .false.
 
-    elseif ( GLIDE_IS_UPWINDED_BOUNDARY(mask(ew,ns)) .and. .not. &
-             GLIDE_IS_CALVING(mask(ew,ns))) then 
+    elseif ( GLIDE_IS_COMP_DOMAIN_BND(mask(ew,ns))) then 
 !    print *, 'At a NON-SHELF boundary ...'
 
         !*sfp** puts specified value for vel on rhs, coincident w/ location of the additional equation 
@@ -1770,12 +1770,12 @@ function vertimainbc(thck,bcflag,dup,efvs,betasquared)
    
     implicit none
 
-	real (kind = dp), intent(in) :: dup, thck, betasquared
-	real (kind = dp), intent(in), dimension(2,2,2) :: efvs
+    real (kind = dp), intent(in) :: dup, thck, betasquared
+    real (kind = dp), intent(in), dimension(2,2,2) :: efvs
     integer, intent(in), dimension(2) :: bcflag
 
-	real (kind = dp) :: c
-	real (kind = dp), dimension(3) :: vertimainbc
+    real (kind = dp) :: c
+    real (kind = dp), dimension(3) :: vertimainbc
 
     c = 0.0_dp
 
@@ -1849,11 +1849,11 @@ function normhorizmainbc(dew,       dns,        &
     implicit none
 
     real (kind = dp), intent(in) :: dew, dns
-	real (kind = dp), intent(in) :: dusrfdew, dusrfdns, dsigmadew, dsigmadns, dup
-	real (kind = dp), intent(in), dimension(2) :: oneorfour, fourorone
-	real (kind = dp), dimension(3,3,3) :: normhorizmainbc
-	real (kind = dp), dimension(3,3,3) :: g
-	real (kind = dp) :: c
+    real (kind = dp), intent(in) :: dusrfdew, dusrfdns, dsigmadew, dsigmadns, dup
+    real (kind = dp), intent(in), dimension(2) :: oneorfour, fourorone
+    real (kind = dp), dimension(3,3,3) :: normhorizmainbc
+    real (kind = dp), dimension(3,3,3) :: g
+    real (kind = dp) :: c
 
     integer, intent(in) :: which
     integer, intent(in), dimension(2) :: bcflag
@@ -1915,11 +1915,11 @@ function croshorizmainbc(dew,       dns,       &
     integer, intent(in), dimension(2) :: bcflag
 
     real (kind = dp), intent(in) :: dew, dns
-	real (kind = dp), intent(in), dimension(2) :: oneortwo, twoorone
-	real (kind = dp), intent(in) :: dusrfdew, dusrfdns, dsigmadew, dsigmadns, dup
-	real (kind = dp), intent(in), dimension(3,3,3) :: local_othervel
-	real (kind = dp), dimension(3,3,3) :: g, croshorizmainbc
-	real (kind = dp) :: c
+    real (kind = dp), intent(in), dimension(2) :: oneortwo, twoorone
+    real (kind = dp), intent(in) :: dusrfdew, dusrfdns, dsigmadew, dsigmadns, dup
+    real (kind = dp), intent(in), dimension(3,3,3) :: local_othervel
+    real (kind = dp), dimension(3,3,3) :: g, croshorizmainbc
+    real (kind = dp) :: c
 
     c = 0.0_dp
     g(:,:,:) = 0.0_dp
@@ -1976,14 +1976,14 @@ function normhorizmainbc_lat(dew,       dns,   &
     implicit none
 
     real (kind = dp), intent(in) :: dew, dns
-	real (kind = dp), intent(in) :: dusrfdew, dusrfdns, dsigmadew, dsigmadns, dup
-	real (kind = dp), intent(in), dimension(2) :: oneorfour, fourorone, normal, fwdorbwd
-	real (kind = dp), intent(in), dimension(3) :: onesideddiff
+    real (kind = dp), intent(in) :: dusrfdew, dusrfdns, dsigmadew, dsigmadns, dup
+    real (kind = dp), intent(in), dimension(2) :: oneorfour, fourorone, normal, fwdorbwd
+    real (kind = dp), intent(in), dimension(3) :: onesideddiff
 
-	real (kind = dp), dimension(3,3,3) :: normhorizmainbc_lat
-	real (kind = dp), dimension(3,3,3) :: g
-	real (kind = dp), dimension(2) :: whichbc
-	real (kind = dp) :: c
+    real (kind = dp), dimension(3,3,3) :: normhorizmainbc_lat
+    real (kind = dp), dimension(3,3,3) :: g
+    real (kind = dp), dimension(2) :: whichbc
+    real (kind = dp) :: c
 
     integer, intent(in) :: which, what
 
@@ -2063,17 +2063,17 @@ function croshorizmainbc_lat (dew,       dns,       &
     implicit none
 
     real (kind = dp), intent(in) :: dew, dns
-	real (kind = dp), intent(in), dimension(2) :: oneortwo, twoorone, fwdorbwd, normal
-	real (kind = dp), intent(in), dimension(3) :: onesideddiff
-	real (kind = dp), intent(in) :: dusrfdew, dusrfdns, dsigmadew, dsigmadns, dup
-	real (kind = dp), intent(in), dimension(3,3,3) :: local_othervel
+    real (kind = dp), intent(in), dimension(2) :: oneortwo, twoorone, fwdorbwd, normal
+    real (kind = dp), intent(in), dimension(3) :: onesideddiff
+    real (kind = dp), intent(in) :: dusrfdew, dusrfdns, dsigmadew, dsigmadns, dup
+    real (kind = dp), intent(in), dimension(3,3,3) :: local_othervel
 
     integer, intent(in) :: which, what
 
-	real (kind = dp), dimension(3,3,3) :: g, croshorizmainbc_lat
-	real (kind = dp), dimension(3) :: gvert
-	real (kind = dp), dimension(2) :: whichbc
-	real (kind = dp) :: c
+    real (kind = dp), dimension(3,3,3) :: g, croshorizmainbc_lat
+    real (kind = dp), dimension(3) :: gvert
+    real (kind = dp), dimension(2) :: whichbc
+    real (kind = dp) :: c
 
     integer, dimension(2) :: inormal
 
@@ -2750,8 +2750,8 @@ function viewsparse( dim, pcgrow, pcgcol, pcgval )
 
     integer, intent( in ), dimension( : ) :: pcgrow, pcgcol
     integer, intent( in ) :: dim
-	real (kind = dp), intent( in ), dimension( : ) :: pcgval
-	real (kind = dp), dimension(dim,dim) :: viewsparse 
+    real (kind = dp), intent( in ), dimension( : ) :: pcgval
+    real (kind = dp), dimension(dim,dim) :: viewsparse 
     integer :: i, j, k, c
 
     c = 0; viewsparse = 0.0_dp

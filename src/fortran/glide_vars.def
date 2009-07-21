@@ -375,21 +375,13 @@ factor:        scale3d_f1
 standard_name: land_ice_y_velocity
 load:          1
 
-[uvelbc]
-dimensions:    time, level, y0, x0
-units:         meter/year
-long_name:     kinematic boundary condition for velocity, u component
-data:          data%velocity_hom%kinematic_bc_u(up,:,:)
-factor:        scale3d_f1
-load:          1
-
-[vvelbc]
-dimensions:    time, level, y0, x0
-units:         meter/year
-long_name:     kinematic boundary condition for velocity, v component
-data:          data%velocity_hom%kinematic_bc_v(up,:,:)
-factor:        scale3d_f1
-load:          1
+[kinbcmask]
+dimensions:   time, y0, x0
+units:        1
+long_name:    mask of kinematic boundary locations
+data:         data%velocity_hom%kinbcmask(:,:)
+type:         int
+load:         1
 
 [velnormhom]
 dimensions:    time, level, y1, x1

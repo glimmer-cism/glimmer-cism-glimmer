@@ -26,8 +26,8 @@ module glide_velo_higher
     implicit none
     
     !TODO: Parameterize the following globals
-    real(dp), parameter :: VEL2ERR  = 5e-4
-    real(dp), parameter :: TOLER    = 1e-6
+    real(dp), parameter :: VEL2ERR  = 1e-6
+    real(dp), parameter :: TOLER    = 5e-4
     integer,  parameter :: CONVT    = 4
     real(dp), parameter :: SHTUNE   = 1.D-16
     integer,  parameter :: UPSTREAM = 0
@@ -118,6 +118,11 @@ contains
             call glide_set_mask(model%numerics, model%geomderv%stagthck, model%geomderv%stagtopg, &
                                 model%general%ewn-1, model%general%nsn-1, model%climate%eus, &
                                 geom_mask_stag) 
+            
+
+            !Augment masks with kinematic boundary condition info
+            call augment_kinbc_mask(model%geometry%mask, model%velocity_hom%kinbcmask)
+            call augment_kinbc_mask(geom_mask_stag, model%velocity_hom%kinbcmask)
 
             !Compute the normal vectors to the marine margin for the staggered grid
             call glide_marine_margin_normal(model%geomderv%stagthck, geom_mask_stag, latbc_norms_stag)
@@ -134,7 +139,6 @@ contains
                                  geom_mask_stag, &
                                  model%temper%flwa, real(gn, dp), model%velocity_hom%beta, &
                                  model%options, &
-                                 model%velocity_hom%kinematic_bc_u, model%velocity_hom%kinematic_bc_v, &
                                  latbc_norms_stag,&
                                  model%velocity_hom%uvel, model%velocity_hom%vvel, &
                                  model%velocity_hom%is_velocity_valid, &
@@ -163,7 +167,6 @@ contains
                                          model%geometry%thkmask, &
                                          model%temper%flwa, real(gn, dp), &
                                          model%velocity_hom%beta, model%options, &
-                                         model%velocity_hom%kinematic_bc_u, model%velocity_hom%kinematic_bc_v, &
                                          model%geometry%marine_bc_normal, &
                                          model%velocity_hom%uvel, model%velocity_hom%vvel, &
                                          model%velocity_hom%is_velocity_valid)
@@ -217,7 +220,7 @@ contains
                                dlsrfdew, dlsrfdns, &
                                d2zdx2, d2zdy2, d2hdx2, d2hdy2, &
                                point_mask, totpts, geometry_mask, flwa, flwn, btrc, &
-                               options, kinematic_bc_u, kinematic_bc_v, &
+                               options, &
                                marine_bc_normal, &
                                uvel, vvel, valid_initial_guess, uflx, vflx, efvs, tau, gdsx, gdsy)
                            
@@ -242,7 +245,6 @@ contains
         integer, dimension(:,:), intent(in) :: geometry_mask
         real(dp), dimension(:,:,:), intent(in) :: flwa !*FD Glen's A (rate factor) - Used for thermomechanical coupling
         real(dp), dimension(:,:), intent(in)   :: btrc !*FD Basal Traction, either betasquared or tau0
-        real(dp), dimension(:,:,:), intent(inout)   :: kinematic_bc_u, kinematic_bc_v
         real(dp), dimension(:,:), intent(in)   :: marine_bc_normal
         real(dp), intent(in) :: flwn !*FD Exponent in Glenn power law
         type(glide_options), intent(in) :: options
@@ -265,9 +267,28 @@ contains
         real(dp), dimension(ewn-1, nsn-1) :: direction_x, direction_y
         real(dp), dimension(upn, ewn-1, nsn-1) :: flwa_stag
 
+        real(dp), dimension(upn, ewn-1, nsn-1) :: kinematic_bc_u, kinematic_bc_v
+    
+        integer :: k
+
+
         direction_x = 0
         direction_y = 0
 
+
+        !Construct fields that contain kinematic boundary condition velocities where they are specified,
+        !and NaN where kinematic boundaries should be computed
+        !TODO: Integrate this more elegantly (using the mask in Pattyn's model rather than construct the old-style
+        !fields outside of it)
+        do k = 1, upn
+            where (GLIDE_IS_DIRICHLET_BOUNDARY(geometry_mask))
+                kinematic_bc_u(k,:,:) = uvel(k,:,:)
+                kinematic_bc_v(k,:,:) = vvel(k,:,:)
+            elsewhere
+                kinematic_bc_u(k,:,:) = NaN
+                kinematic_bc_v(k,:,:) = NaN
+            endwhere
+        end do
 
         call stagvarb_3d(flwa, flwa_stag, ewn, nsn, upn)
 
@@ -350,7 +371,7 @@ contains
     subroutine velo_hom_pattyn_nonstag(ewn, nsn, upn, dew, dns, sigma, thck, usrf, lsrf, &
                               dusrfdew, dusrfdns, dthckdew, dthckdns, dlsrfdew, dlsrfdns, &
                               d2zdx2, d2zdy2, d2hdx2, d2hdy2, point_mask, totpts, geometry_mask, &
-                              flwa, flwn, btrc, options, kinematic_bc_u, kinematic_bc_v, marine_bc_normal,&
+                              flwa, flwn, btrc, options, marine_bc_normal,&
                               uvel, vvel, valid_initial_guess)
                             
         integer, intent(in)  :: ewn !*FD Number of cells X
@@ -374,7 +395,6 @@ contains
         integer, dimension(:,:), intent(in) :: geometry_mask
         real(dp), dimension(:,:,:), intent(in) :: flwa !*FD Glen's A (rate factor) - Used for thermomechanical coupling
         real(dp), dimension(:,:), intent(in)   :: btrc !*FD Basal Traction, either betasquared or tau0
-        real(dp), dimension(:,:,:), intent(in)   :: kinematic_bc_u, kinematic_bc_v
         real(dp), dimension(:,:), intent(in)   :: marine_bc_normal
         real(dp), intent(in) :: flwn !*FD Exponent in Glenn power law
         type(glide_options), intent(in) :: options 
@@ -397,7 +417,7 @@ contains
         
         real(dp), dimension(upn, ewn, nsn) :: efvs, uvel_unstag, vvel_unstag
         
-        integer :: i,j 
+        integer :: i,j,k 
 
         !Determine whether to upwind or downwind derivatives at points on the
         !interior of the model domain (this is mainly important for the marine
@@ -406,16 +426,25 @@ contains
         !transposed.
         direction_y = 0
         direction_x = 0
-        call upwind_from_mask(geometry_mask, direction_y, direction_x)
+        call upwind_from_mask(geometry_mask, direction_x, direction_y)
 
         call unstagger_field_3d(uvel, uvel_unstag, options%periodic_ew, options%periodic_ns)
         call unstagger_field_3d(vvel, vvel_unstag, options%periodic_ew, options%periodic_ns)
        
-        call unstagger_field_3d(kinematic_bc_u,kinematic_bc_u_unstag, options%periodic_ew, options%periodic_ns)
-        call unstagger_field_3d(kinematic_bc_v,kinematic_bc_v_unstag, options%periodic_ew, options%periodic_ns)
-
         call unstagger_field_2d(btrc, btrc_unstag, options%periodic_ew, options%periodic_ns)
- 
+
+        !Construct fields that contain kinematic boundary condition velocities where they are specified,
+        !and NaN where kinematic boundaries should be computed
+        do k = 1, upn
+            where (GLIDE_IS_DIRICHLET_BOUNDARY(geometry_mask))
+                kinematic_bc_u_unstag(k,:,:) = uvel_unstag(k,:,:)
+                kinematic_bc_v_unstag(k,:,:) = vvel_unstag(k,:,:)
+            elsewhere
+                kinematic_bc_u_unstag(k,:,:) = NaN
+                kinematic_bc_v_unstag(k,:,:) = NaN
+            endwhere
+        end do
+
         !In unstaggering the boundary condition fields, we need to remove points
         !that aren't on the boundary
         !do i = 1,nsn

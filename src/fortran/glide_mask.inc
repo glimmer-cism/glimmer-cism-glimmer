@@ -14,16 +14,17 @@
 #define GLIDE_MASK_GROUNDING_LINE      16 
 #define GLIDE_BASE_TYPE_BITS           28
 
-!Bits 6:5 - Presence of a boundary condition.  If bit 4 is activated, it's a domain boundary or margin.
-!The meaning of bit 5 depends on whether bit 4 is activated.  If it is not, bit 5 determines whether
-!a dirichelt boundary was specified.  If it is, bit 5 is on if the boundary is on the domain interior
-!(i.e. if it is a land margin or calving front)
-!If this is a margin, the type of margin is dependent on whether the ice is on land or ocean.
-!A value of 0 for these bits means that we are on the interior.
-#define GLIDE_MASK_DOMAIN_BOUNDARY     32
-#define GLIDE_MASK_MARGIN              96
-#define GLIDE_MASK_DIRICHLET_BND       64
-#define GLIDE_BOUNDARY_TYPE_BITS       96
+!Bit 5: Identifies a margin (jump from zero to nonzero thickness)
+!The type of margin is determined by whether the ice here is grounded or floating.
+#define GLIDE_MASK_MARGIN 32
+
+!Bit 6: Identifies a dirichlet condition
+!The velocity at points marked with this bit should be held constant.
+#define GLIDE_MASK_DIRICHLET_BC 64
+
+!Bit 7: Identifies a computational domain boundary.  These are normally just activated on the edges of the domain,
+!unless there is a domain decomposition (in which case they may be missing)
+#define GLIDE_MASK_COMP_DOMAIN_BND 128 
 
 !Checks for an iceless square
 
@@ -57,9 +58,6 @@
 !Checks for any ice, dynamic or not, that is either grounded *or* on the grounding line
 #define GLIDE_IS_GROUND_OR_GNDLINE(mask) (iand(mask, 20) > 0 .and. GLIDE_HAS_ICE(mask))
 
-!Checks whether this is a domain boundary that requires upwinding (either a margin or a computational boundary)
-#define GLIDE_IS_UPWINDED_BOUNDARY(mask) (iand(mask, GLIDE_MASK_DOMAIN_BOUNDARY) == GLIDE_MASK_DOMAIN_BOUNDARY)
-
 !Checks whether this is an ice margin (thickness jumps from 0 to non-zero at this point)
 #define GLIDE_IS_MARGIN(mask) (iand(mask, GLIDE_MASK_MARGIN) == GLIDE_MASK_MARGIN)
 
@@ -71,6 +69,13 @@
 
 !Checks whether this is a land margin
 #define GLIDE_IS_LAND_MARGIN(mask)        (GLIDE_IS_MARGIN(mask) .and. GLIDE_IS_GOUNDED(mask))
+
+!Checks whether a dirichlet boundary has been defined at this point
+#define GLIDE_IS_DIRICHLET_BOUNDARY(mask) (iand(mask, GLIDE_MASK_DIRICHLET_BC) == GLIDE_MASK_DIRICHLET_BC)
+
+!Checks whether we are at the edge of the computational domain *and* there is ice in this square
+#define GLIDE_IS_COMP_DOMAIN_BND(mask)    (iand(mask, 129) == 129)
+
 
 
 #endif

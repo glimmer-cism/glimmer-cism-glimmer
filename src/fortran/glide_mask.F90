@@ -136,11 +136,34 @@ contains
 
          !Mark domain boundaries
          if (ns == 1 .or. ns == nsn .or. ew == 1 .or. ew == ewn) then
-            mask(ew, ns) = ior(mask(ew, ns), GLIDE_MASK_DOMAIN_BOUNDARY)
+            mask(ew, ns) = ior(mask(ew, ns), GLIDE_MASK_COMP_DOMAIN_BND)
          end if
        end do
     end do
   end subroutine glide_set_mask
+
+  subroutine augment_kinbc_mask(mask, kinbcmask)
+    !*FD Augments the Glide mask with the location of kinematic (dirichlet) boundary
+    !*FD conditions.  These locations cannot be determined by the model a priori, and
+    !*FD must be specified through a field in a NetCDF file.
+    integer, dimension(:,:), target :: mask
+    integer, dimension(:,:) :: kinbcmask
+
+    integer, dimension(:,:), pointer :: maskp
+
+    !Because the kinematic boundary conditions are specified on the staggered grid,
+    !there may be a size mismatch here depending on whether we are computing a mask
+    !for the staggered grid.
+    if (size(mask, 1) == size(kinbcmask, 1) + 1) then
+        maskp => mask(1:size(mask,1) - 1, 1:size(mask,1) - 1)
+    else
+        maskp => mask
+    end if
+
+    where (kinbcmask /= 0)
+        maskp = ior(maskp, GLIDE_MASK_DIRICHLET_BC)
+    endwhere
+  end subroutine
 
   subroutine get_area_vol(thck, dew, dns, iarea, ivol)
     real(dp), dimension(:,:) :: thck

@@ -151,8 +151,6 @@ contains
     model%velocity%bed_softness = model%velowk%btrac_const
   
     !Initialize boundary condition fields to be NaN everywhere
-    model%velocity_hom%kinematic_bc_u = NaN
-    model%velocity_hom%kinematic_bc_v = NaN
     model%geometry%marine_bc_normal = NaN
 
     ! load sigma file
