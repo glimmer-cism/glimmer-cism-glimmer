@@ -532,25 +532,23 @@ contains
      !so that we're not differencing out of the domain
      real(dp), dimension(model%general%ewn, model%general%nsn) :: direction_x, direction_y
 
-     call stagvarb(model%geometry% thck, &
+     call stagthickness(model%geometry% thck, &
                model%geomderv%stagthck,&
                model%general%ewn, &
                model%general%nsn, &
-               STAGGER_CHOICE_ALBNEW, &
                model%geometry%usrf, &
-               model%numerics%thklim)
+               model%numerics%thklim, &
+               model%geometry%thkmask)
       
      call stagvarb(model%geometry%lsrf, &
                model%geomderv%staglsrf,&
                model%general%ewn, &
-               model%general%nsn, &
-               0)
+               model%general%nsn)
 
      call stagvarb(model%geometry%topg, &
                model%geomderv%stagtopg,&
                model%general%ewn, &
-               model%general%nsn, &
-               0)
+               model%general%nsn)
 
 
      model%geomderv%stagusrf = model%geomderv%staglsrf + model%geomderv%stagthck

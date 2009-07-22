@@ -513,7 +513,6 @@ contains
                     call calcefvs(efvs,flwa,h,ax,ay,FLOWN,ZIP,dudx, dudy, dudz, dvdx, dvdy, dvdz)
                     recompute_efvs_toler = recompute_efvs_toler / recompute_efvs_adjust
                     recompute_efvs_toler = max(recompute_efvs_toler, error*2)
-                    write(*,*) "RECOMPUTED MU"
                 end if
             else if (options%which_ho_efvs == HO_EFVS_CONSTANT) then
                 efvs = 1d6

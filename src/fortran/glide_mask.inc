@@ -65,7 +65,8 @@
 #define GLIDE_IS_MARINE_ICE_EDGE(mask)    (GLIDE_IS_MARGIN(mask) .and. GLIDE_IS_FLOAT_OR_GNDLINE(mask))
 
 !Checks whether this is a margin in contact with the ocean
-#define GLIDE_IS_CALVING(mask)            (GLIDE_IS_MARGIN(mask) .and. GLIDE_IS_FLOAT(mask))
+!41 = 32+8+1
+#define GLIDE_IS_CALVING(mask)            (iand(mask, 41) == 41)
 
 !Checks whether this is a land margin
 #define GLIDE_IS_LAND_MARGIN(mask)        (GLIDE_IS_MARGIN(mask) .and. GLIDE_IS_GOUNDED(mask))
