@@ -26,8 +26,8 @@ module glide_velo_higher
     implicit none
     
     !TODO: Parameterize the following globals
-    real(dp), parameter :: VEL2ERR  = 1e-6
-    real(dp), parameter :: TOLER    = 5e-4
+    real(dp), parameter :: VEL2ERR  = 1e-4
+    real(dp), parameter :: TOLER    = 1e-5
     integer,  parameter :: CONVT    = 4
     real(dp), parameter :: SHTUNE   = 1.D-16
     integer,  parameter :: UPSTREAM = 0
