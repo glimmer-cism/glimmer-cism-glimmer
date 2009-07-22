@@ -239,7 +239,7 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
   real (kind = dp), parameter :: minres = 1.0d-5 
   real (kind = dp), save, dimension(2) :: resid  
 
-  integer, parameter :: cmax = 10  
+  integer, parameter :: cmax = 50  
    
   integer :: counter, linit 
 
@@ -271,7 +271,7 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
   ! below w/ subroutine but commented out) to allow for a tweak to the CISM calculated mask (adds
   ! in an unique number for ANY arbritray boundary, be it land, water, or simply at the edge of
   ! the calculation domain). 
-  call maskvelostr(ewn, nsn, thck, stagthck, umask)
+!  call maskvelostr(ewn, nsn, thck, stagthck, umask)
 
   allocate(uindx(ewn-1,nsn-1))
 
@@ -285,10 +285,10 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
   print *, 'mask = '
   print *, umask
   print *, ' '
-  !pause
+  pause
   print *, 'uindx = '
   print *, uindx
-  !`pause
+  pause
   !!!!!!!!! stop debugging !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
@@ -1082,7 +1082,7 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
     if ( GLIDE_HAS_ICE(mask(ew,ns)) .and. .not. &
          GLIDE_IS_COMP_DOMAIN_BND(mask(ew,ns)) .and. .not. &
          GLIDE_IS_CALVING(mask(ew,ns))) then
-!    print *, 'In main body ...'
+!    print *, 'In main body ... ew, ns = ', ew, ns
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
         call calccoeffs( upn,               sigma,              &
@@ -1162,8 +1162,10 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
         end do
         lateralboundry = .false.
 
+! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     elseif ( GLIDE_IS_COMP_DOMAIN_BND(mask(ew,ns))) then 
-!    print *, 'At a NON-SHELF boundary ...'
+!    print *, 'At a NON-SHELF boundary ... ew, ns = ', ew, ns
+! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
         !*sfp** puts specified value for vel on rhs, coincident w/ location of the additional equation 
         ! for the HO sfc and basal bcs (NOTE: this is NOT zero by default unless the initial guess is zero !!)
