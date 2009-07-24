@@ -1,3 +1,12 @@
+2009-01-21 Magnus Hagdorn
+ * bootstrap: search m4macros directory for extra m4 macros
+ * configure.in: use ACX_BLAS to find blas library, check if netCDF
+   library is split up into a c and fortran lib
+ * glimmer-config.in: store blas and netCDF library flags
+ * m4macros/acx_blas.m4: added from autoconf macro library
+ * m4macros/acx_lapack.m4: ditto
+ * src/fortran/Makefile.am: find netCDF and blas libraries
+
 2008-11-30 Ian Rutt
  * Corrected <config.inc> to "config.inc" to conform to strict usage
    required by gfortran 4.4.0
