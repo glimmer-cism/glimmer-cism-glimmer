@@ -238,10 +238,17 @@ contains
     real(dp),dimension(:,:),intent(in) :: thk    !*FD Ice thickness (scaled)
     real(dp),dimension(:,:,:), intent(in) :: surfvel !*FD Surface velocity
     real(sp),dimension(:,:), intent(out) :: gline_flux !*FD Grounding Line flux
-    
+   
+    integer :: ewn, nsn
+
+    !TODO: get the grounding line flux on the velo grid - right now it seems
+    !to be using both the ice grid and the velo grid.
+    ewn = size(gline_flux, 1)
+    nsn = size(gline_flux, 2)
+
     gline_flux = 0.0
-    where (GLIDE_IS_GROUNDING_LINE(mask))
-        gline_flux = thk * surfvel(1,:,:)
+    where (GLIDE_IS_GROUNDING_LINE(mask(1:ewn-1, 1:nsn-1)))
+        gline_flux(1:ewn-1, 1:nsn-1) = thk(1:ewn-1, 1:nsn-1) * surfvel(1,:,:)
     end where
   end subroutine calc_gline_flux
 

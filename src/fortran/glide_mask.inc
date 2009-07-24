@@ -50,7 +50,7 @@
 #define GLIDE_IS_GROUND(mask)      (iand(mask,GLIDE_MASK_LAND) == GLIDE_MASK_LAND .and. GLIDE_HAS_ICE(mask))
 
 !Checks for any ice, dynamic or not, that is on the grounding line
-#define GLIDE_IS_GROUNDING_LINE(mask) (iand(mask, GLIDE_MASK_GROUNDING_LINE) == GLIDE_MASK_GROUNDING_LINE .and. GLIDE_HAS_ICE(mask))
+#define GLIDE_IS_GROUNDING_LINE(mask) (iand(mask, 17) == 17)
 
 !Checks for any ice, dynamic or not, that is either floating *or* on the grounding line
 #define GLIDE_IS_FLOAT_OR_GNDLINE(mask) (iand(mask, 24) > 0 .and. GLIDE_HAS_ICE(mask))
