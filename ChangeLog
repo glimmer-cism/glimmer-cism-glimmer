@@ -1,3 +1,7 @@
+2008-11-30 Ian Rutt
+ * Corrected <config.inc> to "config.inc" to conform to strict usage
+   required by gfortran 4.4.0
+
 2008-05-08 Ian Rutt
  * Merged changes from RELEASE_1_0_0_BRANCH into trunk, as below:
 

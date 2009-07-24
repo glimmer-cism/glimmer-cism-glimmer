@@ -36,7 +36,7 @@
 ! Montana, 2008.
 
 #ifdef HAVE_CONFIG_H
-#include <config.inc>
+#include "config.inc"
 #endif
 
 !The mass balance model

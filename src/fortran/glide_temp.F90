@@ -41,10 +41,10 @@
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 #ifdef HAVE_CONFIG_H
-#include <config.inc>
+#include "config.inc"
 #endif
 
-#include <glide_mask.inc>
+#include "glide_mask.inc"
 
 ! some macros used to disable parts of the temperature equation
 ! vertical diffusion

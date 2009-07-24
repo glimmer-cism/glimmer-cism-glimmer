@@ -1,11 +1,11 @@
 !Helper module containing routines to move between staggered and
 !unstaggered grids
 #ifdef HAVE_CONFIG_H
-#include <config.inc>
+#include "config.inc"
 #endif
 
-#include <glide_nan.inc>
-#include <glide_mask.inc>
+#include "glide_nan.inc"
+#include "glide_mask.inc"
 
 module glide_grids
     use glimmer_global, only : dp, NaN

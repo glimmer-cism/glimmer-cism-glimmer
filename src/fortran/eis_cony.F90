@@ -41,10 +41,10 @@
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 #ifdef HAVE_CONFIG_H
-#include <config.inc>
+#include "config.inc"
 #endif
 
-#include <glide_mask.inc>
+#include "glide_mask.inc"
 
 module eis_cony
   !*FD climate forcing similar to the old Edinburgh Ice Sheet model

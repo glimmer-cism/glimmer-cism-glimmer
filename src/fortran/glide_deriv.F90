@@ -1,5 +1,5 @@
 #ifdef HAVE_CONFIG_H
-#include <config.inc>
+#include "config.inc"
 #endif
 
 !*FD This module contains functions for computing derivatives numerically, both

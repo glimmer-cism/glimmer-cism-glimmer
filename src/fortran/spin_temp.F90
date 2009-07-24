@@ -35,7 +35,7 @@
 ! The Spin series of drivers were developed by Brian Hand, at the University of
 ! Montana, 2008.
 #ifdef HAVE_CONFIG_H
-#include <config.inc>
+#include "config.inc"
 #endif
 
 module spin_temp

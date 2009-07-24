@@ -23,6 +23,7 @@
 import string, getopt, sys, os, os.path
 
 external_mod = ['f95_lapack','netcdf','blas_dense']
+external_inc = ['config.inc']
 
 def search_file(name):
     "function searching a f90/95 file if it contains module information and/or uses modules and/or includes files"
@@ -68,7 +69,7 @@ def search_file(name):
                 continue
             include = string.replace(include,'\"','')
             include = string.replace(include,'\'','')
-            if include  not in result['includes']:
+            if include  not in result['includes'] and include not in external_inc:
                 result['includes'].append(include)
             continue
         # finding module statement

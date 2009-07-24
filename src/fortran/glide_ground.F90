@@ -7,10 +7,10 @@
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 #ifdef HAVE_CONFIG_H
-#include <config.inc>
+#include "config.inc"
 #endif
 
-#include <glide_mask.inc>
+#include "glide_mask.inc"
 module glide_ground
   use glide_types
   use glimmer_global
