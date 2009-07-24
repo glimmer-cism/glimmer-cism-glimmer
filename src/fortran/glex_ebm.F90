@@ -55,6 +55,7 @@ program glint_ebm_ex
   use glimmer_log
   use glint_global_interp
   use glex_ebm_clim
+  use glint_commandline
   implicit none
 
   ! Program variables -------------------------------------------------------------------
@@ -62,8 +63,6 @@ program glint_ebm_ex
   type(glint_params)      :: ice_sheet   ! This is the derived type variable that holds all 
                                          ! domains of the ice model
   type(glex_ebm_climate)      :: climate     ! Climate parameters and fields
-  character(fname_length) :: paramfile   ! Name of the top-level configuration file
-  character(fname_length) :: climatefile ! Name of climate configuration file
 
   ! Arrays which hold the global fields used as input to GLIMMER ------------------------
 
@@ -118,33 +117,11 @@ program glint_ebm_ex
   ! Executable code starts here - Basic initialisation
   ! -------------------------------------------------------------------------------------
 
-#ifdef GLEX_COM_LINE
-
-  ! Non-f95-standard command-line interface using Intel Compiler
-  ! features - possibly portable to other compilers, but untested
-
-  if (nargs().eq.3) then
-     call getarg(1,climatefile)
-     call getarg(2,paramfile)
-     Print*,'Using climate configuration: ',climatefile
-     Print*,'Using ice-model configuration: ',paramfile
-  else
-
-#endif
-
-     ! These are the default inputs
-     Print*,'Enter name of climate configuration file:'
-     read*,climatefile
-     Print*,'Enter name of ice model configuration file:'
-     read*,paramfile
-
-#ifdef GLEX_COM_LINE
-  endif
-#endif
+  call glint_GetCommandline()
 
   ! Initialise climate
 
-  call glex_ebm_clim_init(climate,climatefile)
+  call glex_ebm_clim_init(climate,commandline_climatename)
 
   ! Set dimensions of global grids
 
@@ -196,7 +173,7 @@ program glint_ebm_ex
        climate%grid%lats, &
        climate%grid%lons, &
        climate%climate_tstep, &
-       (/paramfile/), &
+       (/commandline_configname/), &
        orog=orog_out, &
        ice_frac=ice_frac, &
        albedo=albedo, &

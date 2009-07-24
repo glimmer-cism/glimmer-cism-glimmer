@@ -6,9 +6,10 @@ RESTART_COMMON=glimmer_restart_common.F90 glimmer_restart_pointarr.F90 \
                glimmer_restart_statarr.F90 glimmer_restart_statscal.F90
 
 lib_LIBRARIES = libglide.a libglimmer.a libglint.a libclimate.a
-bin_PROGRAMS  =  simple_glide eis_glide glint_example glex_ebm eismint3_glide \
-                nc2config spin_glide glide_thermal_equib
-check_PROGRAMS = test_config test_setup test_ts test_lithot test_integrate glimmer_unittest
+bin_PROGRAMS  =  simple_glide eis_glide glint_example glex_ebm eismint3_glide nc2config \
+                 spin_glide glide_thermal_equib
+check_PROGRAMS = test_config test_setup test_ts test_lithot test_integrate test_commandline \
+                 glimmer_unittest
 
 variable_DATA = glide_vars.def eis_vars.def glint_vars.def time_vars.def \
                 glint_mbal_vars.def eismint3_vars.def spin_vars.def ncdf_template.F90.in
@@ -29,7 +30,7 @@ RESTART_CODE = glide_types.F90 glimmer_config.F90 glimmer_coordinates.F90 \
                   glint_mbal_coupling.F90 glint_mbal.F90 glint_smb.F90 glint_type.F90 \
                   isostasy_types.F90 profile.F90 simple_forcing.F90 glimmer_paramets.F90 \
                   glimmer_anomcouple.F90 glint_mpinterp.F90
-libglimmer_a_SOURCES = glimmer_vers.F90 \
+libglimmer_a_SOURCES = glimmer_vers.F90 glimmer_commandline.F90 \
                        glimmer_config.F90 glimmer_global.F90 glimmer_utils.F90\
                        glimmer_log.F90 glimmer_ts.F90 glimmer_ncdf.F90 \
                        glimmer_ncio.F90 glimmer_ncparams.F90 \
@@ -70,7 +71,7 @@ libglint_a_SOURCES = glint_climate.F90 glint_initialise.F90 glint_io.F90 \
                      glint_precip_param.F90 glint_mbal.F90 glint_constants.F90\
                      glint_mbal_coupling.F90 glint_mbal_io.F90 \
                      glint_example_clim.F90 glint_smb.F90 glex_ebm_clim.F90 \
-                     glint_mpinterp.F90
+                     glint_mpinterp.F90 glint_commandline.F90
 libclimate_a_SOURCES = eismint3_forcing.F90 eismint3_types.F90 \
                        simple_forcing.F90 eis_forcing.F90 eis_ela.F90 \
                        eis_temp.F90 eis_slc.F90 eis_cony.F90 \
@@ -108,6 +109,7 @@ test_lithot_SOURCES = test_lithot.F90
 test_lithot_LDADD = libclimate.a libglide.a libglimmer.a SLAP_library/libslap.a $(BLAS_LIBS) $(NETCDF_LIBS)
 test_integrate_SOURCES = test_integrate.F90 glimmer_global.F90 \
                          glimmer_physcon.F90 glimmer_integrate.F90
+test_commandline_SOURCES = test_commandline.F90 glimmer_commandline.F90
 
 glimmer_unittest_SOURCES = unittest_framework.F90 unittest.F90 unittest_glide_deriv.F90 \
                            unittest_ice3d_lib.F90 unittest_pbc.F90

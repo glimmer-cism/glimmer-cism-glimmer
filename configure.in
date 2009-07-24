@@ -34,6 +34,15 @@ FCFLAGS=$glimmer_FCFLAGS
 FFLAGS=$glimmer_FFLAGS
 AC_LANG(Fortran)
 AC_FC_SRCEXT(f90)
+
+# checking for f2003 command line parser
+AC_MSG_CHECKING([for f2003 command line parser])
+AC_LINK_IFELSE([AC_LANG_PROGRAM([],
+               [i=command_argument_count()
+                call get_command_argument(i)  ])],
+               [AC_DEFINE(HAVE_2003ARGS,,[defined if you have fortran 2003 intrinsics for parsing command line])
+                AC_MSG_RESULT(yes)], [AC_MSG_RESULT(no)])
+
 # which Fortran compiler are we running?
 AC_MSG_CHECKING([which fortran compiler])
 f95v="no idea"

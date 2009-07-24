@@ -55,22 +55,21 @@ program eismint3_glide
   use glimmer_config
   use eismint3_forcing
   use eismint3_io
+  use glimmer_commandline
   implicit none
 
   type(glide_global_type) :: model        ! model instance
   type(eismint3_climate) :: climate
   type(ConfigSection), pointer :: config  ! configuration stuff
-  character(len=fname_length) :: fname   ! name of paramter file
   real(kind=rk) time
 
-  write(*,*) 'Enter name of GLIDE configuration file to be read'
-  read(*,*) fname
+  call glimmer_GetCommandline()
   
   ! start logging
-  call open_log(unit=50, fname=logname(fname))
-  
+  call open_log(unit=50, fname=logname(commandline_configname))
+
   ! read configuration
-  call ConfigRead(fname,config)
+  call ConfigRead(commandline_configname,config)
 
   ! initialise GLIDE
   call glide_config(model,config)
