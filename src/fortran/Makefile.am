@@ -87,27 +87,27 @@ endif PARDISO
 
 eismint3_glide_SOURCES = eismint3_glide.F90
 eismint3_glide_LDADD = libclimate.a libglide.a libglimmer.a \
-                       SLAP_library/libslap.a $(BLAS_LIBS) $(NETCDF_LIBS)
+                       SLAP_library/libslap.a $(BLAS_LIBS) $(NETCDF_LDFLAGS) $(NETCDF_LIBS)
 simple_glide_SOURCES = simple_glide.F90 
 simple_glide_LDADD = libclimate.a libglide.a libglimmer.a \
-                     SLAP_library/libslap.a $(BLAS_LIBS) $(NETCDF_LIBS)
+                     SLAP_library/libslap.a $(BLAS_LIBS) $(NETCDF_LDFLAGS) $(NETCDF_LIBS)
 eis_glide_SOURCES = eis_glide.F90
-eis_glide_LDADD = libclimate.a libglide.a libglimmer.a SLAP_library/libslap.a $(BLAS_LIBS) $(NETCDF_LIBS)
+eis_glide_LDADD = libclimate.a libglide.a libglimmer.a SLAP_library/libslap.a $(BLAS_LIBS) $(NETCDF_LDFLAGS) $(NETCDF_LIBS)
 spin_glide_SOURCES = spin_glide.F90
 spin_glide_LDADD = libclimate.a libglide.a libglimmer.a SLAP_library/libslap.a
 glint_example_SOURCES = glint_example.F90
-glint_example_LDADD = libglint.a libglide.a libglimmer.a SLAP_library/libslap.a $(BLAS_LIBS) $(NETCDF_LIBS)
+glint_example_LDADD = libglint.a libglide.a libglimmer.a SLAP_library/libslap.a $(BLAS_LIBS) $(NETCDF_LDFLAGS) $(NETCDF_LIBS)
 glex_ebm_SOURCES = glex_ebm.F90
-glex_ebm_LDADD = libglint.a libglide.a libglimmer.a SLAP_library/libslap.a $(BLAS_LIBS) $(NETCDF_LIBS)
+glex_ebm_LDADD = libglint.a libglide.a libglimmer.a SLAP_library/libslap.a $(BLAS_LIBS) $(NETCDF_LDFLAGS) $(NETCDF_LIBS)
 nc2config_SOURCES = nc2config.F90
-nc2config_LDADD = libglimmer.a $(NETCDF_LIBS)
+nc2config_LDADD = libglimmer.a $(NETCDF_LDFLAGS) $(NETCDF_LIBS)
 
 test_config_SOURCES = test_config.F90 glimmer_config.F90 glimmer_log.F90
 test_setup_SOURCES = test_setup.F90
-test_setup_LDADD = libglide.a libglimmer.a $(NETCDF_LIBS)
+test_setup_LDADD = libglide.a libglimmer.a $(NETCDF_LDFLAGS) $(NETCDF_LIBS)
 test_ts_SOURCES = glimmer_ts.F90 glimmer_log.F90 test_ts.F90
 test_lithot_SOURCES = test_lithot.F90
-test_lithot_LDADD = libclimate.a libglide.a libglimmer.a SLAP_library/libslap.a $(BLAS_LIBS) $(NETCDF_LIBS)
+test_lithot_LDADD = libclimate.a libglide.a libglimmer.a SLAP_library/libslap.a $(BLAS_LIBS) $(NETCDF_LDFLAGS) $(NETCDF_LIBS)
 test_integrate_SOURCES = test_integrate.F90 glimmer_global.F90 \
                          glimmer_physcon.F90 glimmer_integrate.F90
 test_commandline_SOURCES = test_commandline.F90 glimmer_commandline.F90
@@ -128,7 +128,8 @@ ALL_SRC=$(test_integrage_SOURCES) $(test_lithot_SOURCES) $(test_ts_SOURCES) $(te
 
 AM_FCFLAGS = $(NETCDF_CPPFLAGS) $(HDF5_CPPFLAGS)
 
-LDADD = $(NETCDF_LIBS)
+LDADD = $(NETCDF_LDFLAGS) $(NETCDF_LIBS)
+
 AM_CFLAGS=$(CFORTRAN_CFLAGS)
 
 #some special rules for automatically generating ncdf src code

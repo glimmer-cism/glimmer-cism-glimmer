@@ -1,3 +1,7 @@
+2009-05-05 Magnus Hagdorn
+ * m4macros/netcdf.m4: minor improvement
+ * src/fortran/Makefile.am: forgot to add NETCDF_LDFLAGS
+
 2009-04-29 Magnus Hagdorn
  * Makefile.am: distribute bootstrap
  * configure.in: use new macros to find netcdf and module include switch

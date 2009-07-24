@@ -72,6 +72,8 @@ AS_IF([test "x$with_netcdf" != xno],
         # sort out the library
         if test -d "$with_netcdf"; then
           NETCDF_LDFLAGS=-L"$with_netcdf"/lib
+        else
+          AC_MSG_ERROR([Cannot find directory "$with_netcdf"/lib])
         fi
         # check whether we should use a non standard library path
         AC_ARG_WITH(netcdf-lib,
