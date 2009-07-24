@@ -24,6 +24,9 @@ AC_CONFIG_SRCDIR([glimmer-config.in])
 
 AC_PROG_RANLIB
 
+#Define this here in case nothing else does.
+ax_cv_f90_modflag=-I
+
 # save compiler flags, autoconf will change them later
 glimmer_FCFLAGS=$FCFLAGS
 glimmer_FFLAGS=$FFLAGS
@@ -97,10 +100,26 @@ dnl Checking for python
 AM_PATH_PYTHON([2.3],,[AC_MSG_RESULT(need at least python 2.3)])
 
 # checking for BLAS library
-ac_gl_have_blas=0
-ACX_BLAS([ac_gl_have_blas=1])
-AM_CONDITIONAL(EXT_BLAS,test "$ac_gl_have_blas" == 1)
-LDFLAGS="$LDFLAGS $BLAS_LIBS"
+AC_ARG_WITH(blas,AS_HELP_STRING([--with-blas],[how to link external BLAS library]),[ac_cv_blas=$withval])
+ac_cv_haveblas=0
+if test "$ac_cv_blas" != ""; then
+  LIBS="$LIBS $ac_cv_blas"
+  AC_MSG_CHECKING([for external BLAS lib])
+  AC_LINK_IFELSE([AC_LANG_PROGRAM([],[f=ddot(1,1.,1.,1.,1.)])],ac_cv_haveblas=1,ac_cv_haveblas=0)
+  if test "$ac_cv_haveblas" == 1; then
+    AC_MSG_RESULT([yes])
+  else
+    AC_MSG_RESULT([no])
+    AC_MSG_ERROR([An external BLAS library was specified but could not be linked against])
+  fi
+fi
+AM_CONDITIONAL(EXT_BLAS,test "$ac_cv_haveblas" == 1)
+
+#NEW VERSION of BLAS check (disabled for now):
+#ac_gl_have_blas=0
+#ACX_BLAS([ac_gl_have_blas=1])
+#AM_CONDITIONAL(EXT_BLAS,test "$ac_gl_have_blas" == 1)
+#LDFLAGS="$LDFLAGS $BLAS_LIBS"
 
 # checking for LAPACK library(required for PARDISO)
 AC_ARG_WITH(lapack,AS_HELP_STRING([--with-lapack],[how to link external LAPACK library]),[ac_cv_lapack=$withval])
@@ -136,7 +155,18 @@ AM_CONDITIONAL(EXT_GOMP,test "$ac_cv_havegomp" == 1)
 
 
 # checking for netCDF
-ACX_NETCDF([],[AC_MSG_ERROR(cannot find netCDF fortran library)])
+AC_ARG_WITH(netcdf,AS_HELP_STRING([--with-netcdf],[location where netCDF is installed]),[ac_cv_netcdf_prefix=$withval])
+if test "$ac_cv_netcdf_prefix" != ""; then
+  AC_MSG_RESULT(netCDF location: $ac_cv_netcdf_prefix)
+  FCFLAGS="$FCFLAGS $ax_cv_f90_modflag$ac_cv_netcdf_prefix/include"
+  LDFLAGS="$LDFLAGS -L$ac_cv_netcdf_prefix/lib"
+fi
+AC_CHECK_LIB(netcdf,NF_INQ_LIBVERS)
+AC_MSG_CHECKING([for f90 netCDF interface])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([],[use netcdf])],AC_MSG_RESULT([yes]),AC_MSG_FAILURE([no]))
+
+#NEW VERSION Of netcdf check (disabled for now)
+#ACX_NETCDF([],[AC_MSG_ERROR(cannot find netCDF fortran library)])
 
 #Checking for alternate linear solvers
 AC_ARG_WITH(umfpack,AS_HELP_STRING([--with-umfpack],[Optional location of umfpack linear solver]),[ac_cv_umfpack_prefix=$withval])
