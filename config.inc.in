@@ -15,20 +15,26 @@
 /* Define if you have a BLAS library. */
 #undef HAVE_BLAS
 
+/* Define if you have the HDF5 library. */
+#undef HAVE_HDF5
+
 /* Define to 1 if you have the `' library (-l). */
 #undef HAVE_LIB
 
 /* Define to 1 if you have the `amd' library (-lamd). */
 #undef HAVE_LIBAMD
 
-/* Define to 1 if you have the `netcdf' library (-lnetcdf). */
-#undef HAVE_LIBNETCDF
-
 /* Define to 1 if you have the `pardiso' library (-lpardiso). */
 #undef HAVE_LIBPARDISO
 
 /* Define to 1 if you have the `umfpack' library (-lumfpack). */
 #undef HAVE_LIBUMFPACK
+
+/* Define if you have the NETCDF library. */
+#undef HAVE_NETCDF
+
+/* Define if the netCDF library is compiled with netCDF 4 API. */
+#undef HAVE_NETCDF4
 
 /* Name of package */
 #undef PACKAGE

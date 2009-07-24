@@ -126,7 +126,8 @@ ALL_SRC=$(test_integrage_SOURCES) $(test_lithot_SOURCES) $(test_ts_SOURCES) $(te
 	$(libglide_a_SOURCES) $(libglint_a_SOURCES) $(libclimate_a_SOURCES) $(spin_glide_SOURCES) \
         $(glimmer_unittest_SOURCES)
 
-AM_FCFLAGS = $(NETCDF_FCFLAGS)
+AM_FCFLAGS = $(NETCDF_CPPFLAGS) $(HDF5_CPPFLAGS)
+
 LDADD = $(NETCDF_LIBS)
 AM_CFLAGS=$(CFORTRAN_CFLAGS)
 
