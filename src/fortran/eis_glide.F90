@@ -60,6 +60,8 @@ program eis_glide
   type(eis_climate_type) :: climate       ! climate
   type(ConfigSection), pointer :: config  ! configuration stuff
   real(kind=rk) time
+  real(kind=dp) t1,t2
+  integer clock,clock_rate
   
 
 
@@ -70,6 +72,10 @@ program eis_glide
 
   ! read configuration
   call ConfigRead(commandline_configname,config)
+
+  ! start timing
+  call system_clock(clock,clock_rate)
+  t1 = real(clock,kind=dp)/real(clock_rate,kind=dp)
 
   ! initialise GLIDE
   call glide_config(model,config)
@@ -95,7 +101,9 @@ program eis_glide
 
   ! finalise GLIDE
   call glide_finalise(model)
-  call glimmer_writestats(commandline_resultsname,commandline_configname)
+  call system_clock(clock,clock_rate)
+  t2 = real(clock,kind=dp)/real(clock_rate,kind=dp)
+  call glimmer_writestats(commandline_resultsname,commandline_configname,t2-t1)
   call close_log
 
 end program eis_glide

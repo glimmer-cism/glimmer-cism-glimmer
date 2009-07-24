@@ -112,6 +112,8 @@ program glint_ebm_ex
   logical :: out    ! Outputs set flag
   integer :: i,j    ! Array index counters
   integer :: time   ! Current time (hours)
+  real(kind=dp) t1,t2
+  integer clock,clock_rate
   integer :: ierr
 
   ! -------------------------------------------------------------------------------------
@@ -119,6 +121,10 @@ program glint_ebm_ex
   ! -------------------------------------------------------------------------------------
 
   call glint_GetCommandline()
+
+  ! start timing
+  call system_clock(clock,clock_rate)
+  t1 = real(clock,kind=dp)/real(clock_rate,kind=dp)
 
   ! Initialise climate
 
@@ -213,7 +219,9 @@ program glint_ebm_ex
   ! Finalise/tidy up everything ------------------------------------------------------------
 
   call end_glint(ice_sheet)
-  call glimmer_writestats(commandline_resultsname,commandline_configname)
+  call system_clock(clock,clock_rate)
+  t2 = real(clock,kind=dp)/real(clock_rate,kind=dp)
+  call glimmer_writestats(commandline_resultsname,commandline_configname,t2-t1)
 
 100 format(f9.5)
 101 format(e12.5)

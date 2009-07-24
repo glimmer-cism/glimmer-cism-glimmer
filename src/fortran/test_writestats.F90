@@ -5,7 +5,8 @@
 
 program test_writestats
   use glimmer_writestats_module
+  use glimmer_global, only : dp
   implicit none
 
-  call glimmer_writestats("results","model.conf")
+  call glimmer_writestats("results","model.conf",1000.2_dp)
 end program test_writestats
