@@ -20,24 +20,15 @@
 
 # a handy python script which will launch glide and record the execution time of the model
 
-import os,sys,fcntl,time, ConfigParser, getopt,os.path
+import os,sys,ConfigParser,os.path,optparse,subprocess
 
-def usage():
-    """Print short usage message."""
+usage = """%prog [options] config_file
+launch glide and record execution time of the model. The model binary can be
+either set using the environment variable GLIDE_MODEL or is automatically
+determined from the config file.
 
-    print 'Useage: %s [options] config_file'%sys.argv[0]
-    print 'launch glide and record execution time of the model.'
-    print 'the model binary can be either set using the environment variable'
-    print 'GLIDE_MODEL or is automatically determined from the config file.'
-    print ''
-    print 'config_file is the name of the model configuration to be used.'
-    print ''
-    print 'options'
-    print '--help\tthis message'
-    print '-m BINARY --model=BINARY\tmodel binary to be launched'
-    print '-r NAME --results=NAME\tname of file where timing info is stored'
-    print '--prefix PFX\tGLIMMER prefix'
-    print '--src\tassume prefix is source directory'
+config_file is the name of the model configuration to be used."""
+
 
 def get_runtype(config):
     """Determine which model to run given configuration.
@@ -65,119 +56,73 @@ def get_runtype(config):
             raise KeyError, 'no idea what model I should start'
     return model
 
-def get_lock(f):
-    """Wait until we get lock for file f."""
+def find_prefix(bname):
+    """figure out full path to binary bname"""
 
-    got_lock = False
-    while not got_lock:
-        try:
-            fcntl.lockf(f,(fcntl.LOCK_EX|fcntl.LOCK_NB))
-        except IOError:
-            got_lock=False
-            time.sleep(1)
-        else:
-            got_lock=True
+    print os.path.dirname(bname)
 
-def release_lock(f):
-    """Release lock for file f."""
-
-    fcntl.lockf(f,fcntl.LOCK_UN)
-
-def get_gmtdate():
-    """Get current date."""
-
-    d = time.gmtime()
-    return '%d-%d-%d_%d:%d'%(d[0],d[1],d[2],d[3],d[4])
+    #if os.path.dirname(bname)!="":
+        
 
 if __name__ == '__main__':
 
-    try:
-        opts, args = getopt.getopt(sys.argv[1:],'hr:m:',['help','prefix=','results=','model=','src'])
-    except getopt.GetoptError,error:
-        # print usage and exit
-        print error
-        usage()
-        sys.exit(1)
+
+    parser = optparse.OptionParser(usage=usage)
+    parser.add_option("-m", "--model", help="name of model binary to be launched", metavar="BINARY")
+    parser.add_option("-r", "--results", help="name of file where timing info is stored (default: results)", metavar="RESULTS", default="results")
+    parser.add_option("-s", "--submit-sge",action="store_true",default=False,help="submit job to Sun Grid Engine")
+    parser.add_option("-o", "--submit-options",default="",help="set additional options for cluster submission")
+    parser.add_option("--prefix",help="GLIMMER prefix",metavar="PFX")
+    parser.add_option("--src",action="store_true",default=False,help="assume prefix is source directory")
+    (options, args) = parser.parse_args()
+
 
     if len(args) == 1:
         configname = args[0]
     else:
-        usage()
-        sys.exit(1)        
-
-    prefix=None
-    model = None
-    is_src = False
-    results_name = 'results'
-    for o,a in opts:
-        if o in ('-h', '--help'):
-            usage()
-            sys.exit(0)
-        if o in ('-m', '--model'):
-            model = a
-        if o in ('-r', '--results'):
-            results_name = a
-        if o == '--prefix':
-            prefix=a
-        if o == '--src':
-            is_src = True
-
+        parser.error("no configuration file specified")
 
     config = ConfigParser.ConfigParser()
     config.readfp(open(configname))
 
-    if model == None:
+    if options.model == None:
         model = get_runtype(config)
-    if prefix!=None:
-        if is_src:
-            model = os.path.join(prefix,'src','fortran',model)
-        else:
-            model = os.path.join(prefix,'bin',model)
-
-    # open results file
-    if os.path.exists(results_name):
-        status = open(results_name,'a')
     else:
-        status = open(results_name,'a')
-        get_lock(status)
-        status.write('#cfg_file\tusr_time\tsys_time\tdate\t\thost\tarch\tversion\tfcflags\n')
-        release_lock(status)
-        
-    prog = os.popen(model,'w')
-    prog.write('\"%s\"\n'%configname)
-    prog.close()
-
-    t = os.times()
-
-    # extract some info
-    uname = os.uname()
-    if prefix!=None:
-        if is_src:
-            glimmer_cfg = 'sh %s'%os.path.join(prefix,'glimmer-config')
+        model = options.model
+    if options.prefix!=None:
+        if options.src:
+            prefix = os.path.join(options.prefix,'src','fortran')
         else:
-            glimmer_cfg = os.path.join(prefix,'bin','glimmer-config')
+            prefix = os.path.join(options.prefix,'bin')
     else:
-        glimmer_cfg = 'glimmer-config'
-    prog = os.popen('%s --version'%glimmer_cfg)
-    version = prog.readline().strip()
-    prog.close()
-    prog = os.popen('%s --fcflags'%glimmer_cfg)
-    data = prog.readline()
-    prog.close()
-    fcflags=''
-    for f in data.split():
-        interesting = True
-        for i in ('-I','-fpp'):
-            if f.startswith(i):
-                interesting = False
-        if interesting:
-            fcflags='%s %s'%(fcflags,f)
-    fcflags='\"%s\"'%fcflags.strip()
-    
-    # get lock
-    get_lock(status)
-    status.write('%s\t%f\t%f\t%s\t%s\t%s\t%s\t%s\n'%(configname,t[2],t[3],get_gmtdate(),uname[1],uname[4],version,fcflags))
+        prefix = os.path.abspath(os.path.dirname(sys.argv[0]))
+    p = prefix.split(os.sep)[-1]
+    sge_script = ''
+    if p == 'bin':
+        sge_script = os.path.abspath(os.path.join(prefix,'..','share','glimmer'))
+    elif p == 'python':
+        sge_script = prefix
+        prefix = os.path.abspath(os.path.join(prefix,'..','fortran'))
+    elif p == 'fortran':
+        sge_script = os.path.abspath(os.path.join(prefix,'..','python'))
+    sge_script = os.path.join(sge_script,'qsub_glide.sh')
+    model = os.path.join(prefix,model)
 
-    # release lock
-    release_lock(status)
-    status.close()
+    if not os.path.isfile(model):
+        sys.stderr.write("Cannot find model executable %s"%model)
+        sys.exit(0)
+    prog = "%s -r %s %s"%(model,options.results,configname)
+
+    if options.submit_sge:
+        if not os.path.isfile(sge_script):
+            sys.stderr.write("Cannot find model submission script %s"%sge_script)
+            sys.exit(0)
+        prog = "qsub %s %s %s"%(options.submit_options,sge_script,prog)
+
+    try:
+        retcode = subprocess.call(prog,shell=True)
+        if retcode < 0:
+            sys.stderr.write("glide model %s was terminated by signal %d\n"%(model,-retcode))
+    except OSError, e:
+        sys.stderr.write("Execution failed: %s\n"%e)
+
