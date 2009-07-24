@@ -57,6 +57,7 @@ module glint_commandline
 
   character(len=5000)         :: commandline_history     !< complete command line
   character(len=fname_length) :: commandline_configname  !< name of the configuration file
+  character(len=fname_length) :: commandline_resultsname !< name of results file
   character(len=fname_length) :: commandline_climatename !< name of climate configuration file
 
 contains
@@ -68,11 +69,15 @@ contains
   subroutine glint_GetCommandline()
     implicit none
 
-    integer numargs
+    integer numargs,nfiles
     integer :: i
     integer, external :: iargc
     character(len=100) :: argument
+    integer, dimension(100) :: argumentIdx
     
+    ! defaults
+    commandline_resultsname = 'results'
+
     ! get number of arguments and file names
     numargs = NARGS()
     ! reconstruct command line to store commandline_history
@@ -81,10 +86,47 @@ contains
        call GETARG(i,argument)
        commandline_history = trim(commandline_history)//" "//trim(argument)
     end do
-
-    if (numargs.gt.1) then
-       call GETARG(1,commandline_configname)
-       call GETARG(2,commandline_climatename)
+    
+    if (numargs.gt.0) then
+       i=0
+       nfiles = 0
+       ! loop over command line arguments
+       do while (i.lt.numargs)
+          i = i + 1
+          call GETARG(i,argument)
+          ! check if it is an option
+          if (argument(1:1).eq.'-') then
+             select case (trim(argument))
+             case ('-h')
+                call glint_commandlineHelp()
+                stop
+             case ('-r')
+                i = i+1
+                if (i.gt.numargs) then
+                   write(*,*) 'Error, expect name of output file to follow -o option'
+                   call glint_commandlineHelp()
+                   stop
+                end if
+                call GETARG(i,commandline_resultsname)
+             case default
+                write(*,*) 'Unkown option ',trim(argument)
+                call glint_commandlineHelp()
+                stop
+             end select
+          else
+             ! it's not an option
+             nfiles = nfiles+1
+             argumentIdx(nfiles) = i
+          end if
+       end do
+       if (numargs.gt.1) then
+          call GETARG(1,commandline_configname)
+          call GETARG(2,commandline_climatename)
+       else
+          write(*,*) 'Need at least one argument'
+          call glint_commandlineHelp()
+          stop
+       end if
     else
        write(*,*) 'Enter name of climate configuration file'
        read(*,'(a)') commandline_climatename
@@ -105,5 +147,23 @@ contains
     write(*,*)
     write(*,*) 'commandline_climatename: ',trim(commandline_climatename)
     write(*,*) 'commandline_configname:  ', trim(commandline_configname)
+    write(*,*) 'commandline_resultsname: ', trim(commandline_resultsname)
   end subroutine glint_PrintCommandline
+
+  !> print help message
+  !!
+  !! \author Magnus Hagdorn
+  !! \date April 2009
+  subroutine glint_commandlineHelp()
+    implicit none
+    character(len=500) :: pname
+
+    call GETARG(0,pname)
+
+    write(*,*) 'Usage: ',trim(pname),' [options] climname cfgname'
+    write(*,*) 'where [options] are'
+    write(*,*) '  -h:          this message'
+    write(*,*) '  -r <fname>:  the name of the results file (default: results)'
+  end subroutine glint_commandlineHelp
 end module glint_commandline
+

@@ -3,6 +3,9 @@
 /* Define to 1 if you want to enable command-line arguments */
 #undef COMMAND_LINE
 
+/* fortran compiler flags the model is configured with */
+#undef GLIMMER_FCFLAGS
+
 /* Define to 1 if you want to enable extended restarts */
 #undef GLIMMER_SP
 

@@ -55,6 +55,7 @@ program glint_example
   use glint_global_interp
   use glint_example_clim
   use glint_commandline
+  use glimmer_writestats_module
   implicit none
 
   ! Program variables -------------------------------------------------------------------
@@ -194,6 +195,7 @@ program glint_example
   ! Finalise/tidy up everything ------------------------------------------------------------
 
   call end_glint(ice_sheet)
+  call glimmer_writestats(commandline_resultsname,commandline_configname)
 
 100 format(f9.5)
 101 format(e12.5)

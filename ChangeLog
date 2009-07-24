@@ -1,4 +1,22 @@
 2009-04-10 Magnus Hagdorn
+ * configure.in: figure out C compiler and how to use cfortran.h
+ * src/fortran/Makefile.am: add new targets
+ * src/fortran/cfortran.h: add cfortran.h v 4.3
+ * src/fortran/eis_glide.F90: write run statistics to file
+ * src/fortran/eismint3_glide.F90: ditto
+ * src/fortran/glex_ebm.F90: ditto
+ * src/fortran/glint_example.F90: ditto
+ * src/fortran/simple_glide.F90: ditto
+ * src/fortran/glimmer_commandline.F90: get name of results file from 
+   command line
+ * src/fortran/glint_commandline.F90: ditto
+ * glimmer_writestats.F90: new module wrapping C stats file writer
+ * src/fortran/nc2config.F90: fix minor bug
+ * src/fortran/test_writestats.F90: test_writestats module
+ * src/fortran/writestats.[ch]: collect some runtime statistics and write
+   to file
+
+2009-04-10 Magnus Hagdorn
  * configure.in: test if fortran compiler supports f03 command line parser
  * src/fortran/Makefile.am: add new programs, sources
  * src/fortran/eis_glide.F90: use new command line parser

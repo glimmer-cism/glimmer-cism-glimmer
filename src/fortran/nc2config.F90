@@ -108,8 +108,12 @@ program nc2config
            argumentIdx(nfiles) = i
         end if
      end do
-     if (nfiles.eq.1) then
+     if (nfiles.gt.1) then
         call GETARG(argumentIdx(1),infile)
+     else
+        write(*,*) 'No input file specified'
+        call usage()
+        stop
      end if
   else
      ! These are the default inputs

@@ -785,7 +785,7 @@ function slapsolvstr(ewn, nsn, upn, &
   real (kind = dp), parameter :: tol = 1.0e-12_dp
   real (kind = dp) :: err
 
-  integer, parameter :: isym = 0, itol = 2, itmax = 100
+  integer, parameter :: isym = 0, itol = 2, itmax = 1000
   integer, dimension(2) :: loc
   integer :: iter, ierr, mxnelt
 

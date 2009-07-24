@@ -53,6 +53,7 @@ program eis_glide
   use glimmer_log
   use glimmer_config
   use glimmer_commandline
+  use glimmer_writestats_module
   implicit none
 
   type(glide_global_type) :: model        ! model instance
@@ -94,6 +95,7 @@ program eis_glide
 
   ! finalise GLIDE
   call glide_finalise(model)
+  call glimmer_writestats(commandline_resultsname,commandline_configname)
   call close_log
 
 end program eis_glide

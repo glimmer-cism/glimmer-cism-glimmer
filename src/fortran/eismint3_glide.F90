@@ -56,6 +56,7 @@ program eismint3_glide
   use eismint3_forcing
   use eismint3_io
   use glimmer_commandline
+  use glimmer_writestats_module
   implicit none
 
   type(glide_global_type) :: model        ! model instance
@@ -94,6 +95,7 @@ program eismint3_glide
 
   ! finalise GLIDE
   call glide_finalise(model)
+  call glimmer_writestats(commandline_resultsname,commandline_configname)
   call close_log
 
 end program eismint3_glide
