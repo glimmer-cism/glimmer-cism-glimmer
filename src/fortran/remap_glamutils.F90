@@ -198,11 +198,15 @@ module remap_glamutils
     !because we go in two rows for the low-end ghost cells,
     !then go in two more for the source of the first two
     !high-end ghost cells.
-    ubar_ir(ewn_ir,:,:) = ubar_ir(5,:,:)
-    ubar_ir(:,nsn_ir,:) = ubar_ir(:,5,:)
-    vbar_ir(ewn_ir,:,:) = ubar_ir(5,:,:)
-    vbar_ir(:,nsn_ir,:) = ubar_ir(:,5,:)
-     
+    if (periodic_ew) then
+        ubar_ir(ewn_ir,:,:) = ubar_ir(5,:,:)
+        vbar_ir(ewn_ir,:,:) = ubar_ir(5,:,:)
+    end if
+
+    if (periodic_ns) then
+        ubar_ir(:,nsn_ir,:) = ubar_ir(:,5,:)
+        vbar_ir(:,nsn_ir,:) = ubar_ir(:,5,:)
+    end if
 
     call write_xls("ubar_ir_pbc.txt", ubar_ir(:,:,1))
     call write_xls("vbar_ir_pbc.txt", vbar_ir(:,:,1))    
