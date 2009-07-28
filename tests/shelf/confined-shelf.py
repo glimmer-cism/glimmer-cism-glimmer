@@ -35,7 +35,7 @@ thk = glimcdf.setup_variable(nc, "thk")
 uvelbc = glimcdf.setup_variable(nc, "uvelhom", staggered=True, useZ=True)
 vvelbc = glimcdf.setup_variable(nc, "vvelhom", staggered=True, useZ=True)
 beta = glimcdf.setup_variable(nc, 'beta', staggered=True)
-kinbcmask = glimcdf.setup_variable(nc, 'kinbcmask', staggered=True, type=NC.INT)
+kinbcmask = glimcdf.setup_variable(nc, 'kinbcmask', type=NC.INT)
 
 #Determine the total length of the domain
 L = shape.nx*shape.dx
@@ -43,14 +43,15 @@ L = shape.nx*shape.dx
 rho_i = 910.0
 rho_w = 1028.0
 
-for i in range(shape.nx):
-    xhat = float(i)/(shape.nx-1)
-    for j in range(shape.ny):
+thk[:] = 0
+topg[:] = -2000
+
+for i in range(2,shape.nx-2):
+    for j in range(2,shape.ny-2):
         loc = (0,j,i)
-        yhat = float(j)/(shape.ny-1)
         topg.put_1(loc, -2000) #Everything at sea level
         
-        if j < 2:
+        if j < 4:
             thk.put_1(loc, 0)
         else:
             thk.put_1(loc,1000)
@@ -61,6 +62,8 @@ for i in range(shape.nx):
 uvelbc[:] = 0
 vvelbc[:] = 0
 kinbcmask[:] = 0
-kinbcmask[:,shape.ny-2,:] = 1
-
+kinbcmask[:,shape.ny-3:shape.ny,:] = 1
+if not periodic_ew:
+    kinbcmask[:,:,shape.nx-3:] = 1
+    kinbcmask[:,:,:3] = 1
 nc.close()
