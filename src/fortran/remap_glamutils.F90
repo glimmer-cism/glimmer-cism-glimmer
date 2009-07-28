@@ -193,6 +193,8 @@ module remap_glamutils
     call periodic_boundaries(ubar_ir(:ewn_ir-1,:nsn_ir-1,1), periodic_ew, periodic_ns, 2)
     call periodic_boundaries(vbar_ir(:ewn_ir-1,:nsn_ir-1,1), periodic_ew, periodic_ns, 2)
 
+    call write_xls("thck_ir.txt", thck_ir(:,:,1))
+
     !Copy the extra set of ghost cells over
     !Hard coded 5 as the source for these ghost cells,
     !because we go in two rows for the low-end ghost cells,

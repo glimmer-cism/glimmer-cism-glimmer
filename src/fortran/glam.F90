@@ -87,7 +87,7 @@ module glam
         ! *sfp** call remapping code
 
          call horizontal_remap  ( dt_ir,                                  & 
-                                  ewn-1,               nsn-1,             &
+                                  ewn_ir,               nsn_ir,             &
                                   ntrace_ir,           nghost_ir,         &
                                   ubar_ir,             vbar_ir,           &
                                   thck_ir,             trace_ir,          &
