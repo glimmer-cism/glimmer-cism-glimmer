@@ -1,4 +1,4 @@
-installed_m4 = glimmer.m4 acx_blas.m4
+installed_m4 = glimmer.m4 
 
 EXTRA_DIST = $(installed_m4) $(uninstalled_m4)
 
