@@ -198,10 +198,6 @@ contains
                                         model%velocity_hom%uvel, model%velocity_hom%vvel,           &
                                         model%velocity_hom%uflx, model%velocity_hom%vflx,           &
                                         model%velocity_hom%efvs )
-                                       !model%velocity_hom%efvs,                                    & 
-                                       !model%velocity_hom%kinematic_bc_u,                          &
-                                       !model%velocity_hom%kinematic_bc_v )
- 
          end if
         !Compute the velocity norm - this is independant of the methods used to compute the u and v components so
         !we put it out here
