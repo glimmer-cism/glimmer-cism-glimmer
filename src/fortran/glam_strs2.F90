@@ -1169,7 +1169,7 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
 
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     elseif ( GLIDE_HAS_ICE(mask(ew,ns)) .and. ( GLIDE_IS_DIRICHLET_BOUNDARY(mask(ew,ns)) .or. &
-             GLIDE_IS_COMP_DOMAIN_BND(mask(ew,ns)) ) ) &
+             GLIDE_IS_COMP_DOMAIN_BND(mask(ew,ns)) ) .or. GLIDE_IS_LAND_MARGIN(mask(ew,ns))) &
     then
 !    print *, 'At a NON-SHELF boundary ... ew, ns = ', ew, ns
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
