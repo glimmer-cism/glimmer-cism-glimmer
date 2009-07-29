@@ -282,13 +282,13 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
 
 
   !!!!!!!!! *sfp* start debugging !!!!!!!!!!!!!!!!!!!!!!!!
-  print *, 'mask = '
-  print *, umask
-  print *, ' '
-  pause
-  print *, 'uindx = '
-  print *, uindx
-  pause
+!  print *, 'mask = '
+!  print *, umask
+!  print *, ' '
+!  pause
+!  print *, 'uindx = '
+!  print *, uindx
+!  pause
   !!!!!!!!! stop debugging !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
@@ -1081,7 +1081,10 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     if ( GLIDE_HAS_ICE(mask(ew,ns)) .and. .not. &
          GLIDE_IS_COMP_DOMAIN_BND(mask(ew,ns)) .and. .not. &
-         GLIDE_IS_CALVING(mask(ew,ns))) then
+         GLIDE_IS_MARGIN(mask(ew,ns)) .and. .not. &
+         GLIDE_IS_DIRICHLET_BOUNDARY(mask(ew,ns)) .and. .not. &
+         GLIDE_IS_CALVING(mask(ew,ns) ) ) &
+    then
 !    print *, 'In main body ... ew, ns = ', ew, ns
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -1126,7 +1129,9 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
         end do  ! upn
 
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-    elseif ( GLIDE_IS_CALVING( mask(ew,ns) ) ) then 
+    elseif ( GLIDE_IS_CALVING( mask(ew,ns) ) .and. .not. &
+             GLIDE_IS_COMP_DOMAIN_BND(mask(ew,ns) ) ) &
+    then
 !    print *, 'At a SHELF boundary ... ew, ns = ', ew, ns
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -1163,7 +1168,9 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
         lateralboundry = .false.
 
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-    elseif ( GLIDE_IS_COMP_DOMAIN_BND(mask(ew,ns))) then 
+    elseif ( GLIDE_HAS_ICE(mask(ew,ns)) .and. ( GLIDE_IS_DIRICHLET_BOUNDARY(mask(ew,ns)) .or. &
+             GLIDE_IS_COMP_DOMAIN_BND(mask(ew,ns)) ) ) &
+    then
 !    print *, 'At a NON-SHELF boundary ... ew, ns = ', ew, ns
 ! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
