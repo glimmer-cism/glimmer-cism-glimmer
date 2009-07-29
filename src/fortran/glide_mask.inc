@@ -69,7 +69,8 @@
 #define GLIDE_IS_CALVING(mask)            (iand(mask, 41) == 41)
 
 !Checks whether this is a land margin
-#define GLIDE_IS_LAND_MARGIN(mask)        (GLIDE_IS_MARGIN(mask) .and. GLIDE_IS_GOUND(mask))
+!37 = 32 + 4 + 1
+#define GLIDE_IS_LAND_MARGIN(mask)        (iand(mask, 37) == 37)
 
 !Checks whether a dirichlet boundary has been defined at this point
 #define GLIDE_IS_DIRICHLET_BOUNDARY(mask) (iand(mask, GLIDE_MASK_DIRICHLET_BC) == GLIDE_MASK_DIRICHLET_BC)
