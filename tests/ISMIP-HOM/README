@@ -1,0 +1,42 @@
+ISMIP-HOM Experiments
+=====================
+This is a set of intercomparison experiments meant to test the
+implementation of higher-order physics.  
+For more information, see the ISMIP-HOM page at
+http://homepages.ulb.ac.be/~fpattyn/ismip/
+
+PREREQUISITES:
+In order to use the ISMIP-HOM scripts, you will need Python and the 
+following modules installed:
+PyCDF
+Numpy
+
+To produce visuals, you will also need to install the Python
+matplotlib library.  You will also need to download the ISMIP-HOM
+submitted results from:
+http://homepages.ulb.ac.be/~fpattyn/ismip/tc-2-95-2008-supplement.zip
+and unzip to a directory named ismip_all
+
+RUNNING THE TESTS:
+To run ISMIP-HOM A through D for all domain sizes, invoke the verification script:
+
+python verify.py (or ./verify.py)
+
+You can limit the experiments or the domain sizes.  To run A through D for only 40-160 kilometer domains:
+
+python verify.py --size=40,80,160
+
+To run A and C for all domain sizes:
+
+python verify.py --exp=a,c
+
+Short versions of the arguments are also accepted:
+
+python verify.py -ea,c -s40,80,160
+
+VISUALIZING OUTPUT:
+To produce a visual showing how your model output compares to published results, run the createVisuals.py script.
+Make sure to pass the same arguments that you did to verify.py, otherwise the script may choke as it is missing
+output files.
+
+
