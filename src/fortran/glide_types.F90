@@ -106,6 +106,7 @@ module glide_types
   integer, parameter :: EVOL_ADI = 1
   integer, parameter :: EVOL_DIFFUSION = 2
   integer, parameter :: EVOL_INC_REMAP = 3
+  integer, parameter :: EVOL_FO_UPWIND = 4  ! *sfp** added for summer modeling school
 
   integer, parameter :: SIGMA_BUILTIN_DEFAULT = 0 !Use default Sigma coordinate spacing
   integer, parameter :: SIGMA_BUILTIN_EVEN = 1 !Use an evenly spaced Sigma coordinate
@@ -208,6 +209,7 @@ module glide_types
     !*FD \item[0] Pseudo-diffusion approach 
     !*FD \item[2] Diffusion approach (also calculates velocities)
     !*FD \item[3] Incremental remapping
+    !*FD \item[4] 1st-order upwind scheme
     !*FD \end{description}
 
     integer :: whichwvel = 0
@@ -749,7 +751,7 @@ module glide_types
     real(dp),dimension(:,:),  pointer :: smth     => null()
     real(dp),dimension(:,:,:),pointer :: hadv_u   => null()
     real(dp),dimension(:,:,:),pointer :: hadv_v   => null()
-    !*sfp* added space to the next 2 (cons, f) for use w/ HO and SSA dissip. calc. 
+    !*sfp** added space to the next 2 (cons, f) for use w/ HO and SSA dissip. calc. 
     real(dp),dimension(5)             :: cons     = 0.0
     real(dp),dimension(5)             :: f        = 0.0     
     real(dp),dimension(8)             :: c        = 0.0

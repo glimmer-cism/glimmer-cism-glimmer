@@ -123,6 +123,9 @@ contains
     use glam_strs2, only : glam_velo_fordsiapstr_init
     use remap_glamutils, only : horizontal_remap_init
 
+    ! *sfp** added for summer modeling school
+    use fo_upwind_advect, only : fo_upwind_advect_init
+
     implicit none
     type(glide_global_type) :: model        !*FD model instance
 
@@ -217,6 +220,13 @@ contains
         call horizontal_remap_init( model%general%ewn, model%general%nsn, model%options%periodic_ew, model%options%periodic_ns )
 
     endif 
+
+    ! *sfp** added for summer modeling school
+    if (model%options%whichevol== EVOL_FO_UPWIND ) then
+
+        call fo_upwind_advect_init( model%general%ewn, model%general%nsn )
+
+    endif
 
     ! initialise ice age
     ! Currently the ice age is only computed for remapping transport
@@ -343,6 +353,9 @@ contains
     ! Modeled after similar routines in "glide_thck"
     use glam, only: inc_remap_driver
 
+    ! *sfp** added for summer modeling school
+    use fo_upwind_advect, only: fo_upwind_advect_driver
+
     implicit none
 
     type(glide_global_type) :: model        !*FD model instance
@@ -384,6 +397,11 @@ contains
             ! (Temperature is advected by glide_temp)
 
        call inc_remap_driver( model )
+
+    ! *sfp** added for summer modeling school
+    case(EVOL_FO_UPWIND) ! Use first order upwind scheme for mass transport
+
+       call fo_upwind_advect_driver( model )
  
     end select
 #ifdef PROFILING

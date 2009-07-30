@@ -473,11 +473,12 @@ contains
          '~basal water', &
          '~basal melt ', &
          'taub^3      ' /)
-    character(len=*), dimension(0:3), parameter :: evolution = (/ &
+    character(len=*), dimension(0:4), parameter :: evolution = (/ &
          'pseudo-diffusion                      ', &
          'ADI scheme                            ', &
          'iterated diffusion                    ', &
-         'remap thickness                       '/)    !*sfp* added
+         'remap thickness                       ', &   ! *sfp** added
+         '1st order upwind                      ' /)   ! *sfp** added for summer modeling school 
     character(len=*), dimension(0:1), parameter :: vertical_integration = (/ &
          'standard     ', &
          'obey upper BC' /)
@@ -485,7 +486,7 @@ contains
          'Do not compute higher-order velocities', &
          'Pattyn 2003 (on A-grid)               ', &
          'Pattyn 2003 (on B-grid)               ', &
-         'Payne/Price (on B-grid)               ' /)    !*sfp* added
+         'Payne/Price (on B-grid)               ' /)    !*sfp** added
     character(len=*), dimension(0:3), parameter :: ho_prognostic = (/ &
          'Evolve ice with SIA only', &
          'Pattyn scheme           ', &
