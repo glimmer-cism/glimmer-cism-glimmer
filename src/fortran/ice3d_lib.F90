@@ -914,6 +914,7 @@ contains
                             coef = 0
                             stencil_center_idx = csp_masked(I_J_K,i,j,k,point_mask,NZETA) 
                             if (.not. GLIDE_HAS_ICE( geometry_mask(i,j) ) .or. &
+                                      GLIDE_IS_LAND_MARGIN( geometry_mask(i,j) ) .or. &
                                       GLIDE_IS_THIN( geometry_mask(i,j) ) &
                                          .and. .not. options%ho_include_thinice) then
                                 !No ice - "pass through"
@@ -1285,7 +1286,7 @@ contains
                !call write_xls_3d("uvel.txt",uvel)
         !call write_xls_3d("vvel.txt",vvel)
         character(20) :: point_type
-
+        real(dp) :: rhs2
         !Set up a system of pointers to encapsulate the nomenclature described
         !above
         !TODO: Go through the code and figure out which of these bindings
@@ -1382,7 +1383,8 @@ contains
 #ifndef NOSHELF        
         if (GLIDE_IS_CALVING(mask(i,j)) .and. &
             WHICH_SOURCE /= HO_SOURCE_DISABLED) then !Marine margin dynamic (Neumann) boundary condition
-            call sparse_marine_margin(component,i,j,k,h,latbc_normal, vel_perp, efvs, dx, dy, ax, ay, dz,coef, rhs, &
+            call sparse_marine_margin(component,i,j,k,h,latbc_normal, dzdx, dzdy, dhbdx, dhbdy, &
+                                      vel_perp, efvs, dx, dy, ax, ay, dz,coef, rhs, &
                                       dudx_field,dudy_field,dudz_field,dvdx_field,dvdy_field,dvdz_field,&
                                       direction_x, direction_y, mask, STAGGERED, WHICH_SOURCE)
             point_type = "lateral"
@@ -1421,8 +1423,10 @@ contains
             !to always add to coef, not overwrite it.
             !if (.not. IS_NAN(latbc_normal(i,j))) then !Marine margin dynamic (Neumann) boundary condition
             !    rhs2 = 0
-            !    call sparse_marine_margin(component,i,j,k,h,latbc_normal, vel_perp, efvs, dx, dy, ax, ay, dz,coef, rhs2)
-            !    rhs = rhs + rhs2
+            !call sparse_marine_margin(component,i,j,k,h,latbc_normal, vel_perp, efvs, dx, dy, ax, ay, dz,coef, rhs, &
+            !                          dudx_field,dudy_field,dudz_field,dvdx_field,dvdy_field,dvdz_field,&
+            !                          direction_x, direction_y, mask, STAGGERED, WHICH_SOURCE)
+            !     rhs = rhs + rhs2
             !end if
         else if (k.eq.Ndz) then !Lower boundary condition (Basal sliding)
             !Finite difference coefficients for an irregular Z grid, upwinded
@@ -1481,8 +1485,10 @@ contains
                 !to always add to coef, not overwrite it.
                 !if (.not. IS_NAN(latbc_normal(i,j))) then !Marine margin dynamic (Neumann) boundary condition
                 !    rhs2 = 0
-                !    call sparse_marine_margin(component,i,j,k,h,latbc_normal, vel_perp, efvs, dx, dy, ax, ay, dz,coef, rhs2)
-                !    rhs = rhs + rhs2
+                !call sparse_marine_margin(component,i,j,k,h,latbc_normal, vel_perp, efvs, dx, dy, ax, ay, dz,coef, rhs, &
+                !                      dudx_field,dudy_field,dudz_field,dvdx_field,dvdy_field,dvdz_field,&
+                !                      direction_x, direction_y, mask, STAGGERED, WHICH_SOURCE)
+                !     rhs = rhs + rhs2
                 !end if
             endif
         else !Interior of the ice (e.g. not a boundary condition)
@@ -1561,13 +1567,15 @@ contains
     end subroutine sparse_setup
 
     !Computes finite differences for the marine margin
-    subroutine sparse_marine_margin(component,i,j,k,h,normals, vel_perp, efvs, dx, dy, ax, ay, zeta,coef, rhs, &
+    subroutine sparse_marine_margin(component,i,j,k,h,normals, dzdx, dzdy, dhbdx, dhbdy, &
+                                    vel_perp, efvs, dx, dy, ax, ay, zeta,coef, rhs, &
                                     dudx,dudy,dudz,dvdx,dvdy,dvdz,direction_x,direction_y, geometry_mask, STAGGERED, &
                                     WHICH_SOURCE)
         character(*), intent(in) :: component !*FD Either "u" or "v"
         integer, intent(in) :: i,j,k !*FD Point that the boundary condition is computed for
         real(dp), dimension(:,:), intent(in) :: h !*FD Ice thickness field
         real(dp), dimension(:,:), intent(in) :: normals !*FD Pre-computed angles that are normal to the marine margin
+        real(dp), dimension(:,:), intent(in) :: dzdx, dzdy, dhbdx, dhbdy
         real(dp), dimension(:,:,:), intent(in) :: vel_perp !*FD Velocity component that is perpendicular to the one being computed
         real(dp), dimension(:,:,:), intent(in) :: efvs !*FD effective viscosity
 
@@ -1621,6 +1629,9 @@ contains
         real(dp), pointer :: para_coeff, perp_coeff
 
         real(dp) :: ntot = 1d0
+
+        !Surface (upper or lower) derivatives.  These are only nonzero at k=1 or k=nzeta
+        real(dp) :: ds_dpara = 0, ds_dperp = 0
 
         !Get the normal unit vector
         !The angles are defined in radians, with 0 = 12 o' clock, pi/2 = 3 o' clock,
@@ -1685,6 +1696,15 @@ contains
             dperp_dx = dvdx(k,i,j)
             dperp_dy = dvdy(k,i,j)
             dperp_dz = dvdz(k,i,j)
+
+            !Set the ds terms
+            if (k == 1) then !Surface
+                ds_dpara = dzdx(i,j)
+                ds_dperp = dzdy(i,j)
+            else if (k == size(zeta)) then !Bed
+                ds_dpara = dhbdx(i,j)
+                ds_dperp = dhbdy(i,j)
+            end if
         else if (component=="v") then
             n_para => n_y
             n_perp => n_x
@@ -1701,8 +1721,17 @@ contains
             dperp_dx = dudx(k,i,j)
             dperp_dy = dudy(k,i,j)
             dperp_dz = dudz(k,i,j)
-        end if
 
+            !Set the ds terms
+            if (k == 1) then !Surface
+                ds_dpara = dzdy(i,j)
+                ds_dperp = dzdx(i,j)
+            else if (k == size(zeta)) then !Bed
+                ds_dpara = dhbdy(i,j)
+                ds_dperp = dhbdx(i,j)
+            end if
+        end if
+        
         if (direction_y(i,j) > 0) then
            downwind_y = .true.
         else if (direction_y(i,j) < 0) then
@@ -1715,15 +1744,15 @@ contains
             upwind_x = .true.
         end if
        
-        para_coeff = 4*n_para
-        perp_coeff =   n_perp
+        para_coeff = 4*(n_para + ds_dpara)
+        perp_coeff =   (n_perp + ds_dperp)
         
-        dz_coeff   =   (4*a_para(k,i,j)*n_para + a_perp(k,i,j)*n_perp)
+        dz_coeff   =   (4*a_para(k,i,j)*(n_para + ds_dpara) + a_perp(k,i,j)*(n_perp + ds_dperp))
 
         rhs = source/ntot * n_para &
-                - 2*n_para*dperp_dperp & 
-                -   n_perp*dperp_dpara &
-                -   (2*a_para(k,i,j)*n_perp + a_perp(k,i,j)*n_para)*dperp_dz
+                - 2*(n_para+ds_dpara)*dperp_dperp & 
+                -   (n_perp+ds_dperp)*dperp_dpara &
+                -   (2*a_para(k,i,j)*(n_perp+ds_dperp) + a_perp(k,i,j)*(n_para+ds_dpara))*dperp_dz
 
 
 
