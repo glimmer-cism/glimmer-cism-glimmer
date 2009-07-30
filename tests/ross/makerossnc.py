@@ -268,6 +268,9 @@ beta_var[:,:,:] = 0
 uvel_var = glimcdf.setup_variable(nc, "uvelhom", type=NC.DOUBLE, staggered=True, useZ=True)
 vvel_var = glimcdf.setup_variable(nc, "vvelhom", type=NC.DOUBLE, staggered=True, useZ=True)
 
+uvel[:rows-1, :cols-1] = numpy.where(uvelbc[0,:,:] == uvelbc[0,:,:], uvel[:rows-1, :cols-1], 0)
+vvel[:rows-1, :cols-1] = numpy.where(vvelbc[0,:,:] == vvelbc[0,:,:], vvel[:rows-1, :cols-1], 0)
+
 uvel_var[0,:,:,:] = numpy.array([uvel[:rows-1, :cols-1]]*nlevels)
 vvel_var[0,:,:,:] = numpy.array([vvel[:rows-1, :cols-1]]*nlevels)
 
