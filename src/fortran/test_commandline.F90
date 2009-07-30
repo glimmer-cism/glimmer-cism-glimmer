@@ -1,6 +1,6 @@
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! +                                                           +
-! +  glimmer_version.f90 - part of the GLIMMER ice model      + 
+! +  test_commandline.f90 - part of the GLIMMER ice model     + 
 ! +                                                           +
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! 
@@ -34,14 +34,16 @@
 !
 ! email: <i.c.rutt@bristol.ac.uk> or <ian.rutt@physics.org>
 !
-! GLIMMER is hosted on NeSCForge:
+! GLIMMER is hosted on berliOS.de:
 !
-! http://forge.nesc.ac.uk/projects/glimmer/
+! https://developer.berlios.de/projects/glimmer-cism/
 !
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-module glimmer_vers
-  character(len=*), parameter :: glimmer_version = 'GLIMMER v. @GLIMMER_MAJOR_VERSION@.@GLIMMER_MINOR_VERSION@.@GLIMMER_MICRO_VERSION@@GLIMMER_CVS_VERS@'
-  integer,parameter :: glimmer_v_number = 10000*@GLIMMER_MAJOR_VERSION@ + 100*@GLIMMER_MINOR_VERSION@ + @GLIMMER_MICRO_VERSION@
-  !*FD Glimmer version string
-end module glimmer_vers
+program test_commandline
+  use glimmer_commandline
+  implicit none
+
+  call glimmer_GetCommandline()
+  call glimmer_PrintCommandline()
+end program test_commandline

@@ -34,14 +34,22 @@
 !
 ! email: <i.c.rutt@bristol.ac.uk> or <ian.rutt@physics.org>
 !
-! GLIMMER is hosted on NeSCForge:
+! GLIMMER is hosted on berliOS.de:
 !
-! http://forge.nesc.ac.uk/projects/glimmer/
+! https://developer.berlios.de/projects/glimmer-cism/
 !
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 #ifdef HAVE_CONFIG_H
 #include "config.inc"
+#endif
+
+#ifdef HAVE_2003ARGS
+#define NARGS   command_argument_count
+#define GETARG  get_command_argument
+#else
+#define NARGS   iargc
+#define GETARG  getarg
 #endif
 
 program nc2config
@@ -56,55 +64,65 @@ program nc2config
 
   implicit none
 
-  character(100) :: infile, outfile, opt1, opt2, opt3
+  character(100) :: infile, outfile
   logical :: stdout = .true.
   character(10000) :: config
   integer :: status,ncid,attlen,unit,i,ellen
-
-#ifdef COMMAND_LINE
-
-  if (nargs().eq.2) then
-     call getarg(1,opt1)
-     if (opt1=='-h') then
-        call usage
-        stop
+  integer numargs,nfiles
+  integer, external :: iargc
+  character(len=100) :: argument
+  integer, dimension(100) :: argumentIdx
+  
+  ! get number of arguments
+  numargs = NARGS()
+  if (numargs.gt.0) then
+     i=0
+     nfiles = 0
+     ! loop over command line arguments
+     do while (i.lt.numargs)
+        i = i + 1
+        call GETARG(i,argument)
+        ! check if it is an option
+        if (argument(1:1).eq.'-') then
+           select case (trim(argument))
+           case ('-h')
+              call usage()
+              stop
+           case ('-o')
+              i = i+1
+              if (i.gt.numargs) then
+                 write(*,*) 'Error, expect name of output file to follow -o option'
+                 call usage()
+                 stop
+              end if
+              call GETARG(i,outfile)
+              stdout = .false.
+           case default
+              write(*,*) 'Unkown option ',trim(argument)
+              call usage()
+              stop
+           end select
+        else
+           ! it's not an option
+           nfiles = nfiles+1
+           argumentIdx(nfiles) = i
+        end if
+     end do
+     if (nfiles.gt.1) then
+        call GETARG(argumentIdx(1),infile)
      else
-        infile=opt1
-     end if
-  else if (nargs().eq.4) then
-     call getarg(1,opt1)
-     call getarg(2,opt2)
-     call getarg(3,opt3)
-     if (opt1=='-o') then
-        outfile=opt2
-        infile=opt3
-        stdout=.false.
-     else if (opt2=='-o') then
-        outfile=opt3
-        infile=opt1
-        stdout=.false.
-     else
-        write(0,*)'ERROR: Unknown argument combination'
-        call usage
+        write(*,*) 'No input file specified'
+        call usage()
         stop
      end if
-  else if (nargs().eq.1) then
-#endif
-
-     ! These are the default inputs
-     Print*,'Enter name of input file:'
-     read*,infile
-     Print*,'Enter name of output file:'
-     read*,outfile
-     stdout=.false.
-
-#ifdef COMMAND_LINE
   else
-     write(0,*)'ERROR: Unknown argument combination'
-     call usage
-     stop
-  endif
-#endif
+     ! These are the default inputs
+     write(*,*) 'Enter name of input file:'
+     write(*,'(a)') infile
+     write(*,*) 'Enter name of output file:'
+     write(*,'(a)') outfile
+     stdout=.false.
+  end if
 
   ! Open file and look for appropriate attribute
 
@@ -152,7 +170,7 @@ contains
 
   subroutine usage
 
-    print*,'usage: nc2config [-h | [-o outfile] [infile]]'
+    print*,'usage: nc2config [-h  -o outfile] [infile]'
     print*,'    -h: display this message'
     print*,'    -o: specify output file. If absent, stdout is used'
 

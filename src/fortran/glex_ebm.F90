@@ -35,9 +35,9 @@
 !
 ! email: <i.c.rutt@bristol.ac.uk> or <ian.rutt@physics.org>
 !
-! GLIMMER is hosted on NeSCForge:
+! GLIMMER is hosted on berliOS.de:
 !
-! http://forge.nesc.ac.uk/projects/glimmer/
+! https://developer.berlios.de/projects/glimmer-cism/
 !
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -55,6 +55,8 @@ program glint_ebm_ex
   use glimmer_log
   use glint_global_interp
   use glint_ebm_ex_clim
+  use glint_commandline
+  use glimmer_writestats_module
   implicit none
 
   ! Program variables -------------------------------------------------------------------
@@ -62,8 +64,6 @@ program glint_ebm_ex
   type(glint_params)      :: ice_sheet   ! This is the derived type variable that holds all 
                                          ! domains of the ice model
   type(glex_ebm_climate)      :: climate     ! Climate parameters and fields
-  character(fname_length) :: paramfile   ! Name of the top-level configuration file
-  character(fname_length) :: climatefile ! Name of climate configuration file
 
   ! Arrays which hold the global fields used as input to GLIMMER ------------------------
 
@@ -112,39 +112,23 @@ program glint_ebm_ex
   logical :: out    ! Outputs set flag
   integer :: i,j    ! Array index counters
   integer :: time   ! Current time (hours)
+  real(kind=dp) t1,t2
+  integer clock,clock_rate
   integer :: ierr
 
   ! -------------------------------------------------------------------------------------
   ! Executable code starts here - Basic initialisation
   ! -------------------------------------------------------------------------------------
 
-#ifdef GLEX_COM_LINE
+  call glint_GetCommandline()
 
-  ! Non-f95-standard command-line interface using Intel Compiler
-  ! features - possibly portable to other compilers, but untested
-
-  if (nargs().eq.3) then
-     call getarg(1,climatefile)
-     call getarg(2,paramfile)
-     Print*,'Using climate configuration: ',climatefile
-     Print*,'Using ice-model configuration: ',paramfile
-  else
-
-#endif
-
-     ! These are the default inputs
-     Print*,'Enter name of climate configuration file:'
-     read*,climatefile
-     Print*,'Enter name of ice model configuration file:'
-     read*,paramfile
-
-#ifdef GLEX_COM_LINE
-  endif
-#endif
+  ! start timing
+  call system_clock(clock,clock_rate)
+  t1 = real(clock,kind=dp)/real(clock_rate,kind=dp)
 
   ! Initialise climate
 
-  call glex_ebm_clim_init(climate,climatefile)
+  call glex_ebm_clim_init(climate,commandline_climatename)
 
   ! Set dimensions of global grids
 
@@ -196,7 +180,7 @@ program glint_ebm_ex
        climate%grid%lats, &
        climate%grid%lons, &
        climate%climate_tstep, &
-       (/paramfile/), &
+       (/commandline_configname/), &
        orog=orog_out, &
        ice_frac=ice_frac, &
        albedo=albedo, &
@@ -235,6 +219,9 @@ program glint_ebm_ex
   ! Finalise/tidy up everything ------------------------------------------------------------
 
   call end_glint(ice_sheet)
+  call system_clock(clock,clock_rate)
+  t2 = real(clock,kind=dp)/real(clock_rate,kind=dp)
+  call glimmer_writestats(commandline_resultsname,commandline_configname,t2-t1)
 
 100 format(f9.5)
 101 format(e12.5)

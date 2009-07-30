@@ -17,16 +17,20 @@ which is contained in its own directory, and is in the public domain.
 
 Mailing list
 ============
-The mailing list archive can be found here
-http://forge.nesc.ac.uk/pipermail/glimmer-discuss/
-You can subscribe to it here:
-http://forge.nesc.ac.uk/mailman/listinfo/glimmer-discuss
+There are two mailing lists:
+1. the general user mailing list
+   archive:   https://lists.berlios.de/pipermail/glimmer-cism-user/
+   subscribe: https://lists.berlios.de/mailman/listinfo/glimmer-cism-user
+
+2. the developer mailing list
+   archive:   https://lists.berlios.de/pipermail/glimmer-cism-devel/
+   subscribe: https://lists.berlios.de/mailman/listinfo/glimmer-cism-devel
 
 Bugs:
 ====
 
 Please send all bug reports (preferably with fixes!) to the glimmer mailing list:
-glimmer-discuss@forge.nesc.ac.uk
+glimmer-cism-devel@lists.berlios.de
 
 Compiling:
 =========

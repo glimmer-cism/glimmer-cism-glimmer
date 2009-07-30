@@ -34,9 +34,9 @@
 !
 ! email: <i.c.rutt@bristol.ac.uk> or <ian.rutt@physics.org>
 !
-! GLIMMER is hosted on NeSCForge:
+! GLIMMER is hosted on berliOS.de:
 !
-! http://forge.nesc.ac.uk/projects/glimmer/
+! https://developer.berlios.de/projects/glimmer-cism/
 !
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

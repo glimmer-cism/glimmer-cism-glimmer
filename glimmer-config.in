@@ -73,11 +73,11 @@ if test "$echo_exec_prefix" = "yes"; then
 fi
 
 if test "$echo_fcflags" = "yes"; then
-      echo -I@includedir@ @FCFLAGS@
+      echo -I@includedir@ @FCFLAGS@ @NETCDF_CPPFLAGS@
 fi
 
 if test "$echo_libs" = "yes"; then
-      echo -L@libdir@ @LDFLAGS@ @LIBS@
+      echo -L@libdir@ @LDFLAGS@ @BLAS_LIBS@ @LIBS@ @NETCDF_LIBS@
 fi      
 
 

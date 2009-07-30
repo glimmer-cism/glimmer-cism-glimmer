@@ -1,3 +1,6 @@
+2009-07-30 Magnus Hagdorn
+ * merge trunk r900:1216
+
 2009-04-24 Ian Rutt
  * Fixed bug in daily PDD scheme: model was cutting back pre-existing
    superimposed ice to wmax rather than just using this limit to constrain

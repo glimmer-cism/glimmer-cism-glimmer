@@ -77,7 +77,7 @@ AC_DEFUN([AM_PATH_GLIMMER],
           echo "*** in your PATH or run configure with the --glimmer_prefix option."
       else
           echo "*** Found glimmer version $glimmer_config_major_version.$glimmer_config_minor_version.$glimmer_config_micro_version which is too old"
-          echo "*** Get the latest version of glimmer from http://glimmer.forge.nesc.ac.uk/"
+          echo "*** Get the latest version of glimmer from https://developer.berlios.de/projects/glimmer-cism/"
       fi   
       GLIMMER_PREFIX=""
       GLIMMER_FFLAGS=""

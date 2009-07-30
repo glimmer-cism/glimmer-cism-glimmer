@@ -34,9 +34,9 @@
 !
 ! email: <i.c.rutt@bristol.ac.uk> or <ian.rutt@physics.org>
 !
-! GLIMMER is hosted on NeSCForge:
+! GLIMMER is hosted on berliOS.de:
 !
-! http://forge.nesc.ac.uk/projects/glimmer/
+! https://developer.berlios.de/projects/glimmer-cism/
 !
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -52,24 +52,30 @@ program eis_glide
   use eis_io
   use glimmer_log
   use glimmer_config
+  use glimmer_commandline
+  use glimmer_writestats_module
   implicit none
 
   type(glide_global_type) :: model        ! model instance
   type(eis_climate_type) :: climate       ! climate
   type(ConfigSection), pointer :: config  ! configuration stuff
-  character(len=fname_length) :: fname   ! name of paramter file
   real(kind=rk) time
+  real(kind=dp) t1,t2
+  integer clock,clock_rate
   
 
 
-  write(*,*) 'Enter name of GLIDE configuration file to be read'
-  read(*,*) fname
+  call glimmer_GetCommandline()
   
   ! start logging
-  call open_log(unit=50, fname=logname(fname))
+  call open_log(unit=50, fname=logname(commandline_configname))
 
   ! read configuration
-  call ConfigRead(fname,config)
+  call ConfigRead(commandline_configname,config)
+
+  ! start timing
+  call system_clock(clock,clock_rate)
+  t1 = real(clock,kind=dp)/real(clock_rate,kind=dp)
 
   ! initialise GLIDE
   call glide_config(model,config)
@@ -95,6 +101,9 @@ program eis_glide
 
   ! finalise GLIDE
   call glide_finalise(model)
+  call system_clock(clock,clock_rate)
+  t2 = real(clock,kind=dp)/real(clock_rate,kind=dp)
+  call glimmer_writestats(commandline_resultsname,commandline_configname,t2-t1)
   call close_log
 
 end program eis_glide
