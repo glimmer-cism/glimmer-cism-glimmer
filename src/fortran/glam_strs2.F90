@@ -1311,7 +1311,10 @@ subroutine bodyset(ew,  ns,  up,           &
     ! contains the 1d assumption that ice is not spreading lateraly !(assumes dv/dy = 0 for u along flow)
     ! Note that factor of 2 in front of 'stagthck' is NOT part of the standard bc. Here, it is used to 
     ! correct for the fact that the staggered thickness will be 1/2 of the normal thickness at a boundary 
-    source = abar*vis0_glam * ( 1.0_dp/4.0_dp * rhoi * grav * 2.0d0 * stagthck(ew,ns)*thk0 * ( 1.0_dp - rhoi/rhoo))**3.0_dp
+    ! ... as of summer 2009, this hack has been removed (no more factor of 2) and replaced by a new stagthck
+    ! averaging scheme at the margins, which uses only the non-zero values of thickness on the normal grid to
+    ! calc. the value of the stag. thickness
+    source = abar*vis0_glam * ( 1.0_dp/4.0_dp * rhoi * grav * stagthck(ew,ns)*thk0 * ( 1.0_dp - rhoi/rhoo))**3.0_dp
 
     ! multiply by 4 so that case where v=0, du/dy = 0, LHS gives: du/dx = du/dx|_shelf 
     ! (i.e. LHS = 4*du/dx, requires 4*du/dx_shelf)

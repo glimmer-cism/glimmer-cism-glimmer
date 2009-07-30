@@ -181,7 +181,7 @@ module fo_upwind_advect
     print *, 'net volume change = ', sum( (thck-thck_old)*mask )*thk0 *dew*dns*len0**2 
     print *, 'net calving flux = ', sum( thck * (1.0d0-mask) )*thk0*dew*dns*len0**2
     print *, '(for the confined shelf experiment, the above two should sum to ~0)'
-    print *, 'mean accum/ablat rate = ', sum( acab * (1.0d0-mask) ) / sum(mask) / (dt*tim0) * scyr
+    print *, 'mean accum/ablat rate = ', sum( acab * mask ) / sum(mask) / (dt*tim0) * scyr
     print *, 'mean dH/dt = ', sum( (thck-thck_old)*mask )*thk0 / sum(mask) / (dt*tim0) * scyr
     print *, 'sum of flux change (should be ~0) = ', sum( flux_net*vel0*thk0*len0 ) 
     print *, ' '
