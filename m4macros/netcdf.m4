@@ -80,7 +80,7 @@ AS_IF([test "x$with_netcdf" != xno],
           [AS_HELP_STRING([--with-netcdf-lib],[path to where netcdf library files can be found])],
           [NETCDF_LDFLAGS=-L"$withval"])
 	# check for libraries
-	LDFLAGS="$LDFLAGS $NETCDF_LDFLAGS"
+	LDFLAGS="$LDFLAGS $NETCDF_LDFLAGS $HDF5_LDFLAGS"
         # we always need to link to the C libraries, so let's look for them
         AC_LANG_PUSH(C)
 	AC_CHECK_LIB(netcdf,nc_inq_libvers,[acx_netcdf_ok=yes; NETCDF_LIBS="-lnetcdf"],[acx_netcdf_ok=no],[$HDF5_LIBS])
