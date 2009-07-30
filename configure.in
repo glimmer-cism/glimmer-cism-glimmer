@@ -7,7 +7,7 @@ m4_define([glimmer_micro_version], [1])
 m4_define([glimmer_version],
 	[glimmer_major_version.glimmer_minor_version.glimmer_micro_version])
 
-AC_INIT([GLIMMER],[glimmer_version],[glimmer-discuss@forge.nesc.ac.uk])
+AC_INIT([GLIMMER],[glimmer_version],[glimmer-cism-devel@lists.berlios.de])
 AC_CONFIG_HEADERS(config.inc)
 AM_INIT_AUTOMAKE
 

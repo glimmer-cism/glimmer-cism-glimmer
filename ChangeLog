@@ -1,4 +1,10 @@
 2009-07-30 Magnus Hagdorn
+ * README: mention new mailing lists, point to berliOS
+ * configure.in: point to new mailing list
+ * m4macros/glimmer.m4: point to berliOS
+ * src/fortran/*.F90: mention new site on berliOS
+
+2009-07-30 Magnus Hagdorn
  * configure.in: detect if we are compiling from subversion copy
  * m4macros/netcdf.m4: need to add HDF5 linker flags
  * src/fortran/Makefile.am: distribute cfortran.h, use HDF5_LDFLAGS, 
