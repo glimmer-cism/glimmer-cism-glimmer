@@ -80,6 +80,8 @@ module glint_example_clim
      real(rk) :: precip_scale=1.0 ! Factor to scale precip by
      logical  :: temp_in_kelvin=.true. ! Set if temperature field is in Kelvin
      integer :: cur_tstep=1 !time step counter
+     logical :: interp = .true. !use the original method of interpolating
+                                !between input time slices, instead use each slice
   end type glex_climate
 
   interface read_ncdf
@@ -177,6 +179,7 @@ contains
        call GetValue(section,'total_years',params%total_years)
        call GetValue(section,'climate_tstep',params%climate_tstep)
        params%hours_in_year=params%days_in_year*24
+       call GetValue(section,'interpolate_climate', params%interp)
     end if
 
     if (params%precip_file=='') &
@@ -665,7 +668,7 @@ contains
 
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine example_climate(params,precip,temp,time,method)
+  subroutine example_climate(params,precip,temp,time)
 
     use glimmer_log
 
@@ -677,11 +680,9 @@ contains
     real(rk) :: tsp,tst
     real(rk) :: pos
     integer :: lower,upper
-    character(*), intent(in),optional    :: method
     real(rk) :: fyear
     
-    select case(method)
-    case default !use original method for calculating climate
+    if (params%interp) then
       ! Calculate fraction of year
       fyear = real(mod(time,real(params%hours_in_year,rk)))/real(params%hours_in_year)
     
@@ -693,13 +694,13 @@ contains
       call bracket_point(fyear,params%pr_time,lower,upper,pos)
       precip=linear_interp(params%precip_clim(:,:,lower),params%precip_clim(:,:,upper),pos)
     
-    case('new')
+    else
       temp = params%surftemp_clim(:,:,params%cur_tstep)
       precip = params%precip_clim(:,:,params%cur_tstep)
       write(*,*) params%cur_tstep
       params%cur_tstep = params%cur_tstep + 1
   
-    end select
+    end if 
   
   end subroutine example_climate
 

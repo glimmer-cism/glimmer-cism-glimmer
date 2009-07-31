@@ -139,10 +139,10 @@ contains
            do ew = 2, size(backstress,1)-1
                 if(.not. backstressmap(ew,ns)) then
                    !should be > -1.0 if using log10
-                   if (tempanmly > 0.0) then
+                   if (tempanmly > -1.0) then
                       backstress(ew,ns) = stressout
                    else
-                      backstress(ew,ns) = stressout + (1-stressout)*log10(-tempanmly + 1.)
+                      backstress(ew,ns) = stressout + (1-stressout)*log10(-tempanmly)
                       !( 1-exp(tempanmly))
                       !backstress(ew,ns) = sigmabout + (1-sigmabout)*abs(tempanmly/9.2)
                       ! backstress(ew,ns) =sigmabout + (1-sigmabout)*atan(-tempanmly)/(pi/2)
@@ -150,11 +150,11 @@ contains
                    end if
                 else
                    !should be > -1.0 if using log10
-                   if (tempanmly > 0.0) then
+                   if (tempanmly > -1.0) then
                       backstress(ew,ns) = stressin
                    else
                      !backstress(ew,ns) = sigmabin + (1-sigmabin)*abs(tempanmly/9.2)
-                      backstress(ew,ns) =stressin + (1-stressin)*log10(-tempanmly + 1.0)
+                      backstress(ew,ns) =stressin + (1-stressin)*log10(-tempanmly)
 
                      
                      !backstress(ew,ns) =sigmabin + (1-sigmabin)*atan(-tempanmly)/(pi/2)
