@@ -64,6 +64,6 @@ vvelbc[:] = 0
 kinbcmask[:] = 0
 kinbcmask[:,shape.ny-3:shape.ny,:] = 1
 if not periodic_ew:
-    kinbcmask[:,:,shape.nx-3:] = 1
+    kinbcmask[:,:,shape.nx-2:] = 1
     kinbcmask[:,:,:3] = 1
 nc.close()
