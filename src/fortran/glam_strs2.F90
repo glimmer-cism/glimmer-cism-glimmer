@@ -237,7 +237,7 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
   real (kind = dp), parameter :: minres = 1.0d-5 
   real (kind = dp), save, dimension(2) :: resid  
 
-  integer, parameter :: cmax = 50  
+  integer, parameter :: cmax = 100 
    
   integer :: counter, linit 
 
@@ -1159,8 +1159,8 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
         call valueset(0.0_dp)
         do up = 1,upn
            locplusup = loc(1) + up
-!           call valueset( thisvel(up,ew,ns) )     ! *sfp** vel at margin set to specified value (default = 0) 
-           call valueset( 0.0_dp )  
+           call valueset( thisvel(up,ew,ns) )     ! *sfp** vel at margin set to specified value (default = 0) 
+!           call valueset( 0.0_dp )  
         end do
 
     end if
@@ -2893,13 +2893,16 @@ subroutine calcbetasquared (whichbabc,               &
 
       betasquared = 1.0d10
 
-    case(9)    !*sfp* use value passed in externally from CISM (note that these are passed in diensional)
+    case(9)    !*sfp* use value passed in externally from CISM 
+               ! NOTE that this is NOT dimensional when passed in. It has been scaled by the 
+               ! the following: scyr * vel0 * len0 / (thk0**2)
 
-      betasquared = beta
+      betasquared = beta * scyr * vel0 * len0 / (thk0**2)    ! scale up to dimensional (Pa yrs 1/m)
+
       where ( betasquared /= betasquared )
         betasquared = 1.0d10
       end where    
- 
+
     case default    ! frozen (u=v=0) ice-bed interface
 
       betasquared = 1.0d10
