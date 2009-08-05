@@ -96,9 +96,6 @@ module fo_upwind_advect
     ! defines the velocities there. These velocites can be used to define the velocity at
     ! the face of the last non-zero thickness cell (on the normal grid) which corresponds to
     ! the location of the calving front. 
-    !
-    ! Note also that this code has NOT been tested extensively for anything other than a 
-    ! simple shelf configuration (i.e. the "confined-shelf" in the tests/ directory.
 
     implicit none
 
@@ -114,15 +111,24 @@ module fo_upwind_advect
 
     integer :: ew, ns 
 
+    where( stagthck > 0.0_dp )  ! calculate the depth-ave velocities
+        ubar = uflx / stagthck
+        vbar = vflx / stagthck  
+    end where
+
+    ! conservative CFL check
+    if( ( maxval( abs(ubar) )*dt > 0.5d0*dew ) .or. ( maxval( abs(vbar) )*dt > 0.5d0*dns ) )then
+        print *,' '
+        print *,'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! '
+        print *,'! Advective CFL violation in 1st-order upwind mass advection scheme !'
+        print *,'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! '
+        stop
+    end if
+    
     where( thck > 0.0_dp )      ! mask for eventually removing flux outside of the original domain
         mask = 1.0_dp           ! (i.e. stuff that moves past the calving front goes away)
     else where
         mask = 0.0_dp
-    end where
-
-    where( stagthck > 0.0_dp )  ! calculate the depth-ave velocities
-        ubar = uflx / stagthck
-        vbar = vflx / stagthck  
     end where
 
     thck_old = thck             ! save the old thickness for debugging purposes
