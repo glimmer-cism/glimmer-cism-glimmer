@@ -378,7 +378,7 @@ load:          1
 [kinbcmask]
 dimensions:   time, y0, x0
 units:        1
-long_name:    Mask of locations where uvelhom, vvelhom value should be held as Dirichlet boundaries
+long_name:    Mask of locations where uvelhom, vvelhom value should be held
 data:         data%velocity_hom%kinbcmask(:,:)
 type:         int
 load:         1
