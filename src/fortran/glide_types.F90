@@ -68,6 +68,9 @@ module glide_types
   use glimmer_coordinates
   use glimmer_map_types, pi_dummy=>pi
 
+  !These modules define internal workspace types.  We are including them so that they can appear in glide_types.
+  use remap_glamutils
+
   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   type glide_general
@@ -835,6 +838,9 @@ module glide_types
     type(glide_prof_type) :: glide_prof
     type(isos_type)      :: isos
     type(glide_grnd)     :: ground
+    
+    type(remap_glamutils_workspace) :: remap_wk
+
 end type glide_global_type
 
   !MAKE_RESTART

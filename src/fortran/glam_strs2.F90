@@ -759,7 +759,7 @@ function slapsolvstr(ewn, nsn, upn, &
   real (kind = dp), dimension(:), allocatable :: rwork
   integer, dimension(:), allocatable :: iwork
 
-  real (kind = dp), parameter :: tol = 1.0e-12_dp
+  real (kind = dp), parameter :: tol = 1.0e-6_dp
   real (kind = dp) :: err
 
   integer, parameter :: isym = 0, itol = 2, itmax = 1000
@@ -769,14 +769,15 @@ function slapsolvstr(ewn, nsn, upn, &
 ! ** move to values subr   
 
   pcgsize(2) = ct - 1
-                    
-  call ds2y(pcgsize(1),pcgsize(2),pcgrow,pcgcol,pcgval,isym)                   
+  write(*,*) "SPARSE SOLVE"
 
+  call ds2y(pcgsize(1),pcgsize(2),pcgrow,pcgcol,pcgval,isym)                   
+  write(*,*) "2"
 !** plot the matrix to check that it has the correct form
 !*sfp** this outputs a .txt file of sparse matrixes
 
 !call dcpplt(pcgsize(1),pcgsize(2),pcgrow,pcgcol,pcgval,isym,glimmer_get_logunit())
-
+  write(*,*) "3"
   mxnelt = 60 * pcgsize(1); allocate(rwork(mxnelt),iwork(mxnelt))
 
 !**     solve the problem using the SLAP package routines     
@@ -800,6 +801,7 @@ function slapsolvstr(ewn, nsn, upn, &
 !**     iwork ... workspace for SLAP routines (in)
 
 ! *sfp** initial estimate for vel. field?
+  write(*,*)"4"
   do ns = 1,nsn-1
   do ew = 1,ewn-1
    if (uindx(ew,ns) /= 0) then
@@ -810,9 +812,12 @@ function slapsolvstr(ewn, nsn, upn, &
    end if
   end do
   end do
+  write(*,*)"5"
+!  call dslucs(pcgsize(1),rhsd,answ,pcgsize(2),pcgrow,pcgcol,pcgval, &
+!              isym,itol,tol,itmax,iter,err,ierr,6,rwork,mxnelt,iwork,mxnelt)
 
-  call dslucs(pcgsize(1),rhsd,answ,pcgsize(2),pcgrow,pcgcol,pcgval, &
-              isym,itol,tol,itmax,iter,err,ierr,0,rwork,mxnelt,iwork,mxnelt)
+  call dslugm(pcgsize(1),rhsd,answ,pcgsize(2),pcgrow,pcgcol,pcgval, &
+              isym,20,itol,tol,itmax,iter,err,ierr,6,rwork,mxnelt,iwork,mxnelt)
 
   if (ierr .ne. 0) then
     print *, 'pcg error ', ierr, itmax, iter, tol, err 

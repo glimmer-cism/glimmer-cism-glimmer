@@ -145,7 +145,7 @@ contains
    
     ! *tjb** added; finalization of LANL incremental remapping subroutine for thickness evolution
     if (model%options%whichevol== EVOL_INC_REMAP ) then
-        call horizontal_remap_final()
+        call horizontal_remap_final(model%remap_wk)
     endif 
 
    ! *sfp* added for summer modeling school

@@ -217,7 +217,8 @@ contains
     ! *sfp** added; initialization of LANL incremental remapping subroutine for thickness evolution
     if (model%options%whichevol== EVOL_INC_REMAP ) then
 
-        call horizontal_remap_init( model%general%ewn, model%general%nsn, model%options%periodic_ew, model%options%periodic_ns )
+        call horizontal_remap_init( model%remap_wk, model%general%ewn, model%general%nsn, &
+                                    model%options%periodic_ew, model%options%periodic_ns )
 
     endif 
 
