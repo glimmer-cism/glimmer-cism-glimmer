@@ -378,7 +378,7 @@ load:          1
 [kinbcmask]
 dimensions:   time, y0, x0
 units:        1
-long_name:    mask of kinematic boundary locations
+long_name:    Mask of locations where uvelhom, vvelhom value should be held as Dirichlet boundaries
 data:         data%velocity_hom%kinbcmask(:,:)
 type:         int
 load:         1
@@ -386,7 +386,7 @@ load:         1
 [velnormhom]
 dimensions:    time, level, y1, x1
 units:         meter/year
-long_name:     ice surface velocity 
+long_name:     Ice velocity magnitude according to higher-order model
 data:          data%velocity_hom%velnorm(up,:,:)
 factor:        scale3d_f1
 coordinates:   lon lat
