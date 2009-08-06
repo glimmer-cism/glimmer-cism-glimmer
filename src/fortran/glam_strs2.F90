@@ -1030,18 +1030,18 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
      ! *sfp** depth-ave rate factor, needed for one of the ice shelf b.c. options (below)
 !     flwabar = sum( ( flwa(:,ew,ns) + flwa(:,ew,ns+1) + flwa(:,ew+1,ns) + flwa(:,ew+1,ns+1) ) / 4.0_dp, 1 ) / real(upn)    
 !     flwabar = 3.171d-24 / vis0_glam    ! isothermal, temperate value 
-     flwabar = 1.8075e-25 / vis0_glam    ! EISMINT-ROSS test 3-4 value
+!     flwabar = 1.8075e-25 / vis0_glam    ! EISMINT-ROSS test 3-4 value
 
      ! *sfp* ...or, calculate the depth-averaged value (complicated code so as not to include funny values at boundaries)
      ! *sfp* This is kind of a mess and could be redone or moded to a function/subroutine.
-!     flwabar = ( sum( flwa(:,ew,ns), 1, flwa(1,ew,ns)*vis0_glam < 1.0d-10 )/real(upn) + &
-!               sum( flwa(:,ew,ns+1), 1, flwa(1,ew,ns+1)*vis0_glam < 1.0d-10 )/real(upn)  + &
-!               sum( flwa(:,ew+1,ns), 1, flwa(1,ew+1,ns)*vis0_glam < 1.0d-10 )/real(upn)  + &
-!              sum( flwa(:,ew+1,ns+1), 1, flwa(1,ew+1,ns+1)*vis0_glam < 1.0d-10 )/real(upn) ) / &
-!               ( sum( flwa(:,ew,ns)/flwa(:,ew,ns), 1, flwa(1,ew,ns)*vis0_glam < 1.0d-10 )/real(upn) + &
-!               sum( flwa(:,ew,ns+1)/flwa(:,ew,ns+1), 1, flwa(1,ew,ns+1)*vis0_glam < 1.0d-10 )/real(upn) + &
-!               sum( flwa(:,ew+1,ns)/flwa(:,ew+1,ns), 1, flwa(1,ew+1,ns)*vis0 < 1.0d-10 )/real(upn) + &
-!               sum( flwa(:,ew+1,ns+1)/flwa(:,ew+1,ns+1), 1, flwa(1,ew+1,ns+1)*vis0_glam < 1.0d-10 )/real(upn) )
+     flwabar = ( sum( flwa(:,ew,ns), 1, flwa(1,ew,ns)*vis0_glam < 1.0d-10 )/real(upn) + &
+               sum( flwa(:,ew,ns+1), 1, flwa(1,ew,ns+1)*vis0_glam < 1.0d-10 )/real(upn)  + &
+               sum( flwa(:,ew+1,ns), 1, flwa(1,ew+1,ns)*vis0_glam < 1.0d-10 )/real(upn)  + &
+               sum( flwa(:,ew+1,ns+1), 1, flwa(1,ew+1,ns+1)*vis0_glam < 1.0d-10 )/real(upn) ) / &
+               ( sum( flwa(:,ew,ns)/flwa(:,ew,ns), 1, flwa(1,ew,ns)*vis0_glam < 1.0d-10 )/real(upn) + &
+               sum( flwa(:,ew,ns+1)/flwa(:,ew,ns+1), 1, flwa(1,ew,ns+1)*vis0_glam < 1.0d-10 )/real(upn) + &
+               sum( flwa(:,ew+1,ns)/flwa(:,ew+1,ns), 1, flwa(1,ew+1,ns)*vis0 < 1.0d-10 )/real(upn) + &
+               sum( flwa(:,ew+1,ns+1)/flwa(:,ew+1,ns+1), 1, flwa(1,ew+1,ns+1)*vis0_glam < 1.0d-10 )/real(upn) )
 
     if( ns == 1 .and. ew == 1 ) then
            loc_array = getlocationarray(ewn, nsn, upn, mask )
@@ -1333,10 +1333,10 @@ subroutine bodyset(ew,  ns,  up,           &
 
 
     ! (2)
-!    ! source term (strain rate at shelf/ocean boundary) from MacAyeal depth-ave solution. 
-!    ! As above, factor of 2 in front of 'stagthck' is not part of the formal solution but is used here to
-!    ! correct for the fact that the boundary thickness on the staggered grid will generally be ~1/2 of the 
-!    ! full thickness at the boundary (as a result of averaging to make 'stagthck' from 'thck'). 
+    ! source term (strain rate at shelf/ocean boundary) from MacAyeal depth-ave solution. 
+    ! As above, factor of 2 in front of 'stagthck' is not part of the formal solution but is used here to
+    ! correct for the fact that the boundary thickness on the staggered grid will generally be ~1/2 of the 
+    ! full thickness at the boundary (as a result of averaging to make 'stagthck' from 'thck'). 
 !    source = rhoi * grav * 2.0d0 * stagthck(ew,ns) * thk0 / 2.0_dp * ( 1.0_dp - rhoi / rhoo )
 !
 !    ! terms after "/" below count number of non-zero efvs cells ... needed for averaging efvs at boundary 
