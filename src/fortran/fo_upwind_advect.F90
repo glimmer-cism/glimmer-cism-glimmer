@@ -122,7 +122,7 @@ module fo_upwind_advect
         print *,'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! '
         print *,'! Advective CFL violation in 1st-order upwind mass advection scheme !'
         print *,'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! '
-        stop
+        stop    ! probably the incorrect way to exit - use calls to glide_stop instead?
     end if
     
     where( thck > 0.0_dp )      ! mask for eventually removing flux outside of the original domain
@@ -141,8 +141,8 @@ module fo_upwind_advect
     thck_grid(2:ewn+1,2:nsn+1) = thck(:,:)
 
     ! calculate the interface velocities from the extended B-grid, then use upwinding
-    ! criterion to advect thickness in or out of cells (NOTE that parts of this could
-    ! probably be vectorized at some point)
+    ! criterion to advect thickness in or out of cells 
+    !(NOTE this could probably be vectorized at some point using array math in place of loops)
     do ns = 1, nsn
         do ew = 1, ewn
 
