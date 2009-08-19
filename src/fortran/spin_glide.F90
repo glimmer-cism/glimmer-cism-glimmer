@@ -45,6 +45,7 @@ program spin_glide
   use spin_io
   use glimmer_log
   use glimmer_config
+  use glimmer_commandline
   use spin_types
   use glimmer_pdd
   implicit none
@@ -57,16 +58,20 @@ program spin_glide
   real(kind=rk) time
   
 
-
-  write(*,*) 'Enter name of GLIDE configuration file to be read'
-  read(*,*) fname
+  call glimmer_GetCommandline()
+ 
+  !write(*,*) 'Enter name of GLIDE configuration file to be read'
+  !read(*,*) fname
   
   ! start logging
-  call open_log(unit=50, fname=logname(fname))
+  call open_log(unit=50, fname=logname(commandline_configname))
+
+  !call open_log(unit=50, fname=logname(fname))
 
   ! read configuration
-  call ConfigRead(fname,config)
-
+  !call ConfigRead(fname,config)
+  call ConfigRead(commandline_configname,config)
+  
   ! initialise GLIDE
   call glide_config(model,config)
   call glide_initialise(model)

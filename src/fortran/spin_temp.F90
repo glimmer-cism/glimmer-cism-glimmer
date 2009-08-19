@@ -32,6 +32,12 @@
 ! upstream advection, and non-climatic biases for the upper ice sheet. Climate
 ! of the Past, 3:577-589, 2007.
 
+!Greenland temperature parameterization also includes Fausto 2009
+! Robert S. Fausto, Andreas P. Ahlstrom, Dirk Van As, Carl E. Boggild, and Sigfus
+! J. Johnsen.  A new present-day temperature parameterization for greenland. 
+! Journal of Glaciology, 55:95-105, 2009.
+
+
 ! The Spin series of drivers were developed by Brian Hand, at the University of
 ! Montana, 2008.
 #ifdef HAVE_CONFIG_H
@@ -46,26 +52,25 @@ module spin_temp
   use glimmer_global, only : sp, dp, fname_length
 
   type spin_temp_type
-     integer :: model_type = 0  !determines the model type Antarctica(0) or Greenland(1)
-     integer :: use_simple = 0  !Use simple Eisment forcing (1) or more advanced
-                                !Huybrecht forcing techniques(0)
+     integer :: model_type = 0  !*FD determines the model type Antarctica(0) or Greenland(1)
+     integer :: use_simple = 0  !*FD Use simple Eisment forcing (1) or more advanced
+                                !*FD Huybrecht forcing techniques(0)
      character(len=fname_length) :: fname=''     !*FD name of file containing temperature ts
-     character(len=fname_length) :: ele_fname=''
+     character(len=fname_length) :: ele_fname='' !*FD name of the elevation correction file
      type(glimmer_tseries) :: temp_ts            !*FD temperature time series 
-     type(glimmer_tseries) :: ele_ts
+     type(glimmer_tseries) :: ele_ts             !*FD elevation time series
      real, dimension(:),pointer :: tperturb        !*FD temperature value
-     !real :: tvalue
      integer:: torder
      real(sp),dimension(:,:),pointer :: arng !*FD Surface temp half-range
      real(sp),dimension(:,:),pointer :: presartm  !*FD Present-day surface temperature
-     real(sp),dimension(:,:),pointer :: tinvp ! Inversion point temperature 
-     real(dp),dimension(:,:),pointer :: local_usrf !local ice surface field for
-                                                   !use in scaling
-     integer,dimension(2) :: core_x_y !x and y of the core location to
-                                           !calc the elevation change
-     real(sp) :: temp_ele = 0.0 !temperature correction due to elevation changes at
-                          !the site of the ice core
-     real :: ele_correction = 0.0 !elevation value for correction 
+     real(sp),dimension(:,:),pointer :: tinvp !*FD Inversion point temperature 
+     real(dp),dimension(:,:),pointer :: local_usrf !*FD local ice surface field for
+                                                   !*FD use in scaling
+     integer,dimension(2) :: core_x_y !*FD x and y of the core location to
+                                           !*FD calc the elevation change
+     real(sp) :: temp_ele = 0.0 !*FD temperature correction due to elevation changes at
+                          !*FD the site of the ice core
+     real :: ele_correction = 0.0 !*FD elevation value for correction 
   end type spin_temp_type
 
 contains
@@ -133,7 +138,7 @@ subroutine spin_temp_config(config,temp)
     use glide_types
     implicit none
     type(spin_temp_type)     :: temp  !*FD mb data
-    type(glide_global_type)  :: model !model data
+    type(glide_global_type)  :: model !*FD model data
     
     call glimmer_read_ts(temp%temp_ts,temp%fname,1)
     allocate(temp%tperturb(1))
@@ -207,9 +212,9 @@ subroutine spin_temp_config(config,temp)
     real(sp), dimension(:,:), intent(inout) :: artm !*FD mean annual temperature
     real(dp), dimension(:,:), intent(in) :: usrf !*FD surface elevation
     real(sp), dimension(:,:), intent(in) :: lati !*FD latitude
-    real :: eus !eustatic sea level
-    real, intent(in) :: tperturb !temperature forcing over time
-    integer, intent(in) :: ewn, nsn !# of grid points 
+    real :: eus !*FD eustatic sea level
+    real, intent(in) :: tperturb !*FD temperature forcing over time
+    integer, intent(in) :: ewn, nsn !*FD # of grid points 
     real, dimension(ewn, nsn) :: glandhinv
     select case(model_type)
     
@@ -248,22 +253,22 @@ subroutine spin_temp_config(config,temp)
   subroutine spin_surftemp(model_type, arng, artm, usrf, lati, eus, tperturb, &
                            ewn, nsn, loni, core_x_y, temp_ele, ele_correction)
     
-    integer, intent(in) :: model_type !references which model to run (0)
-                                      !Antarctica, (1) Greenland
-    real(sp), dimension(:,:), intent(out) :: arng !temperature half-range
-    real(sp), dimension(:,:), intent(out) :: artm !mean annual temperature
-    real(dp), dimension(:,:), intent(in) :: usrf !surface elevation
-    real(sp), dimension(:,:), intent(in) :: lati !latitude
-    real :: eus !eustatic sea level
-    real, intent(inout) :: tperturb !temperature forcing over time
-    integer, intent(in) :: ewn, nsn !# of grid points 
+    integer, intent(in) :: model_type !*FD references which model to run (0)
+                                      !*FD Antarctica, (1) Greenland
+    real(sp), dimension(:,:), intent(out) :: arng !*FD temperature half-range
+    real(sp), dimension(:,:), intent(out) :: artm !*FD mean annual temperature
+    real(dp), dimension(:,:), intent(in) :: usrf !*FD surface elevation
+    real(sp), dimension(:,:), intent(in) :: lati !*FD latitude
+    real :: eus !*FD eustatic sea level
+    real, intent(inout) :: tperturb !*FD temperature forcing over time
+    integer, intent(in) :: ewn, nsn !*FD # of grid points 
     real(sp), dimension(:,:), intent(in) :: loni
     real, dimension(ewn, nsn) :: glandhinv
     integer ns, ew   
-    integer, dimension(2), intent(in)  :: core_x_y !the x,y grid values of the
-                                                    !elevation at the site of the ice core
-    real(sp), intent(inout) :: temp_ele !The correction to temperature due to changes in elevation
-                                        !at the site of the ice core
+    integer, dimension(2), intent(in)  :: core_x_y !*FD the x,y grid values of the
+                                                    !*FD elevation at the site of the ice core
+    real(sp), intent(inout) :: temp_ele !*FD The correction to temperature due to changes in elevation
+                                        !*FD at the site of the ice core
     real, intent(in) :: ele_correction
     !make adjustments for elevation changes at the core site here
     if (ele_correction .ne. 0.0) then
@@ -321,16 +326,16 @@ subroutine spin_temp_config(config,temp)
 
   subroutine calc_elevation_change(core_elevation, temp_ele,model_type)
     implicit none
-    real, intent(out) :: temp_ele  !The correction to temperature due to changes in elevation
-                                  !at the site of the ice core
-    real, intent(in) :: core_elevation !surface elevation at the core
-    real  :: core_elevation_last = 0.0 !core elevation at the last time step
-    real :: elevation_diff !difference between the present and last time
-                               !step elevation
-    integer, intent(in) :: model_type !references which model to run (0)
-                                      !Antarctica, (1) Greenland
-    !calculate the difference in surface elevation at each time step to
-    !correct the temperature
+    real, intent(out) :: temp_ele  !*FD The correction to temperature due to changes in elevation
+                                  !*FD at the site of the ice core
+    real, intent(in) :: core_elevation !*FD surface elevation at the core
+    real  :: core_elevation_last = 0.0 !*FD core elevation at the last time step
+    real :: elevation_diff !*FD difference between the present and last time
+                               !*FD step elevation
+    integer, intent(in) :: model_type !*FD references which model to run (0)
+                                      !*FD Antarctica, (1) Greenland
+    !*FD calculate the difference in surface elevation at each time step to
+    !*FD correct the temperature
     if (core_elevation_last .eq. 0.0) then 
       elevation_diff = 0.0
     else
@@ -338,9 +343,9 @@ subroutine spin_temp_config(config,temp)
     end if 
     if (model_type .eq. 0) then
     
-      temp_ele = temp_ele + elevation_diff * 0.014285 !our assumed lapse rate
+      temp_ele = temp_ele + elevation_diff * 0.014285 !our assumed lapse rate for Antarctica
     else  
-      temp_ele = temp_ele + elevation_diff * 0.00792 !our assumed lapse rate
+      temp_ele = temp_ele + elevation_diff * 0.00792 !our assumed lapse rate for Greenland
     end if
     core_elevation_last = core_elevation
   end subroutine calc_elevation_change

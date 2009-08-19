@@ -141,14 +141,14 @@ contains
     use glimmer_config
     use glide_types
     use spin_temp
-    !use glimmer_paramets only: thk0, scyr, tim0 
     implicit none
-    type(spin_mb_type)   :: mb !the mass balance data
-    type(spin_temp_type) :: temp !the temp data
+    
+    type(spin_mb_type)   :: mb !*FD the mass balance data
+    type(spin_temp_type) :: temp !*FD the temp data
     type(glide_global_type)   :: model !*FD model instance
     type(glimmer_pdd_params)  :: pdd_scheme
     real(kind=rk), intent(in) :: time  !*FD current time
-    !write(*,*), model%general%x0 
+    
     if (mb%model_type == 1) then
       !get the value for the oxygen isotope in the case of Greenland
       call glimmer_ts_linear(mb%mb_ts,real(time),mb%oisotope)
@@ -204,19 +204,20 @@ contains
     use glimmer_pdd 
     implicit none
     type(glimmer_pdd_params) :: pdd_scheme
-    real(dp), dimension(:,:), intent(inout) :: usrf !ice elevation
-    real(sp), dimension(:,:), intent(out) :: artm !mean annual temp var   
-    real(sp), dimension(:,:), intent(out) :: arng !temp half range var
-    real(sp), dimension(:,:), intent(out) :: ablt !ablation
-    real(sp), dimension(:,:), intent(out) :: acab !accumlation/ablation
-    real(sp), dimension(:,:), intent(inout) :: prcp !precipitation field var
-    logical, dimension(:,:), intent(inout)  :: landsea !land/sea mask
-    real(sp), dimension(:,:), intent(in) :: presartm !present mean annual temp
-    real(sp), dimension(:,:), intent(in) :: presprcp !present precipitation
-    integer, intent(in) :: model_type !(0) is Antarcitca, (1) is Greenland
-    !real, intent(in) :: eus !eustatic sea level
-    !real(dp), intent(in) :: topg !topgraphy field
+    real(dp), dimension(:,:), intent(inout) :: usrf !*FD ice elevation
+    real(sp), dimension(:,:), intent(out) :: artm !*FD mean annual temp var   
+    real(sp), dimension(:,:), intent(out) :: arng !*FD temp half range var
+    real(sp), dimension(:,:), intent(out) :: ablt !*FD ablation
+    real(sp), dimension(:,:), intent(out) :: acab !*FD accumlation/ablation
+    real(sp), dimension(:,:), intent(inout) :: prcp !*FD precipitation field var
+    logical, dimension(:,:), intent(inout)  :: landsea !*FD land/sea mask
+    real(sp), dimension(:,:), intent(in) :: presartm !*FD present mean annual temp
+    real(sp), dimension(:,:), intent(in) :: presprcp !*FD present precipitation
+    integer, intent(in) :: model_type !*FD (0) is Antarcitca, (1) is Greenland
+    !real, intent(in) :: eus !*FD eustatic sea level
+    !real(dp), intent(in) :: topg !*FD topgraphy field
     real(sp) :: pfac=1.0533 !*FD Precip enhancement factor (default is supposed EISMINT value)
+    
     !calculate the landsea matrix which determines where the pdd method will be
     !used
     where(usrf > 0.0) 
@@ -252,29 +253,29 @@ contains
                             arng,ewn, nsn, oisotope, temp_ele)
 
     use glimmer_pdd
-    type(glimmer_pdd_params)              :: pdd_scheme !pdd type, holds
-                                                        !parameters for pos deg day
-    integer, intent(in)                   :: model_type !(0) is Antarctica
-                                                        !(1) is Greenland
-    logical, dimension(:,:),intent(inout)  :: landsea !land/sea mask
-    real(sp),dimension(:,:),intent(out)   :: tinvp !present inversion temp
-    real(sp),dimension(:,:),intent(out)   :: acab !accumlation/ablation
-    real(sp),dimension(:,:),intent(out)   :: ablt !ablation
-    real(sp),dimension(:,:),intent(in)      :: presartm !present mean annual temp
-    real(sp),dimension(:,:),intent(in)      :: artm !mean annual temp field var
-    real(sp),dimension(:,:),intent(in)      :: presprcp !present precipitation
-    real(sp),dimension(:,:),intent(in)      :: arng !temp half range
-    real(sp),dimension(:,:),intent(inout)   :: prcp !precipitation field var
-    integer, intent(in)                   :: ewn, nsn !grid points
-    real(sp), dimension(ewn,nsn)          :: tinv !inversion temp field var
+    type(glimmer_pdd_params)              :: pdd_scheme !*FD pdd type, holds
+                                                        !*FD parameters for pos deg day
+    integer, intent(in)                   :: model_type !*FD (0) is Antarctica
+                                                        !*FD (1) is Greenland
+    logical, dimension(:,:),intent(inout)  :: landsea !*FD land/sea mask
+    real(sp),dimension(:,:),intent(out)   :: tinvp !*FD present inversion temp
+    real(sp),dimension(:,:),intent(out)   :: acab !*FD accumlation/ablation
+    real(sp),dimension(:,:),intent(out)   :: ablt !*FD ablation
+    real(sp),dimension(:,:),intent(in)      :: presartm !*FD present mean annual temp
+    real(sp),dimension(:,:),intent(in)      :: artm !*FD mean annual temp field var
+    real(sp),dimension(:,:),intent(in)      :: presprcp !*FD present precipitation
+    real(sp),dimension(:,:),intent(in)      :: arng !*FD temp half range
+    real(sp),dimension(:,:),intent(inout)   :: prcp !*FD precipitation field var
+    integer, intent(in)                   :: ewn, nsn !*FD grid points
+    real(sp), dimension(ewn,nsn)          :: tinv !*FD inversion temp field var
     real(sp), dimension(ewn,nsn)          :: z
-    real(dp), dimension(:,:),intent(inout)     :: usrf !ice elevation
-    real                                  :: tzero = 273.16 !Kelvin 
-    real, intent(in)                      :: oisotope !oxygen-isotope
-    real(sp), intent(in)                  :: temp_ele !correction in
-                                                      !temperature for elevation
-    !real, intent(in) :: eus !eustatic sea level
-    !real(dp), intent(in) :: topg !topgraphy field
+    real(dp), dimension(:,:),intent(inout)     :: usrf !*FD ice elevation
+    real                                  :: tzero = 273.16 !*FD Kelvin 
+    real, intent(in)                      :: oisotope !*FD oxygen-isotope
+    real(sp), intent(in)                  :: temp_ele !*FD correction in
+                                                      !*FD temperature for elevation
+    !real, intent(in) :: eus !*FD eustatic sea level
+    !real(dp), intent(in) :: topg !*FD topgraphy field
     
     !set up the landsea matrix as a true/false map of land/sea
     where(usrf > 0.0) 
