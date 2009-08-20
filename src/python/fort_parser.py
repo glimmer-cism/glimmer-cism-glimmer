@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # An attempt to create a general fortran parser written in Python
 # by Ian Rutt
 

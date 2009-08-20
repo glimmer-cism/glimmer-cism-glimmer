@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 import intercomparison
 
 #Given a flowline of values and the average and standard dev. flowlines returned from

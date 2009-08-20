@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 #This python script replaces the Makefile that used to be in this directory.
 #The makefile is replaced because it was growing difficult to avoid a lot of
 #code duplication especially with the requirement that ISMIP-HOM A through D

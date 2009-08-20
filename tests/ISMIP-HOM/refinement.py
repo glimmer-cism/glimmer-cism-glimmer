@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 #The purpose of this script is to run the ISMIP-HOM suite for various grid refinements and solver options
 #to study their impact on the model output.
 import os

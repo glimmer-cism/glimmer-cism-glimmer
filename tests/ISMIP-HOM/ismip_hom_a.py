@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 #Run with a command line argument that is the config file to read filenames and grid data from
 

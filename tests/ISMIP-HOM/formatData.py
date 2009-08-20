@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 #usage: formatData.py experiment_letter infilename outfilename
 
 #This module includes helper routines for use in ISMIP-HOM verification.  In particular, 

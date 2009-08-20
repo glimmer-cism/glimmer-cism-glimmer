@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 #This script takes a glimmer input file and changes the domain size
 #to the specified length in meters

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 import glimcdf
 from math import sin,cos,tan,pi
