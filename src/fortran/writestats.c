@@ -15,6 +15,12 @@
 
 FCALLSCSUB3(gc_writestats,GF_WRITESTATS,gf_writestats,STRING,STRING,DOUBLE)
 
+//On some setups, GLIMMER_FCFLAGS isn't being defined correctly.
+//This should work as a stopgap measure until the problem is found
+#ifndef GLIMMER_FCFLAGS
+#define GLIMMER_FCFLAGS ""
+#endif
+
 #define CFG_LEN 35
 #define BUFFER_LEN 400
 #define PERM_FILE (S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
