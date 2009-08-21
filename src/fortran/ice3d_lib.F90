@@ -15,25 +15,18 @@
 !The following defines contain debug options that aid in examining the sparse
 !matrix.  They should be disabled unless the higher-order code needs debugging.
 
-!Define to write the rows of the sparse matrix for each vel. component then stop.
-!#define OUTPUT_SPARSE_MATRIX
-
 !Define to output a NetCDF file of the partial iterations
 #define OUTPUT_PARTIAL_ITERATIONS
-
-!If defined, a vertically averaged pressure will be used across the ice front.
-!Otherwise, a vertically explicit pressure will be used.
-!#define AVERAGED_PRESSURE
-
-!The maximum number of iterations to use in the unstable manifold loop
-#define NUMBER_OF_ITERATIONS 4000
 
 !#define VERY_VERBOSE
 
 !#define NOSHELF
 
-
 !#define ENFORCE_PBC
+
+!If defined, a text fields contianing debug output will be written to the disk in the
+!directory in which this file was run.
+!#define DEBUG_FIELDS
 
 module ice3d_lib
     use glimmer_global
@@ -47,13 +40,17 @@ module ice3d_lib
     use xls
     use glide_nonlin
     implicit none
-    real(dp) :: small, zip, toler_adjust_factor
-    PARAMETER(SMALL=1.D-10,ZIP=1.D-30)
-    PARAMETER(toler_adjust_factor=1.0)
+    real(dp), parameter :: SMALL=1.D-10, ZIP=1.D-30
+    
+    real(dp), parameter :: toler_adjust_factor=1.0
+    integer, parameter :: maxiter = 2000
 
     real(dp) :: plastic_bed_regularization = 1e-2
 
+#ifdef DEBUG_FIELDS
+    !This is a debugging field to output what computation is done at what point.
     integer, dimension(:,:), allocatable :: pointtype
+#endif
 
 #ifdef VERY_VERBOSE
     logical, parameter :: sparverbose = .true.
@@ -160,12 +157,13 @@ contains
 
         INTEGER :: i,j,k
 
+        !The Pattyn model currently does not support CISM's rescaled coordinates!
 #ifndef NO_RESCALE
         write(*,*) "Pattyn-Bocek model does not work with scaling yet.  Please re-compile with the flag -DNO_RESCALE."
         stop
 #endif
 
-#if 1
+#ifdef DEBUG_FIELDS
         call write_xls("h.txt",h)
         call write_xls("hb.txt",hb)
         call write_xls("surf.txt",surf)
@@ -191,10 +189,6 @@ contains
         !These are given by (40) through (42) in Pattyn 2002.
         !At boundaries or when ice thickness (h) is 0, these
         !factors are set to 0.
-        !WARNING: In this block of code, dfdx really means dfdy
-        !and vice versa.  This is because it is operating in
-        !transposed coordinates instead of native Fortran
-        !coordinates.
         do i = 1, MAXX
             do j = 1, MAXY
                 if ( (i > 1) .and. (i < MAXX) .and. (j > 1) .and. (j < MAXY)&
@@ -239,7 +233,7 @@ contains
                 endif
             end do
         end do
-#if 1
+#ifdef DEBUG_FIELDS
         call write_xls_3d("ax.txt",ax)
         call write_xls_3d("ay.txt",ay)
         call write_xls_3d("bx.txt",bx)
@@ -354,7 +348,7 @@ contains
         !in radians, with 0=12 o'clock, pi/2=3 o'clock, etc.
         real(dp), dimension(:,:), intent(in)   :: marine_bc_normal
 
-        INTEGER l,lacc,m,maxiter,iter,DU1,DU2,DV1,DV2,ijktot,k
+        INTEGER l,lacc,m,iter,DU1,DU2,DV1,DV2,ijktot
         real(dp) :: error,tot,teta
 
         PARAMETER (DU1=1,DU2=2,DV1=3,DV2=4)
@@ -390,7 +384,9 @@ contains
 
         call cpu_time(solve_start_time)
 
+#ifdef DEBUG_FIELDS
         allocate(pointtype(size(efvs, 2), size(efvs, 3)))
+#endif
 
         !Get the sizes from the efvs field.  Calling code must make sure that
         !these all agree.
@@ -399,7 +395,6 @@ contains
         nzeta = size(efvs,1)
         ijktot = active_points*nzeta
 
-        maxiter=NUMBER_OF_ITERATIONS
         error=VEL2ERR
         m=1
         lacc=0
@@ -427,7 +422,7 @@ contains
         call write_xls("h.txt",h)
         call write_xls_3d("flwa.txt",flwa)
 
-#if 1
+#ifdef DEBUG_FIELDS
         call write_xls("dzdx.txt",dzdx)
         call write_xls("dzdy.txt",dzdy)
         call write_xls_3d("ax.txt",ax)
@@ -497,7 +492,7 @@ contains
                            delta_x, delta_y, zeta, .false., &
                            direction_x, direction_y, &
                            dudx, dudy, dudz, dvdx, dvdy, dvdz)
-#if 0
+#ifdef DEBUG_FIELDS
             call write_xls_3d("dudx.txt",dudx)
             call write_xls_3d("dudy.txt",dudy)
             call write_xls_3d("dudz.txt",dudz)
@@ -529,9 +524,6 @@ contains
             !velocities will get spit into ustar and vstar, while uvel and vvel
             !will still hold the old velocities.
 
-#ifdef OUTPUT_SPARSE_MATRIX
-            call open_sparse_output(l, ITER_UNIT)
-#endif
             iter=sparuv(efvs,dzdx,dzdy,ax,ay,bx,by,cxy,h,&
                 uvel,vvel,dudx,dudy,dudz,dvdx,dvdy,dvdz,&
                 ustar,vstar,tau,dhbdx,dhbdy,ijktot,MAXY,&
@@ -539,9 +531,6 @@ contains
                 geometry_mask,matrix, matrix_workspace, matrix_options, &
                 kinematic_bc_u, kinematic_bc_v, &
                 marine_bc_normal,direction_x,direction_y, STAGGERED)
-#ifdef OUTPUT_SPARSE_MATRIX
-            close(ITER_UNIT)
-#endif
 
             !Apply periodic boundary conditions to the computed velocity
             call write_xls("ustar_beforebc.txt", ustar(1,:,:))
@@ -582,17 +571,16 @@ contains
 #ifdef OUTPUT_PARTIAL_ITERATIONS
       call end_debug_iteration(ncid_debug)
 #endif
-#if 0
-      call write_xls_3d("uvel.txt",uvel)
-      call write_xls_3d("vvel.txt",vvel)
-      call write_xls("uvel_surf.txt",uvel(:,:,1))
-      call write_xls("vvel_surf.txt",vvel(:,:,1))
-#endif
+      
       call sparse_destroy_workspace(matrix, matrix_options, matrix_workspace)
       call del_sparse_matrix(matrix) 
 
       call cpu_time(solve_end_time)
+
+#ifdef DEBUG_FIELDS
       deallocate(pointtype)
+#endif
+
       write(*,*) "Pattyn higher-order solve took",solve_end_time - solve_start_time
       return
       END subroutine
@@ -632,13 +620,9 @@ contains
         call linearize_3d(vec_old, linearize_idx, u_old)
         call linearize_3d(vec_old, linearize_idx, v_old)
 
-#if 1
         umc_correct_vels = unstable_manifold_correction(vec_new, &
                 vec_old, vec_correction, maxy*maxx*nzeta*2, toler, tot_out, theta_out)
-#else
-        umc_correct_vels = picard_iterate(vec_new, vec_old, maxy*maxx*nzeta*2, toler, tot_out)
-        theta_out = 0
-#endif
+        
         linearize_idx = 1
         call delinearize_3d(vec_old, linearize_idx, u_old)
         call delinearize_3d(vec_old, linearize_idx, v_old)
@@ -725,8 +709,6 @@ contains
         real(dp), dimension(:,:,:), intent(out) :: dvdz
  
         real(dp), dimension(size(uvel,1),size(uvel,2),size(uvel,3)) :: uvel_test, vvel_test
-
-        integer :: k
 
         !TEST of upwinding shelf boundary derivatives:
         !Everywhere where there's no ice, we set the velocity
@@ -873,18 +855,9 @@ contains
         real(dp), dimension(:,:,:), pointer :: velpara, velperp, velpara_star, kinematic_bc_para
         integer :: whichcomponent
         character(1) :: componentstr
-
+#ifdef DEBUG_FIELDS
         pointtype = 0
-!
-!-------  velocity u
-!
-#ifdef OUTPUT_SPARSE_MATRIX
-        write(ITER_UNIT,*) " Component Y X Z h efvs mask point_type ", &
-                   "im1jm1 im1km1 im1 im1kp1 im1jp1 jm1km1 jm1 jm1kp1 ", &
-                   "km2 km1 center kp1 kp2 jp1km1 jp1 jp1kp1 ", &
-                   "ip1jm1 ip1km1 ip1 ip1kp1 ip1jp1 im2 ip2 jm2 jp2 stencil_total rhs "
 #endif
-
         sparuv = 0
         do whichcomponent = 1,2
             if (whichcomponent == 1) then !Set up to compute u component
@@ -924,14 +897,18 @@ contains
                                 !should be 0, so we'll replace our uvel with that
                                 velpara(k,i,j) = 0
                                 rhs = 0
+#ifdef DEBUG_FIELDS
                                 pointtype(i,j) = 1
+#endif
                             else if (.not. IS_NAN(kinematic_bc_para(k,i,j))) then
                                 !If a kinematic boundary condition was specified
                                 !for this location, hold the location at the
                                 !specified value.
                                 coef(I_J_K)=1.
                                 rhs = kinematic_bc_para(k,i,j)
+#ifdef DEBUG_FIELDS
                                 pointtype(i,j) = 2
+#endif
                             else if ((i.eq.1).or.(i.eq.MAXX).or.(j.eq.1).or.(j.eq.MAXY)) then
                                 !Boundary condition at the edges of the domain.
                                 !If we don't have a kinematic boundary already
@@ -969,9 +946,14 @@ contains
                                 end if
 #endif
                                 coef(I_J_K)=1.
+
+#ifdef DEBUG_FIELDS
                                 pointtype(i,j) = 3
+#endif
                             else
+#ifdef DEBUG_FIELDS
                                 pointtype(i,j) = 4
+#endif
                                 call sparse_setup(componentstr, i, j, k, efvs, dzdx, dzdy, ax, ay, bx, by, cxy, &
                                      h, gridx, gridy, zeta, uvel, vvel, dudx, dudy, dudx, dvdx, dvdy, dvdz, &
                                      dhbdx, dhbdy, beta, geometry_mask, &
@@ -1034,7 +1016,11 @@ contains
             write(*,*)"End Matrix Assembly"
             write(*,*)"Begin Matrix Solve"
 #endif
+
+#ifdef DEBUG_FIELDS
             call write_xls_int("point_type.txt", pointtype)
+#endif
+
             call sparse_solver_preprocess(matrix, matrix_options, matrix_workspace)        
             ierr = sparse_solve(matrix, d, x, matrix_options, matrix_workspace,  err, iter, verbose=sparverbose)
             sparuv = sparuv + iter
@@ -1283,10 +1269,7 @@ contains
         !Cached difference calculations for the nonstaggered Z grid
         real(dp) dz_down1, dz_down2, dz_down3, dz_up1, dz_up2, dz_up3
         real(dp) dz_cen1, dz_cen2, dz_cen3, dz_sec1, dz_sec2, dz_sec3
-               !call write_xls_3d("uvel.txt",uvel)
-        !call write_xls_3d("vvel.txt",vvel)
-        character(20) :: point_type
-        real(dp) :: rhs2
+        
         !Set up a system of pointers to encapsulate the nomenclature described
         !above
         !TODO: Go through the code and figure out which of these bindings
@@ -1334,7 +1317,7 @@ contains
 
             vel_perp => vvel
             vel_para => uvel
-        else if (component == "v") then
+        else
             dpara_dpara => dvdy
             dpara_dperp => dvdx
             dpara_dx    => dvdx
@@ -1377,8 +1360,6 @@ contains
 
             vel_perp => uvel
             vel_para => vvel
-        else
-            write(*,*)"FATAL ERROR: sparse_setup called with invalid component"
         end if
 #ifndef NOSHELF        
         if (GLIDE_IS_CALVING(mask(i,j)) .and. &
@@ -1387,11 +1368,9 @@ contains
                                       vel_perp, efvs, dx, dy, ax, ay, dz,coef, rhs, &
                                       dudx_field,dudy_field,dudz_field,dvdx_field,dvdy_field,dvdz_field,&
                                       direction_x, direction_y, mask, STAGGERED, WHICH_SOURCE)
-            point_type = "lateral"
         else  &
 #endif
         if (k.eq.1) then !Upper boundary condition (stress-free surface)
-            point_type = "surface"
             !Finite difference coefficients for an irregular Z grid, downwinded
             dz_down1=(2.*dz(k)-dz(k+1)-dz(k+2))/(dz(k+1)-dz(k))/(dz(k+2)-dz(k))
             dz_down2=(dz(k+2)-dz(k))/(dz(k+2)-dz(k+1))/(dz(k+1)-dz(k))
@@ -1412,22 +1391,10 @@ contains
             coef(I_J_KP2) = dpara_dz*dz_down3
             coef(I_JP1_K) = dpara_dx*.5/dx
             coef(IP1_J_K) = dpara_dy*.5/dy
-            !Note the transposition below (dfdx => dfdy, vice versa)
             rhs = -dperp_dx * dfdx_3d(vel_perp,i,j,k,dx) &
                 -  dperp_dy * dfdy_3d(vel_perp,i,j,k,dy) &
                 -  dperp_dz * dfdz_3d_downwind_irregular(vel_perp,i,j,k,dz)
                 
-            !"Blend" with lateral boundary condition if we are on the
-            !boundary.  This functionally is just summing the equations.
-            !Note that sparse_marine_margin is written in such a way as
-            !to always add to coef, not overwrite it.
-            !if (.not. IS_NAN(latbc_normal(i,j))) then !Marine margin dynamic (Neumann) boundary condition
-            !    rhs2 = 0
-            !call sparse_marine_margin(component,i,j,k,h,latbc_normal, vel_perp, efvs, dx, dy, ax, ay, dz,coef, rhs, &
-            !                          dudx_field,dudy_field,dudz_field,dvdx_field,dvdy_field,dvdz_field,&
-            !                          direction_x, direction_y, mask, STAGGERED, WHICH_SOURCE)
-            !     rhs = rhs + rhs2
-            !end if
         else if (k.eq.Ndz) then !Lower boundary condition (Basal sliding)
             !Finite difference coefficients for an irregular Z grid, upwinded
             dz_up1=(dz(k)-dz(k-1))/(dz(k-1)-dz(k-2))/(dz(k)-dz(k-2))
@@ -1437,9 +1404,7 @@ contains
             if (IS_NAN(beta(i,j))) then !No sliding at the base
                 coef(I_J_K)=1.
                 rhs=0.
-                point_type = "base-no-slip"
             else !Compute sliding 
-                point_type = "base-stress-free"
                 dpara_dpara = 4.*dhb_dpara(i,j)
                 dpara_dz = 4.*a_para(k,i,j)*dhb_dpara(i,j) + a_perp(k,i,j)*dhb_dperp(i,j) + 1./h(i,j)
                 dpara_dperp = dhb_dperp(i,j)
@@ -1452,7 +1417,6 @@ contains
                 !strain rates by the viscosity.  If there is no friction, then
                 !we have a stress-free base and these coefficients disappear.
                 if (beta(i,j) >= SMALL) then
-                   point_type = "base-beta-squared"
                    dpara_dpara = dpara_dpara*efvs(k,i,j)
                    dpara_dperp = dpara_dperp*efvs(k,i,j)
                    dpara_dz = dpara_dz*efvs(k,i,j)
@@ -1468,7 +1432,6 @@ contains
                 coef(I_J_K)   = dpara_dz*dz_up3
                 coef(I_JP1_K) = .5*dpara_dx/dx
                 coef(IP1_J_K) = .5*dpara_dy/dy
-                !Transposition of derivatives below
                 rhs = -dperp_dx * dfdx_3d(vel_perp, i, j, k, dx) &
                     -  dperp_dy * dfdy_3d(vel_perp, i, j, k, dy) &
                     -  dperp_dz * dfdz_3d_upwind_irregular(vel_perp, i, j, k, dz)
@@ -1479,17 +1442,6 @@ contains
                 !neglected.
                 coef(11) = coef(11) + beta(i,j)! * sqrt(1 + dhbdx(i,j)**2 + dhbdy(i,j)**2)
                 
-                !"Blend" with lateral boundary condition if we are on the
-                !boundary.  This functionally is just summing the equations.
-                !Note that sparse_marine_margin is written in such a way as
-                !to always add to coef, not overwrite it.
-                !if (.not. IS_NAN(latbc_normal(i,j))) then !Marine margin dynamic (Neumann) boundary condition
-                !    rhs2 = 0
-                !call sparse_marine_margin(component,i,j,k,h,latbc_normal, vel_perp, efvs, dx, dy, ax, ay, dz,coef, rhs, &
-                !                      dudx_field,dudy_field,dudz_field,dvdx_field,dvdy_field,dvdz_field,&
-                !                      direction_x, direction_y, mask, STAGGERED, WHICH_SOURCE)
-                !     rhs = rhs + rhs2
-                !end if
             endif
         else !Interior of the ice (e.g. not a boundary condition)
             !Finite difference coefficients for an irregular Z grid
@@ -1500,7 +1452,6 @@ contains
             dz_sec2 = 2./(dz(k)-dz(k+1))/(dz(k)-dz(k-1))
             dz_sec3 = 2./(dz(k+1)-dz(k))/(dz(k+1)-dz(k-1))
 
-            !Derivative transposition below
             defvsdx=dfdx_3d(efvs,i,j,k,dx)
             defvsdy=dfdy_3d(efvs,i,j,k,dy)
             defvsdz=dfdz_3d_irregular(efvs,i,j,k,dz)
@@ -1546,7 +1497,6 @@ contains
             coef(IP1_J_K) = (dpara_dyz*dz_cen2 + dpara_dy) * (.5/dy) + dpara_dy2 / dy**2
             coef(IP1_J_KP1) = dpara_dyz * dz_cen3 * (.5/dy)
           
-            !Transposition of derivatives below
             rhs =RHOI * GRAV * dz_dpara(i,j) &
                 - dperp_dx  * dfdx_3d(vel_perp,i,j,k,dx)&
                 - dperp_dy  * dfdy_3d(vel_perp,i,j,k,dy)&
@@ -1556,13 +1506,7 @@ contains
                 - dperp_dyz * d2fdyz_3d(vel_perp,i,j,k,dy,dz)&
                 - dperp_dz2 * d2fdz2_3d_irregular(vel_perp,i,j,k,dz)
         
-            point_type = "interior"
         end if
-
-#ifdef OUTPUT_SPARSE_MATRIX
-        write(ITER_UNIT,*)component,i,j,k,h(i,j),efvs(k,i,j), &
-                  mask(i,j), point_type, coef,sum(coef),rhs
-#endif
 
     end subroutine sparse_setup
 
@@ -1605,7 +1549,7 @@ contains
         !x and y components of the normal vector with unit length
         real(dp), target :: n_x, n_y
 
-        !Hydrostatic pressure at this level
+        !Balance of hydrostatic and cryostatic pressures at this level
         real(dp) :: source
         
         !Derivative of the perpendicular component (v if computing u and vice
@@ -1628,8 +1572,6 @@ contains
         real(dp), pointer :: n_para, n_perp, dperp_dpara, dperp_dperp
         real(dp), pointer :: para_coeff, perp_coeff
 
-        real(dp) :: ntot = 1d0
-
         !Surface (upper or lower) derivatives.  These are only nonzero at k=1 or k=nzeta
         real(dp) :: ds_dpara = 0, ds_dperp = 0
 
@@ -1642,9 +1584,6 @@ contains
         !theta = normals(i,j) + 2*(PI/4 - normals(i,j))
         !But really this reduces to swapping sine and cosine (easy proof to work
         !through).
-        !n_x =  (sin(normals(i,j)))
-        !n_y = -(cos(normals(i,j)))
-
         n_x = sin(normals(i,j))
         n_y = -cos(normals(i,j))
 
@@ -1659,13 +1598,6 @@ contains
             n_y = 0
         end if
    
-        !Facilitates proper splitting of the source term so the it adds to 1
-        !In the case of a 45 deg. boundary, this will result in changing
-        !1/sqrt(2) to 1/2.  It should do nothing in the case of a boundary
-        !aligned with the axis.
-        !ntot = abs(n_x) + abs(n_y)
-
-
         !Divide the source term by viscosity, less error-prone to do it here
         !rather than multiply everything else by it (though it may give
         !iterative solvers more fits maybe?)
@@ -1678,7 +1610,9 @@ contains
         downwind_x = .false.
         downwind_y = .false.
 
+#ifdef DEBUG_FIELDS
         pointtype(i,j) = 5
+#endif
 
         if (component=="u") then
             n_para => n_x
@@ -1698,14 +1632,15 @@ contains
             dperp_dz = dvdz(k,i,j)
 
             !Set the ds terms
-            if (k == 1) then !Surface
-                ds_dpara = dzdx(i,j)
-                ds_dperp = dzdy(i,j)
-            else if (k == size(zeta)) then !Bed
-                ds_dpara = dhbdx(i,j)
-                ds_dperp = dhbdy(i,j)
-            end if
-        else if (component=="v") then
+            !Not sure if this is actually needed yet
+            !if (k == 1) then !Surface
+            !    ds_dpara = dzdx(i,j)
+            !    ds_dperp = dzdy(i,j)
+            !else if (k == size(zeta)) then !Bed
+            !    ds_dpara = dhbdx(i,j)
+            !    ds_dperp = dhbdy(i,j)
+            !end if
+        else 
             n_para => n_y
             n_perp => n_x
             
@@ -1723,13 +1658,13 @@ contains
             dperp_dz = dudz(k,i,j)
 
             !Set the ds terms
-            if (k == 1) then !Surface
-                ds_dpara = dzdy(i,j)
-                ds_dperp = dzdx(i,j)
-            else if (k == size(zeta)) then !Bed
-                ds_dpara = dhbdy(i,j)
-                ds_dperp = dhbdx(i,j)
-            end if
+            !if (k == 1) then !Surface
+            !    ds_dpara = dzdy(i,j)
+            !    ds_dperp = dzdx(i,j)
+            !else if (k == size(zeta)) then !Bed
+            !    ds_dpara = dhbdy(i,j)
+            !    ds_dperp = dhbdx(i,j)
+            !end if
         end if
         
         if (direction_y(i,j) > 0) then
@@ -1749,7 +1684,7 @@ contains
         
         dz_coeff   =   (4*a_para(k,i,j)*(n_para + ds_dpara) + a_perp(k,i,j)*(n_perp + ds_dperp))
 
-        rhs = source/ntot * n_para &
+        rhs = source * n_para &
                 - 2*(n_para+ds_dpara)*dperp_dperp & 
                 -   (n_perp+ds_dperp)*dperp_dpara &
                 -   (2*a_para(k,i,j)*(n_perp+ds_dperp) + a_perp(k,i,j)*(n_para+ds_dpara))*dperp_dz
@@ -1820,13 +1755,6 @@ contains
             coef(I_JM1_K) = coef(I_JM1_K) - 0.5 * dx_coeff/dx  
         end if
 
-#if 0
-        write(*,*) &
-                   "im1jm1 im1km1 im1 im1kp1 im1jp1 jm1km1 jm1 jm1kp1 ", &
-                   "km2 km1 center kp1 kp2 jp1km1 jp1 jp1kp1 ", &
-                   "ip1jm1 ip1km1 ip1 ip1kp1 ip1jp1 im2 ip2 jm2 jp2 rhs "
-        write(*,*)coef,rhs 
-#endif
     end subroutine
 
     !Computes the source term for an ice shelf from hydrostatic and cryostatic pressure
@@ -1847,12 +1775,12 @@ contains
         !then we are at 1ATM pressure which we just assume to be 0 
         !throughout the model anyway
 
+        source_term = 0
 
         if (which_source == HO_SOURCE_AVERAGED) then
             !Vertically averaged model
             source_term = .5 * rhoi * grav * h(i,j) * (1 - rhoi/rhoo)
         else if (which_source == HO_SOURCE_EXPLICIT) then
-#if 1
             !In order to get the correct source term, I integrate from the level above this
             !one to the current level so that all of the pressure is accounted for.
             if (k == 1) then
@@ -1872,14 +1800,6 @@ contains
                 end if
                 source_term = source_term / (zeta(k) - zeta(k-1))
             end if
-#else
-            !Cryostatic component
-            source_term = rhoi * grav * h(i,j) * zeta(k)
-            !Hydrostatic component, only if we're below the surface
-            if (zeta(k) > (1 - rhoi/rhoo)) then
-                source_term = source_term + rhoo * grav * h(i,j) * (1 - rhoi/rhoo - zeta(k))
-            end if
-#endif
         end if  
 
     end function
@@ -2030,17 +1950,6 @@ function begin_iteration_debug(nx, ny, nz)
     call nc_errorhandle(__FILE__, __LINE__, err) 
     err = nf90_def_var(ncid, "velnorm", NF90_DOUBLE, dims, varid)
     call nc_errorhandle(__FILE__, __LINE__, err) 
-    err = nf90_def_var(ncid, "mask", NF90_INT, dims2d, varid)
-    call nc_errorhandle(__FILE__, __LINE__, err) 
-
-    err = nf90_def_var(ncid, "dudx", NF90_DOUBLE, dims, varid)
-    call nc_errorhandle(__FILE__, __LINE__, err) 
-    err = nf90_def_var(ncid, "dudy", NF90_DOUBLE, dims, varid)
-    call nc_errorhandle(__FILE__, __LINE__, err) 
-    err = nf90_def_var(ncid, "dvdx", NF90_DOUBLE, dims, varid)
-    call nc_errorhandle(__FILE__, __LINE__, err) 
-    err = nf90_def_var(ncid, "dvdy", NF90_DOUBLE, dims, varid)
-    call nc_errorhandle(__FILE__, __LINE__, err) 
   
     err = nf90_enddef(ncid)
     call nc_errorhandle(__FILE__, __LINE__, err)
@@ -2072,7 +1981,6 @@ subroutine iteration_debug_step(ncid, iter, efvs, uvel, vvel, geometry_mask)
         do j = 1,ny
             do k = 1,nz
                 start=(/i,j,k,iter+1/)
-#if 0
        err = nf90_inq_varid(ncid, "efvs", varid)
        call nc_errorhandle(__FILE__, __LINE__, err)
        
@@ -2089,20 +1997,13 @@ subroutine iteration_debug_step(ncid, iter, efvs, uvel, vvel, geometry_mask)
        
        err = nf90_put_var(ncid, varid, vvel(k,i,j), start)
        call nc_errorhandle(__FILE__, __LINE__, err)
-#endif
+       
        err = nf90_inq_varid(ncid, "velnorm", varid)
        call nc_errorhandle(__FILE__, __LINE__, err)
        
        err = nf90_put_var(ncid, varid, sqrt(uvel(k,i,j)**2 + vvel(k,i,j)**2), start)
        call nc_errorhandle(__FILE__, __LINE__, err)
 
-#if 0 
-       err = nf90_inq_varid(ncid, "mask", varid)
-       call nc_errorhandle(__FILE__, __LINE__, err)
-       
-       err = nf90_put_var(ncid, varid, geometry_mask(i,j), (/i,j,iter+1/))
-       call nc_errorhandle(__FILE__, __LINE__, err)
-#endif
         end do
         end do
     end do
@@ -2114,60 +2015,6 @@ subroutine iteration_debug_step(ncid, iter, efvs, uvel, vvel, geometry_mask)
         err = nf90_open("iterdebug.nc", ior(NF90_WRITE,NF90_SHARE), ncid)
         call nc_errorhandle(__FILE__, __LINE__, err)
     end if
-
-end subroutine
-
-subroutine iterdebug_vel_derivs(ncid, iter, dudx, dudy, dvdx, dvdy)
-    use netcdf
-    use glimmer_ncdf, only: nc_errorhandle
-
-    integer :: ncid, iter
-    real(dp), dimension(:,:,:) :: dudx, dudy, dvdx, dvdy
-
-    integer :: varid, err
-
-    integer :: nx, ny, nz
-    integer :: i,j,k, start(4), count(4)
-    
-    nx = size(dudx, 2)
-    ny = size(dudx, 3)
-    nz = size(dudx, 1)
-#if 0
-    count = (/1,1,1,1/)
-    do i = 1,nx
-        do j = 1,ny
-            do k = 1,nz
-                start=(/i,j,k,iter+1/)
-                err = nf90_inq_varid(ncid, "dudx", varid)
-                call nc_errorhandle(__FILE__, __LINE__, err)
-       
-                err = nf90_put_var(ncid, varid, dudx(k,i,j), start)
-                call nc_errorhandle(__FILE__, __LINE__, err)
-
-                err = nf90_inq_varid(ncid, "dudy", varid)
-                call nc_errorhandle(__FILE__, __LINE__, err)
-       
-                err = nf90_put_var(ncid, varid, dudy(k,i,j), start)
-                call nc_errorhandle(__FILE__, __LINE__, err)
-       
-                err = nf90_inq_varid(ncid, "dvdx", varid)
-                call nc_errorhandle(__FILE__, __LINE__, err)
-       
-                err = nf90_put_var(ncid, varid, dvdx(k,i,j), start)
-                call nc_errorhandle(__FILE__, __LINE__, err)
-       
-                err = nf90_inq_varid(ncid, "dvdy", varid)
-                call nc_errorhandle(__FILE__, __LINE__, err)
-       
-                err = nf90_put_var(ncid, varid, dvdy(k,i,j), start)
-                call nc_errorhandle(__FILE__, __LINE__, err)
-       
- 
-            end do
-        end do
-    end do
-#endif
-
 
 end subroutine
 
@@ -2198,87 +2045,6 @@ subroutine write_xls_direction_guide(filename, nx, ny)
 
 end subroutine
 
-subroutine open_sparse_output(iteration, iunit)
-    integer :: iteration
-    integer :: iunit
-
-    character(32) filename
-    character(2)  istring
-
-    write(istring, '(i2)') iteration
-    write(filename,*) "sparse"//istring//".txt"
-    open(unit=iunit, file=filename)
-end subroutine
-
-!Detects locations that are surrounded entirely by 
-subroutine mask_out_edges(geometry_mask, point_mask, uvelbc, vvelbc)
-    integer, dimension(:,:), intent(in) :: geometry_mask
-    integer, dimension(:,:), intent(in) :: point_mask
-    real(dp), dimension(:,:,:), intent(inout) :: uvelbc, vvelbc
-    
-    logical, dimension(size(uvelbc, 1), size(uvelbc, 2)) :: is_potential_point
-
-    integer :: i, j
-
-    !PASS 1: Look for points that potentially need to be masked out (i.e. surrounded by no ice
-    !or by dirichlet boundary)
-    do i = 2, size(uvelbc, 1)-1
-        do j = 2, size(uvelbc, 1)-1
-            is_potential_point(i,j) = needs_mask(i,j,1)
-        end do
-    end do
-
-    !PASS 2: If a point is surrounded entirely by points that might need to be masked out,
-    !points with no ice, or dirichlet boundary conditions, then set a 0-value dirichlet
-    !condition there as it should not contribute to the solution.
-    do i = 2, size(uvelbc, 1)-1
-        do j = 2, size(uvelbc, 1)-1
-            if (needs_mask(i,j,2)) then
-                uvelbc(i,j,:) = 0
-                vvelbc(i,j,:) = 0
-            end if
-        end do
-    end do
-contains
-    function needs_mask(i,j,pass)
-        integer, intent(in) :: i, j
-        integer, intent(in) :: pass
-
-        integer :: i2, j2
-        
-        integer, dimension(-1:1, -1:1) :: local
-
-        logical :: needs_mask
-
-        local = 0
-        do i2 = -1, 1
-            do j2 = -1, 1
-                if (i2 /= 0 .and. j2 /= 0) then
-                    if (.not. IS_NAN(uvelbc(i+i2, j+j2,1))) then
-                        local(i2, j2) = 1
-                    end if
-
-                    if (point_mask(i+i2, j+j2) == 0) then
-                        local(i2, j2) = 1
-                    end if
-                end if
-
-                if (pass == 2 .and. is_potential_point(i+i2, j+j2)) then
-                    local(i2, j2) = 1
-                end if
-            end do
-        end do
-
-        needs_mask = .false.
-        if (pass == 1 .and. sum(local) > 0) then
-            needs_mask = .true.
-        end if
-
-        if (pass == 2 .and. sum(local) == 9) then
-            needs_mask = .true.
-        end if
-    end function
-end subroutine
 
 !
 !---------------------------------------------------
