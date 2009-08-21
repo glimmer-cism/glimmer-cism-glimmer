@@ -10,20 +10,20 @@ module remap_glamutils
 
     type remap_glamutils_workspace
         ! *sfp** arrays needed to pass GLAM variables to/from inc. remapping solver
-        real (kind = dp), allocatable, dimension(:,:,:) ::   &
+        real (kind = dp), pointer, dimension(:,:,:) ::   &
             thck_ir,            &
             dew_ir,   dns_ir,   &
             dewt_ir,  dnst_ir,  &
             dewu_ir,  dnsu_ir,  &
             hm_ir,    tarea_ir, &
             ubar_ir,  vbar_ir
-        real (kind = dp), allocatable, dimension(:,:,:,:) :: trace_ir
+        real (kind = dp), pointer, dimension(:,:,:,:) :: trace_ir
         real (kind = dp) :: dt_ir
 
         ! *sfp** mask to apply for domains where initial ice thickness limits are equivalent
         ! to the domain edge (e.g. the locations where bcs are applied)
 
-        real (kind = dp), allocatable, dimension(:,:) :: mask_ir
+        real (kind = dp), pointer, dimension(:,:) :: mask_ir
 
         integer :: ewn_ir, nsn_ir
     end type remap_glamutils_workspace
