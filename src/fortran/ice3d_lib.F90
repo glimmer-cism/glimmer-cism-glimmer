@@ -369,7 +369,6 @@ contains
 #endif
         !For timing the algorithm
         real(dp) :: solve_start_time, solve_end_time, iter_start_time, iter_end_time
-a
         real(dp) :: max_value 
 
         call cpu_time(solve_start_time)
