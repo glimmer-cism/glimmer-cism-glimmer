@@ -58,14 +58,6 @@ module ice3d_lib
     logical, parameter :: sparverbose = .false.
 #endif
 
-    !Mu is recomputed only when the error tolerance reaches this level
-    !This allows nonlinearities resulting from equation separation and 
-    !the beta^2 computation to "quiet down" before attempting another
-    !viscosity iteration.  Set to a very high number to turn this feature off
-    !entirely
-    real(dp) :: recompute_efvs_toler = 1e10
-    real(dp) :: recompute_efvs_adjust = 1
-
     integer, parameter :: ITER_UNIT = 42
 !------------------------------------------------------
 !   lookup coordinates in sparse matrix
@@ -377,10 +369,8 @@ contains
 #endif
         !For timing the algorithm
         real(dp) :: solve_start_time, solve_end_time, iter_start_time, iter_end_time
-
-        real(dp) :: this_delta, last_delta
-        this_delta=0
-        last_delta=0
+a
+        real(dp) :: max_value 
 
         call cpu_time(solve_start_time)
 
@@ -405,14 +395,6 @@ contains
         call sparse_solver_default_options(options%which_ho_sparse, matrix_options)
         matrix_options%base%tolerance=TOLER
         matrix_options%base%maxiters  = 1000
-
-#ifdef VERY_VERBOSE
-        if (options%which_ho_efvs == 1) then
-            write(*,*) "Using linear rheology"
-        else
-            write(*,*) "Using full stress calculation"
-        end if
-#endif
 
         !Create the sparse matrix
         call new_sparse_matrix(ijktot, ijktot*STENCIL_SIZE, matrix)
@@ -504,21 +486,14 @@ contains
 
             !Compute viscosity
             if (options%which_ho_efvs == HO_EFVS_FULL) then
-                if (tot < recompute_efvs_toler) then
-                    call calcefvs(efvs,flwa,h,ax,ay,FLOWN,ZIP,dudx, dudy, dudz, dvdx, dvdy, dvdz)
-                    recompute_efvs_toler = recompute_efvs_toler / recompute_efvs_adjust
-                    recompute_efvs_toler = max(recompute_efvs_toler, error*2)
-                end if
+                call calcefvs(efvs,flwa,h,ax,ay,FLOWN,ZIP,dudx, dudy, dudz, dvdx, dvdy, dvdz)
             else if (options%which_ho_efvs == HO_EFVS_CONSTANT) then
                 efvs = 1d6
             end if
 
 
-            call write_xls_3d("efvs.txt",efvs)
             !Apply periodic boundary conditions to the viscosity
             call periodic_boundaries_3d(efvs,options%periodic_ew,options%periodic_ns)
-
-            !call write_xls_3d("efvs.txt",efvs)
             
             !Sparse matrix routine for determining velocities.  The new
             !velocities will get spit into ustar and vstar, while uvel and vvel
@@ -553,13 +528,12 @@ contains
                                         tot, teta)    
 
             call cpu_time(iter_end_time)
-            this_delta = maxval(sqrt(ustar**2 + vstar**2))
-#if DEBUG 
-            write(*,*) l, iter, tot, teta, &
-                       this_delta, this_delta-last_delta,&
-                       iter_end_time - iter_start_time
-#endif
-            last_delta = this_delta
+            max_value = maxval(sqrt(ustar**2 + vstar**2))
+            
+            
+            write(*,*) l, iter, tot, &
+                       max_value, iter_end_time - iter_start_time
+            
             !Check whether we have reached convergance
             if (.not. cont) exit nonlinear_iteration
      end do nonlinear_iteration
