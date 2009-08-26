@@ -114,10 +114,9 @@ contains
     implicit none 
 
     real(dp), intent(out), dimension(:,:) :: opvr 
-    real(dp), intent(in), dimension(:,:) :: ipvr
+    real(dp), intent(in), dimension(:,:)  :: ipvr
     
-    integer :: ewn,nsn,ew,ns,n
-    integer :: choice
+    integer, intent(in) :: ewn,nsn
 
         opvr(1:ewn-1,1:nsn-1) = (ipvr(2:ewn,1:nsn-1) + ipvr(1:ewn-1,2:nsn) + &
                                  ipvr(2:ewn,2:nsn)   + ipvr(1:ewn-1,1:nsn-1)) / 4.0d0
@@ -279,7 +278,6 @@ contains
     subroutine periodic_boundaries_3d(m, apply_to_x, apply_to_y, nlayers_arg)
         !*FD Applies periodic boundary conditions to a 3D array
         real(dp), dimension(:,:,:), intent(inout) :: m
-        integer :: maxx, maxy
         logical :: apply_to_x, apply_to_y
         integer, optional :: nlayers_arg
     

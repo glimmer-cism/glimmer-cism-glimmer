@@ -408,7 +408,7 @@ contains
         
         real(dp), dimension(upn, ewn, nsn) :: efvs, uvel_unstag, vvel_unstag
         
-        integer :: i,j,k 
+        integer :: k 
 
         !Determine whether to upwind or downwind derivatives at points on the
         !interior of the model domain (this is mainly important for the marine
@@ -435,19 +435,6 @@ contains
                 kinematic_bc_v_unstag(k,:,:) = NaN
             endwhere
         end do
-
-        !In unstaggering the boundary condition fields, we need to remove points
-        !that aren't on the boundary
-        !do i = 1,nsn
-        !    do j = 1, ewn
-        !        if (i > 1 .and. i < nsn .and. j > 1 .and. j < ewn) then 
-        !            if (thck(i+1, j) /= 0 .and. thck(i-1, j) /= 0 .and. thck(i, j+1) /= 0 .and. thck(i, j-1) /= 0) then
-        !                kinematic_bc_u_t_unstag(i,j,:) = NaN
-        !                kinematic_bc_v_t_unstag(i,j,:) = NaN
-        !            end if
-        !        end if
-        !    end do
-        !end do
 
         !Compute rescaled coordinate parameters (needed because Pattyn uses an
         !irregular Z grid and scales so that 0 is the surface, 1 is the bed)

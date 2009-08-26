@@ -207,6 +207,7 @@ contains
     integer p
     logical first_p
 
+#ifdef USE_UNSTABLE_MANIFOLD
     ! local variables used by unstable manifold correction
     real(kind=dp), dimension(model%general%ewn*model%general%nsn) :: umc_new_vec   
     real(kind=dp), dimension(model%general%ewn*model%general%nsn) :: umc_old_vec 
@@ -217,6 +218,7 @@ contains
     umc_correction_vec = 0
     umc_new_vec = 0
     umc_old_vec = 0
+#endif
 
     if (model%geometry%empty) then
 
@@ -527,10 +529,6 @@ contains
      !*FD Computes derivatives of the ice and bed geometry, as well as averaging
      !*FD them onto the staggered grid
      type(glide_global_type), intent(inout) :: model
-
-     !Fields allow us to upwind derivatives at the ice sheet lateral boundaries
-     !so that we're not differencing out of the domain
-     real(dp), dimension(model%general%ewn, model%general%nsn) :: direction_x, direction_y
 
      call stagthickness(model%geometry% thck, &
                model%geomderv%stagthck,&
