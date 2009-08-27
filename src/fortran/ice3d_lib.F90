@@ -516,7 +516,6 @@ contains
 
 #ifdef OUTPUT_PARTIAL_ITERATIONS
             call iteration_debug_step(ncid_debug, l, efvs, ustar, vstar, geometry_mask)
-            call iterdebug_vel_derivs(ncid_debug, l, dudx, dudy, dvdx, dvdy)
 #endif
 
             !Apply unstable manifold correction.  This function returns
