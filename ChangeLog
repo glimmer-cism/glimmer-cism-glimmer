@@ -1,3 +1,7 @@
+2009-09-01 Magnus Hagdorn
+ * m4macros/netcdf.m4: fix detection of standard location of netCDF
+ * src/fortran/Makefile.am: fix bug with out-of-dir compilation
+
 2009-08-20 Magnus Hagdorn
  * src/python/fort_parser.py: fix the way python is called
 

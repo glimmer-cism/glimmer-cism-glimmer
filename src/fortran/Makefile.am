@@ -122,7 +122,7 @@ $(RESTART_STEM)_body.inc.in $(RESTART_STEM)_head.inc.in: $(RESTART_CODE)
 # handling subversion versioning
 if HAVE_SVN
 svnversion.sed::
-		./createSVNVersion.sh
+		$(srcdir)/createSVNVersion.sh
 glimmer_vers.F90:	svnversion.sed glimmer_vers.F90.in
 		sed -f svnversion.sed glimmer_vers.F90.in > glimmer_vers.F90
 else
