@@ -410,9 +410,6 @@ contains
     call GetValue(section,'periodic_ew',model%options%periodic_ew)
     call GetValue(section,'periodic_ns',model%options%periodic_ns)
     call GetValue(section,'diagnostic_run',model%options%diagnostic_run)
-    call GetValue(section,'stressin',model%climate%stressin)
-    call GetValue(section,'stressout',model%climate%stressout)
-    call GetValue(section,'sliding_constant',model%climate%slidconst)
   end subroutine handle_options
   
   !Higher order options
@@ -681,6 +678,9 @@ contains
     call GetValue(section,'basal_tract_const',model%paramets%btrac_const)
     call GetValue(section,'basal_tract_max',model%paramets%btrac_max)
     call GetValue(section,'basal_tract_slope',model%paramets%btrac_slope)
+    call GetValue(section,'stressin',model%climate%stressin)
+    call GetValue(section,'stressout',model%climate%stressout)
+    call GetValue(section,'sliding_constant',model%climate%slidconst)
   end subroutine handle_parameters
 
   subroutine print_parameters(model)
