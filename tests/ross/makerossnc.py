@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 import numpy
 import pycdf
 from pycdf import NC

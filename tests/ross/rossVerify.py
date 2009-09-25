@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 import pycdf
 import sys
 import matplotlib.pyplot as plt
@@ -90,7 +90,7 @@ for i in range(147):
     column_positions.append(float(griddatafile.readline()))
 
 #Read the RIGGS data (thanks to Ed Bueler and PISM for providing this!)
-riggsdata = open("riggs-clean.dat")
+riggsdata = open("riggs_clean.dat")
 riggsLats = []
 riggsLons = []
 riggsVels = []

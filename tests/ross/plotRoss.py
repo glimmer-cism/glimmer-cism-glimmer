@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 import pycdf as pycdf
 import numpy as np
 from pycdf import NC as NC
@@ -13,7 +13,7 @@ from getopt import gnu_getopt
 #Code to return a descritized version of a colormap
 #From http://www.scipy.org/Cookbook/Matplotlib/ColormapTransformations 
 def cmap_discretize(cmap, N):
-    """Return a discrete colormap from the continuous colormap cmap.     
+     """Return a discrete colormap from the continuous colormap cmap.     
          cmap: colormap instance, eg. cm.jet. 
          N: Number of colors.
      
@@ -22,7 +22,6 @@ def cmap_discretize(cmap, N):
          djet = cmap_discretize(cm.jet, 5)
          imshow(x, cmap=djet)
      """
- 
      cdict = cmap._segmentdata.copy()
      # N colors
      colors_i = linspace(0,1.,N)
