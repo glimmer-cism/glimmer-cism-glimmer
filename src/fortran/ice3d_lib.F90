@@ -2,11 +2,13 @@
 !ice3d_lib.F90
 !This file is adapted from Frank Pattyn's Ice3D model
 !Code updated to Fortran 90 and integrated with Glimmer
-!by Tim Bocek.
+!by Tim Bocek and Jesse Johnson
 !See F. Pattyn, "A new three-dimensional higher-order thermomechanical
 !        ice sheet model: basic sensitivity, ice stream development,
 !        and ice flow across subglacial lakes", Journal of Geophysical
 !        Research, Volume 108, no. B8, 2003.
+! and
+! Tim Bocek's thesis
 !----------------------------------------------------
 
 #include "glide_nan.inc"
@@ -17,14 +19,11 @@
 
 !Define to output a NetCDF file of the partial iterations
 #define OUTPUT_PARTIAL_ITERATIONS
-
 !#define VERY_VERBOSE
-
 !#define NOSHELF
-
 !#define ENFORCE_PBC
 
-!If defined, a text fields contianing debug output will be written to the disk in the
+!If defined, a text field contianing debug output will be written to the disk in the
 !directory in which this file was run.
 !#define DEBUG_FIELDS
 
@@ -39,11 +38,11 @@ module ice3d_lib
     use glimmer_log
     use xls
     use glide_nonlin
+
     implicit none
-    real(dp), parameter :: SMALL=1.D-10, ZIP=1.D-30
-    
+    real(dp), parameter :: SMALL=1.D-10, ZIP=1.D-30, BIG=1.D30
+    integer, parameter :: MAXITER = 50              ! For the non-linear iteration
     real(dp), parameter :: toler_adjust_factor=1.0
-    integer, parameter :: maxiter = 2000
 
     real(dp) :: plastic_bed_regularization = 1e-2
 
@@ -58,12 +57,11 @@ module ice3d_lib
     logical, parameter :: sparverbose = .false.
 #endif
 
-    integer, parameter :: ITER_UNIT = 42
 !------------------------------------------------------
 !   lookup coordinates in sparse matrix
 !
 !   Reference:
-!     1   ->   i - 1, j - 1, k
+!     1   ->   i - 1, j - 1, k     ->   IM1_JM1_K
 !x    2   ->   i - 1, j, k - 1
 !x    3   ->   i - 1, j, k
 !x    4   ->   i - 1, j, k + 1
@@ -84,7 +82,12 @@ module ice3d_lib
 !x   19   ->   i + 1, j, k
 !x   20   ->   i + 1, j, k + 1
 !    21   ->   i + 1, j + 1, k
+!    22   ->   i - 2, j , k
+!    23   ->   i + 2, j , k
+!    24   ->   i , j - 2, k
+!    25   ->   i , j + 2, k
 !------------------------------------------------------
+    integer, parameter :: STENCIL_SIZE = 25
     integer, parameter :: IM1_JM1_K = 1
     integer, parameter :: IM1_J_KM1 = 2
     integer, parameter :: IM1_J_K = 3
@@ -106,15 +109,12 @@ module ice3d_lib
     integer, parameter :: IP1_J_K = 19
     integer, parameter :: IP1_J_KP1 = 20
     integer, parameter :: IP1_JP1_K = 21
-
-    !Extra stencil locations introduced to allow for 2nd order upwinding and downwinding
-    !lateral derivs.
+    ! These are for second order up or downwinding
     integer, parameter :: IM2_J_K = 22
     integer, parameter :: IP2_J_K = 23
     integer, parameter :: I_JM2_K = 24
     integer, parameter :: I_JP2_K = 25
 
-    integer, parameter :: STENCIL_SIZE = 25
 contains
     !Initialize rescaled coordinate coefficients
     subroutine init_rescaled_coordinates(dhdx,dhbdx,dhdy,dhbdy,surf,h,hb,&
@@ -149,7 +149,12 @@ contains
 
         INTEGER :: i,j,k
 
-        !The Pattyn model currently does not support CISM's rescaled coordinates!
+        !jvj checked for consistency. All calls to this function are made from
+        !the same grids
+
+
+        !The Pattyn model currently does not support CISM's rescaling of
+        !variables, see glimmer_paramets.F90
 #ifndef NO_RESCALE
         write(*,*) "Pattyn-Bocek model does not work with scaling yet.  Please re-compile with the flag -DNO_RESCALE."
         stop
@@ -358,7 +363,7 @@ contains
         real(dp), dimension(size(efvs,1),size(efvs,2),size(efvs,3)) :: dvdx, dvdy, dvdz
         real(dp), dimension(size(efvs,2),size(efvs,3)) :: direction_x, direction_y
 
-        logical :: cont
+        logical :: cont = .true.
 
         type(sparse_matrix_type) :: matrix
         type(sparse_solver_workspace) :: matrix_workspace
@@ -369,7 +374,7 @@ contains
 #endif
         !For timing the algorithm
         real(dp) :: solve_start_time, solve_end_time, iter_start_time, iter_end_time
-        real(dp) :: max_value 
+        real(dp) :: max_vel 
 
         call cpu_time(solve_start_time)
 
@@ -441,7 +446,19 @@ contains
         ncid_debug = begin_iteration_debug(maxx, maxy, nzeta)
         call iteration_debug_step(ncid_debug, 0, efvs, uvel, vvel, geometry_mask)
 #endif
-        nonlinear_iteration: do l=1,maxiter !Loop until we have reached the number of iterations allowed
+
+
+        !  =========================================
+        !  Non-linear iteration on velocities
+        !  =========================================
+
+        write (*,*) "Entering the non-linear iteration on velocities (1st order Pattyn)."
+        write (*,*) "Error Tolerance is:", error
+        write (*,*) "==================================================================="
+        write (*,*) "Iteration \t iter \t tot \t Max Vel. \t Run time"
+        write (*,*) "==================================================================="
+
+        nonlinear_iteration: do while (.not. cont .and. l <= MAXITER)
             call cpu_time(iter_start_time)
             
             lacc=lacc+1
@@ -526,14 +543,11 @@ contains
                                         tot, teta)    
 
             call cpu_time(iter_end_time)
-            max_value = maxval(sqrt(ustar**2 + vstar**2))
+
+            max_vel = maxval(sqrt(ustar**2 + vstar**2))
+
+            write(*,*) l, iter, tot, max_vel, iter_end_time - iter_start_time
             
-            
-            write(*,*) l, iter, tot, &
-                       max_value, iter_end_time - iter_start_time
-            
-            !Check whether we have reached convergance
-            if (.not. cont) exit nonlinear_iteration
      end do nonlinear_iteration
 
      if ( l >= maxiter) then
