@@ -432,7 +432,7 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
     counter = counter + 1
 
     ! *sfp** output status of iteration: iteration number, max residual, and location of max residual
-    print '(i3,3g20.6)', counter, resid(1), resid(2), minres
+!    print '(i3,3g20.6)', counter, resid(1), resid(2), minres
 
 !whl - write this info to the log file
 !    write(message,'(" * strs ",i3,3g20.6)') counter, resid(1), resid(2), minres
