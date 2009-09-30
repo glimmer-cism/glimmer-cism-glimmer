@@ -234,7 +234,7 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
 
   integer :: ew, ns, up
 
-  real (kind = dp), parameter :: minres = 1.0d-5 
+  real (kind = dp), parameter :: minres = 1.0d-4 
   real (kind = dp), save, dimension(2) :: resid  
 
   integer, parameter :: cmax = 100 
@@ -284,7 +284,7 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
 
   !!!!!!!!! *sfp* start debugging !!!!!!!!!!!!!!!!!!!!!!!!
 !  print *, 'mask = '
-!  print *, umask
+!  print *, umask(1:5,27:31)
 !  print *, ' '
 !  pause
 !  print *, 'uindx = '
@@ -349,7 +349,7 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
                      uindx,       umask,          &
                      lsrf,        topg,           &
                      minTauf,     flwa,           &
-                     beta )
+                     beta, counter )
 
     ! *sfp** solve 'Ax=b' for the across-flow velocity component
     tvel = slapsolvstr(ewn,  nsn,   upn,  &
@@ -398,7 +398,7 @@ subroutine glam_velo_fordsiapstr(ewn,      nsn,    upn,  &
                      uindx,       umask,          &
                      lsrf,        topg,           &
                      minTauf,     flwa,           &
-                     beta )
+                     beta, counter )
 
     ! *sfp** solve 'Ax=b' for along-flow velocity component
     uvel = slapsolvstr(ewn,  nsn,   upn,  &
@@ -616,7 +616,7 @@ subroutine findefvsstr(ewn,  nsn, upn,       &
     efvs = effstrminsq
   
   end select
-         
+
   return
 
 end subroutine findefvsstr
@@ -940,7 +940,7 @@ function mindcrshstr(pt,whichresid,vel,counter,resid)
 
     usav(:,:,:,pt) = vel
 
-!  print '("* ",i3,g20.6,3i6,g20.6)', counter, resid, locat, vel(locat(1),locat(2),locat(3))
+  print '("* ",i3,g20.6,3i6,g20.6)', counter, resid, locat, vel(locat(1),locat(2),locat(3))
 
   return
 
@@ -964,7 +964,7 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
                        uindx,       mask,           &
                        lsrf,        topg,           &
                        minTauf,     flwa,           &    
-                       beta )
+                       beta, count )
 
 ! *sfp** find coeffecients in stress balance equation ...
 ! ... also appears to contain important bc information
@@ -972,7 +972,7 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
 
   implicit none
 
-  integer, intent(in) :: ewn, nsn, upn 
+  integer, intent(in) :: ewn, nsn, upn, count 
   real (kind = dp), intent(in) :: dew, dns
   real (kind = dp), dimension(:), intent(in) :: sigma
 
@@ -1007,11 +1007,11 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
   integer, dimension(3) :: shift
   integer :: ew, ns, up
 
+  ct = 1        ! *sfp* this index used when placing coeffs. in sparse matrix format
+
   ! *sfp** 'localplusup' is used to find locations in the sparse matrix relative to
   ! the present location. In general, it is approx. the number of grid cells in 
   ! the vertical direction  
-
-  ct = 1
 
   ! *sfp** calculate/specify value of 'betasquared', to be input to subroutine 'bodyset', below
   call calcbetasquared (whichbabc,              &
@@ -1140,7 +1140,7 @@ subroutine findcoefstr(ewn,  nsn,   upn,            &
                          othervel(up-1+shift(1):up+1+shift(1),  &
                          ew-1+shift(2):ew+1+shift(2),  &
                          ns-1+shift(3):ns+1+shift(3)), &
-                         betasquared(ew,ns), abar=flwabar )        
+                         betasquared(ew,ns), abar=flwabar, cc=count )        
         end do
         lateralboundry = .false.
 
@@ -1186,7 +1186,7 @@ subroutine bodyset(ew,  ns,  up,           &
                    local_othervel,         &
                    betasquared,            &
                    local_thisvel,          &
-                   abar)
+                   abar, cc)
 
   implicit none
 
@@ -1198,6 +1198,7 @@ subroutine bodyset(ew,  ns,  up,           &
   integer, intent(in) :: pt
   integer, dimension(ewn-1,nsn-1), intent(in) :: loc_array
   integer, dimension(6), intent(in) :: loc
+
 
   real (kind = dp), dimension(:,:), intent(in) :: stagthck
   real (kind = dp), dimension(:,:), intent(in) :: dusrfdew, dusrfdns
@@ -1214,6 +1215,7 @@ subroutine bodyset(ew,  ns,  up,           &
   real (kind = dp), intent(in) :: betasquared
   real (kind = dp), intent(in), optional :: local_thisvel
   real (kind = dp), intent(in), optional :: abar
+  integer, intent(in), optional :: cc
 
 ! *sfp** needed for dirichlet basal bc (see note below)
   real (kind = dp), dimension(3,3,3) :: g
@@ -1227,6 +1229,10 @@ subroutine bodyset(ew,  ns,  up,           &
   real (kind = dp), dimension(2) :: fwdorbwd, normal
 
   integer, dimension(2) :: bcflag  ! *sfp** indicates choice of sfc and basal bcs ...
+
+  real (kind = dp) :: efvstot   ! *sfp* both of these lines for averaging of eff. vis. near boundaries
+  integer :: efvscount, i, j, k
+  efvstot = 0.0d0; efvscount = 0; i = 0; j = 0; k = 0 
 
   locplusup = loc(1) + up       
 
@@ -1305,6 +1311,8 @@ subroutine bodyset(ew,  ns,  up,           &
     ! we would access stagthck(i-1,j-1) and apply that to the bc rather than stagthck(i,j). For a point
     ! w/ a normal of 1/sqrt(2)*[1,-1], we would access stagthck(i-1,j+1), etc. 
 
+    if( cc < 10 )then
+
     ! (1) 
     ! source term (strain rate at shelf/ocean boundary) from Weertman's analytical solution 
     ! (eq. 2, Pattyn+, 2006, JGR v.111; eq. 8, Vieli&Payne, 2005, JGR v.110). Note that this 
@@ -1315,41 +1323,46 @@ subroutine bodyset(ew,  ns,  up,           &
     ! averaging scheme at the margins, which uses only the non-zero values of thickness on the normal grid to
     ! calc. the value of the stag. thickness
     source = abar*vis0_glam * ( 1.0_dp/4.0_dp * rhoi * grav * stagthck(ew,ns)*thk0 * ( 1.0_dp - rhoi/rhoo))**3.0_dp
+    source = source * tim0
 
     ! multiply by 4 so that case where v=0, du/dy = 0, LHS gives: du/dx = du/dx|_shelf 
     ! (i.e. LHS = 4*du/dx, requires 4*du/dx_shelf)
     source = source * 4.0_dp
 
     ! split source based on the boundary normal orientation and non-dimensinoalize
-    if( normal(1) .ne. 0.0d0 .and. normal(2) .ne. 0.0d0 )then
-    ! *sfp** this necessary so that splitting of scalar source term on RHS is 1/2 to y-dir and 1/2 to x-dir 
-    ! (rather than 1/sqrt(2) to each dir)
-    ! Also note that this is not really appropriate to apply to 2d flow, since terms other than du/dx in 
+    ! Also note that this is not really appropriate to apply option (1) to 2d flow, since terms other than du/dx in 
     ! eff. strain rate are ignored. For 2d flow, should use option (2) below. 
-       source = source * normal(pt) * 1 / sqrt( 2.0d0 ) * tim0
-    else
-       source = source * normal(pt) * tim0
-    end if
+     source = source * normal(pt)
 
+    else
 
     ! (2)
     ! source term (strain rate at shelf/ocean boundary) from MacAyeal depth-ave solution. 
     ! As above, factor of 2 in front of 'stagthck' is not part of the formal solution but is used here to
     ! correct for the fact that the boundary thickness on the staggered grid will generally be ~1/2 of the 
     ! full thickness at the boundary (as a result of averaging to make 'stagthck' from 'thck'). 
-!    source = rhoi * grav * 2.0d0 * stagthck(ew,ns) * thk0 / 2.0_dp * ( 1.0_dp - rhoi / rhoo )
+    ! NOTE that hack having to do w/ stag thick at boundaries has been removed here too, as for option (1) above
+    source = (rhoi*grav*stagthck(ew,ns)*thk0) / tau0_glam / 2.0_dp * ( 1.0_dp - rhoi / rhoo )
+
+    ! terms after "/" below count number of non-zero efvs cells ... needed for averaging efvs at boundary 
+    source = source / ( sum(local_efvs, local_efvs > 1.0d-12) / &
+             sum( (local_efvs/local_efvs), local_efvs > 1.0d-12 ) )
+
+  !! *sfp* This is a hacky version above the above (divide source term by mean eff. visc. at boundary)
+!            do i = 1, 2; do j = 1, 2; do k = 1, 2
+!                if (abs(local_efvs(i,j,k)) > 1.0d-12)then
+!                    efvstot = efvstot + local_efvs(i,j,k)
+!                    efvscount = efvscount + 1 
+!                end if
+!            end do; end do; end do
 !
-!    ! terms after "/" below count number of non-zero efvs cells ... needed for averaging efvs at boundary 
-!    source = source / ( evs0 * sum(local_efvs, local_efvs .gt. 1.0d-10) / &
-!             sum( local_efvs/local_efvs,local_efvs .gt. 1.0d-10 ) )
-!
-!    if( normal(1) .ne. 0.0d0 .and. normal(2) .ne. 0.0d0 )then
-!    ! *sfp** this necessary so that splitting of scalar source term on RHS is 1/2 to y-dir and 1/2 to x-dir 
-!    ! (rather than 1/sqrt(2) to each dir)
-!       source = source * normal(pt) * 1 / sqrt( 2.0d0 ) * tim0
-!    else
-!       source = source * normal(pt) * tim0 ! non-dim
-!    end if
+!    source = source / ( efvstot / efvscount )
+
+    source = source * normal(pt) ! non-dim
+
+
+    end if
+
                         
     g = normhorizmainbc_lat(dew,           dns,        &
                             slopex,        slopey,     &
