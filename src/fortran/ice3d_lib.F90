@@ -41,7 +41,7 @@ module ice3d_lib
 
     implicit none
     real(dp), parameter :: SMALL=1.D-10, ZIP=1.D-30, BIG=1.D30
-    integer, parameter :: MAXITER = 50              ! For the non-linear iteration
+    integer, parameter :: MAXITER = 100              ! For the non-linear iteration
     real(dp), parameter :: toler_adjust_factor=1.0
 
     real(dp) :: plastic_bed_regularization = 1e-2
@@ -391,6 +391,7 @@ contains
 
         error=VEL2ERR
         m=1
+        l=1
         lacc=0
         em = 0
         correction_vec = 0
@@ -452,13 +453,14 @@ contains
         !  Non-linear iteration on velocities
         !  =========================================
 
-        write (*,*) "Entering the non-linear iteration on velocities (1st order Pattyn)."
-        write (*,*) "Error Tolerance is:", error
-        write (*,*) "==================================================================="
-        write (*,*) "Iteration \t iter \t tot \t Max Vel. \t Run time"
-        write (*,*) "==================================================================="
+        print *, "Entering the non-linear iteration on velocities (1st order Pattyn)."
+        print "(a,es10.3)","Error Tolerance is:", error
+        write (*,*) "================================================================"
+        write (*,*) "Nonlin.      Lin. Solv.     Error            Max        CPU time"
+        write (*,*) " Iter.         Iter.                       Velocity             "
+        write (*,*) "================================================================"
 
-        nonlinear_iteration: do while (.not. cont .and. l <= MAXITER)
+        nonlinear_iteration: do while (cont .and. l <= MAXITER)
             call cpu_time(iter_start_time)
             
             lacc=lacc+1
@@ -546,12 +548,15 @@ contains
 
             max_vel = maxval(sqrt(ustar**2 + vstar**2))
 
-            write(*,*) l, iter, tot, max_vel, iter_end_time - iter_start_time
+            print "(i5,10x,i5,7x,es10.3,5x,f10.2,5x,f8.3)", l, iter, tot, max_vel, iter_end_time - iter_start_time
+
+            l = l + 1
             
      end do nonlinear_iteration
 
-     if ( l >= maxiter) then
-        call write_log("Maximum iterations exceeded in Pattyn velocity solve", GM_FATAL)
+     if ( l >= MAXITER) then
+        !call write_log("Maximum iterations exceeded in Pattyn velocity solve", GM_FATAL)
+        write(*,*) "Maximum iterations exceeded. Moving on"
      end if
 
 #ifdef OUTPUT_PARTIAL_ITERATIONS
@@ -1588,6 +1593,10 @@ contains
         !rather than multiply everything else by it (though it may give
         !iterative solvers more fits maybe?)
         source = source_term(i, j, k, H, zeta, WHICH_SOURCE, STAGGERED)/efvs(k,i,j)
+        ! jvj this is just a trick to see if there is an effective viscosity
+        ! instability at the front.
+        ! initial tests indicate that there is, ie this is much more stable.
+        !source = source_term(i, j, k, H, zeta, WHICH_SOURCE, STAGGERED)**3 * 1.e-18
 
         !Determine whether to use upwinded or downwinded derivatives for the
         !horizontal directions.
@@ -1765,7 +1774,12 @@ contains
 
         if (which_source == HO_SOURCE_AVERAGED) then
             !Vertically averaged model
-            source_term = .5 * rhoi * grav * h(i,j) * (1 - rhoi/rhoo)
+            if (k == 1) then
+                source_term = 0
+            else
+                source_term = .5 * rhoi * grav * h(i,j) * (1 - rhoi/rhoo)
+            end if
+
         else if (which_source == HO_SOURCE_EXPLICIT) then
             !In order to get the correct source term, I integrate from the level above this
             !one to the current level so that all of the pressure is accounted for.
