@@ -1,4 +1,4 @@
-SUBDIRS = SLAP_library
+SUBDIRS = SLAP_library plume_src
 RESTART_STEM=glimmer_rst
 RESTART_INC_INS=$(RESTART_STEM)_body.inc.in $(RESTART_STEM)_head.inc.in
 RESTART_INCS=$(RESTART_INC_INS:.inc.in=.inc)
