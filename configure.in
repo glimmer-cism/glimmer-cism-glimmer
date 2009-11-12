@@ -175,5 +175,5 @@ AC_SUBST(GLIMMER_SVN_VERS)
 AM_CONDITIONAL([HAVE_SVN],[test "$have_svn_entries" == "yes"])
 
 AC_CONFIG_FILES([Makefile m4macros/Makefile src/Makefile src/python/Makefile src/fortran/Makefile src/fortran/SLAP_library/Makefile \
-		tests/Makefile])
+		 src/fortran/plume_src/Makefile tests/Makefile])
 AC_OUTPUT([glimmer-config src/fortran/glimmer_vers.F90.in])
